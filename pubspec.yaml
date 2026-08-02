@@ -15,6 +15,7 @@ dependencies:
   intl: ^0.20.2
   confetti: ^0.8.0
   audioplayers: ^6.8.1
+  image_picker: ^1.2.3
 
 dev_dependencies:
   flutter_test:

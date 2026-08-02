@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../models/models.dart';
 import '../../services/sound_service.dart';
@@ -28,7 +31,8 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
 
   final TextEditingController _concept = TextEditingController();
   final TextEditingController _note = TextEditingController();
-  bool _hasPhoto = false;
+  final ImagePicker _picker = ImagePicker();
+  Uint8List? _imageBytes;
   String? _subject;
   MistakeType? _type;
 
@@ -75,7 +79,7 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
                 title: const Text('Kamera ile çek'),
                 onTap: () {
                   Navigator.pop(context);
-                  setState(() => _hasPhoto = true);
+                  _pick(ImageSource.camera);
                 },
               ),
               ListTile(
@@ -84,7 +88,7 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
                 title: const Text('Galeriden seç'),
                 onTap: () {
                   Navigator.pop(context);
-                  setState(() => _hasPhoto = true);
+                  _pick(ImageSource.gallery);
                 },
               ),
               const SizedBox(height: 8),
@@ -95,6 +99,25 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
     );
   }
 
+  Future<void> _pick(ImageSource source) async {
+    try {
+      final XFile? file = await _picker.pickImage(
+        source: source,
+        maxWidth: 1600,
+        imageQuality: 85,
+      );
+      if (file == null) return;
+      final Uint8List bytes = await file.readAsBytes();
+      if (!mounted) return;
+      setState(() => _imageBytes = bytes);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fotoğraf alınamadı.')),
+      );
+    }
+  }
+
   void _save() {
     mistakeStore.add(
       MistakeEntry(
@@ -103,7 +126,8 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
         type: _type!,
         note: _note.text.trim(),
         date: DateTime.now(),
-        hasPhoto: _hasPhoto,
+        hasPhoto: _imageBytes != null,
+        imageBytes: _imageBytes,
       ),
     );
     sound.correct();
@@ -174,36 +198,62 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
   }
 
   Widget _photoArea() {
+    final bool hasImage = _imageBytes != null;
     return GestureDetector(
       onTap: _pickPhoto,
       child: Container(
-        height: 170,
+        height: 200,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: _hasPhoto ? AppColors.greenBg : const Color(0xFFF7F7F7),
+          color: hasImage ? Colors.black : const Color(0xFFF7F7F7),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: _hasPhoto ? AppColors.green : AppColors.line,
+            color: hasImage ? AppColors.green : AppColors.line,
             width: 2,
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(
-              _hasPhoto ? Icons.check_circle_rounded : Icons.add_a_photo_rounded,
-              size: 40,
-              color: _hasPhoto ? AppColors.green : AppColors.inkLight,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              _hasPhoto ? 'Fotoğraf eklendi' : 'Soruyu fotoğrafla veya yükle',
-              style: TextStyle(
-                color: _hasPhoto ? AppColors.greenDark : AppColors.inkLight,
-                fontWeight: FontWeight.w700,
+        child: hasImage
+            ? Stack(
+                fit: StackFit.expand,
+                children: <Widget>[
+                  Image.memory(_imageBytes!, fit: BoxFit.cover),
+                  Positioned(
+                    right: 10,
+                    top: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Icon(Icons.edit, color: Colors.white, size: 16),
+                          SizedBox(width: 4),
+                          Text('Değiştir',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const <Widget>[
+                  Icon(Icons.add_a_photo_rounded,
+                      size: 40, color: AppColors.inkLight),
+                  SizedBox(height: 10),
+                  Text('Soruyu fotoğrafla veya yükle',
+                      style: TextStyle(
+                          color: AppColors.inkLight, fontWeight: FontWeight.w700)),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }

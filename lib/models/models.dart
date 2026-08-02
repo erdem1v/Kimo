@@ -5,6 +5,8 @@
 /// beslemek için düz Dart sınıfları var.
 library;
 
+import 'dart:typed_data';
+
 /// Bir hatanın türü.
 enum MistakeType {
   kavramEksikligi,
@@ -60,6 +62,7 @@ class MistakeEntry {
     required this.note,
     required this.date,
     this.hasPhoto = false,
+    this.imageBytes,
   });
 
   final String subject;
@@ -68,6 +71,9 @@ class MistakeEntry {
   final String note;
   final DateTime date;
   final bool hasPhoto;
+
+  /// Kameradan/galeriden seçilen fotoğrafın ham baytları (opsiyonel).
+  final Uint8List? imageBytes;
 }
 
 /// Profil vitrinindeki rozet.

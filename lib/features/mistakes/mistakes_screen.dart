@@ -124,18 +124,25 @@ class _MistakeCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          // Fotoğraf ön izleme (mock).
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: AppColors.blueBg,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              entry.hasPhoto ? Icons.image_rounded : Icons.notes_rounded,
-              color: AppColors.blueDark,
-            ),
+          // Fotoğraf ön izleme.
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: entry.imageBytes != null
+                ? Image.memory(
+                    entry.imageBytes!,
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
+                  )
+                : Container(
+                    width: 56,
+                    height: 56,
+                    color: AppColors.blueBg,
+                    child: Icon(
+                      entry.hasPhoto ? Icons.image_rounded : Icons.notes_rounded,
+                      color: AppColors.blueDark,
+                    ),
+                  ),
           ),
           const SizedBox(width: 12),
           Expanded(
