@@ -3,7 +3,9 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../data/mistake_repository.dart';
 import '../../models/models.dart';
+import '../../services/supabase_config.dart';
 import '../../services/sound_service.dart';
 import '../../state/mistake_store.dart';
 import '../../theme/app_colors.dart';
@@ -35,6 +37,7 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
   Uint8List? _imageBytes;
   String? _subject;
   MistakeType? _type;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -118,20 +121,41 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
     }
   }
 
-  void _save() {
-    mistakeStore.add(
-      MistakeEntry(
-        subject: _subject!,
-        concept: _concept.text.trim(),
-        type: _type!,
-        note: _note.text.trim(),
-        date: DateTime.now(),
-        hasPhoto: _imageBytes != null,
-        imageBytes: _imageBytes,
-      ),
-    );
-    sound.correct();
-    Navigator.of(context).pop(true);
+  Future<void> _save() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      if (SupabaseConfig.isConfigured) {
+        await mistakeRepository.add(
+          subject: _subject!,
+          concept: _concept.text.trim(),
+          type: _type!,
+          note: _note.text.trim(),
+          imageBytes: _imageBytes,
+        );
+      } else {
+        mistakeStore.add(
+          MistakeEntry(
+            subject: _subject!,
+            concept: _concept.text.trim(),
+            type: _type!,
+            note: _note.text.trim(),
+            date: DateTime.now(),
+            hasPhoto: _imageBytes != null,
+            imageBytes: _imageBytes,
+          ),
+        );
+      }
+      sound.correct();
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Kaydedilemedi. Tekrar dene.')),
+        );
+        setState(() => _saving = false);
+      }
+    }
   }
 
   @override
@@ -188,8 +212,8 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
           ),
           const SizedBox(height: 28),
           GameButton(
-            label: 'KAYDET',
-            enabled: _canSave,
+            label: _saving ? 'Kaydediliyor...' : 'KAYDET',
+            enabled: _canSave && !_saving,
             onPressed: _save,
           ),
         ],

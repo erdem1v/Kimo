@@ -1,21 +1,61 @@
 import 'package:flutter/material.dart';
 
+import '../../data/mistake_repository.dart';
 import '../../models/models.dart';
+import '../../services/supabase_config.dart';
 import '../../state/mistake_store.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_button.dart';
 import '../../widgets/mistake_style.dart';
 import 'add_mistake_screen.dart';
 
-/// Hata bankası: kaydedilmiş hatalı soruların listesi ve yeni hata ekleme.
-class MistakesScreen extends StatelessWidget {
+/// Hata bankası. Supabase yapılandırılmışsa uzak veriden, değilse mock
+/// depodan beslenir.
+class MistakesScreen extends StatefulWidget {
   const MistakesScreen({super.key});
 
-  Future<void> _openAdd(BuildContext context) async {
+  @override
+  State<MistakesScreen> createState() => _MistakesScreenState();
+}
+
+class _MistakesScreenState extends State<MistakesScreen> {
+  final bool _remote = SupabaseConfig.isConfigured;
+  List<MistakeEntry> _items = <MistakeEntry>[];
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_remote) _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final List<MistakeEntry> items = await mistakeRepository.fetch();
+      if (!mounted) return;
+      setState(() {
+        _items = items;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Hatalar yüklenemedi.';
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _openAdd() async {
     final bool? added = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(builder: (_) => const AddMistakeScreen()),
     );
-    if (added == true && context.mounted) {
+    if (added == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Hata bankana eklendi 🎯'),
@@ -23,6 +63,7 @@ class MistakesScreen extends StatelessWidget {
           behavior: SnackBarBehavior.floating,
         ),
       );
+      if (_remote) _load();
     }
   }
 
@@ -31,37 +72,74 @@ class MistakesScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(title: const Text('Hatalarım')),
-      body: ListenableBuilder(
-        listenable: mistakeStore,
-        builder: (BuildContext context, _) {
-          final List<MistakeEntry> items = mistakeStore.items;
-          return Column(
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                child: _summaryCard(items.length),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-                  itemCount: items.length,
-                  itemBuilder: (BuildContext context, int i) =>
-                      _MistakeCard(entry: items[i]),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+      body: _remote
+          ? _remoteBody()
+          : ListenableBuilder(
+              listenable: mistakeStore,
+              builder: (BuildContext context, _) => _list(mistakeStore.items),
+            ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: GameButton(
           label: 'HATALI SORU EKLE',
           icon: Icons.add_a_photo_rounded,
-          onPressed: () => _openAdd(context),
+          onPressed: _openAdd,
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  Widget _remoteBody() {
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(_error!, style: const TextStyle(color: AppColors.inkLight)),
+            const SizedBox(height: 12),
+            TextButton(onPressed: _load, child: const Text('Tekrar dene')),
+          ],
+        ),
+      );
+    }
+    return RefreshIndicator(onRefresh: _load, child: _list(_items));
+  }
+
+  Widget _list(List<MistakeEntry> items) {
+    return Column(
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: _summaryCard(items.length),
+        ),
+        Expanded(
+          child: items.isEmpty
+              ? ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: const <Widget>[
+                    Padding(
+                      padding: EdgeInsets.only(top: 80),
+                      child: Center(
+                        child: Text(
+                          'Henüz hata eklenmemiş.\nAşağıdan ilkini ekle 👇',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppColors.inkLight),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                  itemCount: items.length,
+                  itemBuilder: (BuildContext context, int i) =>
+                      _MistakeCard(entry: items[i]),
+                ),
+        ),
+      ],
     );
   }
 
@@ -124,7 +202,6 @@ class _MistakeCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          // Fotoğraf ön izleme.
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: SizedBox(width: 56, height: 56, child: _thumbnail()),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../data/auth_repository.dart';
 import '../../data/mock_data.dart';
 import '../../models/models.dart';
 import '../../services/sound_service.dart';
+import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_widgets.dart';
@@ -43,6 +45,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _badges(),
               const SizedBox(height: 24),
               _soundToggle(),
+              if (SupabaseConfig.isConfigured) ...<Widget>[
+                const SizedBox(height: 12),
+                _logoutButton(),
+              ],
             ],
           );
         },
@@ -250,6 +256,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: TextStyle(fontWeight: FontWeight.w700)),
         secondary: const Icon(Icons.volume_up_rounded, color: AppColors.green),
         onChanged: (bool v) => setState(() => sound.enabled = v),
+      ),
+    );
+  }
+
+  Widget _logoutButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => authRepository.signOut(),
+        icon: const Icon(Icons.logout_rounded, color: AppColors.red),
+        label: const Text('Çıkış yap',
+            style:
+                TextStyle(color: AppColors.red, fontWeight: FontWeight.w700)),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(52),
+          side: const BorderSide(color: AppColors.red),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
       ),
     );
   }
