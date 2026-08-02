@@ -43,3 +43,15 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Ortam değişkenleri / sırlar — ASLA commit edilmez (.env.example hariç)
+.env
+.env.*
+!.env.example
+
+# Olası servis anahtarları / imzalama dosyaları (ileride)
+**/google-services.json
+**/GoogleService-Info.plist
+*.jks
+*.keystore
+key.properties
