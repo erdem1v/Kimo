@@ -1,30 +1,31 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:ai_yks_coach/main.dart';
+import 'package:ai_yks_coach/app.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Bugünün Tekrarları ekranı yüklenir ve ilk soruyu gösterir',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const ProviderScope(child: AiYksCoachApp()));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Başlık, veri yüklenmeden önce de görünür.
+    expect(find.text('Bugünün Tekrarları'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Yüklenirken bir ilerleme göstergesi olmalı.
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Mock repository gecikmesini geç.
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    // İlk soru yüklendiğinde "Cevabı Göster" butonu görünmeli.
+    expect(find.text('Cevabı Göster'), findsOneWidget);
+
+    // Cevabı göster ve doğru/yanlış butonlarının çıktığını doğrula.
+    await tester.tap(find.text('Cevabı Göster'));
+    await tester.pumpAndSettle();
+    expect(find.text('Doğru bildim'), findsOneWidget);
+    expect(find.text('Bilemedim'), findsOneWidget);
   });
 }

@@ -24,6 +24,9 @@
 
   "conceptLabel": "Kavram",
   "difficultyLabel": "Zorluk",
+  "difficultyEasy": "Kolay",
+  "difficultyMedium": "Orta",
+  "difficultyHard": "Zor",
   "showAnswer": "Cevabı Göster",
   "hideAnswer": "Cevabı Gizle",
   "correctAnswerLabel": "Doğru cevap",

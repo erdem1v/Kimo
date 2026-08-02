@@ -136,6 +136,24 @@ abstract class AppLocalizations {
   /// **'Zorluk'**
   String get difficultyLabel;
 
+  /// No description provided for @difficultyEasy.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kolay'**
+  String get difficultyEasy;
+
+  /// No description provided for @difficultyMedium.
+  ///
+  /// In tr, this message translates to:
+  /// **'Orta'**
+  String get difficultyMedium;
+
+  /// No description provided for @difficultyHard.
+  ///
+  /// In tr, this message translates to:
+  /// **'Zor'**
+  String get difficultyHard;
+
   /// No description provided for @showAnswer.
   ///
   /// In tr, this message translates to:

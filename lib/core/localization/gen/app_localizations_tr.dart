@@ -40,6 +40,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String get difficultyLabel => 'Zorluk';
 
   @override
+  String get difficultyEasy => 'Kolay';
+
+  @override
+  String get difficultyMedium => 'Orta';
+
+  @override
+  String get difficultyHard => 'Zor';
+
+  @override
   String get showAnswer => 'Cevabı Göster';
 
   @override
