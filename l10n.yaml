@@ -1,9 +1,0 @@
-# Türkçe metinlerin .arb dosyalarından AppLocalizations sınıfına üretilmesi.
-# Yeni dil eklemek için lib/core/localization/l10n/ altına app_<dil>.arb ekleyip
-# `flutter gen-l10n` çalıştırmak yeterli.
-arb-dir: lib/core/localization/l10n
-template-arb-file: app_tr.arb
-output-dir: lib/core/localization/gen
-output-localization-file: app_localizations.dart
-output-class: AppLocalizations
-nullable-getter: false

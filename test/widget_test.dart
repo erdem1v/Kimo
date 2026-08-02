@@ -1,31 +1,29 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ai_yks_coach/app.dart';
+import 'package:ai_yks_coach/services/sound_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:ai_yks_coach/app.dart';
-
 void main() {
-  testWidgets('Bugünün Tekrarları ekranı yüklenir ve ilk soruyu gösterir',
+  testWidgets('Uygulama açılır ve sekmeler arası geçiş çalışır',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: AiYksCoachApp()));
+    // Testte ses eklentisi olmadığı için sesi kapat.
+    sound.enabled = false;
 
-    // Başlık, veri yüklenmeden önce de görünür.
-    expect(find.text('Bugünün Tekrarları'), findsOneWidget);
+    await tester.pumpWidget(const AiYksCoachApp());
+    await tester.pump();
 
-    // Yüklenirken bir ilerleme göstergesi olmalı.
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    // Başlangıçta "Bugün" sekmesi: Konular bölümü görünür.
+    expect(find.text('Konular'), findsOneWidget);
+    // Sohbet ekranı henüz seçili değil (offstage).
+    expect(find.text('Koç Baykuş'), findsNothing);
 
-    // Mock repository gecikmesini geç.
-    await tester.pump(const Duration(milliseconds: 400));
+    // Alt navigasyondan "Koç" sekmesine geç.
+    await tester.tap(find.text('Koç'));
     await tester.pumpAndSettle();
+    expect(find.text('Koç Baykuş'), findsOneWidget);
 
-    // İlk soru yüklendiğinde "Cevabı Göster" butonu görünmeli.
-    expect(find.text('Cevabı Göster'), findsOneWidget);
-
-    // Cevabı göster ve doğru/yanlış butonlarının çıktığını doğrula.
-    await tester.tap(find.text('Cevabı Göster'));
+    // "Bugün" sekmesine geri dön.
+    await tester.tap(find.text('Bugün'));
     await tester.pumpAndSettle();
-    expect(find.text('Doğru bildim'), findsOneWidget);
-    expect(find.text('Bilemedim'), findsOneWidget);
+    expect(find.text('Konular'), findsOneWidget);
   });
 }

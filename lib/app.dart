@@ -1,27 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
-import 'package:ai_yks_coach/core/localization/gen/app_localizations.dart';
-import 'package:ai_yks_coach/core/theme/app_theme.dart';
-import 'package:ai_yks_coach/features/spaced_repetition/presentation/today_reviews_screen.dart';
+import 'features/home/home_shell.dart';
+import 'theme/app_theme.dart';
 
-/// Uygulamanın kök widget'ı. Tema ve Türkçe lokalizasyonu kurar.
+/// Uygulamanın kök widget'ı. Beyaz temayı ve Türkçe yerelleştirmeyi kurar.
 class AiYksCoachApp extends StatelessWidget {
   const AiYksCoachApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      onGenerateTitle: (BuildContext context) =>
-          AppLocalizations.of(context).appTitle,
+      title: 'AI YKS Coach',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      // Uygulama şimdilik yalnızca Türkçe. Yeni dil eklendiğinde bu satır
-      // kaldırılıp cihaz diline göre otomatik seçim yapılabilir.
+      localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const <Locale>[Locale('tr'), Locale('en')],
       locale: const Locale('tr'),
-      home: const TodayReviewsScreen(),
+      home: const HomeShell(),
     );
   }
 }
