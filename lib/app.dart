@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'features/auth/auth_gate.dart';
 import 'features/home/home_shell.dart';
+import 'services/supabase_config.dart';
 import 'theme/app_theme.dart';
 
 /// Uygulamanın kök widget'ı. Beyaz temayı ve Türkçe yerelleştirmeyi kurar.
@@ -21,7 +23,8 @@ class AiYksCoachApp extends StatelessWidget {
       ],
       supportedLocales: const <Locale>[Locale('tr'), Locale('en')],
       locale: const Locale('tr'),
-      home: const HomeShell(),
+      // Supabase yapılandırılmışsa giriş kapısı, değilse doğrudan mock uygulama.
+      home: SupabaseConfig.isConfigured ? const AuthGate() : const HomeShell(),
     );
   }
 }

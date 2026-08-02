@@ -24,6 +24,19 @@ enum MistakeType {
         MistakeType.islemHatasi => '✖️',
         MistakeType.dikkatsizlik => '👀',
       };
+
+  /// Veritabanındaki enum değeri.
+  String get dbValue => switch (this) {
+        MistakeType.kavramEksikligi => 'kavram_eksikligi',
+        MistakeType.islemHatasi => 'islem_hatasi',
+        MistakeType.dikkatsizlik => 'dikkatsizlik',
+      };
+
+  static MistakeType fromDb(String value) => switch (value) {
+        'kavram_eksikligi' => MistakeType.kavramEksikligi,
+        'islem_hatasi' => MistakeType.islemHatasi,
+        _ => MistakeType.dikkatsizlik,
+      };
 }
 
 /// Çoktan seçmeli pratik sorusu.
@@ -63,6 +76,7 @@ class MistakeEntry {
     required this.date,
     this.hasPhoto = false,
     this.imageBytes,
+    this.photoUrl,
   });
 
   final String subject;
@@ -72,8 +86,11 @@ class MistakeEntry {
   final DateTime date;
   final bool hasPhoto;
 
-  /// Kameradan/galeriden seçilen fotoğrafın ham baytları (opsiyonel).
+  /// Yeni seçilen fotoğrafın ham baytları (yerel önizleme için).
   final Uint8List? imageBytes;
+
+  /// Supabase Storage'daki fotoğrafın imzalı URL'i (uzak kayıtlar için).
+  final String? photoUrl;
 }
 
 /// Profil vitrinindeki rozet.

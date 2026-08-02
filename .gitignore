@@ -49,6 +49,9 @@ app.*.map.json
 .env.*
 !.env.example
 
+# Supabase yerel anahtarları (--dart-define-from-file) — ASLA commit edilmez
+supabase.json
+
 # Olası servis anahtarları / imzalama dosyaları (ileride)
 **/google-services.json
 **/GoogleService-Info.plist

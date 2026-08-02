@@ -127,22 +127,7 @@ class _MistakeCard extends StatelessWidget {
           // Fotoğraf ön izleme.
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: entry.imageBytes != null
-                ? Image.memory(
-                    entry.imageBytes!,
-                    width: 56,
-                    height: 56,
-                    fit: BoxFit.cover,
-                  )
-                : Container(
-                    width: 56,
-                    height: 56,
-                    color: AppColors.blueBg,
-                    child: Icon(
-                      entry.hasPhoto ? Icons.image_rounded : Icons.notes_rounded,
-                      color: AppColors.blueDark,
-                    ),
-                  ),
+            child: SizedBox(width: 56, height: 56, child: _thumbnail()),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -204,6 +189,30 @@ class _MistakeCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _thumbnail() {
+    if (entry.imageBytes != null) {
+      return Image.memory(entry.imageBytes!, fit: BoxFit.cover);
+    }
+    if (entry.photoUrl != null) {
+      return Image.network(
+        entry.photoUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _thumbPlaceholder(),
+      );
+    }
+    return _thumbPlaceholder();
+  }
+
+  Widget _thumbPlaceholder() {
+    return Container(
+      color: AppColors.blueBg,
+      child: Icon(
+        entry.hasPhoto ? Icons.image_rounded : Icons.notes_rounded,
+        color: AppColors.blueDark,
       ),
     );
   }
