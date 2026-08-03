@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Ağ erişimi (Supabase). Release derlemesinde de gerekli; Flutter bunu
+         yalnızca debug/profile manifest'ine koyduğu için elle ekliyoruz. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="ai_yks_coach"
         android:name="${applicationName}"
