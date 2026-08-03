@@ -42,9 +42,7 @@ class HomeDashboard extends StatelessWidget {
               _dailyGoalCard(),
               const SizedBox(height: 14),
               GameButton(
-                label: gameProgress.dailyDone == 0
-                    ? 'GÜNE BAŞLA'
-                    : 'PRATİĞE DEVAM ET',
+                label: 'HATALARINI ÇÖZ',
                 icon: Icons.play_arrow_rounded,
                 onPressed: () => _startPractice(context),
               ),

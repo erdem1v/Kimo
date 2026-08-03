@@ -1,19 +1,19 @@
-import 'dart:math' as math;
-
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../data/mock_data.dart';
+import '../../data/mistake_repository.dart';
 import '../../models/models.dart';
 import '../../services/sound_service.dart';
-import '../../state/game_progress.dart';
+import '../../services/supabase_config.dart';
+import '../../state/mistake_store.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/drawing_canvas.dart';
 import '../../widgets/game_button.dart';
-import '../../widgets/game_widgets.dart';
 
-/// Oyunlaştırılmış günlük pratik ekranı. Çoktan seçmeli sorular; doğru cevapta
-/// konfeti + ses + titreşim + XP animasyonu, yanlışta sallanma + can kaybı.
+/// Günlük pratik: kullanıcının eklediği hatalı soruları tek tek çözdürür.
+/// Her soruda soru fotoğrafı + karalama kağıdı (kalem/silgi) vardır; öğrenci
+/// çözüp kendini "Doğru çözdüm / Bilemedim" ile değerlendirir.
 class PracticeScreen extends StatefulWidget {
   const PracticeScreen({super.key});
 
@@ -21,22 +21,18 @@ class PracticeScreen extends StatefulWidget {
   State<PracticeScreen> createState() => _PracticeScreenState();
 }
 
-class _PracticeScreenState extends State<PracticeScreen>
-    with TickerProviderStateMixin {
-  final List<PracticeQuestion> _questions = MockData.practiceQuestions;
+class _PracticeScreenState extends State<PracticeScreen> {
+  final bool _remote = SupabaseConfig.isConfigured;
 
+  List<MistakeEntry> _items = <MistakeEntry>[];
+  bool _loading = true;
+  String? _error;
   int _index = 0;
-  int? _selected;
-  bool _answered = false;
-  int _correctCount = 0;
+  int _correct = 0;
   bool _completed = false;
 
   late final ConfettiController _confetti =
       ConfettiController(duration: const Duration(milliseconds: 900));
-  late final AnimationController _shake =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 450));
-  late final AnimationController _xp =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
 
   static const List<Color> _confettiColors = <Color>[
     AppColors.green,
@@ -47,46 +43,59 @@ class _PracticeScreenState extends State<PracticeScreen>
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
   void dispose() {
     _confetti.dispose();
-    _shake.dispose();
-    _xp.dispose();
     super.dispose();
   }
 
-  PracticeQuestion get _q => _questions[_index];
-  bool get _isCorrect => _selected == _q.correctIndex;
-  bool get _isLast => _index >= _questions.length - 1;
-
-  void _check() {
-    setState(() => _answered = true);
-    if (_isCorrect) {
-      _correctCount++;
-      gameProgress.answer(correct: true);
-      sound.correct();
-      HapticFeedback.mediumImpact();
-      _confetti.play();
-      _xp.forward(from: 0);
-    } else {
-      gameProgress.answer(correct: false);
-      sound.wrong();
-      HapticFeedback.heavyImpact();
-      _shake.forward(from: 0);
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final List<MistakeEntry> items =
+          _remote ? await mistakeRepository.fetch() : mistakeStore.items;
+      if (!mounted) return;
+      setState(() {
+        _items = items;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Sorular yüklenemedi.';
+        _loading = false;
+      });
     }
   }
 
-  void _next() {
+  MistakeEntry get _current => _items[_index];
+  bool get _isLast => _index >= _items.length - 1;
+
+  void _answer(bool correct) {
+    if (correct) {
+      _correct++;
+      sound.correct();
+      HapticFeedback.mediumImpact();
+      _confetti.play();
+    } else {
+      sound.wrong();
+      HapticFeedback.heavyImpact();
+    }
     if (_isLast) {
       setState(() => _completed = true);
       sound.levelUp();
       _confetti.play();
-      return;
+    } else {
+      setState(() => _index++);
     }
-    setState(() {
-      _index++;
-      _selected = null;
-      _answered = false;
-    });
   }
 
   @override
@@ -95,56 +104,19 @@ class _PracticeScreenState extends State<PracticeScreen>
       backgroundColor: Colors.white,
       body: Stack(
         children: <Widget>[
-          SafeArea(
-            child: _completed ? _buildCompletion() : _buildQuestion(),
-          ),
-          // Konfeti tüm ekranın üstünden patlar.
+          SafeArea(child: _body()),
           Align(
             alignment: Alignment.topCenter,
             child: ConfettiWidget(
               confettiController: _confetti,
               blastDirectionality: BlastDirectionality.explosive,
               shouldLoop: false,
-              numberOfParticles: 22,
-              maxBlastForce: 22,
+              numberOfParticles: 20,
+              maxBlastForce: 20,
               minBlastForce: 8,
               gravity: 0.25,
               emissionFrequency: 0.06,
               colors: _confettiColors,
-            ),
-          ),
-          // Doğru cevapta yükselip kaybolan "+10 XP" balonu.
-          Align(
-            alignment: const Alignment(0, -0.5),
-            child: IgnorePointer(
-              child: AnimatedBuilder(
-                animation: _xp,
-                builder: (BuildContext context, _) {
-                  final double v = _xp.value;
-                  if (!_xp.isAnimating || v == 0) return const SizedBox.shrink();
-                  return Opacity(
-                    opacity: (1 - v).clamp(0.0, 1.0),
-                    child: Transform.translate(
-                      offset: Offset(0, -60 * v),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.gold,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '+${GameProgress.xpPerCorrect} XP ⚡',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
             ),
           ),
         ],
@@ -152,12 +124,27 @@ class _PracticeScreenState extends State<PracticeScreen>
     );
   }
 
-  Widget _buildQuestion() {
+  Widget _body() {
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) return _messageView(_error!, retry: true);
+    if (_items.isEmpty) {
+      return _messageView(
+        'Henüz hata yok.\n"Hatalarım" sekmesinden hatalı soru ekleyince '
+        'burada çözebilirsin.',
+        emoji: '📭',
+      );
+    }
+    if (_completed) return _completionView();
+    return _practiceView();
+  }
+
+  Widget _practiceView() {
+    final MistakeEntry e = _current;
     return Column(
       children: <Widget>[
-        // Üst şerit: kapat + ilerleme + can
+        // Üst şerit: kapat + ilerleme
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
+          padding: const EdgeInsets.fromLTRB(8, 8, 16, 4),
           child: Row(
             children: <Widget>[
               IconButton(
@@ -165,53 +152,162 @@ class _PracticeScreenState extends State<PracticeScreen>
                 onPressed: () => Navigator.of(context).maybePop(),
               ),
               Expanded(
-                child: RoundedProgressBar(
-                  value: _index / _questions.length,
-                  color: AppColors.green,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: _index / _items.length,
+                    minHeight: 8,
+                    backgroundColor: AppColors.line,
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(AppColors.green),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
-              HeartsRow(hearts: gameProgress.hearts, maxHearts: gameProgress.maxHearts),
+              Text('${_index + 1}/${_items.length}',
+                  style: const TextStyle(fontWeight: FontWeight.w800)),
             ],
           ),
         ),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                _conceptChip(),
-                const SizedBox(height: 16),
-                AnimatedBuilder(
-                  animation: _shake,
-                  builder: (BuildContext context, Widget? child) {
-                    final double dx =
-                        math.sin(_shake.value * math.pi * 6) * (1 - _shake.value) * 10;
-                    return Transform.translate(offset: Offset(dx, 0), child: child);
-                  },
-                  child: Text(
-                    _q.text,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      height: 1.35,
-                      color: AppColors.ink,
-                    ),
-                  ),
+        // Soru: fotoğraf (dokun → tam ekran) + konu + not
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              _thumbnail(e),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    _conceptChip(e),
+                    if (e.note.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 6),
+                      Text(
+                        e.note,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: AppColors.inkLight, fontSize: 13),
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 24),
-                for (int i = 0; i < _q.options.length; i++) _optionTile(i),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
-        _buildBottomBar(),
+        // Karalama kağıdı
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+            child: DrawingCanvas(key: ValueKey<int>(_index)),
+          ),
+        ),
+        // Değerlendirme
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+              16, 8, 16, 12 + MediaQuery.of(context).padding.bottom),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: GameButton(
+                  label: 'Bilemedim',
+                  color: AppColors.red,
+                  icon: Icons.close_rounded,
+                  onPressed: () => _answer(false),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: GameButton(
+                  label: 'Doğru çözdüm',
+                  color: AppColors.green,
+                  icon: Icons.check_rounded,
+                  onPressed: () => _answer(true),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 
-  Widget _conceptChip() {
+  Widget _thumbnail(MistakeEntry e) {
+    final bool hasPhoto = e.imageBytes != null || e.photoUrl != null;
+    return GestureDetector(
+      onTap: hasPhoto ? () => _showPhoto(e) : null,
+      child: Stack(
+        children: <Widget>[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(width: 88, height: 88, child: _photo(e)),
+          ),
+          if (hasPhoto)
+            Positioned(
+              right: 4,
+              bottom: 4,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.zoom_in, color: Colors.white, size: 16),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _photo(MistakeEntry e, {BoxFit fit = BoxFit.cover}) {
+    if (e.imageBytes != null) return Image.memory(e.imageBytes!, fit: fit);
+    if (e.photoUrl != null) {
+      return Image.network(
+        e.photoUrl!,
+        fit: fit,
+        errorBuilder: (_, _, _) => _photoPlaceholder(),
+      );
+    }
+    return _photoPlaceholder();
+  }
+
+  Widget _photoPlaceholder() => Container(
+        color: AppColors.blueBg,
+        child: const Icon(Icons.notes_rounded, color: AppColors.blueDark),
+      );
+
+  void _showPhoto(MistakeEntry e) {
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext ctx) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(12),
+        child: Stack(
+          children: <Widget>[
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4,
+              child: Center(child: _photo(e, fit: BoxFit.contain)),
+            ),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _conceptChip(MistakeEntry e) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -219,7 +315,7 @@ class _PracticeScreenState extends State<PracticeScreen>
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        '${_q.subject} · ${_q.concept}',
+        '${e.subject} · ${e.concept}',
         style: const TextStyle(
           color: AppColors.blueDark,
           fontWeight: FontWeight.w700,
@@ -229,135 +325,7 @@ class _PracticeScreenState extends State<PracticeScreen>
     );
   }
 
-  Widget _optionTile(int i) {
-    final bool selected = _selected == i;
-    Color border = AppColors.line;
-    Color bg = Colors.white;
-    Color textColor = AppColors.ink;
-
-    if (_answered) {
-      if (i == _q.correctIndex) {
-        border = AppColors.green;
-        bg = AppColors.greenBg;
-        textColor = AppColors.greenDark;
-      } else if (selected) {
-        border = AppColors.red;
-        bg = AppColors.redBg;
-        textColor = AppColors.redDark;
-      }
-    } else if (selected) {
-      border = AppColors.blue;
-      bg = AppColors.blueBg;
-      textColor = AppColors.blueDark;
-    }
-
-    return GestureDetector(
-      onTap: _answered
-          ? null
-          : () {
-              sound.tap();
-              setState(() => _selected = i);
-            },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: border, width: 2),
-        ),
-        child: Row(
-          children: <Widget>[
-            Container(
-              width: 30,
-              height: 30,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: border, width: 2),
-              ),
-              child: Text(
-                String.fromCharCode(65 + i),
-                style: TextStyle(
-                    color: textColor, fontWeight: FontWeight.w800, fontSize: 14),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                _q.options[i],
-                style: TextStyle(
-                    color: textColor, fontWeight: FontWeight.w700, fontSize: 16),
-              ),
-            ),
-            if (_answered && i == _q.correctIndex)
-              const Icon(Icons.check_circle, color: AppColors.green)
-            else if (_answered && selected)
-              const Icon(Icons.cancel, color: AppColors.red),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomBar() {
-    if (!_answered) {
-      return Padding(
-        padding: EdgeInsets.fromLTRB(
-            20, 8, 20, 16 + MediaQuery.of(context).padding.bottom),
-        child: GameButton(
-          label: 'KONTROL ET',
-          enabled: _selected != null,
-          onPressed: _check,
-        ),
-      );
-    }
-
-    final bool correct = _isCorrect;
-    final Color accent = correct ? AppColors.greenDark : AppColors.redDark;
-    return Container(
-      width: double.infinity,
-      color: correct ? AppColors.greenBg : AppColors.redBg,
-      padding: EdgeInsets.fromLTRB(
-          20, 18, 20, 16 + MediaQuery.of(context).padding.bottom),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Icon(correct ? Icons.check_circle : Icons.cancel, color: accent),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  correct
-                      ? 'Harika, doğru! 🎉'
-                      : 'Doğru cevap: ${_q.options[_q.correctIndex]}',
-                  style: TextStyle(
-                      color: accent, fontWeight: FontWeight.w800, fontSize: 17),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _q.explanation,
-            style: TextStyle(color: accent, fontSize: 14, height: 1.35),
-          ),
-          const SizedBox(height: 14),
-          GameButton(
-            label: _isLast ? 'BİTİR' : 'DEVAM ET',
-            color: correct ? AppColors.green : AppColors.red,
-            onPressed: _next,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCompletion() {
-    final int earnedXp = _correctCount * GameProgress.xpPerCorrect;
+  Widget _completionView() {
     return Padding(
       padding: const EdgeInsets.all(28),
       child: Column(
@@ -365,35 +333,13 @@ class _PracticeScreenState extends State<PracticeScreen>
         children: <Widget>[
           const Text('🏆', style: TextStyle(fontSize: 88)),
           const SizedBox(height: 12),
-          const Text(
-            'Ders tamamlandı!',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
-          ),
+          const Text('Tekrar bitti!',
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
           const SizedBox(height: 8),
-          const Text(
-            'Bugünkü pratiğini bitirdin, harikasın!',
+          Text(
+            '$_correct / ${_items.length} soruyu doğru çözdün.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.inkLight, fontSize: 15),
-          ),
-          const SizedBox(height: 28),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: _resultCard(
-                  '⚡ $earnedXp',
-                  'KAZANILAN XP',
-                  AppColors.gold,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: _resultCard(
-                  '🎯 $_correctCount/${_questions.length}',
-                  'DOĞRU',
-                  AppColors.green,
-                ),
-              ),
-            ],
+            style: const TextStyle(color: AppColors.inkLight, fontSize: 15),
           ),
           const SizedBox(height: 32),
           GameButton(
@@ -405,26 +351,27 @@ class _PracticeScreenState extends State<PracticeScreen>
     );
   }
 
-  Widget _resultCard(String value, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.4), width: 2),
-      ),
-      child: Column(
-        children: <Widget>[
-          Text(value,
-              style: TextStyle(
-                  fontSize: 22, fontWeight: FontWeight.w800, color: color)),
-          const SizedBox(height: 4),
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.inkLight)),
-        ],
+  Widget _messageView(String message, {String emoji = '⚠️', bool retry = false}) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(emoji, style: const TextStyle(fontSize: 64)),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.inkLight, fontSize: 15),
+            ),
+            const SizedBox(height: 24),
+            GameButton(
+              label: retry ? 'Tekrar dene' : 'TAMAM',
+              onPressed: retry ? _load : () => Navigator.of(context).maybePop(),
+            ),
+          ],
+        ),
       ),
     );
   }
