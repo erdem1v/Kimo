@@ -12,8 +12,8 @@ import '../../widgets/drawing_canvas.dart';
 import '../../widgets/game_button.dart';
 
 /// Günlük pratik: kullanıcının eklediği hatalı soruları tek tek çözdürür.
-/// Her soruda soru fotoğrafı + karalama kağıdı (kalem/silgi) vardır; öğrenci
-/// çözüp kendini "Doğru çözdüm / Bilemedim" ile değerlendirir.
+/// Soru büyük gösterilir; kalem/silgi doğrudan sorunun üstünde kullanılır.
+/// Öğrenci çözüp kendini "Doğru çözdüm / Bilemedim" ile değerlendirir.
 class PracticeScreen extends StatefulWidget {
   const PracticeScreen({super.key});
 
@@ -78,6 +78,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
   MistakeEntry get _current => _items[_index];
   bool get _isLast => _index >= _items.length - 1;
+  bool _hasPhoto(MistakeEntry e) => e.imageBytes != null || e.photoUrl != null;
 
   void _answer(bool correct) {
     if (correct) {
@@ -169,40 +170,37 @@ class _PracticeScreenState extends State<PracticeScreen> {
             ],
           ),
         ),
-        // Soru: fotoğraf (dokun → tam ekran) + konu + not
+        // Konu etiketi + (varsa) not / tam ekran
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              _thumbnail(e),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    _conceptChip(e),
-                    if (e.note.isNotEmpty) ...<Widget>[
-                      const SizedBox(height: 6),
-                      Text(
-                        e.note,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            color: AppColors.inkLight, fontSize: 13),
-                      ),
-                    ],
-                  ],
+              Expanded(child: _conceptChip(e)),
+              if (e.note.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.sticky_note_2_outlined,
+                      color: AppColors.inkLight),
+                  tooltip: 'Notun',
+                  onPressed: () => _showNote(e),
                 ),
-              ),
+              if (_hasPhoto(e))
+                IconButton(
+                  icon: const Icon(Icons.fullscreen_rounded,
+                      color: AppColors.inkLight),
+                  tooltip: 'Tam ekran',
+                  onPressed: () => _showPhoto(e),
+                ),
             ],
           ),
         ),
-        // Karalama kağıdı
+        // Soru + çizim (büyük alan)
         Expanded(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-            child: DrawingCanvas(key: ValueKey<int>(_index)),
+            child: DrawingCanvas(
+              key: ValueKey<int>(_index),
+              background: _questionBackground(e),
+            ),
           ),
         ),
         // Değerlendirme
@@ -235,50 +233,76 @@ class _PracticeScreenState extends State<PracticeScreen> {
     );
   }
 
-  Widget _thumbnail(MistakeEntry e) {
-    final bool hasPhoto = e.imageBytes != null || e.photoUrl != null;
-    return GestureDetector(
-      onTap: hasPhoto ? () => _showPhoto(e) : null,
-      child: Stack(
-        children: <Widget>[
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox(width: 88, height: 88, child: _photo(e)),
+  /// Çizim katmanının arka planı: soru fotoğrafı (yoksa metin).
+  Widget _questionBackground(MistakeEntry e) {
+    if (e.imageBytes != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Image.memory(e.imageBytes!, fit: BoxFit.contain),
+        ),
+      );
+    }
+    if (e.photoUrl != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Image.network(
+            e.photoUrl!,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => _noPhotoText(e),
           ),
-          if (hasPhoto)
-            Positioned(
-              right: 4,
-              bottom: 4,
-              child: Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.zoom_in, color: Colors.white, size: 16),
-              ),
+        ),
+      );
+    }
+    return _noPhotoText(e);
+  }
+
+  Widget _noPhotoText(MistakeEntry e) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(Icons.help_outline_rounded,
+                size: 48, color: AppColors.inkLight),
+            const SizedBox(height: 12),
+            Text(
+              e.concept,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.ink),
             ),
-        ],
+            if (e.note.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 8),
+              Text(
+                e.note,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.inkLight, fontSize: 14),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _photo(MistakeEntry e, {BoxFit fit = BoxFit.cover}) {
-    if (e.imageBytes != null) return Image.memory(e.imageBytes!, fit: fit);
-    if (e.photoUrl != null) {
-      return Image.network(
-        e.photoUrl!,
-        fit: fit,
-        errorBuilder: (_, _, _) => _photoPlaceholder(),
-      );
-    }
-    return _photoPlaceholder();
+  void _showNote(MistakeEntry e) {
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: const Text('Notun'),
+        content: Text(e.note),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Kapat'),
+          ),
+        ],
+      ),
+    );
   }
-
-  Widget _photoPlaceholder() => Container(
-        color: AppColors.blueBg,
-        child: const Icon(Icons.notes_rounded, color: AppColors.blueDark),
-      );
 
   void _showPhoto(MistakeEntry e) {
     showDialog<void>(
@@ -291,7 +315,11 @@ class _PracticeScreenState extends State<PracticeScreen> {
             InteractiveViewer(
               minScale: 0.5,
               maxScale: 4,
-              child: Center(child: _photo(e, fit: BoxFit.contain)),
+              child: Center(
+                child: e.imageBytes != null
+                    ? Image.memory(e.imageBytes!, fit: BoxFit.contain)
+                    : Image.network(e.photoUrl!, fit: BoxFit.contain),
+              ),
             ),
             Positioned(
               top: 4,
@@ -308,18 +336,22 @@ class _PracticeScreenState extends State<PracticeScreen> {
   }
 
   Widget _conceptChip(MistakeEntry e) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.blueBg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        '${e.subject} · ${e.concept}',
-        style: const TextStyle(
-          color: AppColors.blueDark,
-          fontWeight: FontWeight.w700,
-          fontSize: 13,
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.blueBg,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          '${e.subject} · ${e.concept}',
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: AppColors.blueDark,
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+          ),
         ),
       ),
     );

@@ -3,32 +3,32 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
 class _Stroke {
-  _Stroke(this.color, this.width);
-  final Color color;
+  _Stroke({required this.isEraser, required this.width});
+  final bool isEraser;
   final double width;
   final List<Offset> points = <Offset>[];
 }
 
-/// Soru çözerken kullanılan basit karalama kağıdı: kalem + silgi + geri al +
-/// temizle. Beyaz zemin üzerinde silgi, beyaz çizerek siler.
+/// Soru fotoğrafının ÜSTÜNE çizim yapılan katman: kalem + silgi + geri al +
+/// temizle. Arka plan olarak [background] (genellikle soru fotoğrafı) verilir;
+/// silgi gerçek siler (mürekkebi kaldırır, altındaki soru görünür).
 class DrawingCanvas extends StatefulWidget {
-  const DrawingCanvas({super.key});
+  const DrawingCanvas({super.key, this.background});
+
+  final Widget? background;
 
   @override
   State<DrawingCanvas> createState() => _DrawingCanvasState();
 }
 
 class _DrawingCanvasState extends State<DrawingCanvas> {
-  static const Color _penColor = Color(0xFF1A1A2E);
+  static const Color _penColor = Color(0xFF2563EB); // beyaz kağıtta belirgin mavi
 
   final List<_Stroke> _strokes = <_Stroke>[];
   bool _eraser = false;
 
-  void _startStroke(Offset p) {
-    final _Stroke s = _Stroke(
-      _eraser ? Colors.white : _penColor,
-      _eraser ? 26 : 3.2,
-    );
+  void _start(Offset p) {
+    final _Stroke s = _Stroke(isEraser: _eraser, width: _eraser ? 28 : 3.5);
     s.points.add(p);
     setState(() => _strokes.add(s));
   }
@@ -60,13 +60,22 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
               border: Border.all(color: AppColors.line, width: 1.5),
             ),
             clipBehavior: Clip.antiAlias,
-            child: GestureDetector(
-              onPanStart: (DragStartDetails d) => _startStroke(d.localPosition),
-              onPanUpdate: (DragUpdateDetails d) => _extend(d.localPosition),
-              child: CustomPaint(
-                painter: _CanvasPainter(_strokes),
-                child: const SizedBox.expand(),
-              ),
+            child: Stack(
+              children: <Widget>[
+                if (widget.background != null)
+                  Positioned.fill(child: widget.background!),
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onPanStart: (DragStartDetails d) => _start(d.localPosition),
+                    onPanUpdate: (DragUpdateDetails d) => _extend(d.localPosition),
+                    child: CustomPaint(
+                      painter: _CanvasPainter(_strokes, _penColor),
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -135,24 +144,31 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
 }
 
 class _CanvasPainter extends CustomPainter {
-  _CanvasPainter(this.strokes);
+  _CanvasPainter(this.strokes, this.penColor);
 
   final List<_Stroke> strokes;
+  final Color penColor;
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Mürekkep katmanını izole et ki silgi (BlendMode.clear) yalnızca çizimi
+    // silsin, altındaki fotoğrafı değil.
+    canvas.saveLayer(Offset.zero & size, Paint());
     for (final _Stroke s in strokes) {
       final Paint paint = Paint()
-        ..color = s.color
+        ..style = PaintingStyle.stroke
         ..strokeWidth = s.width
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
-        ..style = PaintingStyle.stroke;
+        ..color = s.isEraser ? const Color(0xFF000000) : penColor
+        ..blendMode = s.isEraser ? BlendMode.clear : BlendMode.srcOver;
       if (s.points.length < 2) {
         canvas.drawCircle(
           s.points.first,
           s.width / 2,
-          Paint()..color = s.color,
+          Paint()
+            ..color = paint.color
+            ..blendMode = paint.blendMode,
         );
       } else {
         final Path path = Path()
@@ -163,6 +179,7 @@ class _CanvasPainter extends CustomPainter {
         canvas.drawPath(path, paint);
       }
     }
+    canvas.restore();
   }
 
   @override
