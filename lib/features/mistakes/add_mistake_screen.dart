@@ -5,15 +5,15 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../data/mistake_repository.dart';
 import '../../models/models.dart';
-import '../../services/supabase_config.dart';
 import '../../services/sound_service.dart';
+import '../../services/supabase_config.dart';
 import '../../state/mistake_store.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_button.dart';
 import '../../widgets/mistake_style.dart';
 
-/// Hatalı soru ekleme ekranı. Fotoğraf yükleme mock; kayıt hata bankasına
-/// eklenir.
+/// Hatalı soru ekleme. Fotoğraf seçilince AI şıkları çıkarır; kullanıcı doğru
+/// şıkkı işaretler. Kayıt hata bankasına eklenir.
 class AddMistakeScreen extends StatefulWidget {
   const AddMistakeScreen({super.key});
 
@@ -39,6 +39,12 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
   MistakeType? _type;
   bool _saving = false;
 
+  // AI ile çıkarılan şıklar
+  bool _analyzing = false;
+  final List<TextEditingController> _optionCtrls = <TextEditingController>[];
+  final List<String> _optionLabels = <String>[];
+  int? _correctIndex;
+
   @override
   void initState() {
     super.initState();
@@ -49,11 +55,24 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
   void dispose() {
     _concept.dispose();
     _note.dispose();
+    _clearOptions();
     super.dispose();
   }
 
   bool get _canSave =>
-      _concept.text.trim().isNotEmpty && _subject != null && _type != null;
+      _concept.text.trim().isNotEmpty &&
+      _subject != null &&
+      _type != null &&
+      (_optionCtrls.isEmpty || _correctIndex != null);
+
+  void _clearOptions() {
+    for (final TextEditingController c in _optionCtrls) {
+      c.dispose();
+    }
+    _optionCtrls.clear();
+    _optionLabels.clear();
+    _correctIndex = null;
+  }
 
   void _pickPhoto() {
     sound.tap();
@@ -86,8 +105,8 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
                 },
               ),
               ListTile(
-                leading:
-                    const Icon(Icons.photo_library_rounded, color: AppColors.green),
+                leading: const Icon(Icons.photo_library_rounded,
+                    color: AppColors.green),
                 title: const Text('Galeriden seç'),
                 onTap: () {
                   Navigator.pop(context);
@@ -113,6 +132,7 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
       final Uint8List bytes = await file.readAsBytes();
       if (!mounted) return;
       setState(() => _imageBytes = bytes);
+      if (SupabaseConfig.isConfigured) _analyze(bytes);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -121,10 +141,64 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
     }
   }
 
+  Future<void> _analyze(Uint8List bytes) async {
+    setState(() => _analyzing = true);
+    try {
+      final List<QuestionOption> opts =
+          await mistakeRepository.analyzeQuestion(bytes);
+      if (!mounted) return;
+      _clearOptions();
+      setState(() {
+        for (final QuestionOption o in opts) {
+          _optionLabels.add(o.label);
+          _optionCtrls.add(TextEditingController(text: o.text));
+        }
+        _analyzing = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _analyzing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Şıklar çıkarılamadı. Elle ekleyebilirsin.')),
+      );
+    }
+  }
+
+  void _addOption() {
+    setState(() {
+      _optionLabels.add(String.fromCharCode(65 + _optionCtrls.length));
+      _optionCtrls.add(TextEditingController());
+    });
+  }
+
+  void _removeOption(int i) {
+    setState(() {
+      _optionCtrls[i].dispose();
+      _optionCtrls.removeAt(i);
+      _optionLabels.removeAt(i);
+      if (_correctIndex == i) {
+        _correctIndex = null;
+      } else if (_correctIndex != null && _correctIndex! > i) {
+        _correctIndex = _correctIndex! - 1;
+      }
+      for (int k = 0; k < _optionLabels.length; k++) {
+        _optionLabels[k] = String.fromCharCode(65 + k);
+      }
+    });
+  }
+
   Future<void> _save() async {
     if (_saving) return;
     setState(() => _saving = true);
     try {
+      final List<QuestionOption>? options = _optionCtrls.isEmpty
+          ? null
+          : <QuestionOption>[
+              for (int i = 0; i < _optionCtrls.length; i++)
+                QuestionOption(
+                    label: _optionLabels[i], text: _optionCtrls[i].text.trim()),
+            ];
+
       if (SupabaseConfig.isConfigured) {
         await mistakeRepository.add(
           subject: _subject!,
@@ -132,6 +206,8 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
           type: _type!,
           note: _note.text.trim(),
           imageBytes: _imageBytes,
+          options: options,
+          correctIndex: _correctIndex,
         );
       } else {
         mistakeStore.add(
@@ -143,6 +219,8 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
             date: DateTime.now(),
             hasPhoto: _imageBytes != null,
             imageBytes: _imageBytes,
+            options: options,
+            correctIndex: _correctIndex,
           ),
         );
       }
@@ -167,12 +245,18 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         children: <Widget>[
           _photoArea(),
+          if (SupabaseConfig.isConfigured && _imageBytes != null) ...<Widget>[
+            const SizedBox(height: 22),
+            _label('Şıklar'),
+            const SizedBox(height: 8),
+            _optionsBlock(),
+          ],
           const SizedBox(height: 22),
           _label('Konu / Kavram'),
           const SizedBox(height: 8),
           TextField(
             controller: _concept,
-            decoration: _inputDecoration('Örn. Oran - Orantı'),
+            decoration: _inputDecoration('Örn. Birinci Dereceden Denklem'),
           ),
           const SizedBox(height: 22),
           _label('Ders'),
@@ -215,6 +299,95 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
             label: _saving ? 'Kaydediliyor...' : 'KAYDET',
             enabled: _canSave && !_saving,
             onPressed: _save,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _optionsBlock() {
+    if (_analyzing) {
+      return Row(
+        children: const <Widget>[
+          SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2)),
+          SizedBox(width: 10),
+          Text('AI şıkları çıkarıyor...',
+              style: TextStyle(color: AppColors.inkLight)),
+        ],
+      );
+    }
+    if (_optionCtrls.isEmpty) {
+      return Row(
+        children: <Widget>[
+          const Expanded(
+            child: Text('Şık bulunamadı.',
+                style: TextStyle(color: AppColors.inkLight)),
+          ),
+          TextButton(
+            onPressed: () => _analyze(_imageBytes!),
+            child: const Text('Tekrar dene'),
+          ),
+          TextButton(onPressed: _addOption, child: const Text('Elle ekle')),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text('Doğru şıkka dokunup işaretle:',
+            style: TextStyle(color: AppColors.inkLight, fontSize: 13)),
+        const SizedBox(height: 8),
+        for (int i = 0; i < _optionCtrls.length; i++) _optionRow(i),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: _addOption,
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Şık ekle'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _optionRow(int i) {
+    final bool correct = _correctIndex == i;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: <Widget>[
+          GestureDetector(
+            onTap: () => setState(() => _correctIndex = i),
+            child: Container(
+              width: 32,
+              height: 32,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: correct ? AppColors.green : Colors.transparent,
+                border: Border.all(
+                    color: correct ? AppColors.green : AppColors.line, width: 2),
+              ),
+              child: correct
+                  ? const Icon(Icons.check, color: Colors.white, size: 18)
+                  : Text(_optionLabels[i],
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800, color: AppColors.ink)),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _optionCtrls[i],
+              decoration: _inputDecoration('Şık ${_optionLabels[i]}'),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close_rounded, color: AppColors.inkLight),
+            onPressed: () => _removeOption(i),
           ),
         ],
       ),
