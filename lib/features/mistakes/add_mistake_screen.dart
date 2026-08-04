@@ -59,11 +59,19 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
     super.dispose();
   }
 
-  bool get _canSave =>
-      _concept.text.trim().isNotEmpty &&
-      _subject != null &&
-      _type != null &&
-      (_optionCtrls.isEmpty || _correctIndex != null);
+  bool get _canSave {
+    final bool base = _concept.text.trim().isNotEmpty &&
+        _subject != null &&
+        _type != null;
+    if (!SupabaseConfig.isConfigured) {
+      return base && (_optionCtrls.isEmpty || _correctIndex != null);
+    }
+    // Supabase modunda şıklar zorunlu: şık yoksa/doğru işaretlenmediyse kaydetme.
+    return base &&
+        !_analyzing &&
+        _optionCtrls.isNotEmpty &&
+        _correctIndex != null;
+  }
 
   void _clearOptions() {
     for (final TextEditingController c in _optionCtrls) {
@@ -245,7 +253,9 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         children: <Widget>[
           _photoArea(),
-          if (SupabaseConfig.isConfigured && _imageBytes != null) ...<Widget>[
+          if (SupabaseConfig.isConfigured &&
+              _imageBytes != null &&
+              !_analyzing) ...<Widget>[
             const SizedBox(height: 22),
             _label('Şıklar'),
             const SizedBox(height: 8),
@@ -306,32 +316,41 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
   }
 
   Widget _optionsBlock() {
-    if (_analyzing) {
-      return Row(
-        children: const <Widget>[
-          SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2)),
-          SizedBox(width: 10),
-          Text('AI şıkları çıkarıyor...',
-              style: TextStyle(color: AppColors.inkLight)),
-        ],
-      );
-    }
     if (_optionCtrls.isEmpty) {
-      return Row(
-        children: <Widget>[
-          const Expanded(
-            child: Text('Şık bulunamadı.',
-                style: TextStyle(color: AppColors.inkLight)),
-          ),
-          TextButton(
-            onPressed: () => _analyze(_imageBytes!),
-            child: const Text('Tekrar dene'),
-          ),
-          TextButton(onPressed: _addOption, child: const Text('Elle ekle')),
-        ],
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.redBg,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: const <Widget>[
+                Icon(Icons.warning_amber_rounded, color: AppColors.redDark),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Şıklar görünmüyor. Soruyu daha net/yakın çek.',
+                    style: TextStyle(
+                        color: AppColors.redDark, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: <Widget>[
+                TextButton(
+                  onPressed: () => _analyze(_imageBytes!),
+                  child: const Text('Tekrar dene'),
+                ),
+                TextButton(onPressed: _addOption, child: const Text('Elle ekle')),
+              ],
+            ),
+          ],
+        ),
       );
     }
     return Column(

@@ -390,72 +390,58 @@ class _PracticeScreenState extends State<PracticeScreen> {
   }
 
   Widget _optionsSection(MistakeEntry e) {
+    final int n = e.options!.length;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        for (int i = 0; i < e.options!.length; i++) _optionTile(e, i),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: <Widget>[
+            for (int i = 0; i < n; i++) _letterButton(e, i),
+          ],
+        ),
         if (_answered) ...<Widget>[
-          const SizedBox(height: 4),
+          const SizedBox(height: 10),
           GameButton(label: _isLast ? 'BİTİR' : 'DEVAM', onPressed: _advance),
         ],
       ],
     );
   }
 
-  Widget _optionTile(MistakeEntry e, int i) {
-    final QuestionOption opt = e.options![i];
-    Color border = AppColors.line;
+  Widget _letterButton(MistakeEntry e, int i) {
+    final String label = e.options![i].label.isNotEmpty
+        ? e.options![i].label
+        : String.fromCharCode(65 + i);
     Color bg = Colors.white;
+    Color border = AppColors.line;
     Color fg = AppColors.ink;
     if (_answered) {
       if (i == e.correctIndex) {
+        bg = AppColors.green;
         border = AppColors.green;
-        bg = AppColors.greenBg;
-        fg = AppColors.greenDark;
+        fg = Colors.white;
       } else if (i == _selectedOption) {
+        bg = AppColors.red;
         border = AppColors.red;
-        bg = AppColors.redBg;
-        fg = AppColors.redDark;
+        fg = Colors.white;
+      } else {
+        fg = AppColors.inkLight;
       }
     }
     return GestureDetector(
       onTap: _answered ? null : () => _pickOption(i),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        width: 54,
+        height: 54,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: border, width: 2),
+          shape: BoxShape.circle,
+          border: Border.all(color: border, width: 2.5),
         ),
-        child: Row(
-          children: <Widget>[
-            Container(
-              width: 28,
-              height: 28,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: border, width: 2),
-              ),
-              child: Text(opt.label,
-                  style: TextStyle(
-                      color: fg, fontWeight: FontWeight.w800, fontSize: 13)),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                opt.text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: fg, fontWeight: FontWeight.w600),
-              ),
-            ),
-            if (_answered && i == e.correctIndex)
-              const Icon(Icons.check_circle, color: AppColors.green)
-            else if (_answered && i == _selectedOption)
-              const Icon(Icons.cancel, color: AppColors.red),
-          ],
+        child: Text(
+          label,
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: fg),
         ),
       ),
     );
