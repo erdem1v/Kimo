@@ -27,7 +27,12 @@ class MistakeRepository {
       final String? path = row['photo_path'] as String?;
       String? url;
       if (path != null) {
-        url = await _client.storage.from(_bucket).createSignedUrl(path, 3600);
+        try {
+          url = await _client.storage.from(_bucket).createSignedUrl(path, 3600);
+        } catch (_) {
+          // Fotoğraf Storage'dan silinmiş olabilir; kaydı fotosuz göster.
+          url = null;
+        }
       }
 
       final dynamic rawOptions = row['options'];
