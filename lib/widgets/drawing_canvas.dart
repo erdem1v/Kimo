@@ -9,9 +9,10 @@ class _Stroke {
   final List<Offset> points = <Offset>[];
 }
 
-/// Soru fotoğrafının ÜSTÜNE çizim yapılan katman: kalem + silgi + geri al +
-/// temizle. Arka plan olarak [background] (genellikle soru fotoğrafı) verilir;
-/// silgi gerçek siler (mürekkebi kaldırır, altındaki soru görünür).
+/// Soru fotoğrafının üstünde iki modlu çalışma alanı:
+/// * **Dokunma (varsayılan):** parmakla yakınlaştır/kaydır (InteractiveViewer).
+/// * **Kalem / Silgi:** üstüne çizim; çizimler soruya sabittir, zoom'la ölçeklenir.
+/// Arka plan olarak [background] (soru fotoğrafı) verilir.
 class DrawingCanvas extends StatefulWidget {
   const DrawingCanvas({super.key, this.background});
 
@@ -22,10 +23,18 @@ class DrawingCanvas extends StatefulWidget {
 }
 
 class _DrawingCanvasState extends State<DrawingCanvas> {
-  static const Color _penColor = Color(0xFF2563EB); // beyaz kağıtta belirgin mavi
+  static const Color _penColor = Color(0xFF2563EB);
 
   final List<_Stroke> _strokes = <_Stroke>[];
+  final TransformationController _tc = TransformationController();
+  bool _drawMode = false; // false = dokunma/zoom
   bool _eraser = false;
+
+  @override
+  void dispose() {
+    _tc.dispose();
+    super.dispose();
+  }
 
   void _start(Offset p) {
     final _Stroke s = _Stroke(isEraser: _eraser, width: _eraser ? 28 : 3.5);
@@ -46,6 +55,8 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
     if (_strokes.isNotEmpty) setState(_strokes.clear);
   }
 
+  void _resetZoom() => _tc.value = Matrix4.identity();
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -60,22 +71,39 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
               border: Border.all(color: AppColors.line, width: 1.5),
             ),
             clipBehavior: Clip.antiAlias,
-            child: Stack(
-              children: <Widget>[
-                if (widget.background != null)
-                  Positioned.fill(child: widget.background!),
-                Positioned.fill(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onPanStart: (DragStartDetails d) => _start(d.localPosition),
-                    onPanUpdate: (DragUpdateDetails d) => _extend(d.localPosition),
-                    child: CustomPaint(
-                      painter: _CanvasPainter(_strokes, _penColor),
-                      child: const SizedBox.expand(),
-                    ),
+            child: InteractiveViewer(
+              transformationController: _tc,
+              panEnabled: !_drawMode,
+              scaleEnabled: !_drawMode,
+              minScale: 1,
+              maxScale: 5,
+              child: Stack(
+                fit: StackFit.expand,
+                children: <Widget>[
+                  if (widget.background != null)
+                    Positioned.fill(child: widget.background!),
+                  Positioned.fill(
+                    child: _drawMode
+                        ? GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onPanStart: (DragStartDetails d) =>
+                                _start(d.localPosition),
+                            onPanUpdate: (DragUpdateDetails d) =>
+                                _extend(d.localPosition),
+                            child: CustomPaint(
+                              painter: _CanvasPainter(_strokes, _penColor),
+                              child: const SizedBox.expand(),
+                            ),
+                          )
+                        : IgnorePointer(
+                            child: CustomPaint(
+                              painter: _CanvasPainter(_strokes, _penColor),
+                              child: const SizedBox.expand(),
+                            ),
+                          ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -86,31 +114,55 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
   Widget _toolbar() {
     return Row(
       children: <Widget>[
-        _toolChip(Icons.edit, 'Kalem', !_eraser, () => setState(() => _eraser = false)),
-        const SizedBox(width: 8),
-        _toolChip(Icons.auto_fix_normal, 'Silgi', _eraser, () => setState(() => _eraser = true)),
+        _modeButton(Icons.pan_tool_rounded, 'Dokunma', !_drawMode, () {
+          setState(() => _drawMode = false);
+        }),
+        const SizedBox(width: 6),
+        _modeButton(Icons.edit, 'Kalem', _drawMode && !_eraser, () {
+          setState(() {
+            _drawMode = true;
+            _eraser = false;
+          });
+        }),
+        const SizedBox(width: 6),
+        _modeButton(Icons.auto_fix_normal, 'Silgi', _drawMode && _eraser, () {
+          setState(() {
+            _drawMode = true;
+            _eraser = true;
+          });
+        }),
         const Spacer(),
         IconButton(
           onPressed: _strokes.isEmpty ? null : _undo,
           icon: const Icon(Icons.undo_rounded),
           color: AppColors.inkLight,
           tooltip: 'Geri al',
+          visualDensity: VisualDensity.compact,
         ),
         IconButton(
           onPressed: _strokes.isEmpty ? null : _clear,
           icon: const Icon(Icons.delete_outline_rounded),
           color: AppColors.inkLight,
           tooltip: 'Temizle',
+          visualDensity: VisualDensity.compact,
+        ),
+        IconButton(
+          onPressed: _resetZoom,
+          icon: const Icon(Icons.center_focus_strong_rounded),
+          color: AppColors.inkLight,
+          tooltip: 'Yakınlaştırmayı sıfırla',
+          visualDensity: VisualDensity.compact,
         ),
       ],
     );
   }
 
-  Widget _toolChip(IconData icon, String label, bool active, VoidCallback onTap) {
+  Widget _modeButton(
+      IconData icon, String label, bool active, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: active
               ? AppColors.green.withValues(alpha: 0.14)
@@ -125,15 +177,15 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             Icon(icon,
-                size: 18,
+                size: 17,
                 color: active ? AppColors.greenDark : AppColors.inkLight),
-            const SizedBox(width: 6),
+            const SizedBox(width: 5),
             Text(
               label,
               style: TextStyle(
                 color: active ? AppColors.greenDark : AppColors.inkLight,
                 fontWeight: FontWeight.w700,
-                fontSize: 13,
+                fontSize: 12,
               ),
             ),
           ],
@@ -151,8 +203,6 @@ class _CanvasPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Mürekkep katmanını izole et ki silgi (BlendMode.clear) yalnızca çizimi
-    // silsin, altındaki fotoğrafı değil.
     canvas.saveLayer(Offset.zero & size, Paint());
     for (final _Stroke s in strokes) {
       final Paint paint = Paint()
@@ -171,8 +221,7 @@ class _CanvasPainter extends CustomPainter {
             ..blendMode = paint.blendMode,
         );
       } else {
-        final Path path = Path()
-          ..moveTo(s.points.first.dx, s.points.first.dy);
+        final Path path = Path()..moveTo(s.points.first.dx, s.points.first.dy);
         for (int i = 1; i < s.points.length; i++) {
           path.lineTo(s.points[i].dx, s.points[i].dy);
         }
