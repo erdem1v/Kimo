@@ -81,6 +81,16 @@ class QuestionOption {
   Map<String, dynamic> toJson() => <String, dynamic>{'label': label, 'text': text};
 }
 
+/// AI foto analizinin sonucu. [ok] true ise fotoğrafta okunabilir bir soru +
+/// şıklar var demektir; değilse [reason] kısa bir Türkçe sebep içerir.
+class QuestionAnalysis {
+  const QuestionAnalysis({required this.ok, required this.options, this.reason});
+
+  final bool ok;
+  final List<QuestionOption> options;
+  final String? reason;
+}
+
 /// Hata bankası kaydı.
 class MistakeEntry {
   const MistakeEntry({

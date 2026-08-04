@@ -41,6 +41,7 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
 
   // AI ile çıkarılan şıklar
   bool _analyzing = false;
+  String? _analysisReason;
   final List<TextEditingController> _optionCtrls = <TextEditingController>[];
   final List<String> _optionLabels = <String>[];
   int? _correctIndex;
@@ -150,49 +151,35 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
   }
 
   Future<void> _analyze(Uint8List bytes) async {
-    setState(() => _analyzing = true);
+    setState(() {
+      _analyzing = true;
+      _analysisReason = null;
+    });
     try {
-      final List<QuestionOption> opts =
+      final QuestionAnalysis res =
           await mistakeRepository.analyzeQuestion(bytes);
       if (!mounted) return;
       _clearOptions();
       setState(() {
-        for (final QuestionOption o in opts) {
-          _optionLabels.add(o.label);
-          _optionCtrls.add(TextEditingController(text: o.text));
+        if (res.ok) {
+          for (final QuestionOption o in res.options) {
+            _optionLabels.add(o.label);
+            _optionCtrls.add(TextEditingController(text: o.text));
+          }
+          _analysisReason = null;
+        } else {
+          _analysisReason =
+              res.reason ?? 'Fotoğrafta net bir soru ve şıklar görünmeli.';
         }
         _analyzing = false;
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _analyzing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Şıklar çıkarılamadı. Elle ekleyebilirsin.')),
-      );
+      setState(() {
+        _analyzing = false;
+        _analysisReason = 'Şıklar çıkarılamadı. Tekrar dene.';
+      });
     }
-  }
-
-  void _addOption() {
-    setState(() {
-      _optionLabels.add(String.fromCharCode(65 + _optionCtrls.length));
-      _optionCtrls.add(TextEditingController());
-    });
-  }
-
-  void _removeOption(int i) {
-    setState(() {
-      _optionCtrls[i].dispose();
-      _optionCtrls.removeAt(i);
-      _optionLabels.removeAt(i);
-      if (_correctIndex == i) {
-        _correctIndex = null;
-      } else if (_correctIndex != null && _correctIndex! > i) {
-        _correctIndex = _correctIndex! - 1;
-      }
-      for (int k = 0; k < _optionLabels.length; k++) {
-        _optionLabels[k] = String.fromCharCode(65 + k);
-      }
-    });
   }
 
   Future<void> _save() async {
@@ -327,27 +314,30 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Row(
-              children: const <Widget>[
-                Icon(Icons.warning_amber_rounded, color: AppColors.redDark),
-                SizedBox(width: 8),
+              children: <Widget>[
+                const Icon(Icons.warning_amber_rounded, color: AppColors.redDark),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Şıklar görünmüyor. Soruyu daha net/yakın çek.',
-                    style: TextStyle(
+                    _analysisReason ??
+                        'Fotoğrafta net bir soru ve şıklar görünmeli.',
+                    style: const TextStyle(
                         color: AppColors.redDark, fontWeight: FontWeight.w700),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            Row(
-              children: <Widget>[
-                TextButton(
-                  onPressed: () => _analyze(_imageBytes!),
-                  child: const Text('Tekrar dene'),
-                ),
-                TextButton(onPressed: _addOption, child: const Text('Elle ekle')),
-              ],
+            const SizedBox(height: 2),
+            const Text(
+              'Soruyu şıklarıyla birlikte, net ve yakın çek.',
+              style: TextStyle(color: AppColors.redDark, fontSize: 12),
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () => _analyze(_imageBytes!),
+                child: const Text('Tekrar dene'),
+              ),
             ),
           ],
         ),
@@ -360,14 +350,6 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
             style: TextStyle(color: AppColors.inkLight, fontSize: 13)),
         const SizedBox(height: 8),
         for (int i = 0; i < _optionCtrls.length; i++) _optionRow(i),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            onPressed: _addOption,
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('Şık ekle'),
-          ),
-        ),
       ],
     );
   }
@@ -403,10 +385,6 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
               controller: _optionCtrls[i],
               decoration: _inputDecoration('Şık ${_optionLabels[i]}'),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close_rounded, color: AppColors.inkLight),
-            onPressed: () => _removeOption(i),
           ),
         ],
       ),

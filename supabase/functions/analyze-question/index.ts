@@ -1,9 +1,10 @@
-// AI Gateway — soru fotoğrafından çoktan seçmeli şıkları çıkarır.
-// OpenAI anahtarı SADECE burada (Supabase secret: OPENAI_API_KEY). Uygulamaya
-// asla girmez. Yalnızca giriş yapmış kullanıcılar çağırabilir (verify_jwt).
+// AI Gateway — soru fotoğrafını değerlendirir ve çoktan seçmeli şıkları çıkarır.
+// Geçerli sayılması için fotoğrafta: (1) net OKUNABİLİR olmalı, (2) bir SORU/
+// problem ifadesi olmalı, (3) ŞIKLAR olmalı. Değilse ilgili bayrak false olur
+// ve reason'a kısa Türkçe sebep yazılır.
 //
+// OpenAI anahtarı SADECE burada (Supabase secret: OPENAI_API_KEY).
 // Deploy: supabase functions deploy analyze-question
-// Secret: supabase secrets set OPENAI_API_KEY=sk-...
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -37,9 +38,14 @@ Deno.serve(async (req: Request) => {
         {
           role: "system",
           content:
-            "Sen bir YKS sorusu analiz aracısın. Verilen fotoğraftaki çoktan " +
-            "seçmeli sorunun ŞIKLARINI aynen çıkar. Doğru cevabı SEN belirleme; " +
-            "sadece şıkları listele. Şık yoksa has_options=false döndür.",
+            "Sen bir YKS sorusu doğrulama ve şık çıkarma aracısın. Verilen " +
+            "fotoğrafı değerlendir. GEÇERLİ bir çoktan seçmeli soru fotoğrafı " +
+            "için üç şart: (1) metin net OKUNABİLİR, (2) bir SORU/problem " +
+            "ifadesi var, (3) ŞIKLAR var. is_readable, has_question, " +
+            "has_options bayraklarını buna göre doldur. Şıkları aynen çıkar " +
+            "(doğru cevabı SEN belirleme). Geçerli değilse 'reason' alanına " +
+            "kısa Türkçe sebep yaz (ör. 'Sadece şıklar var, soru görünmüyor' " +
+            "veya 'Fotoğraf bulanık/okunmuyor'); geçerliyse reason boş kalsın.",
         },
         {
           role: "user",
@@ -47,8 +53,7 @@ Deno.serve(async (req: Request) => {
             {
               type: "text",
               text:
-                "Bu fotoğraftaki sorunun şıklarını çıkar. Her şıkkın harfini " +
-                "(A, B, C, D, E) ve metnini ver.",
+                "Bu fotoğrafı değerlendir ve varsa şıkları (harf + metin) çıkar.",
             },
             { type: "image_url", image_url: { url: dataUrl } },
           ],
@@ -57,13 +62,16 @@ Deno.serve(async (req: Request) => {
       response_format: {
         type: "json_schema",
         json_schema: {
-          name: "question_options",
+          name: "question_analysis",
           strict: true,
           schema: {
             type: "object",
             additionalProperties: false,
             properties: {
+              is_readable: { type: "boolean" },
+              has_question: { type: "boolean" },
               has_options: { type: "boolean" },
+              reason: { type: "string" },
               options: {
                 type: "array",
                 items: {
@@ -77,7 +85,13 @@ Deno.serve(async (req: Request) => {
                 },
               },
             },
-            required: ["has_options", "options"],
+            required: [
+              "is_readable",
+              "has_question",
+              "has_options",
+              "reason",
+              "options",
+            ],
           },
         },
       },

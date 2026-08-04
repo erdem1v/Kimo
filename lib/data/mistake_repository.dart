@@ -93,9 +93,9 @@ class MistakeRepository {
     });
   }
 
-  /// Fotoğraftaki sorunun şıklarını AI Gateway (Edge Function) ile çıkarır.
-  /// Şık bulunamazsa boş liste döner.
-  Future<List<QuestionOption>> analyzeQuestion(Uint8List imageBytes) async {
+  /// Fotoğrafı AI Gateway (Edge Function) ile değerlendirir: okunabilir bir
+  /// soru + şıklar var mı? Geçerliyse şıkları, değilse sebebi döndürür.
+  Future<QuestionAnalysis> analyzeQuestion(Uint8List imageBytes) async {
     final FunctionResponse res = await _client.functions.invoke(
       'analyze-question',
       body: <String, dynamic>{
@@ -104,13 +104,37 @@ class MistakeRepository {
       },
     );
     final dynamic data = res.data;
-    if (data is Map && data['has_options'] == true && data['options'] is List) {
-      return (data['options'] as List)
-          .map((dynamic o) =>
-              QuestionOption.fromJson((o as Map).cast<String, dynamic>()))
-          .toList();
+    if (data is! Map) {
+      return const QuestionAnalysis(
+          ok: false, options: <QuestionOption>[], reason: 'Analiz edilemedi.');
     }
-    return <QuestionOption>[];
+
+    final bool readable = data['is_readable'] == true;
+    final bool hasQuestion = data['has_question'] == true;
+    final bool hasOptions = data['has_options'] == true;
+    final List<QuestionOption> options = (data['options'] is List)
+        ? (data['options'] as List)
+            .map((dynamic o) =>
+                QuestionOption.fromJson((o as Map).cast<String, dynamic>()))
+            .toList()
+        : <QuestionOption>[];
+
+    final bool ok =
+        readable && hasQuestion && hasOptions && options.isNotEmpty;
+    if (ok) {
+      return QuestionAnalysis(ok: true, options: options);
+    }
+
+    String reason = (data['reason'] as String?)?.trim() ?? '';
+    if (reason.isEmpty) {
+      reason = !readable
+          ? 'Fotoğraf net okunmuyor.'
+          : !hasQuestion
+              ? 'Soru metni görünmüyor.'
+              : 'Şıklar görünmüyor.';
+    }
+    return QuestionAnalysis(
+        ok: false, options: <QuestionOption>[], reason: reason);
   }
 }
 
