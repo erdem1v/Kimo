@@ -66,6 +66,21 @@ class ChatMessage {
   final bool isUser;
 }
 
+/// Bir sorunun çoktan seçmeli şıkkı (AI ile fotoğraftan çıkarılır).
+class QuestionOption {
+  const QuestionOption({required this.label, required this.text});
+
+  final String label; // 'A', 'B', ...
+  final String text;
+
+  factory QuestionOption.fromJson(Map<String, dynamic> json) => QuestionOption(
+        label: (json['label'] ?? '') as String,
+        text: (json['text'] ?? '') as String,
+      );
+
+  Map<String, dynamic> toJson() => <String, dynamic>{'label': label, 'text': text};
+}
+
 /// Hata bankası kaydı.
 class MistakeEntry {
   const MistakeEntry({
@@ -77,6 +92,8 @@ class MistakeEntry {
     this.hasPhoto = false,
     this.imageBytes,
     this.photoUrl,
+    this.options,
+    this.correctIndex,
   });
 
   final String subject;
@@ -91,6 +108,14 @@ class MistakeEntry {
 
   /// Supabase Storage'daki fotoğrafın imzalı URL'i (uzak kayıtlar için).
   final String? photoUrl;
+
+  /// AI ile çıkarılan şıklar (varsa).
+  final List<QuestionOption>? options;
+
+  /// [options] içindeki doğru şıkkın 0-tabanlı indeksi (varsa).
+  final int? correctIndex;
+
+  bool get hasOptions => options != null && options!.isNotEmpty;
 }
 
 /// Profil vitrinindeki rozet.

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -5,7 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/models.dart';
 
 /// Hata bankasının Supabase uygulaması: `mistakes` tablosu + `mistake-photos`
-/// (özel) storage bucket'ı. Yalnızca Supabase yapılandırılmışken kullanılır.
+/// (özel) storage bucket'ı + `analyze-question` Edge Function (AI Gateway).
 class MistakeRepository {
   MistakeRepository._();
   static final MistakeRepository instance = MistakeRepository._();
@@ -14,8 +15,7 @@ class MistakeRepository {
 
   SupabaseClient get _client => Supabase.instance.client;
 
-  /// Kullanıcının hatalarını (en yeni önce) getirir. Fotoğraflar için kısa
-  /// ömürlü imzalı URL üretir (bucket özel).
+  /// Kullanıcının hatalarını (en yeni önce) getirir.
   Future<List<MistakeEntry>> fetch() async {
     final List<Map<String, dynamic>> rows = await _client
         .from('mistakes')
@@ -29,6 +29,16 @@ class MistakeRepository {
       if (path != null) {
         url = await _client.storage.from(_bucket).createSignedUrl(path, 3600);
       }
+
+      final dynamic rawOptions = row['options'];
+      List<QuestionOption>? options;
+      if (rawOptions is List) {
+        options = rawOptions
+            .map((dynamic o) =>
+                QuestionOption.fromJson((o as Map).cast<String, dynamic>()))
+            .toList();
+      }
+
       result.add(
         MistakeEntry(
           subject: row['subject'] as String,
@@ -38,6 +48,8 @@ class MistakeRepository {
           date: DateTime.parse(row['created_at'] as String),
           hasPhoto: path != null,
           photoUrl: url,
+          options: options,
+          correctIndex: row['correct_index'] as int?,
         ),
       );
     }
@@ -51,6 +63,8 @@ class MistakeRepository {
     required MistakeType type,
     required String note,
     Uint8List? imageBytes,
+    List<QuestionOption>? options,
+    int? correctIndex,
   }) async {
     String? path;
     if (imageBytes != null) {
@@ -72,7 +86,31 @@ class MistakeRepository {
       'mistake_type': type.dbValue,
       'note': note.isEmpty ? null : note,
       'photo_path': path,
+      'options': (options == null || options.isEmpty)
+          ? null
+          : options.map((QuestionOption o) => o.toJson()).toList(),
+      'correct_index': correctIndex,
     });
+  }
+
+  /// Fotoğraftaki sorunun şıklarını AI Gateway (Edge Function) ile çıkarır.
+  /// Şık bulunamazsa boş liste döner.
+  Future<List<QuestionOption>> analyzeQuestion(Uint8List imageBytes) async {
+    final FunctionResponse res = await _client.functions.invoke(
+      'analyze-question',
+      body: <String, dynamic>{
+        'imageBase64': base64Encode(imageBytes),
+        'mimeType': 'image/jpeg',
+      },
+    );
+    final dynamic data = res.data;
+    if (data is Map && data['has_options'] == true && data['options'] is List) {
+      return (data['options'] as List)
+          .map((dynamic o) =>
+              QuestionOption.fromJson((o as Map).cast<String, dynamic>()))
+          .toList();
+    }
+    return <QuestionOption>[];
   }
 }
 
