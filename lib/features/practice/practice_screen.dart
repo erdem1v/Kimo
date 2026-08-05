@@ -31,6 +31,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
   String? _error;
   int _index = 0;
   int _correct = 0;
+  // Bu oturuma başlarken bugün zaten yapılmış tekrar sayısı (kaldığın yerden
+  // devam için sayaç oturuma değil, günün geneline bağlanır).
+  int _doneAtStart = 0;
   bool _completed = false;
   int? _selectedOption;
   bool _answered = false;
@@ -74,6 +77,14 @@ class _PracticeScreenState extends State<PracticeScreen> {
         _items = items;
         _loading = false;
       });
+      if (_global) {
+        // Bugün zaten yapılanları koru (kaldığın yerden devam) ve hedefi
+        // gerçek "kalan" sayısına göre ayarla.
+        _doneAtStart = gameProgress.dailyReviewsDone;
+        gameProgress.setDueRemaining(items.length);
+      } else {
+        _doneAtStart = 0;
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -85,9 +96,12 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
   MistakeEntry get _current => _items[_index];
   bool get _isLast => _index >= _items.length - 1;
-  int get _dailyGoal => _items.length < GameProgress.dailyReviewCap
-      ? _items.length
-      : GameProgress.dailyReviewCap;
+  // Gerçek (uzak) modda günün genel hedefini kullan; mock'ta yalnızca yüklenen
+  // listeye göre say.
+  bool get _global => _remote;
+  int get _target => _global ? gameProgress.dailyTarget : _items.length;
+  // Bu oturuma başlarken tamamlanmış tekrar sayısı (kaldığın yer).
+  int get _base => _global ? _doneAtStart : 0;
   bool _hasPhoto(MistakeEntry e) => e.imageBytes != null || e.photoPath != null;
 
   void _feedback(bool correct) {
@@ -109,7 +123,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
   void _advance() {
     final int next = _index + 1;
     final bool allDone = next >= _items.length;
-    final bool reachedGoal = !_goalClaimed && next >= _dailyGoal;
+    // Günün geneline göre hedefe ulaşıldı mı (kaldığın yer + bu oturum).
+    final bool reachedGoal =
+        !_goalClaimed && _target > 0 && (_base + next) >= _target;
 
     if (reachedGoal) {
       final bool awarded =
@@ -214,9 +230,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: LinearProgressIndicator(
-                    value: _goalClaimed
+                    value: _goalClaimed || _target == 0
                         ? 1.0
-                        : (_index / _dailyGoal).clamp(0.0, 1.0),
+                        : ((_base + _index) / _target).clamp(0.0, 1.0),
                     minHeight: 8,
                     backgroundColor: AppColors.line,
                     valueColor:
@@ -227,8 +243,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
               const SizedBox(width: 12),
               Text(
                 _goalClaimed
-                    ? 'Ekstra ${_index - _dailyGoal + 1}'
-                    : '${_index + 1}/$_dailyGoal',
+                    ? 'Ekstra ${_base + _index - _target + 1}'
+                    : '${_base + _index + 1}/$_target',
                 style: const TextStyle(fontWeight: FontWeight.w800),
               ),
             ],

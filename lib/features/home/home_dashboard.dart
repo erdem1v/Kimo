@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../data/mistake_repository.dart';
 import '../../data/mock_data.dart';
 import '../../models/models.dart';
+import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_button.dart';
@@ -9,13 +11,39 @@ import '../../widgets/game_widgets.dart';
 import '../practice/practice_screen.dart';
 
 /// "Bugün" sekmesi: günlük hedef, hızlı başlama ve konular.
-class HomeDashboard extends StatelessWidget {
+class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
 
-  void _startPractice(BuildContext context) {
-    Navigator.of(context).push<void>(
+  @override
+  State<HomeDashboard> createState() => _HomeDashboardState();
+}
+
+class _HomeDashboardState extends State<HomeDashboard> {
+  final bool _remote = SupabaseConfig.isConfigured;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDue();
+  }
+
+  /// Bugün planı gelmiş (kalan) tekrar sayısını yükleyip hedefe yansıtır.
+  Future<void> _loadDue() async {
+    if (!_remote) return;
+    try {
+      final List<MistakeEntry> due = await mistakeRepository.dueReviews();
+      gameProgress.setDueRemaining(due.length);
+    } catch (_) {
+      // Sessiz geç; hedef sonra tekrar yüklenebilir.
+    }
+  }
+
+  Future<void> _startPractice(BuildContext context) async {
+    await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(builder: (_) => const PracticeScreen()),
     );
+    // Pratikten dönünce hedefi/kalanı tazele.
+    await _loadDue();
   }
 
   @override
@@ -59,8 +87,12 @@ class HomeDashboard extends StatelessWidget {
   }
 
   Widget _dailyGoalCard() {
-    final bool done = gameProgress.dailyGoalReached;
     final int doneCount = gameProgress.dailyReviewsDone;
+    final int target = gameProgress.dailyTarget;
+    // "Bugün için iş yok" durumu: kalan da yapılan da yoksa.
+    final bool nothingToday = target == 0 && !gameProgress.dailyGoalReached;
+    final bool done = gameProgress.dailyGoalReached ||
+        (target > 0 && doneCount >= target);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -79,14 +111,14 @@ class HomeDashboard extends StatelessWidget {
                   width: 64,
                   height: 64,
                   child: CircularProgressIndicator(
-                    value: gameProgress.dailyProgress,
+                    value: nothingToday ? 1 : gameProgress.dailyProgress,
                     strokeWidth: 7,
                     backgroundColor: Colors.white,
                     valueColor:
                         const AlwaysStoppedAnimation<Color>(AppColors.green),
                   ),
                 ),
-                done
+                (done || nothingToday)
                     ? const Icon(Icons.check_rounded,
                         color: AppColors.greenDark, size: 28)
                     : Text(
@@ -115,7 +147,9 @@ class HomeDashboard extends StatelessWidget {
                 Text(
                   done
                       ? 'Tamamladın! 🎉'
-                      : '$doneCount / ${GameProgress.dailyReviewCap} tekrar',
+                      : nothingToday
+                          ? 'Bugün için tekrar yok'
+                          : '$doneCount / $target tekrar',
                   style: const TextStyle(color: AppColors.greenDark, fontSize: 14),
                 ),
               ],

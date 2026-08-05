@@ -27,6 +27,8 @@ class GameProgress extends ChangeNotifier {
 
   // --- Günlük tekrar ilerlemesi (yerel, gün değişince sıfırlanır) ---
   int dailyReviewsDone = 0;
+  // Bugün yapılmayı bekleyen (planı gelmiş) tekrar sayısı; ekranlar yükleyince set eder.
+  int _dueRemaining = 0;
   DateTime? _reviewDay;
   DateTime? _lastGoalDate;
 
@@ -36,7 +38,23 @@ class GameProgress extends ChangeNotifier {
     if (_reviewDay != today) {
       _reviewDay = today;
       dailyReviewsDone = 0;
+      _dueRemaining = 0;
     }
+  }
+
+  /// Bugünün toplam hedefi = yapılan + kalan (üst sınır: dailyReviewCap).
+  /// Kalan bilinmiyorsa (henüz yüklenmediyse) 0 olur.
+  int get dailyTarget {
+    final int total = dailyReviewsDone + _dueRemaining;
+    return total > dailyReviewCap ? dailyReviewCap : total;
+  }
+
+  /// Ekranlar bugünün "kalan" (planı gelmiş, henüz yapılmamış) tekrar sayısını
+  /// yükleyince çağırır. Böylece hedef gerçek soru sayısını yansıtır.
+  void setDueRemaining(int remaining) {
+    _rollDay();
+    _dueRemaining = remaining < 0 ? 0 : remaining;
+    notifyListeners();
   }
 
   /// Günlük hedef bugün alındı mı?
@@ -48,14 +66,18 @@ class GameProgress extends ChangeNotifier {
         _lastGoalDate!.day == n.day;
   }
 
-  double get dailyProgress => dailyGoalReached
-      ? 1
-      : (dailyReviewsDone / dailyReviewCap).clamp(0, 1).toDouble();
+  double get dailyProgress {
+    if (dailyGoalReached) return 1;
+    final int t = dailyTarget;
+    if (t == 0) return 0;
+    return (dailyReviewsDone / t).clamp(0, 1).toDouble();
+  }
 
   /// Bir tekrar cevaplandığında (doğru/yanlış fark etmez) çağrılır.
   void recordReview() {
     _rollDay();
     dailyReviewsDone++;
+    if (_dueRemaining > 0) _dueRemaining--;
     notifyListeners();
   }
 
