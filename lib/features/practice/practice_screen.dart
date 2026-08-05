@@ -11,6 +11,7 @@ import '../../state/mistake_store.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/drawing_canvas.dart';
 import '../../widgets/game_button.dart';
+import '../../widgets/mistake_photo.dart';
 
 /// Günlük pratik: kullanıcının eklediği hatalı soruları tek tek çözdürür.
 /// Soru büyük gösterilir; kalem/silgi doğrudan sorunun üstünde kullanılır.
@@ -87,7 +88,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
   int get _dailyGoal => _items.length < GameProgress.dailyReviewCap
       ? _items.length
       : GameProgress.dailyReviewCap;
-  bool _hasPhoto(MistakeEntry e) => e.imageBytes != null || e.photoUrl != null;
+  bool _hasPhoto(MistakeEntry e) => e.imageBytes != null || e.photoPath != null;
 
   void _feedback(bool correct) {
     if (correct) {
@@ -100,6 +101,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
       sound.wrong();
       HapticFeedback.heavyImpact();
     }
+    gameProgress.recordReview();
     // Tekrar planını güncelle (1→3→7→30; yanlışta 1 güne sıfırla).
     if (_remote) mistakeRepository.submitReview(_current, correct);
   }
@@ -285,17 +287,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
         ),
       );
     }
-    if (e.photoUrl != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(6),
-          child: Image.network(
-            e.photoUrl!,
-            fit: BoxFit.contain,
-            errorBuilder: (_, _, _) => _noPhotoText(e),
-          ),
-        ),
-      );
+    if (e.photoPath != null) {
+      return MistakePhoto(path: e.photoPath!, fit: BoxFit.contain);
     }
     return _noPhotoText(e);
   }
@@ -360,7 +353,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
               child: Center(
                 child: e.imageBytes != null
                     ? Image.memory(e.imageBytes!, fit: BoxFit.contain)
-                    : Image.network(e.photoUrl!, fit: BoxFit.contain),
+                    : MistakePhoto(path: e.photoPath!, fit: BoxFit.contain),
               ),
             ),
             Positioned(

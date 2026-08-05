@@ -6,6 +6,7 @@ import '../../services/supabase_config.dart';
 import '../../state/mistake_store.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_button.dart';
+import '../../widgets/mistake_photo.dart';
 import '../../widgets/mistake_style.dart';
 import 'add_mistake_screen.dart';
 
@@ -235,7 +236,9 @@ class _MistakeCard extends StatelessWidget {
                   style: const TextStyle(color: AppColors.inkLight, fontSize: 13),
                 ),
                 const SizedBox(height: 8),
-                Row(
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
                   children: <Widget>[
                     Container(
                       padding:
@@ -252,6 +255,28 @@ class _MistakeCard extends StatelessWidget {
                             fontSize: 12),
                       ),
                     ),
+                    if (entry.isLeech)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.red.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(Icons.warning_amber_rounded,
+                                size: 14, color: AppColors.redDark),
+                            SizedBox(width: 4),
+                            Text('Zorlanıyorsun',
+                                style: TextStyle(
+                                    color: AppColors.redDark,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12)),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
                 if (entry.note.isNotEmpty) ...<Widget>[
@@ -274,12 +299,8 @@ class _MistakeCard extends StatelessWidget {
     if (entry.imageBytes != null) {
       return Image.memory(entry.imageBytes!, fit: BoxFit.cover);
     }
-    if (entry.photoUrl != null) {
-      return Image.network(
-        entry.photoUrl!,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => _thumbPlaceholder(),
-      );
+    if (entry.photoPath != null) {
+      return MistakePhoto(path: entry.photoPath!, fit: BoxFit.cover);
     }
     return _thumbPlaceholder();
   }

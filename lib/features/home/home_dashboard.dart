@@ -59,7 +59,8 @@ class HomeDashboard extends StatelessWidget {
   }
 
   Widget _dailyGoalCard() {
-    final bool done = gameProgress.dailyDone >= gameProgress.dailyGoal;
+    final bool done = gameProgress.dailyGoalReached;
+    final int doneCount = gameProgress.dailyReviewsDone;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -85,13 +86,16 @@ class HomeDashboard extends StatelessWidget {
                         const AlwaysStoppedAnimation<Color>(AppColors.green),
                   ),
                 ),
-                Text(
-                  '${gameProgress.dailyDone}/${gameProgress.dailyGoal}',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13,
-                      color: AppColors.greenDark),
-                ),
+                done
+                    ? const Icon(Icons.check_rounded,
+                        color: AppColors.greenDark, size: 28)
+                    : Text(
+                        '$doneCount',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
+                            color: AppColors.greenDark),
+                      ),
               ],
             ),
           ),
@@ -101,7 +105,7 @@ class HomeDashboard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 const Text(
-                  'Günlük Hedef',
+                  'Günlük Tekrar Hedefi',
                   style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 16,
@@ -110,8 +114,8 @@ class HomeDashboard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   done
-                      ? 'Hedefi tamamladın! 🎉'
-                      : '${gameProgress.dailyGoal - gameProgress.dailyDone} soru kaldı',
+                      ? 'Tamamladın! 🎉'
+                      : '$doneCount / ${GameProgress.dailyReviewCap} tekrar',
                   style: const TextStyle(color: AppColors.greenDark, fontSize: 14),
                 ),
               ],

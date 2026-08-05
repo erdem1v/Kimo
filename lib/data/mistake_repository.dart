@@ -39,25 +39,11 @@ class MistakeRepository {
     return _mapRows(rows);
   }
 
-  Future<List<MistakeEntry>> _mapRows(List<Map<String, dynamic>> rows) async {
-    final List<MistakeEntry> result = <MistakeEntry>[];
-    for (final Map<String, dynamic> row in rows) {
-      result.add(await _mapRow(row));
-    }
-    return result;
-  }
+  List<MistakeEntry> _mapRows(List<Map<String, dynamic>> rows) =>
+      rows.map(_mapRow).toList();
 
-  Future<MistakeEntry> _mapRow(Map<String, dynamic> row) async {
+  MistakeEntry _mapRow(Map<String, dynamic> row) {
     final String? path = row['photo_path'] as String?;
-    String? url;
-    if (path != null) {
-      try {
-        url = await _client.storage.from(_bucket).createSignedUrl(path, 3600);
-      } catch (_) {
-        // Fotoğraf Storage'dan silinmiş olabilir; kaydı fotosuz göster.
-        url = null;
-      }
-    }
 
     final dynamic rawOptions = row['options'];
     List<QuestionOption>? options;
@@ -76,7 +62,7 @@ class MistakeRepository {
       note: (row['note'] as String?) ?? '',
       date: DateTime.parse(row['created_at'] as String),
       hasPhoto: path != null,
-      photoUrl: url,
+      photoPath: path,
       options: options,
       correctIndex: row['correct_index'] as int?,
       step: (row['step'] as int?) ?? 0,
@@ -84,6 +70,16 @@ class MistakeRepository {
       mastered: row['mastered'] == true,
       isLeech: row['is_leech'] == true,
     );
+  }
+
+  /// Storage'daki bir fotoğraf için kısa ömürlü imzalı URL üretir (gösterim
+  /// anında, tembel). Foto silinmişse null döner.
+  Future<String?> signedUrl(String path) async {
+    try {
+      return await _client.storage.from(_bucket).createSignedUrl(path, 3600);
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Yeni hata ekler; fotoğraf varsa önce Storage'a yükler.

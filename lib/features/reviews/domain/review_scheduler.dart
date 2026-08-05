@@ -52,12 +52,14 @@ class ReviewScheduler {
   const ReviewScheduler({
     this.steps = defaultSteps,
     this.leechThreshold = 4,
+    this.leechCooldownDays = 3,
   });
 
   static const List<int> defaultSteps = <int>[1, 3, 7, 30];
 
   final List<int> steps;
   final int leechThreshold;
+  final int leechCooldownDays;
 
   static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
@@ -102,12 +104,15 @@ class ReviewScheduler {
     }
 
     final int newLapses = lapses + 1;
+    final bool leech = newLapses >= leechThreshold;
+    // Leech (inatçı hata) ise günlük döngüyü kırmak için daha uzun bekleme.
+    final int wrongInterval = leech ? leechCooldownDays : steps.first;
     return ReviewOutcome(
       step: 0,
       lapses: newLapses,
-      isLeech: newLapses >= leechThreshold,
+      isLeech: leech,
       mastered: false,
-      nextReviewDate: today.add(Duration(days: steps.first)),
+      nextReviewDate: today.add(Duration(days: wrongInterval)),
     );
   }
 }

@@ -58,6 +58,8 @@ void main() {
       }
       expect(r.lapses, 4);
       expect(r.isLeech, true);
+      // Leech olunca yanlışta 1 gün değil cooldown (3 gün) sonra gelir.
+      expect(r.nextReviewDate, today.add(const Duration(days: 3)));
     });
 
     test('nextReviewDate saatten bağımsız (güne normalize)', () {

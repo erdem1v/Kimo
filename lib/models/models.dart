@@ -101,7 +101,7 @@ class MistakeEntry {
     required this.date,
     this.hasPhoto = false,
     this.imageBytes,
-    this.photoUrl,
+    this.photoPath,
     this.options,
     this.correctIndex,
     this.id,
@@ -130,8 +130,8 @@ class MistakeEntry {
   /// Yeni seçilen fotoğrafın ham baytları (yerel önizleme için).
   final Uint8List? imageBytes;
 
-  /// Supabase Storage'daki fotoğrafın imzalı URL'i (uzak kayıtlar için).
-  final String? photoUrl;
+  /// Supabase Storage yolu (imzalı URL gösterim anında üretilir).
+  final String? photoPath;
 
   /// AI ile çıkarılan şıklar (varsa).
   final List<QuestionOption>? options;
