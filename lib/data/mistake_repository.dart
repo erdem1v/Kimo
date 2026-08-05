@@ -28,6 +28,19 @@ class MistakeRepository {
     return _mapRows(rows);
   }
 
+  /// Bugün gözden geçirilmiş (cevaplanmış) tekrar sayısı — günlük ilerlemeyi
+  /// uygulama kapansa da geri yüklemek için DB'den türetilir.
+  Future<int> reviewedTodayCount() async {
+    final DateTime now = DateTime.now();
+    final String start =
+        DateTime(now.year, now.month, now.day).toIso8601String();
+    final List<Map<String, dynamic>> rows = await _client
+        .from('mistakes')
+        .select('id')
+        .gte('last_reviewed_at', start);
+    return rows.length;
+  }
+
   /// Bugün (ve öncesi) tekrarı gelen, öğrenilmemiş hatalar — pratik için.
   Future<List<MistakeEntry>> dueReviews() async {
     final String today = _dateStr(DateTime.now());

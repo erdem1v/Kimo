@@ -57,6 +57,17 @@ class GameProgress extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Bugün yapılan tekrar sayısını DB'den gelen değerle senkronlar (uygulama
+  /// kapanıp açılınca "bugün X/20" geri gelsin). Yalnızca yukarı doğru günceller
+  /// ki henüz DB'ye yazılmamış (fire-and-forget) cevaplar geri sayılmasın.
+  void syncDailyDone(int dbCount) {
+    _rollDay();
+    if (dbCount > dailyReviewsDone) {
+      dailyReviewsDone = dbCount;
+      notifyListeners();
+    }
+  }
+
   /// Günlük hedef bugün alındı mı?
   bool get dailyGoalReached {
     final DateTime n = DateTime.now();

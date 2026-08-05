@@ -47,7 +47,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
     }
     try {
       final List<MistakeEntry> due = await mistakeRepository.dueReviews();
+      // Bugün yapılanları DB'den geri yükle (uygulama kapanmışsa sayaç dönsün).
+      final int doneToday = await mistakeRepository.reviewedTodayCount();
       if (!mounted) return;
+      gameProgress.syncDailyDone(doneToday);
       gameProgress.setDueRemaining(due.length);
       setState(() {
         _due = due;

@@ -100,6 +100,10 @@ class _PracticeScreenState extends State<PracticeScreen> {
         // Günlük hedef TÜM derslerin toplamıdır; filtreli girişte kalan sayısını
         // ezmeyelim (onu dashboard tüm tekrarlara göre belirler).
         if (subject == null) gameProgress.setDueRemaining(items.length);
+        // Bugünkü hedef zaten dolmuşsa (ör. yeniden açılış) tekrar kutlama ve
+        // bonus verme; "Ekstra" modunda devam et.
+        _goalClaimed = gameProgress.dailyTarget > 0 &&
+            _doneAtStart >= gameProgress.dailyTarget;
       } else {
         _doneAtStart = 0;
       }
