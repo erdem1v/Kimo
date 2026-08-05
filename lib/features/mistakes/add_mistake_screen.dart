@@ -22,13 +22,19 @@ class AddMistakeScreen extends StatefulWidget {
 }
 
 class _AddMistakeScreenState extends State<AddMistakeScreen> {
-  static const List<String> _subjects = <String>[
+  // Tüm YKS dersleri (AI önerisi bunlardan biriyle eşleşsin diye geniş tutuldu).
+  final List<String> _subjects = <String>[
+    'Türkçe',
     'Matematik',
     'Geometri',
     'Fizik',
     'Kimya',
-    'Türkçe',
     'Biyoloji',
+    'Edebiyat',
+    'Tarih',
+    'Coğrafya',
+    'Felsefe',
+    'Din Kültürü',
   ];
 
   final TextEditingController _concept = TextEditingController();
@@ -36,6 +42,7 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
   final ImagePicker _picker = ImagePicker();
   Uint8List? _imageBytes;
   String? _subject;
+  String? _exam; // 'TYT' | 'AYT' (AI önerir, kullanıcı düzenleyebilir)
   MistakeType? _type;
   bool _saving = false;
 
@@ -166,6 +173,17 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
             _optionLabels.add(o.label);
             _optionCtrls.add(TextEditingController(text: o.text));
           }
+          // AI'nın ders/konu/sınav önerilerini otomatik doldur (düzenlenebilir).
+          if (res.subject != null) {
+            if (!_subjects.contains(res.subject)) {
+              _subjects.insert(0, res.subject!);
+            }
+            _subject = res.subject;
+          }
+          if (res.concept != null && res.concept!.isNotEmpty) {
+            _concept.text = res.concept!;
+          }
+          if (res.exam == 'TYT' || res.exam == 'AYT') _exam = res.exam;
           _analysisReason = null;
         } else {
           _analysisReason =
@@ -203,6 +221,7 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
           imageBytes: _imageBytes,
           options: options,
           correctIndex: _correctIndex,
+          exam: _exam,
         );
       } else {
         mistakeStore.add(
@@ -249,7 +268,18 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
             _optionsBlock(),
           ],
           const SizedBox(height: 22),
-          _label('Konu / Kavram'),
+          Row(
+            children: <Widget>[
+              _label('Konu / Kavram'),
+              if (SupabaseConfig.isConfigured &&
+                  _imageBytes != null &&
+                  !_analyzing &&
+                  _optionCtrls.isNotEmpty) ...<Widget>[
+                const SizedBox(width: 8),
+                _aiHint(),
+              ],
+            ],
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: _concept,
@@ -272,6 +302,29 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
                     fontWeight: FontWeight.w700,
                   ),
                   selectedColor: AppColors.green,
+                  backgroundColor: const Color(0xFFF4F4F4),
+                  shape: const StadiumBorder(),
+                  side: BorderSide.none,
+                  showCheckmark: false,
+                ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          _label('Sınav'),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: <Widget>[
+              for (final String e in const <String>['TYT', 'AYT'])
+                ChoiceChip(
+                  label: Text(e),
+                  selected: _exam == e,
+                  onSelected: (_) => setState(() => _exam = e),
+                  labelStyle: TextStyle(
+                    color: _exam == e ? Colors.white : AppColors.ink,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  selectedColor: AppColors.blue,
                   backgroundColor: const Color(0xFFF4F4F4),
                   shape: const StadiumBorder(),
                   side: BorderSide.none,
@@ -488,6 +541,27 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
       ),
     );
   }
+
+  /// Ders/konu/sınav alanlarının AI tarafından dolduğunu belirten küçük rozet.
+  Widget _aiHint() => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: AppColors.purple.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.auto_awesome, size: 13, color: AppColors.purpleDark),
+            SizedBox(width: 4),
+            Text('AI doldurdu · düzenleyebilirsin',
+                style: TextStyle(
+                    color: AppColors.purpleDark,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11)),
+          ],
+        ),
+      );
 
   Widget _label(String text) => Text(
         text,

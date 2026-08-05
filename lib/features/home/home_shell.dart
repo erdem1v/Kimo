@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../services/sound_service.dart';
+import '../../services/supabase_config.dart';
+import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
 import '../chat/chat_screen.dart';
 import '../mistakes/mistakes_screen.dart';
+import '../onboarding/exam_year_sheet.dart';
 import '../profile/profile_screen.dart';
 import 'home_dashboard.dart';
 
@@ -18,6 +21,20 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Müfredatı yükle; henüz belirlenmemişse ilk açılışta bir kez sor.
+    if (SupabaseConfig.isConfigured) {
+      userProfile.loadFromAuth();
+      if (!userProfile.isSet) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) showExamYearSheet(context, dismissible: false);
+        });
+      }
+    }
+  }
 
   static const List<Widget> _pages = <Widget>[
     HomeDashboard(),

@@ -6,8 +6,10 @@ import '../../models/models.dart';
 import '../../services/sound_service.dart';
 import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
+import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_widgets.dart';
+import '../onboarding/exam_year_sheet.dart';
 
 /// Profil / oyunlaştırma vitrini: seviye, seri, lig ve rozetler.
 class ProfileScreen extends StatefulWidget {
@@ -46,6 +48,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 24),
               _soundToggle(),
               if (SupabaseConfig.isConfigured) ...<Widget>[
+                const SizedBox(height: 12),
+                _curriculumTile(),
                 const SizedBox(height: 12),
                 _logoutButton(),
               ],
@@ -257,6 +261,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
         secondary: const Icon(Icons.volume_up_rounded, color: AppColors.green),
         onChanged: (bool v) => setState(() => sound.enabled = v),
       ),
+    );
+  }
+
+  Widget _curriculumTile() {
+    return ListenableBuilder(
+      listenable: userProfile,
+      builder: (BuildContext context, _) {
+        final int? year = userProfile.examYear;
+        final String subtitle = year == null
+            ? 'Belirlenmedi — dokunup seç'
+            : '$year · ${userProfile.curriculum == UserProfile.maarif ? 'Yeni müfredat (Maarif)' : 'Mevcut müfredat (2018)'}';
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFF7F7F7),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ListTile(
+            leading: const Icon(Icons.school_rounded, color: AppColors.blue),
+            title: const Text('Sınav yılı / müfredat',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: Text(subtitle,
+                style: const TextStyle(color: AppColors.inkLight, fontSize: 13)),
+            trailing: const Icon(Icons.chevron_right_rounded,
+                color: AppColors.inkLight),
+            onTap: () => showExamYearSheet(context),
+          ),
+        );
+      },
     );
   }
 

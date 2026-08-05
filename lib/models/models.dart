@@ -83,12 +83,36 @@ class QuestionOption {
 
 /// AI foto analizinin sonucu. [ok] true ise fotoğrafta okunabilir bir soru +
 /// şıklar var demektir; değilse [reason] kısa bir Türkçe sebep içerir.
+///
+/// Geçerliyse AI ayrıca soruyu sınıflandırır: [exam] (TYT/AYT), [subject]
+/// (ders) ve [concept] (konu). [conceptValid] true ise konu taksonomideki bir
+/// adla birebir eşleşmiştir; false ise AI'nın en yakın tahminidir.
 class QuestionAnalysis {
-  const QuestionAnalysis({required this.ok, required this.options, this.reason});
+  const QuestionAnalysis({
+    required this.ok,
+    required this.options,
+    this.reason,
+    this.exam,
+    this.subject,
+    this.concept,
+    this.conceptValid = false,
+  });
 
   final bool ok;
   final List<QuestionOption> options;
   final String? reason;
+
+  /// 'TYT' | 'AYT' | null.
+  final String? exam;
+
+  /// AI'nın önerdiği ders (ör. 'Matematik').
+  final String? subject;
+
+  /// AI'nın önerdiği konu (ör. 'Türev').
+  final String? concept;
+
+  /// Konu, taksonomideki bir adla birebir eşleşti mi?
+  final bool conceptValid;
 }
 
 /// Hata bankası kaydı.

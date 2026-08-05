@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../features/reviews/domain/review_scheduler.dart';
 import '../models/models.dart';
+import '../state/user_profile.dart';
 
 /// Hata bankasının Supabase uygulaması: `mistakes` tablosu + `mistake-photos`
 /// (özel) storage bucket'ı + `analyze-question` Edge Function (AI Gateway) +
@@ -91,6 +92,7 @@ class MistakeRepository {
     Uint8List? imageBytes,
     List<QuestionOption>? options,
     int? correctIndex,
+    String? exam,
   }) async {
     String? path;
     if (imageBytes != null) {
@@ -116,6 +118,7 @@ class MistakeRepository {
           ? null
           : options.map((QuestionOption o) => o.toJson()).toList(),
       'correct_index': correctIndex,
+      'exam': (exam == null || exam.isEmpty) ? null : exam,
     });
     // step/next_review_date DB varsayılanlarıyla gelir (adım 0, ertesi gün).
   }
@@ -153,6 +156,7 @@ class MistakeRepository {
       body: <String, dynamic>{
         'imageBase64': base64Encode(imageBytes),
         'mimeType': 'image/jpeg',
+        'curriculum': userProfile.curriculum,
       },
     );
     final dynamic data = res.data;
@@ -174,7 +178,17 @@ class MistakeRepository {
     final bool ok =
         readable && hasQuestion && hasOptions && options.isNotEmpty;
     if (ok) {
-      return QuestionAnalysis(ok: true, options: options);
+      final String exam = (data['sinav'] as String?)?.trim() ?? '';
+      final String ders = (data['ders'] as String?)?.trim() ?? '';
+      final String konu = (data['konu'] as String?)?.trim() ?? '';
+      return QuestionAnalysis(
+        ok: true,
+        options: options,
+        exam: exam.isEmpty ? null : exam,
+        subject: ders.isEmpty ? null : ders,
+        concept: konu.isEmpty ? null : konu,
+        conceptValid: data['konu_valid'] == true,
+      );
     }
 
     String reason = (data['reason'] as String?)?.trim() ?? '';
