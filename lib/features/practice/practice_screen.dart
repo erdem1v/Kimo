@@ -63,7 +63,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
     });
     try {
       final List<MistakeEntry> items =
-          _remote ? await mistakeRepository.fetch() : mistakeStore.items;
+          _remote ? await mistakeRepository.dueReviews() : mistakeStore.items;
       if (!mounted) return;
       setState(() {
         _items = items;
@@ -92,6 +92,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
       sound.wrong();
       HapticFeedback.heavyImpact();
     }
+    // Tekrar planını güncelle (1→3→7→30; yanlışta 1 güne sıfırla).
+    if (_remote) mistakeRepository.submitReview(_current, correct);
   }
 
   void _advance() {
@@ -153,9 +155,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
     if (_error != null) return _messageView(_error!, retry: true);
     if (_items.isEmpty) {
       return _messageView(
-        'Henüz hata yok.\n"Hatalarım" sekmesinden hatalı soru ekleyince '
-        'burada çözebilirsin.',
-        emoji: '📭',
+        'Bugünlük tekrar kalmadı! 🎉\n'
+        'Yeni hata ekleyebilir ya da yarın tekrar gelebilirsin.',
+        emoji: '🎉',
       );
     }
     if (_completed) return _completionView();

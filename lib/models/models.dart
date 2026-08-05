@@ -104,7 +104,21 @@ class MistakeEntry {
     this.photoUrl,
     this.options,
     this.correctIndex,
+    this.id,
+    this.step = 0,
+    this.lapses = 0,
+    this.mastered = false,
+    this.isLeech = false,
   });
+
+  /// Supabase satır kimliği (tekrar güncellemesi için).
+  final String? id;
+
+  /// Aralıklı tekrar durumu.
+  final int step;
+  final int lapses;
+  final bool mastered;
+  final bool isLeech;
 
   final String subject;
   final String concept;

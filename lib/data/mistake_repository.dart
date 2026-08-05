@@ -3,62 +3,87 @@ import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../features/reviews/domain/review_scheduler.dart';
 import '../models/models.dart';
 
 /// Hata bankasının Supabase uygulaması: `mistakes` tablosu + `mistake-photos`
-/// (özel) storage bucket'ı + `analyze-question` Edge Function (AI Gateway).
+/// (özel) storage bucket'ı + `analyze-question` Edge Function (AI Gateway) +
+/// aralıklı tekrar planlaması (ReviewScheduler).
 class MistakeRepository {
   MistakeRepository._();
   static final MistakeRepository instance = MistakeRepository._();
 
   static const String _bucket = 'mistake-photos';
+  static const ReviewScheduler _scheduler = ReviewScheduler();
 
   SupabaseClient get _client => Supabase.instance.client;
 
-  /// Kullanıcının hatalarını (en yeni önce) getirir.
+  /// Kullanıcının TÜM hataları (en yeni önce) — Hatalarım ekranı için.
   Future<List<MistakeEntry>> fetch() async {
     final List<Map<String, dynamic>> rows = await _client
         .from('mistakes')
         .select()
         .order('created_at', ascending: false);
+    return _mapRows(rows);
+  }
 
+  /// Bugün (ve öncesi) tekrarı gelen, öğrenilmemiş hatalar — pratik için.
+  Future<List<MistakeEntry>> dueReviews() async {
+    final String today = _dateStr(DateTime.now());
+    final List<Map<String, dynamic>> rows = await _client
+        .from('mistakes')
+        .select()
+        .eq('mastered', false)
+        .lte('next_review_date', today)
+        .order('next_review_date', ascending: true);
+    return _mapRows(rows);
+  }
+
+  Future<List<MistakeEntry>> _mapRows(List<Map<String, dynamic>> rows) async {
     final List<MistakeEntry> result = <MistakeEntry>[];
     for (final Map<String, dynamic> row in rows) {
-      final String? path = row['photo_path'] as String?;
-      String? url;
-      if (path != null) {
-        try {
-          url = await _client.storage.from(_bucket).createSignedUrl(path, 3600);
-        } catch (_) {
-          // Fotoğraf Storage'dan silinmiş olabilir; kaydı fotosuz göster.
-          url = null;
-        }
-      }
-
-      final dynamic rawOptions = row['options'];
-      List<QuestionOption>? options;
-      if (rawOptions is List) {
-        options = rawOptions
-            .map((dynamic o) =>
-                QuestionOption.fromJson((o as Map).cast<String, dynamic>()))
-            .toList();
-      }
-
-      result.add(
-        MistakeEntry(
-          subject: row['subject'] as String,
-          concept: row['concept'] as String,
-          type: MistakeType.fromDb(row['mistake_type'] as String),
-          note: (row['note'] as String?) ?? '',
-          date: DateTime.parse(row['created_at'] as String),
-          hasPhoto: path != null,
-          photoUrl: url,
-          options: options,
-          correctIndex: row['correct_index'] as int?,
-        ),
-      );
+      result.add(await _mapRow(row));
     }
     return result;
+  }
+
+  Future<MistakeEntry> _mapRow(Map<String, dynamic> row) async {
+    final String? path = row['photo_path'] as String?;
+    String? url;
+    if (path != null) {
+      try {
+        url = await _client.storage.from(_bucket).createSignedUrl(path, 3600);
+      } catch (_) {
+        // Fotoğraf Storage'dan silinmiş olabilir; kaydı fotosuz göster.
+        url = null;
+      }
+    }
+
+    final dynamic rawOptions = row['options'];
+    List<QuestionOption>? options;
+    if (rawOptions is List) {
+      options = rawOptions
+          .map((dynamic o) =>
+              QuestionOption.fromJson((o as Map).cast<String, dynamic>()))
+          .toList();
+    }
+
+    return MistakeEntry(
+      id: row['id'] as String?,
+      subject: row['subject'] as String,
+      concept: row['concept'] as String,
+      type: MistakeType.fromDb(row['mistake_type'] as String),
+      note: (row['note'] as String?) ?? '',
+      date: DateTime.parse(row['created_at'] as String),
+      hasPhoto: path != null,
+      photoUrl: url,
+      options: options,
+      correctIndex: row['correct_index'] as int?,
+      step: (row['step'] as int?) ?? 0,
+      lapses: (row['lapses'] as int?) ?? 0,
+      mastered: row['mastered'] == true,
+      isLeech: row['is_leech'] == true,
+    );
   }
 
   /// Yeni hata ekler; fotoğraf varsa önce Storage'a yükler.
@@ -96,6 +121,32 @@ class MistakeRepository {
           : options.map((QuestionOption o) => o.toJson()).toList(),
       'correct_index': correctIndex,
     });
+    // step/next_review_date DB varsayılanlarıyla gelir (adım 0, ertesi gün).
+  }
+
+  /// Bir tekrar sonucunu ([correct]) uygular ve planı (adım/tarih/leech/
+  /// mastered) günceller.
+  Future<void> submitReview(MistakeEntry entry, bool correct) async {
+    final String? id = entry.id;
+    if (id == null) return;
+    final ReviewOutcome o = _scheduler.review(
+      step: entry.step,
+      lapses: entry.lapses,
+      correct: correct,
+      reviewedOn: DateTime.now(),
+    );
+    try {
+      await _client.from('mistakes').update(<String, dynamic>{
+        'step': o.step,
+        'lapses': o.lapses,
+        'is_leech': o.isLeech,
+        'mastered': o.mastered,
+        'next_review_date': _dateStr(o.nextReviewDate),
+        'last_reviewed_at': DateTime.now().toIso8601String(),
+      }).eq('id', id);
+    } catch (_) {
+      // Ağ hatası vb.; pratiği bloklamayalım.
+    }
   }
 
   /// Fotoğrafı AI Gateway (Edge Function) ile değerlendirir: okunabilir bir
@@ -141,6 +192,11 @@ class MistakeRepository {
     return QuestionAnalysis(
         ok: false, options: <QuestionOption>[], reason: reason);
   }
+
+  static String _dateStr(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 }
 
 final MistakeRepository mistakeRepository = MistakeRepository.instance;
