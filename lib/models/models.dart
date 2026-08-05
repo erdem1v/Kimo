@@ -133,6 +133,7 @@ class MistakeEntry {
     this.lapses = 0,
     this.mastered = false,
     this.isLeech = false,
+    this.exam,
   });
 
   /// Supabase satır kimliği (tekrar güncellemesi için).
@@ -150,6 +151,9 @@ class MistakeEntry {
   final String note;
   final DateTime date;
   final bool hasPhoto;
+
+  /// Sınav türü: 'TYT' | 'AYT' | null (AI belirler).
+  final String? exam;
 
   /// Yeni seçilen fotoğrafın ham baytları (yerel önizleme için).
   final Uint8List? imageBytes;

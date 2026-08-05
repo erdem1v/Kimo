@@ -43,6 +43,18 @@ class MistakeRepository {
   List<MistakeEntry> _mapRows(List<Map<String, dynamic>> rows) =>
       rows.map(_mapRow).toList();
 
+  /// Bir hatanın seçilen (sınav, ders) filtresine uyup uymadığı. Ders birebir
+  /// eşleşmeli; sınavı boş (eski kayıt) olanlar her sınavda gösterilir.
+  static bool matchesFilter(
+    MistakeEntry e, {
+    required String exam,
+    required String subject,
+  }) {
+    if (e.subject != subject) return false;
+    final String? ex = e.exam;
+    return ex == null || ex.isEmpty || ex == exam;
+  }
+
   MistakeEntry _mapRow(Map<String, dynamic> row) {
     final String? path = row['photo_path'] as String?;
 
@@ -70,6 +82,7 @@ class MistakeRepository {
       lapses: (row['lapses'] as int?) ?? 0,
       mastered: row['mastered'] == true,
       isLeech: row['is_leech'] == true,
+      exam: row['exam'] as String?,
     );
   }
 

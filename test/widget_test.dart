@@ -11,8 +11,8 @@ void main() {
     await tester.pumpWidget(const AiYksCoachApp());
     await tester.pump();
 
-    // Başlangıçta "Bugün" sekmesi: Konular bölümü görünür.
-    expect(find.text('Konular'), findsOneWidget);
+    // Başlangıçta "Bugün" sekmesi: günlük hedef kartı görünür.
+    expect(find.text('Günlük Tekrar Hedefi'), findsOneWidget);
     // Sohbet ekranı henüz seçili değil (offstage).
     expect(find.text('Koç Baykuş'), findsNothing);
 
@@ -24,6 +24,6 @@ void main() {
     // "Bugün" sekmesine geri dön.
     await tester.tap(find.text('Bugün'));
     await tester.pumpAndSettle();
-    expect(find.text('Konular'), findsOneWidget);
+    expect(find.text('Günlük Tekrar Hedefi'), findsOneWidget);
   });
 }

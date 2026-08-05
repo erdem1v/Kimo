@@ -17,7 +17,12 @@ import '../../widgets/mistake_photo.dart';
 /// Soru büyük gösterilir; kalem/silgi doğrudan sorunun üstünde kullanılır.
 /// Öğrenci çözüp kendini "Doğru çözdüm / Bilemedim" ile değerlendirir.
 class PracticeScreen extends StatefulWidget {
-  const PracticeScreen({super.key});
+  const PracticeScreen({super.key, this.exam, this.subject});
+
+  /// Seçili sınav (TYT/AYT) ve ders. Verilirse yalnızca o dersin tekrarları
+  /// çözdürülür; null ise tüm tekrarlar gelir.
+  final String? exam;
+  final String? subject;
 
   @override
   State<PracticeScreen> createState() => _PracticeScreenState();
@@ -70,18 +75,31 @@ class _PracticeScreenState extends State<PracticeScreen> {
       _error = null;
     });
     try {
-      final List<MistakeEntry> items =
+      List<MistakeEntry> items =
           _remote ? await mistakeRepository.dueReviews() : mistakeStore.items;
+      // Sınav/ders filtresi verildiyse yalnızca o dersin tekrarları.
+      final String? subject = widget.subject;
+      final String? exam = widget.exam;
+      if (subject != null) {
+        items = items
+            .where((MistakeEntry e) => MistakeRepository.matchesFilter(
+                  e,
+                  exam: exam ?? '',
+                  subject: subject,
+                ))
+            .toList();
+      }
       if (!mounted) return;
       setState(() {
         _items = items;
         _loading = false;
       });
       if (_global) {
-        // Bugün zaten yapılanları koru (kaldığın yerden devam) ve hedefi
-        // gerçek "kalan" sayısına göre ayarla.
+        // Bugün zaten yapılanları koru (kaldığın yerden devam).
         _doneAtStart = gameProgress.dailyReviewsDone;
-        gameProgress.setDueRemaining(items.length);
+        // Günlük hedef TÜM derslerin toplamıdır; filtreli girişte kalan sayısını
+        // ezmeyelim (onu dashboard tüm tekrarlara göre belirler).
+        if (subject == null) gameProgress.setDueRemaining(items.length);
       } else {
         _doneAtStart = 0;
       }
@@ -203,8 +221,11 @@ class _PracticeScreenState extends State<PracticeScreen> {
     if (_error != null) return _messageView(_error!, retry: true);
     if (_items.isEmpty) {
       return _messageView(
-        'Bugünlük tekrar kalmadı! 🎉\n'
-        'Yeni hata ekleyebilir ya da yarın tekrar gelebilirsin.',
+        widget.subject != null
+            ? '${widget.subject} dersinde bugünlük tekrar kalmadı! 🎉\n'
+                'Başka bir ders seçebilir ya da yarın gelebilirsin.'
+            : 'Bugünlük tekrar kalmadı! 🎉\n'
+                'Yeni hata ekleyebilir ya da yarın tekrar gelebilirsin.',
         emoji: '🎉',
       );
     }
