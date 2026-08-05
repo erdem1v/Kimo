@@ -6,6 +6,7 @@ import '../../data/mistake_repository.dart';
 import '../../models/models.dart';
 import '../../services/sound_service.dart';
 import '../../services/supabase_config.dart';
+import '../../state/game_progress.dart';
 import '../../state/mistake_store.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/drawing_canvas.dart';
@@ -32,6 +33,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
   bool _completed = false;
   int? _selectedOption;
   bool _answered = false;
+  bool _showGoal = false;
+  bool _goalClaimed = false;
+  int _bonusAwarded = 0;
 
   late final ConfettiController _confetti =
       ConfettiController(duration: const Duration(milliseconds: 900));
@@ -80,6 +84,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
   MistakeEntry get _current => _items[_index];
   bool get _isLast => _index >= _items.length - 1;
+  int get _dailyGoal => _items.length < GameProgress.dailyReviewCap
+      ? _items.length
+      : GameProgress.dailyReviewCap;
   bool _hasPhoto(MistakeEntry e) => e.imageBytes != null || e.photoUrl != null;
 
   void _feedback(bool correct) {
@@ -88,6 +95,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
       sound.correct();
       HapticFeedback.mediumImpact();
       _confetti.play();
+      gameProgress.addXp(GameProgress.xpPerCorrect);
     } else {
       sound.wrong();
       HapticFeedback.heavyImpact();
@@ -97,17 +105,39 @@ class _PracticeScreenState extends State<PracticeScreen> {
   }
 
   void _advance() {
-    if (_isLast) {
-      setState(() => _completed = true);
+    final int next = _index + 1;
+    final bool allDone = next >= _items.length;
+    final bool reachedGoal = !_goalClaimed && next >= _dailyGoal;
+
+    if (reachedGoal) {
+      final bool awarded =
+          gameProgress.claimDailyGoal(GameProgress.dailyGoalBonus);
       sound.levelUp();
       _confetti.play();
-    } else {
       setState(() {
-        _index++;
+        _index = next;
         _selectedOption = null;
         _answered = false;
+        _goalClaimed = true;
+        _showGoal = true;
+        _bonusAwarded = awarded ? GameProgress.dailyGoalBonus : 0;
       });
+      return;
     }
+    if (allDone) {
+      sound.levelUp();
+      _confetti.play();
+      setState(() {
+        _index = next;
+        _completed = true;
+      });
+      return;
+    }
+    setState(() {
+      _index = next;
+      _selectedOption = null;
+      _answered = false;
+    });
   }
 
   void _selfGrade(bool correct) {
@@ -161,6 +191,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
       );
     }
     if (_completed) return _completionView();
+    if (_showGoal) return _goalView();
     return _practiceView();
   }
 
@@ -181,7 +212,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: LinearProgressIndicator(
-                    value: _index / _items.length,
+                    value: _goalClaimed
+                        ? 1.0
+                        : (_index / _dailyGoal).clamp(0.0, 1.0),
                     minHeight: 8,
                     backgroundColor: AppColors.line,
                     valueColor:
@@ -190,8 +223,12 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Text('${_index + 1}/${_items.length}',
-                  style: const TextStyle(fontWeight: FontWeight.w800)),
+              Text(
+                _goalClaimed
+                    ? 'Ekstra ${_index - _dailyGoal + 1}'
+                    : '${_index + 1}/$_dailyGoal',
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
             ],
           ),
         ),
@@ -445,6 +482,66 @@ class _PracticeScreenState extends State<PracticeScreen> {
           label,
           style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: fg),
         ),
+      ),
+    );
+  }
+
+  void _continuePastGoal() {
+    setState(() {
+      _showGoal = false;
+      _selectedOption = null;
+      _answered = false;
+    });
+  }
+
+  Widget _goalView() {
+    final int remaining = _items.length - _index;
+    return Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          const Text('🎯', style: TextStyle(fontSize: 84)),
+          const SizedBox(height: 12),
+          const Text('Günlük hedefini tamamladın!',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          Text('$_correct / $_index doğru',
+              style: const TextStyle(color: AppColors.inkLight, fontSize: 15)),
+          if (_bonusAwarded > 0) ...<Widget>[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.gold.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text('+$_bonusAwarded XP 🎉',
+                  style: const TextStyle(
+                      color: AppColors.goldDark,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18)),
+            ),
+          ],
+          const SizedBox(height: 28),
+          if (remaining > 0) ...<Widget>[
+            GameButton(
+              label: 'DEVAM ET ($remaining soru daha)',
+              onPressed: _continuePastGoal,
+            ),
+            const SizedBox(height: 12),
+            GameButton(
+              label: 'Bugünlük bitir',
+              color: AppColors.blue,
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+          ] else
+            GameButton(
+              label: 'HARİKA, BİTİR',
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+        ],
       ),
     );
   }

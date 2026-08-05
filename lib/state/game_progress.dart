@@ -17,6 +17,10 @@ class GameProgress extends ChangeNotifier {
   static const int xpPerLevel = 500;
   static const int xpPerCorrect = 10;
 
+  /// Günlük tekrar hedefi (üst sınır) ve hedefi tamamlama bonusu.
+  static const int dailyReviewCap = 20;
+  static const int dailyGoalBonus = 50;
+
   int get level => xp ~/ xpPerLevel + 1;
   int get xpIntoLevel => xp % xpPerLevel;
   double get levelProgress => xpIntoLevel / xpPerLevel;
@@ -37,6 +41,27 @@ class GameProgress extends ChangeNotifier {
   void refillHearts() {
     hearts = maxHearts;
     notifyListeners();
+  }
+
+  void addXp(int amount) {
+    xp += amount;
+    notifyListeners();
+  }
+
+  DateTime? _lastGoalDate;
+
+  /// Günlük hedef bonusunu günde yalnızca bir kez verir; verdiyse true döner.
+  bool claimDailyGoal(int bonus) {
+    final DateTime now = DateTime.now();
+    final bool alreadyToday = _lastGoalDate != null &&
+        _lastGoalDate!.year == now.year &&
+        _lastGoalDate!.month == now.month &&
+        _lastGoalDate!.day == now.day;
+    if (alreadyToday) return false;
+    _lastGoalDate = DateTime(now.year, now.month, now.day);
+    xp += bonus;
+    notifyListeners();
+    return true;
   }
 }
 
