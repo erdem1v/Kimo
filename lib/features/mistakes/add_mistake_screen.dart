@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -41,6 +42,7 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
   final TextEditingController _note = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   Uint8List? _imageBytes;
+  double? _imageAspect; // en/boy — foto alanını orana göre boyutlamak için
   String? _subject;
   String? _exam; // 'TYT' | 'AYT' (AI önerir, kullanıcı düzenleyebilir)
   MistakeType? _type;
@@ -147,13 +149,31 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
       if (file == null) return;
       final Uint8List bytes = await file.readAsBytes();
       if (!mounted) return;
-      setState(() => _imageBytes = bytes);
+      setState(() {
+        _imageBytes = bytes;
+        _imageAspect = null;
+      });
+      _decodeAspect(bytes);
       if (SupabaseConfig.isConfigured) _analyze(bytes);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Fotoğraf alınamadı.')),
       );
+    }
+  }
+
+  /// Fotoğrafın en/boy oranını çözer (dikey sorular küçük görünmesin diye
+  /// foto alanı bu orana göre boyutlanır).
+  Future<void> _decodeAspect(Uint8List bytes) async {
+    try {
+      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+      final ui.FrameInfo frame = await codec.getNextFrame();
+      final double aspect = frame.image.width / frame.image.height;
+      frame.image.dispose();
+      if (mounted) setState(() => _imageAspect = aspect);
+    } catch (_) {
+      // Oran çözülemezse varsayılan kullanılır.
     }
   }
 
@@ -263,14 +283,14 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
               _imageBytes != null &&
               !_analyzing) ...<Widget>[
             const SizedBox(height: 22),
-            _label('Şıklar'),
+            _label('Şıklar', emoji: '🔤'),
             const SizedBox(height: 8),
             _optionsBlock(),
           ],
           const SizedBox(height: 22),
           Row(
             children: <Widget>[
-              _label('Konu / Kavram'),
+              _label('Konu / Kavram', emoji: '🏷️'),
               if (SupabaseConfig.isConfigured &&
                   _imageBytes != null &&
                   !_analyzing &&
@@ -286,7 +306,7 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
             decoration: _inputDecoration('Örn. Birinci Dereceden Denklem'),
           ),
           const SizedBox(height: 22),
-          _label('Ders'),
+          _label('Ders', emoji: '📚'),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -301,7 +321,7 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
                     color: _subject == s ? Colors.white : AppColors.ink,
                     fontWeight: FontWeight.w700,
                   ),
-                  selectedColor: AppColors.green,
+                  selectedColor: AppColors.purple,
                   backgroundColor: const Color(0xFFF4F4F4),
                   shape: const StadiumBorder(),
                   side: BorderSide.none,
@@ -310,7 +330,7 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
             ],
           ),
           const SizedBox(height: 22),
-          _label('Sınav'),
+          _label('Sınav', emoji: '🎯'),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -333,11 +353,11 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
             ],
           ),
           const SizedBox(height: 22),
-          _label('Hata türü'),
+          _label('Hata türü', emoji: '⚠️'),
           const SizedBox(height: 8),
           for (final MistakeType t in MistakeType.values) _typeTile(t),
           const SizedBox(height: 22),
-          _label('Not (opsiyonel)'),
+          _label('Not (opsiyonel)', emoji: '📝'),
           const SizedBox(height: 8),
           TextField(
             controller: _note,
@@ -446,13 +466,21 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
 
   Widget _photoArea() {
     final bool hasImage = _imageBytes != null;
+    // Foto alanı, fotoğrafın oranına göre boyutlanır: dikey sorular yüksek
+    // (büyük) görünür, yatay sorular alçak. Ekran taşmasın diye sınırlandırılır.
+    double photoHeight = 200;
+    if (hasImage) {
+      final double maxW = MediaQuery.of(context).size.width - 40;
+      final double aspect = _imageAspect ?? 1.3;
+      photoHeight = (maxW / aspect).clamp(240.0, 520.0);
+    }
     return GestureDetector(
-      onTap: _pickPhoto,
+      onTap: _analyzing ? null : _pickPhoto,
       child: Container(
-        height: 200,
+        height: photoHeight,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: hasImage ? Colors.black : const Color(0xFFF7F7F7),
+          color: hasImage ? Colors.white : const Color(0xFFF7F7F7),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: hasImage ? AppColors.green : AppColors.line,
@@ -463,44 +491,104 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
             ? Stack(
                 fit: StackFit.expand,
                 children: <Widget>[
-                  Image.memory(_imageBytes!, fit: BoxFit.cover),
-                  Positioned(
-                    right: 10,
-                    top: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.55),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Icon(Icons.edit, color: Colors.white, size: 16),
-                          SizedBox(width: 4),
-                          Text('Değiştir',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700)),
-                        ],
+                  // Tüm soru görünsün diye contain (kırpma yok).
+                  Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Image.memory(_imageBytes!, fit: BoxFit.contain),
+                  ),
+                  if (!_analyzing)
+                    Positioned(
+                      right: 10,
+                      top: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(Icons.edit, color: Colors.white, size: 16),
+                            SizedBox(width: 4),
+                            Text('Değiştir',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700)),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
+                  if (_analyzing) _analyzingOverlay(),
                 ],
               )
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const <Widget>[
-                  Icon(Icons.add_a_photo_rounded,
-                      size: 40, color: AppColors.inkLight),
-                  SizedBox(height: 10),
-                  Text('Soruyu fotoğrafla veya yükle',
+                children: <Widget>[
+                  Container(
+                    width: 64,
+                    height: 64,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: AppColors.blueBg,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.add_a_photo_rounded,
+                        size: 32, color: AppColors.blue),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('Soruyu fotoğrafla veya yükle',
                       style: TextStyle(
-                          color: AppColors.inkLight, fontWeight: FontWeight.w700)),
+                          color: AppColors.ink,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15)),
+                  const SizedBox(height: 3),
+                  const Text('Kameradan çek ya da galeriden seç',
+                      style: TextStyle(color: AppColors.inkLight, fontSize: 12)),
                 ],
               ),
+      ),
+    );
+  }
+
+  /// Analiz sürerken fotoğrafın üstünde yarı saydam yükleniyor katmanı.
+  Widget _analyzingOverlay() {
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.55),
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const SizedBox(
+              width: 34,
+              height: 34,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                SizedBox(width: 6),
+                Text('AI soruyu analiz ediyor…',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text('şıklar ve konu çıkarılıyor',
+                style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8), fontSize: 12)),
+          ],
+        ),
       ),
     );
   }
@@ -563,10 +651,19 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
         ),
       );
 
-  Widget _label(String text) => Text(
-        text,
-        style: const TextStyle(
-            fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.ink),
+  Widget _label(String text, {String? emoji}) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (emoji != null) ...<Widget>[
+            Text(emoji, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            text,
+            style: const TextStyle(
+                fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.ink),
+          ),
+        ],
       );
 
   InputDecoration _inputDecoration(String hint) => InputDecoration(
