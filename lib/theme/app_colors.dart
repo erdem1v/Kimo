@@ -37,4 +37,10 @@ class AppColors {
   // Mor — rozet / özel
   static const Color purple = Color(0xFFCE82FF);
   static const Color purpleDark = Color(0xFFA560E8);
+
+  // Ders aksanları için ek canlı tonlar
+  static const Color teal = Color(0xFF12B8A6);
+  static const Color pink = Color(0xFFFF5FA2);
+  static const Color indigo = Color(0xFF7C6FF0);
+  static const Color cyan = Color(0xFF00C2E0);
 }

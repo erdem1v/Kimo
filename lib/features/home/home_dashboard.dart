@@ -33,6 +33,23 @@ class _HomeDashboardState extends State<HomeDashboard> {
     'Coğrafya': '🌍', 'Felsefe': '🤔', 'Felsefe Grubu': '🤔', 'Din Kültürü': '🕌',
   };
 
+  static const Map<String, Color> _subjectColor = <String, Color>{
+    'Türkçe': AppColors.red,
+    'Matematik': AppColors.blue,
+    'Geometri': AppColors.indigo,
+    'Fizik': AppColors.purple,
+    'Kimya': AppColors.teal,
+    'Biyoloji': AppColors.green,
+    'Edebiyat': AppColors.pink,
+    'Tarih': AppColors.orange,
+    'Coğrafya': AppColors.cyan,
+    'Felsefe': AppColors.gold,
+    'Felsefe Grubu': AppColors.gold,
+    'Din Kültürü': AppColors.indigo,
+  };
+
+  Color _colorFor(String subject) => _subjectColor[subject] ?? AppColors.blue;
+
   @override
   void initState() {
     super.initState();
@@ -138,20 +155,26 @@ class _HomeDashboardState extends State<HomeDashboard> {
   Widget _examTab(String exam) {
     final bool selected = _exam == exam;
     final int total = _countsForExam(exam).values.fold(0, (int a, int b) => a + b);
+    // TYT ve AYT'ye ayrı canlı gradyanlar.
+    final List<Color> grad = exam == 'TYT'
+        ? <Color>[AppColors.blue, AppColors.indigo]
+        : <Color>[AppColors.pink, AppColors.purple];
     return GestureDetector(
       onTap: () => setState(() => _exam = exam),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(vertical: 13),
         decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.transparent,
+          gradient: selected
+              ? LinearGradient(colors: grad)
+              : null,
           borderRadius: BorderRadius.circular(13),
           boxShadow: selected
               ? <BoxShadow>[
                   BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2))
+                      color: grad.last.withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4))
                 ]
               : null,
         ),
@@ -163,7 +186,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               style: TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
-                color: selected ? AppColors.ink : AppColors.inkLight,
+                color: selected ? Colors.white : AppColors.inkLight,
               ),
             ),
             if (total > 0) ...<Widget>[
@@ -171,7 +194,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
-                  color: selected ? AppColors.green : AppColors.line,
+                  color: selected
+                      ? Colors.white.withValues(alpha: 0.30)
+                      : AppColors.line,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -217,61 +242,68 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   Widget _subjectTile(String subject, int count) {
     final bool active = count > 0;
+    final Color color = _colorFor(subject);
     return GestureDetector(
       onTap: active ? () => _practice(exam: _exam, subject: subject) : null,
-      child: Opacity(
-        opacity: active ? 1 : 0.55,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.line, width: 1.5),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: active ? color.withValues(alpha: 0.09) : const Color(0xFFFAFAFA),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: active ? color.withValues(alpha: 0.30) : AppColors.line,
+            width: 1.5,
           ),
-          child: Row(
-            children: <Widget>[
-              Container(
-                width: 48,
-                height: 48,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF4F4F4),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(_subjectEmoji[subject] ?? '📚',
-                    style: const TextStyle(fontSize: 24)),
+        ),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 50,
+              height: 50,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: active
+                    ? color.withValues(alpha: 0.20)
+                    : const Color(0xFFF0F0F0),
+                borderRadius: BorderRadius.circular(14),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      subject,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 15,
-                          color: AppColors.ink),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      active ? '$count soru seni bekliyor' : 'Bekleyen soru yok',
-                      style: const TextStyle(
-                          color: AppColors.inkLight, fontSize: 13),
-                    ),
-                  ],
-                ),
+              child: Text(_subjectEmoji[subject] ?? '📚',
+                  style: TextStyle(
+                      fontSize: 24,
+                      color: active ? null : Colors.black.withValues(alpha: 0.35))),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    subject,
+                    style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15.5,
+                        color: active ? AppColors.ink : AppColors.inkLight),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    active ? '$count soru seni bekliyor' : 'Bekleyen soru yok',
+                    style: TextStyle(
+                        color: active ? color : AppColors.inkLight,
+                        fontWeight: active ? FontWeight.w700 : FontWeight.w400,
+                        fontSize: 13),
+                  ),
+                ],
               ),
-              _subjectTrailing(count, active),
-            ],
-          ),
+            ),
+            _subjectTrailing(count, active, color),
+          ],
         ),
       ),
     );
   }
 
-  Widget _subjectTrailing(int count, bool active) {
+  Widget _subjectTrailing(int count, bool active, Color color) {
     if (!active) {
       return Container(
         width: 30,
@@ -289,10 +321,16 @@ class _HomeDashboardState extends State<HomeDashboard> {
       );
     }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
       decoration: BoxDecoration(
-        color: AppColors.green,
+        color: color,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+              color: color.withValues(alpha: 0.35),
+              blurRadius: 8,
+              offset: const Offset(0, 3)),
+        ],
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
