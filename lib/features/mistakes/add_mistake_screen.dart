@@ -9,6 +9,7 @@ import '../../models/models.dart';
 import '../../services/sound_service.dart';
 import '../../services/supabase_config.dart';
 import '../../state/mistake_store.dart';
+import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_button.dart';
 import '../../widgets/mistake_style.dart';
@@ -47,8 +48,6 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
   String? _exam; // 'TYT' | 'AYT' (AI önerir, kullanıcı düzenleyebilir)
   MistakeType? _type;
   bool _saving = false;
-  // Havuz paylaşımı OPT-IN: kullanıcı açıkça izin vermeden soru paylaşılmaz.
-  bool _share = false;
 
   // AI ile çıkarılan şıklar
   bool _analyzing = false;
@@ -244,7 +243,9 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
           options: options,
           correctIndex: _correctIndex,
           exam: _exam,
-          isPublic: _share,
+          // Paylaşım izni karşılama akışında bir kez alınır (profilden
+          // değiştirilebilir); soru başına ayrıca sorulmaz.
+          isPublic: userProfile.shareConsent,
         );
       } else {
         mistakeStore.add(
@@ -367,8 +368,6 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
             maxLines: 3,
             decoration: _inputDecoration('Neyi yanlış yaptığını kısaca yaz...'),
           ),
-          const SizedBox(height: 22),
-          _shareTile(),
           const SizedBox(height: 28),
           GameButton(
             label: _saving ? 'Kaydediliyor...' : 'KAYDET',
@@ -631,55 +630,6 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
             if (selected) Icon(Icons.check_circle, color: color),
           ],
         ),
-      ),
-    );
-  }
-
-  /// Havuz paylaşımı onayı. Kapalıyken soru yalnızca kullanıcıya aittir.
-  Widget _shareTile() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 6, 8, 6),
-      decoration: BoxDecoration(
-        color: _share
-            ? AppColors.purple.withValues(alpha: 0.10)
-            : const Color(0xFFF7F7F7),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: _share ? AppColors.purple.withValues(alpha: 0.35) : AppColors.line,
-          width: 1.5,
-        ),
-      ),
-      child: Row(
-        children: <Widget>[
-          const Text('🌍', style: TextStyle(fontSize: 20)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Text('Soru havuzunda paylaş',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
-                        color: AppColors.ink)),
-                const SizedBox(height: 2),
-                Text(
-                  _share
-                      ? 'Fotoğrafı ve şıkları diğer öğrenciler görebilir; '
-                          'takma adın görünür. Notun paylaşılmaz.'
-                      : 'Kapalı: bu soru yalnızca sana özel kalır.',
-                  style: const TextStyle(
-                      color: AppColors.inkLight, fontSize: 12, height: 1.25),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: _share,
-            activeThumbColor: AppColors.purple,
-            onChanged: (bool v) => setState(() => _share = v),
-          ),
-        ],
       ),
     );
   }

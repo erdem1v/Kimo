@@ -18,7 +18,15 @@ class OnboardingFlow extends StatefulWidget {
   State<OnboardingFlow> createState() => _OnboardingFlowState();
 }
 
-enum _Step { nickname, examYear, mascot, howPhoto, howReview, howGamify }
+enum _Step {
+  nickname,
+  examYear,
+  mascot,
+  howPhoto,
+  howReview,
+  howGamify,
+  shareConsent,
+}
 
 class _OnboardingFlowState extends State<OnboardingFlow> {
   final PageController _pager = PageController();
@@ -28,6 +36,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   int _index = 0;
   int? _year;
   Mascot? _mascot;
+  bool _consent = false;
   bool _saving = false;
 
   static const List<int> _years = <int>[2026, 2027, 2028, 2029, 2030];
@@ -46,7 +55,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       _Step.howPhoto,
       _Step.howReview,
       _Step.howGamify,
+      _Step.shareConsent,
     ];
+    _consent = userProfile.shareConsent;
     _nickname.addListener(() => setState(() {}));
   }
 
@@ -79,6 +90,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           await userProfile.setExamYear(_year!);
         case _Step.mascot:
           await userProfile.setMascot(_mascot!);
+        case _Step.shareConsent:
+          await userProfile.setShareConsent(_consent);
         default:
           break;
       }
@@ -210,7 +223,129 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                 'büyütürsün. Hatalarım sekmesinde derslere göre nerede '
                 'zorlandığını görürsün.',
           ),
+        _Step.shareConsent => _consentPage(),
       };
+
+  /// Soru havuzu paylaşım onayı — bir kez alınır, profilden değiştirilebilir.
+  Widget _consentPage() {
+    return _pad(
+      SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const SizedBox(height: 8),
+            Center(
+              child: Container(
+                width: 96,
+                height: 96,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.purple.withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: const Text('🌍', style: TextStyle(fontSize: 44)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            _title('Soru havuzu'),
+            _subtitle(
+              'Yüklediğin sorular, diğer öğrencilerin çözebilmesi için ortak '
+              'havuza eklenir. Sen de onların sorularını çözersin — havuz '
+              'herkesin katkısıyla büyür.',
+            ),
+            const SizedBox(height: 16),
+            _consentBullet('👀', 'Paylaşılan',
+                'Sorunun fotoğrafı, şıkları ve takma adın.'),
+            _consentBullet('🔒', 'Paylaşılmayan',
+                'Notların, hata türün, tekrar durumun ve e-postan.'),
+            const SizedBox(height: 18),
+            GestureDetector(
+              onTap: () {
+                sound.tap();
+                setState(() => _consent = !_consent);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: _consent
+                      ? AppColors.green.withValues(alpha: 0.10)
+                      : const Color(0xFFF7F7F7),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _consent ? AppColors.green : AppColors.line,
+                    width: _consent ? 2 : 1.5,
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Icon(
+                      _consent
+                          ? Icons.check_box_rounded
+                          : Icons.check_box_outline_blank_rounded,
+                      color: _consent ? AppColors.green : AppColors.inkLight,
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'Yüklediğim soruların diğer öğrencilerle '
+                        'paylaşılacağını okudum, anladım ve kabul ediyorum.',
+                        style: TextStyle(
+                            fontSize: 13.5,
+                            height: 1.35,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Kabul etmezsen sorularının hiçbiri paylaşılmaz; uygulamayı '
+              'yine de kullanabilirsin. Bu tercihi profilinden '
+              'değiştirebilirsin.',
+              style: TextStyle(
+                  color: AppColors.inkLight, fontSize: 12, height: 1.3),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _consentBullet(String emoji, String title, String body) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(emoji, style: const TextStyle(fontSize: 15)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: <TextSpan>[
+                  TextSpan(
+                    text: '$title: ',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, color: AppColors.ink),
+                  ),
+                  TextSpan(
+                    text: body,
+                    style: const TextStyle(color: AppColors.inkLight),
+                  ),
+                ],
+              ),
+              style: const TextStyle(fontSize: 13, height: 1.3),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   // --- Adımlar ---
 

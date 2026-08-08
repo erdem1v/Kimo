@@ -20,6 +20,7 @@ class UserProfile extends ChangeNotifier {
   int? _examYear;
   String? _nickname;
   Mascot? _mascot;
+  bool _shareConsent = false;
 
   /// Müfredat belirlendi mi?
   bool get isSet => _curriculum != null;
@@ -30,6 +31,10 @@ class UserProfile extends ChangeNotifier {
   int? get examYear => _examYear;
   String? get nickname => _nickname;
   Mascot? get mascot => _mascot;
+
+  /// Yüklenen soruların soru havuzunda paylaşılmasına izin verildi mi?
+  /// Karşılama akışında bir kez sorulur, profilden değiştirilebilir.
+  bool get shareConsent => _shareConsent;
 
   /// Karşılama akışı tamamlandı mı? (takma ad + sınav yılı + maskot)
   bool get onboardingComplete =>
@@ -52,7 +57,14 @@ class UserProfile extends ChangeNotifier {
     _examYear = y is int ? y : (y is num ? y.toInt() : null);
     _nickname = (n is String && n.trim().isNotEmpty) ? n.trim() : null;
     _mascot = Mascot.fromDb(meta?['mascot'] as String?);
+    _shareConsent = meta?['share_consent'] == true;
     notifyListeners();
+  }
+
+  Future<void> setShareConsent(bool value) async {
+    _shareConsent = value;
+    notifyListeners();
+    await _save(<String, dynamic>{'share_consent': value});
   }
 
   /// Sınav yılını kaydeder ve müfredatı buna göre belirler.

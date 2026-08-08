@@ -54,6 +54,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 12),
                 _mascotTile(),
                 const SizedBox(height: 12),
+                _shareConsentTile(),
+                const SizedBox(height: 12),
                 _curriculumTile(),
                 const SizedBox(height: 12),
                 _logoutButton(),
@@ -311,6 +313,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
       },
+    );
+  }
+
+  /// Soru havuzu paylaşım izni. Kapatınca sonraki yüklemeler paylaşılmaz.
+  Widget _shareConsentTile() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F7F7),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: SwitchListTile(
+        value: userProfile.shareConsent,
+        onChanged: (bool v) => userProfile.setShareConsent(v),
+        activeThumbColor: AppColors.purple,
+        secondary: const Text('🌍', style: TextStyle(fontSize: 22)),
+        title: const Text('Sorularımı havuzda paylaş',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        subtitle: Text(
+          userProfile.shareConsent
+              ? 'Yeni yüklediğin sorular diğer öğrencilerce çözülebilir.'
+              : 'Kapalı: yüklediğin sorular sana özel kalır.',
+          style: const TextStyle(color: AppColors.inkLight, fontSize: 12.5),
+        ),
+      ),
     );
   }
 
