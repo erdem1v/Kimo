@@ -143,25 +143,30 @@ class _MistakesScreenState extends State<MistakesScreen> {
     );
   }
 
-  /// Tüm kutucukları kaydırmadan, kalan alana sığdıran grid. Kutu oranı
-  /// mevcut yükseklik + kutu sayısına göre hesaplanır.
+  /// Kutucuklar 3 sütun halinde, kalan alana sığdırılır. Kutular okunur
+  /// boyutun altına düşecekse sığdırmayı bırakıp kaydırmaya izin verir.
   Widget _grid(List<_Grp> groups, int total) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints c) {
-        const int cols = 3;
         const double spacing = 10;
+        const int cols = 3;
+        const double minCellH = 108; // kutunun okunur kaldığı en küçük yükseklik
         final int rows = (groups.length / cols).ceil();
+
         final double cellW = (c.maxWidth - (cols - 1) * spacing) / cols;
-        final double cellH =
-            ((c.maxHeight - 2) - (rows - 1) * spacing) / rows;
-        final double aspect =
-            cellH <= 0 ? 0.92 : (cellW / cellH).clamp(0.55, 3.0);
+        final double availH = c.maxHeight - (rows - 1) * spacing;
+        final double cellH = rows == 0 ? minCellH : availH / rows;
+        final bool fits = cellH >= minCellH;
+        final double h = fits ? cellH : minCellH;
+
         return GridView.count(
           crossAxisCount: cols,
-          physics: const NeverScrollableScrollPhysics(),
+          physics: fits
+              ? const NeverScrollableScrollPhysics()
+              : const AlwaysScrollableScrollPhysics(),
           mainAxisSpacing: spacing,
           crossAxisSpacing: spacing,
-          childAspectRatio: aspect,
+          childAspectRatio: cellW / h,
           children: <Widget>[
             for (final _Grp g in groups) _groupBox(g, total),
           ],
@@ -247,15 +252,19 @@ class _MistakesScreenState extends State<MistakesScreen> {
               ],
             ),
             const Spacer(),
-            Text(
-              g.subject,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  fontWeight: FontWeight.w800, fontSize: 13.5, color: fg),
+            Flexible(
+              child: Text(
+                g.subject,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontWeight: FontWeight.w800, fontSize: 13.5, color: fg),
+              ),
             ),
             const SizedBox(height: 3),
             Text('$count soru · %$percent',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                     color: fg.withValues(alpha: 0.85),
                     fontSize: 10.5,
