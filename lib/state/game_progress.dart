@@ -1,4 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+
+import '../data/social_repository.dart';
+import '../models/social.dart';
+import '../services/supabase_config.dart';
 
 /// Oyunlaştırma durumu: XP, seviye, can, seri, elmas ve günlük tekrar
 /// ilerlemesi. Ekranlar arasında paylaşılır (tekil [ChangeNotifier]).
@@ -8,11 +14,11 @@ class GameProgress extends ChangeNotifier {
   GameProgress._();
   static final GameProgress instance = GameProgress._();
 
-  int xp = 1240;
+  int xp = 0;
   int hearts = 5;
   final int maxHearts = 5;
-  int streak = 12;
-  int gems = 335;
+  int streak = 0;
+  int gems = 0;
 
   static const int xpPerLevel = 500;
   static const int xpPerCorrect = 10;
@@ -92,9 +98,54 @@ class GameProgress extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Bu haftaki XP — lig içi sıralamayı belirler, pazartesi sıfırlanır.
+  int weeklyXp = 0;
+  DateTime? _weekStart;
+
+  void _rollWeek() {
+    final DateTime current = weekStart(DateTime.now());
+    if (_weekStart != current) {
+      _weekStart = current;
+      weeklyXp = 0;
+    }
+  }
+
   void addXp(int amount) {
+    _rollWeek();
     xp += amount;
+    weeklyXp += amount;
     notifyListeners();
+    _scheduleSync();
+  }
+
+  /// Sunucudaki değerlerle başlat (oturum açılışında).
+  void hydrate({
+    required int xp,
+    required int streak,
+    int weeklyXp = 0,
+  }) {
+    this.xp = xp;
+    this.streak = streak;
+    _weekStart = weekStart(DateTime.now());
+    this.weeklyXp = weeklyXp;
+    notifyListeners();
+  }
+
+  // XP her doğru cevapta artıyor; her seferinde ağ isteği atmamak için
+  // kısa bir gecikmeyle toplu kaydederiz.
+  Timer? _syncTimer;
+
+  void _scheduleSync() {
+    if (!SupabaseConfig.isConfigured) return;
+    _syncTimer?.cancel();
+    _syncTimer = Timer(const Duration(seconds: 2), () {
+      socialRepository.syncStats(
+        xp: xp,
+        streak: streak,
+        weeklyXp: weeklyXp,
+        weekStartDate: _weekStart ?? weekStart(DateTime.now()),
+      );
+    });
   }
 
   /// Günlük hedef bonusunu günde yalnızca bir kez verir; verdiyse true döner.
@@ -104,6 +155,7 @@ class GameProgress extends ChangeNotifier {
     _lastGoalDate = DateTime(n.year, n.month, n.day);
     xp += bonus;
     notifyListeners();
+    _scheduleSync();
     return true;
   }
 

@@ -10,6 +10,7 @@ import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_widgets.dart';
 import '../../models/mascot.dart';
+import '../../models/social.dart';
 import '../onboarding/exam_year_sheet.dart';
 import '../onboarding/mascot_sheet.dart';
 
@@ -175,11 +176,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _leagueCard() {
+    final League league = League.fromXp(gameProgress.xp);
+    final League? next = league.next;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: <Color>[AppColors.blue, AppColors.purple],
+        gradient: LinearGradient(
+          colors: <Color>[league.color, league.color.withValues(alpha: 0.72)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -187,20 +190,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Row(
         children: <Widget>[
-          const Text('🏅', style: TextStyle(fontSize: 40)),
+          Text(league.emoji, style: const TextStyle(fontSize: 40)),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const <Widget>[
-                Text('Elmas Ligi',
-                    style: TextStyle(
+              children: <Widget>[
+                Text(league.label,
+                    style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.w800)),
-                SizedBox(height: 2),
-                Text('Bu hafta 3. sıradasın · 340 XP',
-                    style: TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 2),
+                Text(
+                  next == null
+                      ? '${gameProgress.xp} XP · en üst lig 👑'
+                      : '${gameProgress.xp} XP · ${next.label} için '
+                          '${next.minXp - gameProgress.xp} XP',
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
               ],
             ),
           ),
