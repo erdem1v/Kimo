@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/public_question.dart';
+import '../models/received_question.dart';
 
 /// Soru havuzu: kullanıcıların paylaşıma açtığı hataları rastgele getirir ve
 /// çözüm denemelerini kaydeder.
@@ -29,6 +30,71 @@ class QuestionPoolRepository {
       return await _client.storage.from(_bucket).createSignedUrl(path, 3600);
     } catch (_) {
       return null;
+    }
+  }
+
+  // ------------------------------------------------ arkadaşa soru gönderme
+
+  /// Bir soruyu arkadaşlara gönderir. Arkadaşlık kontrolü RLS'te zorunludur.
+  /// Zaten gönderilmiş olanlar sessizce atlanır.
+  Future<int> sendToFriends({
+    required String mistakeId,
+    required List<String> receiverIds,
+    String? note,
+  }) async {
+    final String? uid = _client.auth.currentUser?.id;
+    if (uid == null || receiverIds.isEmpty) return 0;
+    int sent = 0;
+    for (final String receiver in receiverIds) {
+      try {
+        await _client.from('question_sends').insert(<String, dynamic>{
+          'sender_id': uid,
+          'receiver_id': receiver,
+          'mistake_id': mistakeId,
+          'note': (note == null || note.trim().isEmpty) ? null : note.trim(),
+        });
+        sent++;
+      } catch (_) {
+        // Aynı soruyu aynı kişiye ikinci kez göndermek (unique) ya da ağ hatası.
+      }
+    }
+    return sent;
+  }
+
+  /// Bana gelen sorular (en yeni önce).
+  Future<List<ReceivedQuestion>> received({bool onlyUnsolved = false}) async {
+    final List<Map<String, dynamic>> rows = await _client
+        .from('received_questions')
+        .select()
+        .order('created_at', ascending: false);
+    final List<ReceivedQuestion> items =
+        rows.map(ReceivedQuestion.fromRow).toList();
+    if (!onlyUnsolved) return items;
+    return items.where((ReceivedQuestion q) => !q.solved).toList();
+  }
+
+  /// Çözülmemiş gelen soru sayısı (rozet için).
+  Future<int> unsolvedCount() async {
+    try {
+      final List<Map<String, dynamic>> rows = await _client
+          .from('received_questions')
+          .select('send_id')
+          .filter('solved_at', 'is', null);
+      return rows.length;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Gelen soruyu çözüldü olarak işaretler.
+  Future<void> markSolved(String sendId, bool correct) async {
+    try {
+      await _client.from('question_sends').update(<String, dynamic>{
+        'solved_at': DateTime.now().toIso8601String(),
+        'correct': correct,
+      }).eq('id', sendId);
+    } catch (_) {
+      // Akışı bloklamayalım.
     }
   }
 

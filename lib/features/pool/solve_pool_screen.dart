@@ -10,6 +10,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/drawing_canvas.dart';
 import '../../widgets/game_button.dart';
 import '../../widgets/mistake_photo.dart';
+import 'send_question_sheet.dart';
 
 /// Soru havuzu: başka öğrencilerin paylaştığı hataları rastgele çözdürür.
 /// Her sorunun üstünde sahibinin takma adı ve havuz istatistikleri görünür.
@@ -175,6 +176,15 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
               Text('$_correct doğru',
                   style: const TextStyle(
                       fontWeight: FontWeight.w800, color: AppColors.green)),
+              IconButton(
+                icon: const Icon(Icons.send_rounded, color: AppColors.purple),
+                tooltip: 'Arkadaşına gönder',
+                onPressed: () => showSendQuestionSheet(
+                  context,
+                  mistakeId: _current.id,
+                  title: '${_current.subject} · ${_current.concept}',
+                ),
+              ),
             ],
           ),
         ),

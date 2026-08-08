@@ -9,6 +9,8 @@ import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_widgets.dart';
 import '../../widgets/mistake_style.dart';
+import '../../data/question_pool_repository.dart';
+import '../pool/received_questions_screen.dart';
 import '../pool/solve_pool_screen.dart';
 import '../practice/practice_screen.dart';
 
@@ -28,6 +30,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
   List<MistakeEntry> _due = <MistakeEntry>[];
   bool _loading = true;
   String _exam = 'TYT';
+  // Arkadaşlarından gelen, henüz çözülmemiş soru sayısı.
+  int _incomingCount = 0;
 
   Color _colorFor(String subject) => subjectColor(subject);
 
@@ -47,7 +51,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
       final List<MistakeEntry> due = await mistakeRepository.dueReviews();
       // Bugün yapılanları DB'den geri yükle (uygulama kapanmışsa sayaç dönsün).
       final int doneToday = await mistakeRepository.reviewedTodayCount();
+      final int incoming = await questionPoolRepository.unsolvedCount();
       if (!mounted) return;
+      _incomingCount = incoming;
       gameProgress.syncDailyDone(doneToday);
       gameProgress.setDueRemaining(due.length);
       setState(() {
@@ -103,6 +109,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
               const SizedBox(height: 16),
               _dailyGoalCard(),
               if (_remote) ...<Widget>[
+                if (_incomingCount > 0) ...<Widget>[
+                  const SizedBox(height: 12),
+                  _incomingCard(),
+                ],
                 const SizedBox(height: 12),
                 _poolCard(),
               ],
@@ -117,6 +127,60 @@ class _HomeDashboardState extends State<HomeDashboard> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  /// Arkadaşlarından gelen sorular (yalnızca çözülmemiş varken görünür).
+  Widget _incomingCard() {
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute<void>(
+              builder: (_) => const ReceivedQuestionsScreen()),
+        );
+        await _loadDue();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: <Color>[AppColors.orange, AppColors.gold],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+                color: AppColors.orange.withValues(alpha: 0.30),
+                blurRadius: 12,
+                offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Row(
+          children: <Widget>[
+            const Text('📨', style: TextStyle(fontSize: 32)),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Arkadaşından $_incomingCount soru',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text('Sana gönderilen soruları çöz.',
+                      style: TextStyle(color: Colors.white70, fontSize: 12.5)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.white),
+          ],
+        ),
       ),
     );
   }

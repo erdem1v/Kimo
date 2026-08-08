@@ -8,6 +8,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/game_button.dart';
 import '../../widgets/mistake_photo.dart';
 import '../../widgets/mistake_style.dart';
+import '../pool/send_question_sheet.dart';
 import 'add_mistake_screen.dart';
 
 /// Hata bankası. Supabase yapılandırılmışsa uzak veriden, değilse mock
@@ -398,6 +399,27 @@ class _MistakeCard extends StatelessWidget {
                       style: const TextStyle(
                           color: AppColors.inkLight, fontSize: 12),
                     ),
+                    // Çözülebilir sorular (foto + şık) arkadaşa gönderilebilir.
+                    if (entry.id != null &&
+                        entry.photoPath != null &&
+                        entry.hasOptions &&
+                        entry.correctIndex != null)
+                      SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          iconSize: 18,
+                          icon: const Icon(Icons.send_rounded,
+                              color: AppColors.purple),
+                          tooltip: 'Arkadaşına gönder',
+                          onPressed: () => showSendQuestionSheet(
+                            context,
+                            mistakeId: entry.id!,
+                            title: '${entry.subject} · ${entry.concept}',
+                          ),
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 2),
