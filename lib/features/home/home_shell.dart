@@ -6,7 +6,6 @@ import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
 import '../chat/chat_screen.dart';
 import '../mistakes/mistakes_screen.dart';
-import '../onboarding/exam_year_sheet.dart';
 import '../profile/profile_screen.dart';
 import 'home_dashboard.dart';
 
@@ -25,15 +24,9 @@ class _HomeShellState extends State<HomeShell> {
   @override
   void initState() {
     super.initState();
-    // Müfredatı yükle; henüz belirlenmemişse ilk açılışta bir kez sor.
-    if (SupabaseConfig.isConfigured) {
-      userProfile.loadFromAuth();
-      if (!userProfile.isSet) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) showExamYearSheet(context, dismissible: false);
-        });
-      }
-    }
+    // Profil tercihleri (müfredat, maskot) karşılama akışında alınır; burada
+    // yalnızca oturumdaki değerleri belleğe yükleriz.
+    if (SupabaseConfig.isConfigured) userProfile.loadFromAuth();
   }
 
   static const List<Widget> _pages = <Widget>[

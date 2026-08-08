@@ -5,11 +5,14 @@ import '../../data/auth_repository.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_button.dart';
 
-/// Giriş / kayıt ekranı. Kayıt akışında yaş/veli onayı kutucuğu (reşit olmayan
-/// kullanıcılar için UI iskeleti). Başarılı oturumda AuthGate otomatik geçiş
-/// yapar.
+/// Giriş / kayıt ekranı. Kayıtta takma ad (nickname) alınır; kalan tercihler
+/// (sınav yılı, maskot) karşılama akışında sorulur. Başarılı oturumda AuthGate
+/// otomatik geçiş yapar.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.startWithSignUp = false});
+
+  /// Karşılama ekranından "başlayalım" ile gelindiğinde kayıt formu açılır.
+  final bool startWithSignUp;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -20,7 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _password = TextEditingController();
   final TextEditingController _name = TextEditingController();
 
-  bool _isSignUp = false;
+  late bool _isSignUp = widget.startWithSignUp;
   bool _guardianConsent = false;
   bool _loading = false;
 
@@ -43,6 +46,10 @@ class _LoginScreenState extends State<LoginScreen> {
       _snack('E-posta ve şifre gerekli.');
       return;
     }
+    if (_isSignUp && _name.text.trim().length < 2) {
+      _snack('En az 2 karakterlik bir takma ad gir.');
+      return;
+    }
     if (_isSignUp && !_guardianConsent) {
       _snack('Devam etmek için veli onayını işaretle.');
       return;
@@ -54,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
         await authRepository.signUp(
           email: email,
           password: password,
-          displayName: _name.text.trim().isEmpty ? 'Öğrenci' : _name.text.trim(),
+          displayName: _name.text.trim(),
           guardianConsent: _guardianConsent,
         );
         if (authRepository.currentSession == null && mounted) {
@@ -63,7 +70,12 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         await authRepository.signIn(email: email, password: password);
       }
-      // Oturum açılırsa AuthGate otomatik olarak uygulamaya geçirir.
+      // Oturum açıldıysa bu ekran (ve karşılama) yığından kalkmalı; arkadaki
+      // AuthGate zaten uygulamaya/karşılama akışına geçmiş olur.
+      if (authRepository.currentSession != null && mounted) {
+        Navigator.of(context).popUntil((Route<dynamic> r) => r.isFirst);
+        return;
+      }
     } on AuthException catch (e) {
       if (mounted) _snack(e.message);
     } catch (_) {
@@ -85,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 const SizedBox(height: 12),
-                const Text('🦉', style: TextStyle(fontSize: 64), textAlign: TextAlign.center),
+                const Text('🐻', style: TextStyle(fontSize: 64), textAlign: TextAlign.center),
                 const SizedBox(height: 12),
                 const Text(
                   'AI YKS Coach',
@@ -100,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 28),
                 if (_isSignUp) ...<Widget>[
-                  _field(_name, 'Adın', TextInputType.name),
+                  _field(_name, 'Takma adın', TextInputType.name),
                   const SizedBox(height: 12),
                 ],
                 _field(_email, 'E-posta', TextInputType.emailAddress),

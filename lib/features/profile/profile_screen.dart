@@ -9,7 +9,9 @@ import '../../state/game_progress.dart';
 import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_widgets.dart';
+import '../../models/mascot.dart';
 import '../onboarding/exam_year_sheet.dart';
+import '../onboarding/mascot_sheet.dart';
 
 /// Profil / oyunlaştırma vitrini: seviye, seri, lig ve rozetler.
 class ProfileScreen extends StatefulWidget {
@@ -29,7 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: const Text('Profil'),
       ),
       body: ListenableBuilder(
-        listenable: gameProgress,
+        listenable: Listenable.merge(<Listenable>[gameProgress, userProfile]),
         builder: (BuildContext context, _) {
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
@@ -48,6 +50,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 24),
               _soundToggle(),
               if (SupabaseConfig.isConfigured) ...<Widget>[
+                const SizedBox(height: 12),
+                _mascotTile(),
                 const SizedBox(height: 12),
                 _curriculumTile(),
                 const SizedBox(height: 12),
@@ -69,14 +73,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           alignment: Alignment.center,
           decoration: const BoxDecoration(
               color: AppColors.greenBg, shape: BoxShape.circle),
-          child: const Text('🎓', style: TextStyle(fontSize: 30)),
+          child: Text(userProfile.mascot?.emoji ?? '🎓',
+              style: const TextStyle(fontSize: 30)),
         ),
         const SizedBox(width: 14),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text('Öğrenci',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+            Text(userProfile.nickname ?? 'Öğrenci',
+                style: const TextStyle(
+                    fontSize: 22, fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -261,6 +267,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
         secondary: const Icon(Icons.volume_up_rounded, color: AppColors.green),
         onChanged: (bool v) => setState(() => sound.enabled = v),
       ),
+    );
+  }
+
+  Widget _mascotTile() {
+    return ListenableBuilder(
+      listenable: userProfile,
+      builder: (BuildContext context, _) {
+        final Mascot? m = userProfile.mascot;
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFF7F7F7),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ListTile(
+            leading: Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: (m?.color ?? AppColors.purple).withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(m?.emoji ?? '🐻',
+                  style: const TextStyle(fontSize: 20)),
+            ),
+            title: const Text('Koçun',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: Text(m?.label ?? 'Seçilmedi — dokunup seç',
+                style: const TextStyle(
+                    color: AppColors.inkLight, fontSize: 13)),
+            trailing: const Icon(Icons.chevron_right_rounded,
+                color: AppColors.inkLight),
+            onTap: () => showMascotSheet(context),
+          ),
+        );
+      },
     );
   }
 

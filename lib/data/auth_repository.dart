@@ -27,6 +27,7 @@ class AuthRepository {
       password: password,
       data: <String, dynamic>{
         'display_name': displayName,
+        'nickname': displayName,
         'guardian_consent': guardianConsent,
       },
     );

@@ -1,13 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/mascot.dart';
 import '../services/supabase_config.dart';
 
-/// Kullanıcının müfredat tercihi. Sınav yılına göre eski (2018) veya maarif
-/// (Türkiye Yüzyılı Maarif Modeli) seçilir ve Supabase auth metadata'sında
-/// saklanır (cihazlar arası senkron; ayrı tablo/RLS gerekmez).
+/// Kullanıcının profil tercihleri: takma ad, sınav yılı → müfredat ve maskot
+/// karakteri. Hepsi Supabase auth metadata'sında saklanır (cihazlar arası
+/// senkron; ayrı tablo/RLS gerekmez).
 ///
-/// 2026-2027 → eski · 2028 ve sonrası → maarif.
+/// 2026-2027 → eski müfredat · 2028 ve sonrası → maarif.
 class UserProfile extends ChangeNotifier {
   UserProfile._();
   static final UserProfile instance = UserProfile._();
@@ -17,14 +18,25 @@ class UserProfile extends ChangeNotifier {
 
   String? _curriculum; // 'eski' | 'maarif' | null (henüz belirlenmedi)
   int? _examYear;
+  String? _nickname;
+  Mascot? _mascot;
 
-  /// Müfredat belirlendi mi? (false ise ilk açılışta sorulmalı.)
+  /// Müfredat belirlendi mi?
   bool get isSet => _curriculum != null;
 
   /// Etkin müfredat (belirlenmediyse güvenli varsayılan: eski).
   String get curriculum => _curriculum ?? eski;
 
   int? get examYear => _examYear;
+  String? get nickname => _nickname;
+  Mascot? get mascot => _mascot;
+
+  /// Karşılama akışı tamamlandı mı? (takma ad + sınav yılı + maskot)
+  bool get onboardingComplete =>
+      _nickname != null &&
+      _nickname!.isNotEmpty &&
+      _curriculum != null &&
+      _mascot != null;
 
   static String curriculumForYear(int year) => year >= 2028 ? maarif : eski;
 
@@ -35,8 +47,11 @@ class UserProfile extends ChangeNotifier {
         Supabase.instance.client.auth.currentUser?.userMetadata;
     final Object? c = meta?['curriculum'];
     final Object? y = meta?['exam_year'];
+    final Object? n = meta?['nickname'] ?? meta?['display_name'];
     _curriculum = (c == eski || c == maarif) ? c as String : null;
     _examYear = y is int ? y : (y is num ? y.toInt() : null);
+    _nickname = (n is String && n.trim().isNotEmpty) ? n.trim() : null;
+    _mascot = Mascot.fromDb(meta?['mascot'] as String?);
     notifyListeners();
   }
 
@@ -45,20 +60,37 @@ class UserProfile extends ChangeNotifier {
     _examYear = year;
     _curriculum = curriculumForYear(year);
     notifyListeners();
-    if (SupabaseConfig.isConfigured) {
-      await Supabase.instance.client.auth.updateUser(
-        UserAttributes(data: <String, dynamic>{
-          'curriculum': _curriculum,
-          'exam_year': year,
-        }),
-      );
-    }
+    await _save(<String, dynamic>{
+      'curriculum': _curriculum,
+      'exam_year': year,
+    });
+  }
+
+  Future<void> setNickname(String nickname) async {
+    final String value = nickname.trim();
+    if (value.isEmpty) return;
+    _nickname = value;
+    notifyListeners();
+    await _save(<String, dynamic>{'nickname': value, 'display_name': value});
+  }
+
+  Future<void> setMascot(Mascot mascot) async {
+    _mascot = mascot;
+    notifyListeners();
+    await _save(<String, dynamic>{'mascot': mascot.dbValue});
+  }
+
+  Future<void> _save(Map<String, dynamic> data) async {
+    if (!SupabaseConfig.isConfigured) return;
+    await Supabase.instance.client.auth.updateUser(UserAttributes(data: data));
   }
 
   /// Oturum kapanınca temizle.
   void clear() {
     _curriculum = null;
     _examYear = null;
+    _nickname = null;
+    _mascot = null;
     notifyListeners();
   }
 }
