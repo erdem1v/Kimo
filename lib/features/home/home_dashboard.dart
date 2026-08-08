@@ -5,6 +5,7 @@ import '../../data/yks_subjects.dart';
 import '../../models/models.dart';
 import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
+import '../../state/refresh_bus.dart';
 import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_widgets.dart';
@@ -39,6 +40,18 @@ class _HomeDashboardState extends State<HomeDashboard> {
   void initState() {
     super.initState();
     _loadDue();
+    refreshBus.addListener(_onRefresh);
+  }
+
+  @override
+  void dispose() {
+    refreshBus.removeListener(_onRefresh);
+    super.dispose();
+  }
+
+  /// Sekmeye dönüldüğünde tazele (gelen sorular anında görünsün).
+  void _onRefresh() {
+    if (mounted && !_loading) _loadDue();
   }
 
   /// Bugün planı gelmiş TÜM tekrarları yükler (gruplama + günlük hedef için).

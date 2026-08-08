@@ -5,6 +5,7 @@ import '../../models/social.dart';
 import '../../services/sound_service.dart';
 import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
+import '../../state/refresh_bus.dart';
 import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
 import '../chat/chat_screen.dart';
@@ -77,6 +78,9 @@ class _HomeShellState extends State<HomeShell> {
     if (_index == i) return;
     sound.tap();
     setState(() => _index = i);
+    // Sekmeler canlı tutulduğu için ekranlar kendiliğinden yenilenmez;
+    // dönüşte tazeleme sinyali yayınla (gelen istek/soru anında görünsün).
+    refreshBus.ping();
   }
 
   @override

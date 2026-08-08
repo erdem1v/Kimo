@@ -8,6 +8,7 @@ import '../../models/social.dart';
 import '../../services/sound_service.dart';
 import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
+import '../../state/refresh_bus.dart';
 import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
 
@@ -43,12 +44,22 @@ class _SocialScreenState extends State<SocialScreen>
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
-    if (_remote) _load();
+    if (_remote) {
+      _load();
+      refreshBus.addListener(_onRefresh);
+    }
     _query.addListener(_onQueryChanged);
+  }
+
+  /// Sekmeye dönüldüğünde tazele (gelen istekler için uygulamayı kapatmaya
+  /// gerek kalmasın).
+  void _onRefresh() {
+    if (mounted && !_loading) _load();
   }
 
   @override
   void dispose() {
+    refreshBus.removeListener(_onRefresh);
     _debounce?.cancel();
     _query.dispose();
     _tabs.dispose();
