@@ -119,6 +119,7 @@ class MistakeRepository {
     List<QuestionOption>? options,
     int? correctIndex,
     String? exam,
+    bool isPublic = false,
   }) async {
     String? path;
     if (imageBytes != null) {
@@ -145,6 +146,7 @@ class MistakeRepository {
           : options.map((QuestionOption o) => o.toJson()).toList(),
       'correct_index': correctIndex,
       'exam': (exam == null || exam.isEmpty) ? null : exam,
+      'is_public': isPublic,
     });
     // step/next_review_date DB varsayılanlarıyla gelir (adım 0, ertesi gün).
   }

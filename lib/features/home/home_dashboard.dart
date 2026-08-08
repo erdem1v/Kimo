@@ -9,6 +9,7 @@ import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_widgets.dart';
 import '../../widgets/mistake_style.dart';
+import '../pool/solve_pool_screen.dart';
 import '../practice/practice_screen.dart';
 
 /// "Bugün" sekmesi: günlük hedef + sınav (TYT/AYT) ve ders seçimi. Kullanıcı
@@ -101,6 +102,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
               ),
               const SizedBox(height: 16),
               _dailyGoalCard(),
+              if (_remote) ...<Widget>[
+                const SizedBox(height: 12),
+                _poolCard(),
+              ],
               const SizedBox(height: 24),
               if (!_remote)
                 _mockNotice()
@@ -112,6 +117,57 @@ class _HomeDashboardState extends State<HomeDashboard> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  /// Soru havuzu girişi: başkalarının paylaştığı hataları çöz.
+  Widget _poolCard() {
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute<void>(builder: (_) => const SolvePoolScreen()),
+        );
+        await _loadDue();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: <Color>[AppColors.purple, AppColors.indigo],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+                color: AppColors.purple.withValues(alpha: 0.30),
+                blurRadius: 12,
+                offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Row(
+          children: <Widget>[
+            const Text('🌍', style: TextStyle(fontSize: 32)),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text('Soru Havuzu',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800)),
+                  SizedBox(height: 2),
+                  Text('Başka öğrencilerin hatalarını çöz, XP kazan.',
+                      style: TextStyle(color: Colors.white70, fontSize: 12.5)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.white),
+          ],
+        ),
       ),
     );
   }
