@@ -72,7 +72,17 @@ class _MistakesScreenState extends State<MistakesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text('Hatalarım')),
+      appBar: AppBar(
+        title: const Text('Hatalarım'),
+        actions: <Widget>[
+          if (_remote)
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              tooltip: 'Yenile',
+              onPressed: _loading ? null : _load,
+            ),
+        ],
+      ),
       body: _remote
           ? _remoteBody()
           : ListenableBuilder(
@@ -105,42 +115,154 @@ class _MistakesScreenState extends State<MistakesScreen> {
         ),
       );
     }
-    return RefreshIndicator(onRefresh: _load, child: _list(_items));
+    return _list(_items);
   }
 
   Widget _list(List<MistakeEntry> items) {
-    return Column(
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: _summaryCard(items.length),
-        ),
-        Expanded(
-          child: items.isEmpty
-              ? ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: const <Widget>[
-                    Padding(
-                      padding: EdgeInsets.only(top: 80),
-                      child: Center(
-                        child: Text(
-                          'Henüz hata eklenmemiş.\nAşağıdan ilkini ekle 👇',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: AppColors.inkLight),
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              : ListView.builder(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-                  itemCount: items.length,
-                  itemBuilder: (BuildContext context, int i) =>
-                      _MistakeCard(entry: items[i]),
+    final List<_Grp> groups = _groups(items);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
+      child: Column(
+        children: <Widget>[
+          _summaryCard(items.length),
+          const SizedBox(height: 14),
+          if (items.isEmpty)
+            const Expanded(
+              child: Center(
+                child: Text(
+                  'Henüz hata eklenmemiş.\nAşağıdan ilkini ekle 👇',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.inkLight),
                 ),
+              ),
+            )
+          else
+            Expanded(child: _grid(groups, items.length)),
+        ],
+      ),
+    );
+  }
+
+  /// Tüm kutucukları kaydırmadan, kalan alana sığdıran grid. Kutu oranı
+  /// mevcut yükseklik + kutu sayısına göre hesaplanır.
+  Widget _grid(List<_Grp> groups, int total) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints c) {
+        const int cols = 3;
+        const double spacing = 10;
+        final int rows = (groups.length / cols).ceil();
+        final double cellW = (c.maxWidth - (cols - 1) * spacing) / cols;
+        final double cellH =
+            ((c.maxHeight - 2) - (rows - 1) * spacing) / rows;
+        final double aspect =
+            cellH <= 0 ? 0.92 : (cellW / cellH).clamp(0.55, 3.0);
+        return GridView.count(
+          crossAxisCount: cols,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: spacing,
+          crossAxisSpacing: spacing,
+          childAspectRatio: aspect,
+          children: <Widget>[
+            for (final _Grp g in groups) _groupBox(g, total),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Hataları sınav+ders bazında gruplar; TYT → AYT → Belirsiz, her sınav
+  /// içinde çoktan aza sıralanır.
+  List<_Grp> _groups(List<MistakeEntry> items) {
+    final Map<String, _Grp> map = <String, _Grp>{};
+    for (final MistakeEntry e in items) {
+      final String exam =
+          (e.exam == 'TYT' || e.exam == 'AYT') ? e.exam! : 'Belirsiz';
+      final String key = '$exam|${e.subject}';
+      (map[key] ??= _Grp(exam, e.subject)).items.add(e);
+    }
+    int rank(String x) => x == 'TYT' ? 0 : (x == 'AYT' ? 1 : 2);
+    final List<_Grp> list = map.values.toList();
+    list.sort((_Grp a, _Grp b) {
+      final int r = rank(a.exam).compareTo(rank(b.exam));
+      if (r != 0) return r;
+      final int c = b.items.length.compareTo(a.items.length);
+      if (c != 0) return c;
+      return a.subject.compareTo(b.subject);
+    });
+    return list;
+  }
+
+  /// Sınav+ders kutucuğu — dolu, canlı renk (ana ekranla aynı ton). Yazı rengi
+  /// zemine göre okunur seçilir. Dokununca o grubun hataları ayrı ekranda açılır.
+  Widget _groupBox(_Grp g, int total) {
+    final Color color = subjectColor(g.subject);
+    final Color fg =
+        color.computeLuminance() > 0.55 ? AppColors.ink : Colors.white;
+    final int count = g.items.length;
+    final int percent = total == 0 ? 0 : (count / total * 100).round();
+    final String examLabel = g.exam == 'Belirsiz' ? '?' : g.exam;
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => _GroupDetailScreen(
+            title: '$examLabel · ${g.subject}',
+            color: color,
+            items: g.items,
+          ),
         ),
-      ],
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+                color: color.withValues(alpha: 0.35),
+                blurRadius: 8,
+                offset: const Offset(0, 3)),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: fg.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(examLabel,
+                      style: TextStyle(
+                          color: fg,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 10)),
+                ),
+                const Spacer(),
+                Text(subjectEmoji(g.subject),
+                    style: const TextStyle(fontSize: 16)),
+              ],
+            ),
+            const Spacer(),
+            Text(
+              g.subject,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontWeight: FontWeight.w800, fontSize: 13.5, color: fg),
+            ),
+            const SizedBox(height: 3),
+            Text('$count soru · %$percent',
+                style: TextStyle(
+                    color: fg.withValues(alpha: 0.85),
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
     );
   }
 
@@ -179,6 +301,45 @@ class _MistakesScreenState extends State<MistakesScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Sınav+ders bazlı hata grubu (Hatalarım ekranındaki kutucuklar).
+class _Grp {
+  _Grp(this.exam, this.subject);
+  final String exam; // 'TYT' | 'AYT' | 'Belirsiz'
+  final String subject;
+  final List<MistakeEntry> items = <MistakeEntry>[];
+}
+
+/// Bir grubun (ör. "TYT · Matematik") hatalarını listeleyen detay ekranı.
+class _GroupDetailScreen extends StatelessWidget {
+  const _GroupDetailScreen({
+    required this.title,
+    required this.color,
+    required this.items,
+  });
+
+  final String title;
+  final Color color;
+  final List<MistakeEntry> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text(title),
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        itemCount: items.length,
+        itemBuilder: (BuildContext context, int i) =>
+            _MistakeCard(entry: items[i]),
       ),
     );
   }

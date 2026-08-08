@@ -8,6 +8,7 @@ import '../../state/game_progress.dart';
 import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_widgets.dart';
+import '../../widgets/mistake_style.dart';
 import '../practice/practice_screen.dart';
 
 /// "Bugün" sekmesi: günlük hedef + sınav (TYT/AYT) ve ders seçimi. Kullanıcı
@@ -27,28 +28,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
   bool _loading = true;
   String _exam = 'TYT';
 
-  static const Map<String, String> _subjectEmoji = <String, String>{
-    'Türkçe': '📕', 'Matematik': '➗', 'Geometri': '📐', 'Fizik': '🧲',
-    'Kimya': '⚗️', 'Biyoloji': '🧬', 'Edebiyat': '📖', 'Tarih': '🏛️',
-    'Coğrafya': '🌍', 'Felsefe': '🤔', 'Felsefe Grubu': '🤔', 'Din Kültürü': '🕌',
-  };
-
-  static const Map<String, Color> _subjectColor = <String, Color>{
-    'Türkçe': AppColors.red,
-    'Matematik': AppColors.blue,
-    'Geometri': AppColors.indigo,
-    'Fizik': AppColors.purple,
-    'Kimya': AppColors.teal,
-    'Biyoloji': AppColors.green,
-    'Edebiyat': AppColors.pink,
-    'Tarih': AppColors.orange,
-    'Coğrafya': AppColors.cyan,
-    'Felsefe': AppColors.gold,
-    'Felsefe Grubu': AppColors.gold,
-    'Din Kültürü': AppColors.indigo,
-  };
-
-  Color _colorFor(String subject) => _subjectColor[subject] ?? AppColors.blue;
+  Color _colorFor(String subject) => subjectColor(subject);
 
   @override
   void initState() {
@@ -268,7 +248,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     : const Color(0xFFF0F0F0),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Text(_subjectEmoji[subject] ?? '📚',
+              child: Text(subjectEmoji(subject),
                   style: TextStyle(
                       fontSize: 24,
                       color: active ? null : Colors.black.withValues(alpha: 0.35))),
