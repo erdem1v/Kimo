@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../data/mistake_repository.dart';
+import '../../data/yks_curriculum.dart';
 import '../../models/models.dart';
 import '../../services/sound_service.dart';
 import '../../services/supabase_config.dart';
@@ -13,6 +14,7 @@ import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_button.dart';
 import '../../widgets/mistake_style.dart';
+import 'topic_picker_sheet.dart';
 
 /// Hatalı soru ekleme. Fotoğraf seçilince AI şıkları çıkarır; kullanıcı doğru
 /// şıkkı işaretler. Kayıt hata bankasına eklenir.
@@ -24,28 +26,13 @@ class AddMistakeScreen extends StatefulWidget {
 }
 
 class _AddMistakeScreenState extends State<AddMistakeScreen> {
-  // Tüm YKS dersleri (AI önerisi bunlardan biriyle eşleşsin diye geniş tutuldu).
-  final List<String> _subjects = <String>[
-    'Türkçe',
-    'Matematik',
-    'Geometri',
-    'Fizik',
-    'Kimya',
-    'Biyoloji',
-    'Edebiyat',
-    'Tarih',
-    'Coğrafya',
-    'Felsefe',
-    'Din Kültürü',
-  ];
-
-  final TextEditingController _concept = TextEditingController();
   final TextEditingController _note = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   Uint8List? _imageBytes;
   double? _imageAspect; // en/boy — foto alanını orana göre boyutlamak için
   String? _subject;
-  String? _exam; // 'TYT' | 'AYT' (AI önerir, kullanıcı düzenleyebilir)
+  String? _concept; // müfredat listesinden seçilir; serbest metin yok
+  String _exam = 'TYT'; // AI önerir, kullanıcı düzenleyebilir
   MistakeType? _type;
   bool _saving = false;
 
@@ -57,23 +44,27 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
   int? _correctIndex;
 
   @override
-  void initState() {
-    super.initState();
-    _concept.addListener(() => setState(() {}));
-  }
-
-  @override
   void dispose() {
-    _concept.dispose();
     _note.dispose();
     _clearOptions();
     super.dispose();
   }
 
+  /// Seçili sınav+müfredat için ders listesi (müfredattan gelir, sabit değil).
+  List<String> get _subjects =>
+      YksCurriculum.forExam(userProfile.curriculum, _exam).keys.toList();
+
+  /// Seçili dersin geçerli konuları.
+  List<String> _topicsOf(String subject) {
+    final List<Unit> units =
+        YksCurriculum.forExam(userProfile.curriculum, _exam)[subject] ??
+            <Unit>[];
+    return <String>[for (final Unit u in units) ...u.topics];
+  }
+
   bool get _canSave {
-    final bool base = _concept.text.trim().isNotEmpty &&
-        _subject != null &&
-        _type != null;
+    final bool base =
+        _concept != null && _subject != null && _type != null;
     if (!SupabaseConfig.isConfigured) {
       return base && (_optionCtrls.isEmpty || _correctIndex != null);
     }
@@ -194,17 +185,16 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
             _optionLabels.add(o.label);
             _optionCtrls.add(TextEditingController(text: o.text));
           }
-          // AI'nın ders/konu/sınav önerilerini otomatik doldur (düzenlenebilir).
-          if (res.subject != null) {
-            if (!_subjects.contains(res.subject)) {
-              _subjects.insert(0, res.subject!);
-            }
+          // AI önerilerini doldur — ama YALNIZCA müfredatta karşılığı varsa.
+          // Uydurma ders/konu haritayı ve havuzu kirletmemeli.
+          if (res.exam == 'TYT' || res.exam == 'AYT') _exam = res.exam!;
+          if (res.subject != null && _subjects.contains(res.subject)) {
             _subject = res.subject;
+            if (res.concept != null &&
+                _topicsOf(res.subject!).contains(res.concept)) {
+              _concept = res.concept;
+            }
           }
-          if (res.concept != null && res.concept!.isNotEmpty) {
-            _concept.text = res.concept!;
-          }
-          if (res.exam == 'TYT' || res.exam == 'AYT') _exam = res.exam;
           _analysisReason = null;
         } else {
           _analysisReason =
@@ -236,7 +226,7 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
       if (SupabaseConfig.isConfigured) {
         await mistakeRepository.add(
           subject: _subject!,
-          concept: _concept.text.trim(),
+          concept: _concept!,
           type: _type!,
           note: _note.text.trim(),
           imageBytes: _imageBytes,
@@ -251,7 +241,7 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
         mistakeStore.add(
           MistakeEntry(
             subject: _subject!,
-            concept: _concept.text.trim(),
+            concept: _concept!,
             type: _type!,
             note: _note.text.trim(),
             date: DateTime.now(),
@@ -291,48 +281,7 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
             const SizedBox(height: 8),
             _optionsBlock(),
           ],
-          const SizedBox(height: 22),
-          Row(
-            children: <Widget>[
-              _label('Konu / Kavram', emoji: '🏷️'),
-              if (SupabaseConfig.isConfigured &&
-                  _imageBytes != null &&
-                  !_analyzing &&
-                  _optionCtrls.isNotEmpty) ...<Widget>[
-                const SizedBox(width: 8),
-                _aiHint(),
-              ],
-            ],
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _concept,
-            decoration: _inputDecoration('Örn. Birinci Dereceden Denklem'),
-          ),
-          const SizedBox(height: 22),
-          _label('Ders', emoji: '📚'),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              for (final String s in _subjects)
-                ChoiceChip(
-                  label: Text(s),
-                  selected: _subject == s,
-                  onSelected: (_) => setState(() => _subject = s),
-                  labelStyle: TextStyle(
-                    color: _subject == s ? Colors.white : AppColors.ink,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  selectedColor: AppColors.purple,
-                  backgroundColor: const Color(0xFFF4F4F4),
-                  shape: const StadiumBorder(),
-                  side: BorderSide.none,
-                  showCheckmark: false,
-                ),
-            ],
-          ),
+          // Sıra bağımlılığa göre: sınav → ders → konu.
           const SizedBox(height: 22),
           _label('Sınav', emoji: '🎯'),
           const SizedBox(height: 8),
@@ -343,7 +292,18 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
                 ChoiceChip(
                   label: Text(e),
                   selected: _exam == e,
-                  onSelected: (_) => setState(() => _exam = e),
+                  onSelected: (_) => setState(() {
+                    _exam = e;
+                    // Ders listesi sınava göre değişir; geçersiz kalan
+                    // seçimleri temizle.
+                    if (_subject != null && !_subjects.contains(_subject)) {
+                      _subject = null;
+                    }
+                    if (_subject == null ||
+                        !_topicsOf(_subject!).contains(_concept)) {
+                      _concept = null;
+                    }
+                  }),
                   labelStyle: TextStyle(
                     color: _exam == e ? Colors.white : AppColors.ink,
                     fontWeight: FontWeight.w700,
@@ -356,6 +316,49 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
                 ),
             ],
           ),
+          const SizedBox(height: 22),
+          Row(
+            children: <Widget>[
+              _label('Ders', emoji: '📚'),
+              if (SupabaseConfig.isConfigured &&
+                  _imageBytes != null &&
+                  !_analyzing &&
+                  _optionCtrls.isNotEmpty) ...<Widget>[
+                const SizedBox(width: 8),
+                _aiHint(),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              for (final String s in _subjects)
+                ChoiceChip(
+                  label: Text(s),
+                  selected: _subject == s,
+                  onSelected: (_) => setState(() {
+                    _subject = s;
+                    // Ders değişince konu seçimi geçersiz olabilir.
+                    if (!_topicsOf(s).contains(_concept)) _concept = null;
+                  }),
+                  labelStyle: TextStyle(
+                    color: _subject == s ? Colors.white : AppColors.ink,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  selectedColor: subjectColor(s),
+                  backgroundColor: const Color(0xFFF4F4F4),
+                  shape: const StadiumBorder(),
+                  side: BorderSide.none,
+                  showCheckmark: false,
+                ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          _label('Konu', emoji: '🏷️'),
+          const SizedBox(height: 8),
+          _conceptPicker(),
           const SizedBox(height: 22),
           _label('Hata türü', emoji: '⚠️'),
           const SizedBox(height: 8),
@@ -628,6 +631,65 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
               ),
             ),
             if (selected) Icon(Icons.check_circle, color: color),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Konu seçimi: yalnızca müfredat listesinden. Önce ders seçilmeli.
+  Widget _conceptPicker() {
+    final bool ready = _subject != null;
+    final Color color =
+        _subject == null ? AppColors.line : subjectColor(_subject!);
+    return GestureDetector(
+      onTap: !ready
+          ? null
+          : () async {
+              sound.tap();
+              final String? picked = await showTopicPicker(
+                context,
+                curriculum: userProfile.curriculum,
+                exam: _exam,
+                subject: _subject!,
+                selected: _concept,
+              );
+              if (picked != null && mounted) {
+                setState(() => _concept = picked);
+              }
+            },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        decoration: BoxDecoration(
+          color: _concept == null
+              ? const Color(0xFFF7F7F7)
+              : color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: _concept == null ? AppColors.line : color,
+            width: _concept == null ? 1.5 : 2,
+          ),
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                _concept ??
+                    (ready ? 'Konu seç' : 'Önce ders seç'),
+                style: TextStyle(
+                  fontWeight:
+                      _concept == null ? FontWeight.w500 : FontWeight.w800,
+                  fontSize: 15,
+                  color: _concept == null ? AppColors.inkLight : AppColors.ink,
+                ),
+              ),
+            ),
+            Icon(
+              _concept == null
+                  ? Icons.expand_more_rounded
+                  : Icons.check_circle_rounded,
+              color: _concept == null ? AppColors.inkLight : color,
+            ),
           ],
         ),
       ),
