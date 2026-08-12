@@ -2,6 +2,7 @@ import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../data/progress_repository.dart';
 import '../../data/question_pool_repository.dart';
 import '../../models/received_question.dart';
 import '../../services/sound_service.dart';
@@ -234,7 +235,8 @@ class _SolveReceivedScreenState extends State<_SolveReceivedScreen> {
 
   void _pick(int i) {
     if (_answered || widget.question.solved) return;
-    final bool correct = i == widget.question.correctIndex;
+    final ReceivedQuestion q = widget.question;
+    final bool correct = i == q.correctIndex;
     if (correct) {
       sound.correct();
       HapticFeedback.mediumImpact();
@@ -246,6 +248,13 @@ class _SolveReceivedScreenState extends State<_SolveReceivedScreen> {
     }
     gameProgress.registerActivity();
     questionPoolRepository.markSolved(widget.question.sendId, correct);
+    progressRepository.recordAttempt(
+      subject: q.subject,
+      concept: q.concept,
+      exam: q.exam,
+      correct: correct,
+      source: 'sent',
+    );
     setState(() {
       _selected = i;
       _answered = true;

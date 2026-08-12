@@ -13,11 +13,26 @@ class QuestionPoolRepository {
   static const String _bucket = 'mistake-photos';
 
   /// Rastgele havuz soruları (kendi soruların ve daha önce çözdüklerin hariç).
-  Future<List<PublicQuestion>> fetchRandom({int limit = 10}) async {
-    final List<dynamic> rows = await _client.rpc<List<dynamic>>(
-      'random_public_questions',
-      params: <String, dynamic>{'p_limit': limit},
-    );
+  /// [subject] verilirse yalnızca o dersten, [concept] de verilirse yalnızca
+  /// o konudan gelir (harita üzerinden konu testi).
+  Future<List<PublicQuestion>> fetchRandom({
+    int limit = 10,
+    String? subject,
+    String? concept,
+  }) async {
+    final List<dynamic> rows = subject == null
+        ? await _client.rpc<List<dynamic>>(
+            'random_public_questions',
+            params: <String, dynamic>{'p_limit': limit},
+          )
+        : await _client.rpc<List<dynamic>>(
+            'random_questions_by_topic',
+            params: <String, dynamic>{
+              'p_subject': subject,
+              'p_concept': concept,
+              'p_limit': limit,
+            },
+          );
     return rows
         .map((dynamic r) =>
             PublicQuestion.fromRow((r as Map).cast<String, dynamic>()))

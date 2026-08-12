@@ -2,6 +2,7 @@ import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../data/progress_repository.dart';
 import '../../data/question_pool_repository.dart';
 import '../../models/public_question.dart';
 import '../../services/sound_service.dart';
@@ -15,7 +16,11 @@ import 'send_question_sheet.dart';
 /// Soru havuzu: başka öğrencilerin paylaştığı hataları rastgele çözdürür.
 /// Her sorunun üstünde sahibinin takma adı ve havuz istatistikleri görünür.
 class SolvePoolScreen extends StatefulWidget {
-  const SolvePoolScreen({super.key});
+  const SolvePoolScreen({super.key, this.subject, this.concept});
+
+  /// Verilirse yalnızca bu ders/konudan soru gelir (haritadan konu testi).
+  final String? subject;
+  final String? concept;
 
   @override
   State<SolvePoolScreen> createState() => _SolvePoolScreenState();
@@ -59,8 +64,10 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
       _error = null;
     });
     try {
-      final List<PublicQuestion> items =
-          await questionPoolRepository.fetchRandom();
+      final List<PublicQuestion> items = await questionPoolRepository.fetchRandom(
+        subject: widget.subject,
+        concept: widget.concept,
+      );
       if (!mounted) return;
       setState(() {
         _items = items;
@@ -97,6 +104,13 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
     }
     gameProgress.registerActivity(); // havuzda çözmek de seriyi sürdürür
     questionPoolRepository.recordAttempt(_current.id, correct);
+    progressRepository.recordAttempt(
+      subject: _current.subject,
+      concept: _current.concept,
+      exam: _current.exam,
+      correct: correct,
+      source: 'pool',
+    );
     setState(() {
       _selected = i;
       _answered = true;
@@ -146,8 +160,11 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
     if (_error != null) return _message(_error!, retry: true);
     if (_items.isEmpty) {
       return _message(
-        'Havuzda şu an çözebileceğin soru yok.\n'
-        'Sen de sorularını paylaşarak havuzu büyütebilirsin.',
+        widget.concept != null
+            ? '"${widget.concept}" konusunda havuzda henüz soru yok.\n'
+                'Havuz doldukça burası da dolacak.'
+            : 'Havuzda şu an çözebileceğin soru yok.\n'
+                'Sen de sorularını paylaşarak havuzu büyütebilirsin.',
         emoji: '🫙',
       );
     }

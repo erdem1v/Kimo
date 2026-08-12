@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../data/mistake_repository.dart';
+import '../../data/progress_repository.dart';
 import '../../models/models.dart';
 import '../../services/sound_service.dart';
 import '../../services/supabase_config.dart';
@@ -139,7 +140,16 @@ class _PracticeScreenState extends State<PracticeScreen> {
     }
     gameProgress.recordReview();
     // Tekrar planını güncelle (1→3→7→30; yanlışta 1 güne sıfırla).
-    if (_remote) mistakeRepository.submitReview(_current, correct);
+    if (_remote) {
+      mistakeRepository.submitReview(_current, correct);
+      // Konu haritası için ölçüm kaydı.
+      progressRepository.recordAttempt(
+        subject: _current.subject,
+        concept: _current.concept,
+        exam: _current.exam,
+        correct: correct,
+      );
+    }
   }
 
   void _advance() {
