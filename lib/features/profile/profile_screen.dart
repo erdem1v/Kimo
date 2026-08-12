@@ -142,7 +142,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Row(
       children: <Widget>[
         Expanded(
-            child: _statCard('🔥', '${gameProgress.streak}', 'Gün seri',
+            child: _statCard('🔥', '${gameProgress.currentStreak}', 'Gün seri',
                 AppColors.orange)),
         const SizedBox(width: 12),
         Expanded(

@@ -121,6 +121,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
               ),
               const SizedBox(height: 16),
               _dailyGoalCard(),
+              const SizedBox(height: 12),
+              _streakCard(),
               if (_remote) ...<Widget>[
                 if (_incomingCount > 0) ...<Widget>[
                   const SizedBox(height: 12),
@@ -140,6 +142,65 @@ class _HomeDashboardState extends State<HomeDashboard> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  /// Seri kartı: kaç gündür üst üste çözüyorsun, bugün sürdürüldü mü.
+  Widget _streakCard() {
+    final int streak = gameProgress.currentStreak;
+    final bool doneToday = gameProgress.activeToday;
+    final bool atRisk = gameProgress.streakAtRisk;
+
+    final Color color = doneToday
+        ? AppColors.orange
+        : (atRisk ? AppColors.red : AppColors.inkLight);
+    final String title = streak == 0
+        ? 'Serini başlat'
+        : '$streak günlük seri${doneToday ? '' : ' tehlikede'}';
+    final String subtitle = streak == 0
+        ? 'Bugün bir soru çöz, seri başlasın.'
+        : (doneToday
+            ? 'Bugünü tamamladın, seri devam ediyor 💪'
+            : 'Bugün çözmezsen sıfırlanır.');
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.30), width: 1.5),
+      ),
+      child: Row(
+        children: <Widget>[
+          // Seri sönükse alev de sönük.
+          Opacity(
+            opacity: doneToday || streak == 0 ? 1 : 0.55,
+            child: Text(streak == 0 ? '🕯️' : '🔥',
+                style: const TextStyle(fontSize: 32)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(title,
+                    style: TextStyle(
+                        color: color == AppColors.inkLight
+                            ? AppColors.ink
+                            : color,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800)),
+                const SizedBox(height: 2),
+                Text(subtitle,
+                    style: const TextStyle(
+                        color: AppColors.inkLight, fontSize: 12.5)),
+              ],
+            ),
+          ),
+          if (doneToday)
+            const Icon(Icons.check_circle_rounded, color: AppColors.orange),
+        ],
       ),
     );
   }

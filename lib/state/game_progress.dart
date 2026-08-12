@@ -8,8 +8,7 @@ import '../services/supabase_config.dart';
 
 /// Oyunlaştırma durumu: XP, seviye, can, seri, elmas ve günlük tekrar
 /// ilerlemesi. Ekranlar arasında paylaşılır (tekil [ChangeNotifier]).
-/// Not: şu an yereldir (uygulama kapanınca sıfırlanır); ileride Supabase'e
-/// taşınacak.
+/// XP, seri ve haftalık XP Supabase'de kalıcıdır (bkz. SocialRepository).
 class GameProgress extends ChangeNotifier {
   GameProgress._();
   static final GameProgress instance = GameProgress._();
@@ -30,6 +29,48 @@ class GameProgress extends ChangeNotifier {
   int get level => xp ~/ xpPerLevel + 1;
   int get xpIntoLevel => xp % xpPerLevel;
   double get levelProgress => xpIntoLevel / xpPerLevel;
+
+  // ------------------------------------------------------------------ seri
+  // Seri, soru çözülen gün sayısıdır. Art arda günlerde çözülürse büyür,
+  // bir gün atlanırsa sıfırlanır. Son aktif gün sunucuda saklanır.
+  DateTime? _lastActive;
+
+  static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  DateTime? get lastActiveDate => _lastActive;
+
+  /// Bugün seriyi sürdürecek aktivite yapıldı mı?
+  bool get activeToday {
+    final DateTime? d = _lastActive;
+    return d != null && d == _dateOnly(DateTime.now());
+  }
+
+  /// Geçerli seri: son aktivite bugün ya da dünse yaşıyor, daha eskiyse
+  /// kırılmıştır (sunucudaki sayı eski kalmış olabilir).
+  int get currentStreak {
+    final DateTime? d = _lastActive;
+    if (d == null) return 0;
+    final int gap = _dateOnly(DateTime.now()).difference(d).inDays;
+    return gap <= 1 ? streak : 0;
+  }
+
+  /// Seri bugün henüz sürdürülmedi ama dün aktifti: risk altında.
+  bool get streakAtRisk => currentStreak > 0 && !activeToday;
+
+  /// Soru çözüldüğünde çağrılır (doğru/yanlış fark etmez). Günde bir kez sayar.
+  void registerActivity() {
+    final DateTime today = _dateOnly(DateTime.now());
+    final DateTime? last = _lastActive;
+    if (last == today) return; // bugün zaten sayıldı
+    if (last != null && today.difference(last).inDays == 1) {
+      streak += 1; // dün de aktiftin: seri büyüdü
+    } else {
+      streak = 1; // ilk gün ya da seri kırılmış
+    }
+    _lastActive = today;
+    notifyListeners();
+    _scheduleSync();
+  }
 
   // --- Günlük tekrar ilerlemesi (yerel, gün değişince sıfırlanır) ---
   int dailyReviewsDone = 0;
@@ -96,6 +137,7 @@ class GameProgress extends ChangeNotifier {
     dailyReviewsDone++;
     if (_dueRemaining > 0) _dueRemaining--;
     notifyListeners();
+    registerActivity();
   }
 
   /// Bu haftaki XP — lig içi sıralamayı belirler, pazartesi sıfırlanır.
@@ -123,11 +165,13 @@ class GameProgress extends ChangeNotifier {
     required int xp,
     required int streak,
     int weeklyXp = 0,
+    DateTime? lastActive,
   }) {
     this.xp = xp;
     this.streak = streak;
     _weekStart = weekStart(DateTime.now());
     this.weeklyXp = weeklyXp;
+    _lastActive = lastActive == null ? null : _dateOnly(lastActive);
     notifyListeners();
   }
 
@@ -144,6 +188,7 @@ class GameProgress extends ChangeNotifier {
         streak: streak,
         weeklyXp: weeklyXp,
         weekStartDate: _weekStart ?? weekStart(DateTime.now()),
+        lastActiveDate: _lastActive,
       );
     });
   }

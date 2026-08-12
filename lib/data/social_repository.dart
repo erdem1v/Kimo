@@ -46,6 +46,7 @@ class SocialRepository {
     required int streak,
     int? weeklyXp,
     DateTime? weekStartDate,
+    DateTime? lastActiveDate,
   }) async {
     final String? uid = _uid;
     if (uid == null) return;
@@ -55,10 +56,28 @@ class SocialRepository {
         'streak': streak,
         'weekly_xp': ?weeklyXp,
         if (weekStartDate != null) 'week_start': _dateStr(weekStartDate),
+        if (lastActiveDate != null)
+          'last_activity_date': _dateStr(lastActiveDate),
         'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', uid);
     } catch (_) {
       // Ağ hatası akışı bloklamasın.
+    }
+  }
+
+  /// Kendi oyunlaştırma verilerim (seri için son aktif gün dahil). Yalnızca
+  /// kendi satırım okunur; profiles'ın RLS'i buna izin verir.
+  Future<Map<String, dynamic>?> myStats() async {
+    final String? uid = _uid;
+    if (uid == null) return null;
+    try {
+      return await _client
+          .from('profiles')
+          .select('xp, streak, weekly_xp, week_start, last_activity_date')
+          .eq('id', uid)
+          .maybeSingle();
+    } catch (_) {
+      return null;
     }
   }
 

@@ -244,6 +244,7 @@ class _SolveReceivedScreenState extends State<_SolveReceivedScreen> {
       sound.wrong();
       HapticFeedback.heavyImpact();
     }
+    gameProgress.registerActivity();
     questionPoolRepository.markSolved(widget.question.sendId, correct);
     setState(() {
       _selected = i;

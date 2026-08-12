@@ -57,7 +57,7 @@ class TopStatsBar extends StatelessWidget {
           children: <Widget>[
             StatPill(
                 emoji: '🔥',
-                value: '${gameProgress.streak}',
+                value: '${gameProgress.currentStreak}',
                 color: AppColors.orange),
             StatPill(
                 emoji: '💎',

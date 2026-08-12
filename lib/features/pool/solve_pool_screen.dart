@@ -95,6 +95,7 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
       sound.wrong();
       HapticFeedback.heavyImpact();
     }
+    gameProgress.registerActivity(); // havuzda çözmek de seriyi sürdürür
     questionPoolRepository.recordAttempt(_current.id, correct);
     setState(() {
       _selected = i;

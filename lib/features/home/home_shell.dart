@@ -44,17 +44,29 @@ class _HomeShellState extends State<HomeShell> {
         nickname: userProfile.nickname ?? 'Öğrenci',
         mascot: userProfile.mascot,
       );
-      final PublicProfile? me = await socialRepository.myProfile();
-      if (me != null && mounted) {
+      final Map<String, dynamic>? stats = await socialRepository.myStats();
+      if (stats != null && mounted) {
+        final Object? last = stats['last_activity_date'];
         gameProgress.hydrate(
-          xp: me.xp,
-          streak: me.streak,
-          weeklyXp: me.weeklyXp,
+          xp: (stats['xp'] as int?) ?? 0,
+          streak: (stats['streak'] as int?) ?? 0,
+          weeklyXp: _weeklyXpFor(stats),
+          lastActive: last is String ? DateTime.tryParse(last) : null,
         );
       }
     } catch (_) {
       // Çevrimdışı olabilir; oyunlaştırma yerel değerlerle devam eder.
     }
+  }
+
+  /// Haftalık XP yalnızca içinde bulunduğumuz haftaya aitse geçerlidir.
+  int _weeklyXpFor(Map<String, dynamic> stats) {
+    final Object? ws = stats['week_start'];
+    final DateTime? stored = ws is String ? DateTime.tryParse(ws) : null;
+    if (stored == null) return 0;
+    return stored == weekStart(DateTime.now())
+        ? ((stats['weekly_xp'] as int?) ?? 0)
+        : 0;
   }
 
   static const List<Widget> _pages = <Widget>[
