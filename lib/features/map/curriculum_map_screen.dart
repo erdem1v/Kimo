@@ -76,7 +76,20 @@ class _CurriculumMapScreenState extends State<CurriculumMapScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF6FBFF),
       appBar: AppBar(
-        title: const Text('Konu Haritası'),
+        // Başlık seçili dersi gösterir (ders emojisi + adı).
+        title: Row(
+          children: <Widget>[
+            Text(subjectEmoji(subject), style: const TextStyle(fontSize: 20)),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                '$subject · $_exam',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
         backgroundColor: color,
         foregroundColor:
             color.computeLuminance() > 0.55 ? AppColors.ink : Colors.white,
