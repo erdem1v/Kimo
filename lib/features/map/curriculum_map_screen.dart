@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -12,9 +13,9 @@ import '../../widgets/game_button.dart';
 import '../../widgets/mistake_style.dart';
 import '../pool/solve_pool_screen.dart';
 
-/// Müfredat haritası: ders → ünite → konu. Her konu bir amblem; 15 soru
-/// çözülene kadar dolmaz, dolduktan sonra başarıya göre renklenir, uzun süre
-/// dokunulmayan konular solar.
+/// Müfredat haritası: seçilen dersin konuları yılankavi bir yol üzerinde
+/// dizilir. Her konu bir durak; 15 soru çözülene kadar amblem dolmaz,
+/// dolduktan sonra başarıya göre renklenir, uzun süre uğranmayan durak solar.
 class CurriculumMapScreen extends StatefulWidget {
   const CurriculumMapScreen({super.key});
 
@@ -22,10 +23,17 @@ class CurriculumMapScreen extends StatefulWidget {
   State<CurriculumMapScreen> createState() => _CurriculumMapScreenState();
 }
 
+// --- Yerleşim ölçüleri ---
+const double _nodeSize = 72;
+const double _nodeGap = 108; // duraklar arası dikey mesafe
+const double _bannerHeight = 40; // ünite bandı
+const double _amplitude = 78; // yolun yanal salınımı
+
 class _CurriculumMapScreenState extends State<CurriculumMapScreen> {
   Map<String, TopicProgress> _progress = <String, TopicProgress>{};
   bool _loading = true;
   String _exam = 'TYT';
+  String? _subject;
 
   @override
   void initState() {
@@ -52,14 +60,26 @@ class _CurriculumMapScreenState extends State<CurriculumMapScreen> {
       _progress['$subject|$concept'] ??
       TopicProgress(subject: subject, concept: concept);
 
+  Map<String, List<Unit>> get _subjects =>
+      YksCurriculum.forExam(userProfile.curriculum, _exam);
+
+  String get _activeSubject {
+    final Map<String, List<Unit>> s = _subjects;
+    if (_subject != null && s.containsKey(_subject)) return _subject!;
+    return s.keys.first;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final Map<String, List<Unit>> subjects =
-        YksCurriculum.forExam(userProfile.curriculum, _exam);
+    final String subject = _activeSubject;
+    final Color color = subjectColor(subject);
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF6FBFF),
       appBar: AppBar(
         title: const Text('Konu Haritası'),
+        backgroundColor: color,
+        foregroundColor:
+            color.computeLuminance() > 0.55 ? AppColors.ink : Colors.white,
         actions: <Widget>[
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -68,276 +88,140 @@ class _CurriculumMapScreenState extends State<CurriculumMapScreen> {
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-              children: <Widget>[
-                _examSelector(),
-                const SizedBox(height: 14),
-                _legend(),
-                const SizedBox(height: 18),
-                for (final MapEntry<String, List<Unit>> e in subjects.entries)
-                  _subjectBlock(e.key, e.value),
-              ],
-            ),
+      body: Column(
+        children: <Widget>[
+          _examSelector(),
+          _subjectStrip(),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _MapTrail(
+                    key: ValueKey<String>('$_exam|$subject'),
+                    subject: subject,
+                    units: _subjects[subject]!,
+                    progressOf: (String c) => _of(subject, c),
+                    onTapTopic: _openTopic,
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _examSelector() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF2F2F2),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: <Widget>[
-          for (final String e in const <String>['TYT', 'AYT'])
-            Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  sound.tap();
-                  setState(() => _exam = e);
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    gradient: _exam == e
-                        ? LinearGradient(
-                            colors: e == 'TYT'
-                                ? <Color>[AppColors.blue, AppColors.indigo]
-                                : <Color>[AppColors.pink, AppColors.purple],
-                          )
-                        : null,
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                  child: Text(
-                    e,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                      color: _exam == e ? Colors.white : AppColors.inkLight,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEDEFF2),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: <Widget>[
+            for (final String e in const <String>['TYT', 'AYT'])
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    sound.tap();
+                    setState(() {
+                      _exam = e;
+                      _subject = null;
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      gradient: _exam == e
+                          ? LinearGradient(
+                              colors: e == 'TYT'
+                                  ? <Color>[AppColors.blue, AppColors.indigo]
+                                  : <Color>[AppColors.pink, AppColors.purple],
+                            )
+                          : null,
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: Text(
+                      e,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: _exam == e ? Colors.white : AppColors.inkLight,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _legend() {
-    Widget item(Color c, String label) => Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Container(width: 11, height: 11,
-                decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
-            const SizedBox(width: 5),
-            Text(label,
-                style: const TextStyle(
-                    color: AppColors.inkLight, fontSize: 11.5)),
           ],
-        );
-    return Wrap(
-      spacing: 14,
-      runSpacing: 6,
-      children: <Widget>[
-        item(const Color(0xFFD9D9D9), 'Hiç çözülmedi'),
-        item(AppColors.blue, 'Ölçülüyor'),
-        item(AppColors.green, 'Sağlam'),
-        item(AppColors.orange, 'Orta'),
-        item(AppColors.red, 'Zayıf'),
-      ],
+        ),
+      ),
     );
   }
 
-  Widget _subjectBlock(String subject, List<Unit> units) {
-    final Color color = subjectColor(subject);
-    // Dersin genel doluluğu: konuların ortalama doluluk oranı.
-    final int total = YksCurriculum.topicCount(units);
-    double sum = 0;
-    for (final Unit u in units) {
-      for (final String t in u.topics) {
-        sum += _of(subject, t).fill;
-      }
-    }
-    final int percent = total == 0 ? 0 : (sum / total * 100).round();
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 18),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: color.withValues(alpha: 0.22), width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  /// Ders şeridi: yatay kaydırmalı, seçili ders dolu renkte.
+  Widget _subjectStrip() {
+    return SizedBox(
+      height: 62,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
         children: <Widget>[
-          // Ders başlığı
-          Container(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Row(
-              children: <Widget>[
-                Text(subjectEmoji(subject),
-                    style: const TextStyle(fontSize: 22)),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    subject,
-                    style: TextStyle(
-                      color: color.computeLuminance() > 0.55
-                          ? AppColors.ink
-                          : Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.28),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text('%$percent',
-                      style: TextStyle(
-                          color: color.computeLuminance() > 0.55
-                              ? AppColors.ink
-                              : Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 12)),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                for (final Unit u in units) _unitBlock(subject, u),
-              ],
-            ),
-          ),
+          for (final String s in _subjects.keys) _subjectChip(s),
         ],
       ),
     );
   }
 
-  Widget _unitBlock(String subject, Unit unit) {
+  Widget _subjectChip(String s) {
+    final bool selected = s == _activeSubject;
+    final Color color = subjectColor(s);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            unit.name.toUpperCase(),
-            style: const TextStyle(
-              color: AppColors.inkLight,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.4,
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: () {
+          sound.tap();
+          setState(() => _subject = s);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? color : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? color : AppColors.line,
+              width: 1.5,
             ),
+            boxShadow: selected
+                ? <BoxShadow>[
+                    BoxShadow(
+                        color: color.withValues(alpha: 0.35),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3))
+                  ]
+                : null,
           ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 10,
-            runSpacing: 12,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              for (final String t in unit.topics) _topicNode(subject, t),
+              Text(subjectEmoji(s), style: const TextStyle(fontSize: 15)),
+              const SizedBox(width: 6),
+              Text(
+                s,
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                  color: selected
+                      ? (color.computeLuminance() > 0.55
+                          ? AppColors.ink
+                          : Colors.white)
+                      : AppColors.ink,
+                ),
+              ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  /// Bir konu amblemi: dairesel doluluk halkası + durum rengi.
-  Widget _topicNode(String subject, String concept) {
-    final TopicProgress p = _of(subject, concept);
-    return GestureDetector(
-      onTap: () {
-        sound.tap();
-        _openTopic(p);
-      },
-      child: SizedBox(
-        width: 76,
-        child: Column(
-          children: <Widget>[
-            Stack(
-              alignment: Alignment.center,
-              children: <Widget>[
-                CustomPaint(
-                  size: const Size(56, 56),
-                  painter: _NodePainter(
-                    fill: p.fill,
-                    color: p.displayColor,
-                    complete: p.state == TopicState.measured,
-                  ),
-                ),
-                // Ortada: yüzde (ölçüldüyse) ya da soru sayısı
-                if (p.state == TopicState.measured)
-                  Text('%${p.successPercent}',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                          color: p.displayColor))
-                else if (p.attempts > 0)
-                  Text('${p.attempts}',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                          color: p.displayColor))
-                else
-                  const Icon(Icons.lock_outline_rounded,
-                      size: 18, color: Color(0xFFB5B5B5)),
-                // Zayıf konu uyarısı
-                if (p.needsAttention)
-                  Positioned(
-                    top: 0,
-                    right: 6,
-                    child: Container(
-                      width: 18,
-                      height: 18,
-                      alignment: Alignment.center,
-                      decoration: const BoxDecoration(
-                        color: AppColors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Text('!',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 12)),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 5),
-            Text(
-              concept,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 10.5,
-                height: 1.15,
-                fontWeight: FontWeight.w700,
-                color: p.state == TopicState.untouched
-                    ? AppColors.inkLight
-                    : AppColors.ink,
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -356,10 +240,8 @@ class _CurriculumMapScreenState extends State<CurriculumMapScreen> {
           Navigator.of(ctx).pop();
           await Navigator.of(context).push<void>(
             MaterialPageRoute<void>(
-              builder: (_) => SolvePoolScreen(
-                subject: p.subject,
-                concept: p.concept,
-              ),
+              builder: (_) =>
+                  SolvePoolScreen(subject: p.subject, concept: p.concept),
             ),
           );
           await _load();
@@ -369,59 +251,467 @@ class _CurriculumMapScreenState extends State<CurriculumMapScreen> {
   }
 }
 
-/// Konu amblemi: gri taban halka + ilerleme yayı.
-class _NodePainter extends CustomPainter {
-  const _NodePainter({
-    required this.fill,
-    required this.color,
-    required this.complete,
+/// Haritadaki sıra: ya bir ünite bandı ya da bir konu durağı.
+class _Stop {
+  const _Stop.unit(this.unitName)
+      : concept = null,
+        unitIndex = 0;
+  const _Stop.topic(this.concept, this.unitIndex) : unitName = null;
+
+  final String? unitName;
+  final String? concept;
+  final int unitIndex;
+
+  bool get isUnit => unitName != null;
+}
+
+/// Yılankavi yol: arka plan manzarası + noktalı iz + duraklar.
+class _MapTrail extends StatelessWidget {
+  const _MapTrail({
+    super.key,
+    required this.subject,
+    required this.units,
+    required this.progressOf,
+    required this.onTapTopic,
   });
+
+  final String subject;
+  final List<Unit> units;
+  final TopicProgress Function(String concept) progressOf;
+  final void Function(TopicProgress) onTapTopic;
+
+  @override
+  Widget build(BuildContext context) {
+    // Sıra listesini kur.
+    final List<_Stop> stops = <_Stop>[];
+    for (int u = 0; u < units.length; u++) {
+      stops.add(_Stop.unit(units[u].name));
+      for (final String t in units[u].topics) {
+        stops.add(_Stop.topic(t, u));
+      }
+    }
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints c) {
+        final double w = c.maxWidth;
+        final double cx = w / 2;
+
+        // Her sıranın y konumunu, konu duraklarının da x konumunu hesapla.
+        final List<double> ys = <double>[];
+        final List<double> xs = <double>[]; // yalnızca konu durakları için
+        double y = 28;
+        int topicIndex = 0;
+        final List<Offset> nodeCenters = <Offset>[];
+        final List<int> nodeStopIndex = <int>[];
+
+        for (int i = 0; i < stops.length; i++) {
+          ys.add(y);
+          if (stops[i].isUnit) {
+            xs.add(0);
+            y += _bannerHeight + 14;
+          } else {
+            final double dx =
+                cx + _amplitude * math.sin(topicIndex * 0.85) - _nodeSize / 2;
+            xs.add(dx);
+            nodeCenters.add(Offset(dx + _nodeSize / 2, y + _nodeSize / 2));
+            nodeStopIndex.add(i);
+            topicIndex++;
+            y += _nodeGap;
+          }
+        }
+        final double totalHeight = y + 60;
+
+        // İlerlenecek ilk durak (maskotun duracağı yer).
+        int currentNode = -1;
+        for (int n = 0; n < nodeCenters.length; n++) {
+          final _Stop s = stops[nodeStopIndex[n]];
+          final TopicProgress p = progressOf(s.concept!);
+          if (p.state != TopicState.measured) {
+            currentNode = n;
+            break;
+          }
+        }
+
+        return SingleChildScrollView(
+          child: SizedBox(
+            width: w,
+            height: totalHeight,
+            child: Stack(
+              children: <Widget>[
+                // Manzara + noktalı yol
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _TrailPainter(
+                      points: nodeCenters,
+                      accent: subjectColor(subject),
+                    ),
+                  ),
+                ),
+                // Duraklar ve ünite bantları
+                for (int i = 0; i < stops.length; i++)
+                  if (stops[i].isUnit)
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      top: ys[i],
+                      child: _UnitBanner(
+                        name: stops[i].unitName!,
+                        color: subjectColor(subject),
+                      ),
+                    )
+                  else
+                    Positioned(
+                      left: xs[i],
+                      top: ys[i],
+                      child: _TopicStop(
+                        progress: progressOf(stops[i].concept!),
+                        onTap: onTapTopic,
+                      ),
+                    ),
+                // Maskot: sıradaki durağın yanında
+                if (currentNode >= 0)
+                  Positioned(
+                    left: (nodeCenters[currentNode].dx + _nodeSize / 2 + 6)
+                        .clamp(0.0, w - 46),
+                    top: nodeCenters[currentNode].dy - 20,
+                    child: const _MascotMarker(),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Ünite bandı — Duolingo'daki bölüm başlığı gibi.
+class _UnitBanner extends StatelessWidget {
+  const _UnitBanner({required this.name, required this.color});
+
+  final String name;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color fg =
+        color.computeLuminance() > 0.55 ? AppColors.ink : Colors.white;
+    return Container(
+      height: _bannerHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: <Color>[color, color.withValues(alpha: 0.78)],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: color.withValues(alpha: 0.25),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.flag_rounded, color: fg.withValues(alpha: 0.85), size: 15),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: fg,
+                fontWeight: FontWeight.w800,
+                fontSize: 12.5,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 3B basılabilir durak düğmesi.
+class _TopicStop extends StatefulWidget {
+  const _TopicStop({required this.progress, required this.onTap});
+
+  final TopicProgress progress;
+  final void Function(TopicProgress) onTap;
+
+  @override
+  State<_TopicStop> createState() => _TopicStopState();
+}
+
+class _TopicStopState extends State<_TopicStop> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final TopicProgress p = widget.progress;
+    final Color color = p.displayColor;
+    final bool untouched = p.state == TopicState.untouched;
+    // Gölge için koyu ton (3B his).
+    final Color shade = Color.lerp(color, Colors.black, 0.28)!;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        sound.tap();
+        widget.onTap(p);
+      },
+      child: SizedBox(
+        width: _nodeSize,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 90),
+              transform: Matrix4.translationValues(0, _pressed ? 4 : 0, 0),
+              width: _nodeSize,
+              height: _nodeSize,
+              child: Stack(
+                alignment: Alignment.center,
+                children: <Widget>[
+                  // Alt gölge katmanı (butona derinlik verir)
+                  Positioned(
+                    top: _pressed ? 2 : 6,
+                    child: Container(
+                      width: _nodeSize - 8,
+                      height: _nodeSize - 8,
+                      decoration: BoxDecoration(
+                        color: untouched ? const Color(0xFFBFBFBF) : shade,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                  // Üst yüzey
+                  Container(
+                    width: _nodeSize - 8,
+                    height: _nodeSize - 8,
+                    decoration: BoxDecoration(
+                      color: untouched ? const Color(0xFFE2E2E2) : color,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
+                    ),
+                    alignment: Alignment.center,
+                    child: _center(p),
+                  ),
+                  // İlerleme halkası
+                  if (!untouched)
+                    CustomPaint(
+                      size: const Size(_nodeSize, _nodeSize),
+                      painter: _RingPainter(fill: p.fill, color: Colors.white),
+                    ),
+                  // Zayıf konu uyarısı
+                  if (p.needsAttention)
+                    Positioned(
+                      top: 0,
+                      right: 2,
+                      child: Container(
+                        width: 20,
+                        height: 20,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.red,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Text('!',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 12)),
+                      ),
+                    ),
+                  // Tamamlanmış konuya taç
+                  if (p.state == TopicState.measured &&
+                      (p.successRate ?? 0) >= 0.7)
+                    const Positioned(
+                      top: -2,
+                      child: Text('👑', style: TextStyle(fontSize: 16)),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              p.concept,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10.5,
+                height: 1.15,
+                fontWeight: FontWeight.w700,
+                color: untouched ? AppColors.inkLight : AppColors.ink,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _center(TopicProgress p) {
+    switch (p.state) {
+      case TopicState.untouched:
+        return const Icon(Icons.lock_rounded,
+            size: 22, color: Color(0xFF9E9E9E));
+      case TopicState.inProgress:
+        return Text('${p.attempts}',
+            style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 20,
+                color: Colors.white));
+      case TopicState.measured:
+        return Text('%${p.successPercent}',
+            style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 15,
+                color: Colors.white));
+    }
+  }
+}
+
+/// Düğüm çevresindeki ilerleme halkası.
+class _RingPainter extends CustomPainter {
+  const _RingPainter({required this.fill, required this.color});
 
   final double fill;
   final Color color;
-  final bool complete;
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (fill <= 0) return;
     final Offset c = Offset(size.width / 2, size.height / 2);
-    final double r = size.width / 2 - 4;
-
-    // İç dolgu
-    canvas.drawCircle(
-      c,
-      r,
-      Paint()..color = color.withValues(alpha: complete ? 0.20 : 0.10),
-    );
-
-    // Taban halka
-    canvas.drawCircle(
-      c,
-      r,
+    canvas.drawArc(
+      Rect.fromCircle(center: c, radius: size.width / 2 - 2),
+      -math.pi / 2,
+      2 * math.pi * fill,
+      false,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 5
-        ..color = const Color(0xFFE8E8E8),
+        ..strokeWidth = 4
+        ..strokeCap = StrokeCap.round
+        ..color = color,
     );
+  }
 
-    // İlerleme yayı (tepeden saat yönünde)
-    if (fill > 0) {
-      canvas.drawArc(
-        Rect.fromCircle(center: c, radius: r),
-        -math.pi / 2,
-        2 * math.pi * fill,
-        false,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 5
-          ..strokeCap = StrokeCap.round
-          ..color = color,
-      );
+  @override
+  bool shouldRepaint(_RingPainter old) =>
+      old.fill != fill || old.color != color;
+}
+
+/// Maskot işaretçisi: sıradaki durağın yanında bekler.
+class _MascotMarker extends StatelessWidget {
+  const _MascotMarker();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.14),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Text(userProfile.mascot?.emoji ?? '🐻',
+          style: const TextStyle(fontSize: 20)),
+    );
+  }
+}
+
+/// Arka plan manzarası + duraklar arasındaki noktalı iz.
+class _TrailPainter extends CustomPainter {
+  const _TrailPainter({required this.points, required this.accent});
+
+  final List<Offset> points;
+  final Color accent;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    _paintScenery(canvas, size);
+    _paintTrail(canvas);
+  }
+
+  /// Yumuşak tepeler ve bulutlar — görsel dosya olmadan "dünya" hissi.
+  void _paintScenery(Canvas canvas, Size size) {
+    final Paint hill = Paint()..color = accent.withValues(alpha: 0.07);
+    final Paint hill2 = Paint()..color = accent.withValues(alpha: 0.05);
+
+    // Sağ ve sol kenarlarda yumuşak tepe silüetleri.
+    for (double y = 0; y < size.height; y += 420) {
+      final Path left = Path()
+        ..moveTo(0, y + 120)
+        ..quadraticBezierTo(70, y + 20, 150, y + 130)
+        ..lineTo(0, y + 130)
+        ..close();
+      canvas.drawPath(left, hill);
+
+      final Path right = Path()
+        ..moveTo(size.width, y + 320)
+        ..quadraticBezierTo(size.width - 90, y + 220, size.width - 170, y + 330)
+        ..lineTo(size.width, y + 330)
+        ..close();
+      canvas.drawPath(right, hill2);
+    }
+
+    // Bulut benzeri lekeler.
+    final Paint cloud = Paint()..color = Colors.white.withValues(alpha: 0.75);
+    for (double y = 90; y < size.height; y += 340) {
+      canvas.drawCircle(Offset(size.width * 0.18, y), 16, cloud);
+      canvas.drawCircle(Offset(size.width * 0.24, y + 6), 12, cloud);
+      canvas.drawCircle(Offset(size.width * 0.82, y + 170), 14, cloud);
+      canvas.drawCircle(Offset(size.width * 0.76, y + 176), 10, cloud);
+    }
+  }
+
+  /// Duraklar arasında S kıvrımlı, noktalı iz.
+  void _paintTrail(Canvas canvas) {
+    if (points.length < 2) return;
+    final Path path = Path()..moveTo(points.first.dx, points.first.dy);
+    for (int i = 1; i < points.length; i++) {
+      final Offset p0 = points[i - 1];
+      final Offset p1 = points[i];
+      final double half = (p1.dy - p0.dy) / 2;
+      path.cubicTo(p0.dx, p0.dy + half, p1.dx, p1.dy - half, p1.dx, p1.dy);
+    }
+
+    final Paint dot = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 7
+      ..strokeCap = StrokeCap.round
+      ..color = const Color(0xFFDCE3EA);
+
+    const double dash = 3;
+    const double gap = 13;
+    for (final ui.PathMetric m in path.computeMetrics()) {
+      double d = 0;
+      while (d < m.length) {
+        canvas.drawPath(
+          m.extractPath(d, math.min(d + dash, m.length)),
+          dot,
+        );
+        d += dash + gap;
+      }
     }
   }
 
   @override
-  bool shouldRepaint(_NodePainter old) =>
-      old.fill != fill || old.color != color || old.complete != complete;
+  bool shouldRepaint(_TrailPainter old) =>
+      old.points != points || old.accent != accent;
 }
 
 /// Konuya dokununca açılan detay: maskotun yorumu + istatistik + test.
@@ -453,13 +743,11 @@ class _TopicSheet extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(p.concept,
-                style: const TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.w800)),
+                style:
+                    const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
             Text(p.subject,
-                style: const TextStyle(
-                    color: AppColors.inkLight, fontSize: 13)),
+                style: const TextStyle(color: AppColors.inkLight, fontSize: 13)),
             const SizedBox(height: 16),
-            // Maskotun sözü
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -491,18 +779,17 @@ class _TopicSheet extends StatelessWidget {
               children: <Widget>[
                 _stat('${p.attempts}', 'çözülen'),
                 _stat('${p.correct}', 'doğru'),
-                _stat(
-                    p.successPercent == null ? '—' : '%${p.successPercent}',
+                _stat(p.successPercent == null ? '—' : '%${p.successPercent}',
                     'başarı'),
                 if (p.attempts > 0)
                   _stat(p.daysSince == 0 ? 'bugün' : '${p.daysSince}g',
                       'son çalışma'),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             if (p.state != TopicState.measured)
               Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: LinearProgressIndicator(
@@ -513,7 +800,7 @@ class _TopicSheet extends StatelessWidget {
                   ),
                 ),
               ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
             GameButton(
               label: p.attempts == 0 ? 'BU KONUYU TEST ET' : 'SORU ÇÖZ',
               onPressed: onSolve,
@@ -534,8 +821,7 @@ class _TopicSheet extends StatelessWidget {
                   fontSize: 16,
                   color: AppColors.ink)),
           Text(label,
-              style: const TextStyle(
-                  color: AppColors.inkLight, fontSize: 11)),
+              style: const TextStyle(color: AppColors.inkLight, fontSize: 11)),
         ],
       ),
     );
