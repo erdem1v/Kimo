@@ -38,8 +38,20 @@ enum League {
   /// Sıralamada kaçıncıya kadar üst lige çıkılır.
   static const int promotionCount = 5;
 
+  /// Sondan kaç kişi bir alt lige düşer.
+  static const int demotionCount = 5;
+
   /// Bir grubun en fazla kaç kişi olabileceği.
   static const int cohortSize = 15;
+
+  /// Bir alt lig (en alttaysa null).
+  League? get previous => switch (this) {
+        League.bronz => null,
+        League.gumus => League.bronz,
+        League.altin => League.gumus,
+        League.elmas => League.altin,
+        League.efsane => League.elmas,
+      };
 
   /// Bir sonraki lig (en üstteyse null).
   League? get next => switch (this) {

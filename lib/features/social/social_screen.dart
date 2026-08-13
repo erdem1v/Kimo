@@ -265,7 +265,8 @@ class _SocialScreenState extends State<SocialScreen>
           const SizedBox(height: 4),
           Text(
             '${_board?.entries.length ?? 0} kişilik gruptasın. Hafta sonunda '
-            'ilk ${League.promotionCount} üst lige çıkar.',
+            'ilk ${League.promotionCount} üst lige çıkar, '
+            'son ${League.demotionCount} alt lige düşer.',
             style: const TextStyle(color: AppColors.inkLight, fontSize: 12.5),
           ),
           const SizedBox(height: 12),
@@ -315,49 +316,66 @@ class _SocialScreenState extends State<SocialScreen>
     return Column(
       children: <Widget>[
         for (int i = 0; i < rows.length; i++) ...<Widget>[
-          _boardTile(i + 1, rows[i], rows[i].userId == me),
+          _boardTile(i + 1, rows[i], rows[i].userId == me, rows.length),
+          // Yükselme sınırı
           if (i + 1 == League.promotionCount &&
               rows.length > League.promotionCount)
-            _zoneDivider(),
+            _zoneDivider(promotion: true),
+          // Düşme sınırı (grup 5'ten büyükse ve iki sınır çakışmıyorsa)
+          if (rows.length > League.promotionCount + League.demotionCount &&
+              i + 1 == rows.length - League.demotionCount)
+            _zoneDivider(promotion: false),
         ],
       ],
     );
   }
 
-  Widget _zoneDivider() {
+  /// Yükselme (üstteki 5) ve düşme (alttaki 5) sınır çizgileri.
+  Widget _zoneDivider({required bool promotion}) {
+    final Color color = promotion ? AppColors.green : AppColors.red;
+    final Color dark = promotion ? AppColors.greenDark : AppColors.redDark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: <Widget>[
-          const Expanded(child: Divider(color: AppColors.green, thickness: 1.5)),
+          Expanded(child: Divider(color: color, thickness: 1.5)),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
-              children: const <Widget>[
-                Icon(Icons.arrow_upward_rounded,
-                    size: 14, color: AppColors.greenDark),
-                SizedBox(width: 4),
-                Text('yükselme bölgesi',
+              children: <Widget>[
+                Icon(
+                    promotion
+                        ? Icons.arrow_upward_rounded
+                        : Icons.arrow_downward_rounded,
+                    size: 14,
+                    color: dark),
+                const SizedBox(width: 4),
+                Text(promotion ? 'yükselme bölgesi' : 'düşme bölgesi',
                     style: TextStyle(
-                        color: AppColors.greenDark,
+                        color: dark,
                         fontWeight: FontWeight.w700,
                         fontSize: 11.5)),
               ],
             ),
           ),
-          const Expanded(child: Divider(color: AppColors.green, thickness: 1.5)),
+          Expanded(child: Divider(color: color, thickness: 1.5)),
         ],
       ),
     );
   }
 
-  Widget _boardTile(int rank, LeagueEntry p, bool isMe) {
+  Widget _boardTile(int rank, LeagueEntry p, bool isMe, int total) {
     final bool promo = rank <= League.promotionCount;
+    // Düşme bölgesi yalnızca grup yeterince kalabalıksa gösterilir.
+    final bool demo = total > League.promotionCount + League.demotionCount &&
+        rank > total - League.demotionCount;
     final Color medal = switch (rank) {
       1 => AppColors.gold,
       2 => const Color(0xFF9AA5B1),
       3 => const Color(0xFFB07242),
-      _ => promo ? AppColors.greenDark : AppColors.inkLight,
+      _ => promo
+          ? AppColors.greenDark
+          : (demo ? AppColors.redDark : AppColors.inkLight),
     };
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -483,7 +501,12 @@ class _SocialScreenState extends State<SocialScreen>
     final int myRank = board == null
         ? 0
         : board.entries.indexWhere((LeagueEntry e) => e.userId == _meId) + 1;
+    final int members = board?.entries.length ?? 0;
     final bool promoting = myRank > 0 && myRank <= League.promotionCount;
+    // Düşme yalnızca grup kalabalıkken işler.
+    final bool demoting = myRank > 0 &&
+        members > League.promotionCount + League.demotionCount &&
+        myRank > members - League.demotionCount;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -541,7 +564,9 @@ class _SocialScreenState extends State<SocialScreen>
                 Icon(
                   promoting
                       ? Icons.trending_up_rounded
-                      : Icons.emoji_events_outlined,
+                      : (demoting
+                          ? Icons.trending_down_rounded
+                          : Icons.emoji_events_outlined),
                   color: Colors.white,
                   size: 18,
                 ),
@@ -555,8 +580,12 @@ class _SocialScreenState extends State<SocialScreen>
                             : promoting
                                 ? '$myRank. sıradasın — ilk ${League.promotionCount} '
                                     '${next == null ? "zirvede kalır" : "${next.label}'ne çıkar"}!'
-                                : '$myRank. sıradasın — ilk '
-                                    '${League.promotionCount}\'e girmen lazım.',
+                                : demoting
+                                    ? '$myRank. sıradasın — düşme bölgesindesin, '
+                                        '${league.previous?.label ?? "alt lige"} '
+                                        'düşmemek için çöz!'
+                                    : '$myRank. sıradasın — ilk '
+                                        '${League.promotionCount}\'e girmen lazım.',
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12.5,

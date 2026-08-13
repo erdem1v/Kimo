@@ -22,9 +22,18 @@ void main() {
       expect(League.efsane.next, isNull);
     });
 
-    test('grup ve terfi sayıları', () {
+    test('grup, terfi ve düşme sayıları', () {
       expect(League.cohortSize, 15);
       expect(League.promotionCount, 5);
+      expect(League.demotionCount, 5);
+    });
+
+    test('düşme zinciri doğru, en altın öncesi yok', () {
+      expect(League.efsane.previous, League.elmas);
+      expect(League.elmas.previous, League.altin);
+      expect(League.altin.previous, League.gumus);
+      expect(League.gumus.previous, League.bronz);
+      expect(League.bronz.previous, isNull);
     });
   });
 
