@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../data/social_repository.dart';
 import '../../models/mascot.dart';
 import '../../models/social.dart';
+import '../../services/notification_service.dart';
 import '../../services/sound_service.dart';
 import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
@@ -86,6 +87,18 @@ class _SocialScreenState extends State<SocialScreen>
         if (board != null) gameProgress.league = board.tier;
         _loading = false;
       });
+      // Haftanın son günü ve sıralama kritikse hatırlatma planla.
+      if (board != null) {
+        final int rank =
+            board.entries.indexWhere((LeagueEntry e) => e.userId == _meId) + 1;
+        unawaited(notifications.planLeagueReminder(
+          enabled: userProfile.notifyEnabled,
+          mascot: userProfile.mascot ?? Mascot.evHanimi,
+          rank: rank,
+          leagueLabel: board.tier.label,
+          daysLeft: board.daysLeft,
+        ));
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() {

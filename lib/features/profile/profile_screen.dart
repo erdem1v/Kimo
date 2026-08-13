@@ -4,6 +4,7 @@ import '../../data/auth_repository.dart';
 import '../../data/moderation_repository.dart';
 import '../../data/mock_data.dart';
 import '../../models/models.dart';
+import '../../services/notification_service.dart';
 import '../../services/sound_service.dart';
 import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
@@ -68,6 +69,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               if (SupabaseConfig.isConfigured) ...<Widget>[
                 const SizedBox(height: 12),
                 _mascotTile(),
+                const SizedBox(height: 12),
+                _notifyTile(),
                 const SizedBox(height: 12),
                 _shareConsentTile(),
                 const SizedBox(height: 12),
@@ -335,6 +338,103 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
       },
+    );
+  }
+
+  /// Maskot hatırlatmaları: açma/kapama ve saat ayarı.
+  Widget _notifyTile() {
+    final Mascot m = userProfile.mascot ?? Mascot.evHanimi;
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F7F7),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: <Widget>[
+          SwitchListTile(
+            value: userProfile.notifyEnabled,
+            activeThumbColor: m.color,
+            secondary: Text(m.emoji, style: const TextStyle(fontSize: 22)),
+            title: const Text('Hatırlatmalar',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: Text(
+              userProfile.notifyEnabled
+                  ? 'Tekrar ${userProfile.reviewHour}:00 · '
+                      'seri ${userProfile.streakHour}:00'
+                  : 'Kapalı',
+              style: const TextStyle(color: AppColors.inkLight, fontSize: 12.5),
+            ),
+            onChanged: (bool v) async {
+              // Açarken sistem izni gerekebilir.
+              bool ok = v;
+              if (v) ok = await notifications.requestPermission();
+              await userProfile.setNotifyEnabled(ok);
+              if (!ok) await notifications.cancelAll();
+              if (mounted) setState(() {});
+            },
+          ),
+          if (userProfile.notifyEnabled)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _hourPicker(
+                      label: 'Tekrar',
+                      value: userProfile.reviewHour,
+                      onPick: (int h) =>
+                          userProfile.setNotifyHours(review: h),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _hourPicker(
+                      label: 'Seri',
+                      value: userProfile.streakHour,
+                      onPick: (int h) =>
+                          userProfile.setNotifyHours(streak: h),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _hourPicker({
+    required String label,
+    required int value,
+    required void Function(int) onPick,
+  }) {
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: label,
+        isDense: true,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          value: value,
+          isDense: true,
+          isExpanded: true,
+          // Sessiz saat dışı: 08:00–21:00
+          items: <DropdownMenuItem<int>>[
+            for (int h = 8; h <= 21; h++)
+              DropdownMenuItem<int>(
+                value: h,
+                child: Text('$h:00',
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+              ),
+          ],
+          onChanged: (int? h) {
+            if (h != null) onPick(h);
+          },
+        ),
+      ),
     );
   }
 

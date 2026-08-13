@@ -21,6 +21,9 @@ class UserProfile extends ChangeNotifier {
   String? _nickname;
   Mascot? _mascot;
   bool _shareConsent = false;
+  bool _notifyEnabled = false;
+  int _reviewHour = 17;
+  int _streakHour = 20;
 
   /// Müfredat belirlendi mi?
   bool get isSet => _curriculum != null;
@@ -35,6 +38,11 @@ class UserProfile extends ChangeNotifier {
   /// Yüklenen soruların soru havuzunda paylaşılmasına izin verildi mi?
   /// Karşılama akışında bir kez sorulur, profilden değiştirilebilir.
   bool get shareConsent => _shareConsent;
+
+  /// Maskot hatırlatmaları açık mı, hangi saatlerde?
+  bool get notifyEnabled => _notifyEnabled;
+  int get reviewHour => _reviewHour;
+  int get streakHour => _streakHour;
 
   /// Karşılama akışı tamamlandı mı? (takma ad + sınav yılı + maskot)
   bool get onboardingComplete =>
@@ -58,7 +66,32 @@ class UserProfile extends ChangeNotifier {
     _nickname = (n is String && n.trim().isNotEmpty) ? n.trim() : null;
     _mascot = Mascot.fromDb(meta?['mascot'] as String?);
     _shareConsent = meta?['share_consent'] == true;
+    _notifyEnabled = meta?['notify_enabled'] == true;
+    _reviewHour = _hour(meta?['notify_review_hour'], 17);
+    _streakHour = _hour(meta?['notify_streak_hour'], 20);
     notifyListeners();
+  }
+
+  /// Sessiz saatlerin (22:00–08:00) dışına kırpar.
+  static int _hour(Object? v, int fallback) {
+    final int h = v is int ? v : (v is num ? v.toInt() : fallback);
+    return (h < 8 || h > 21) ? fallback : h;
+  }
+
+  Future<void> setNotifyEnabled(bool value) async {
+    _notifyEnabled = value;
+    notifyListeners();
+    await _save(<String, dynamic>{'notify_enabled': value});
+  }
+
+  Future<void> setNotifyHours({int? review, int? streak}) async {
+    if (review != null) _reviewHour = _hour(review, _reviewHour);
+    if (streak != null) _streakHour = _hour(streak, _streakHour);
+    notifyListeners();
+    await _save(<String, dynamic>{
+      'notify_review_hour': _reviewHour,
+      'notify_streak_hour': _streakHour,
+    });
   }
 
   Future<void> setShareConsent(bool value) async {

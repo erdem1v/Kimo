@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../data/mistake_repository.dart';
+import '../../data/question_pool_repository.dart';
 import '../../data/yks_subjects.dart';
+import '../../models/mascot.dart';
 import '../../models/models.dart';
+import '../../services/notification_service.dart';
 import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
 import '../../state/refresh_bus.dart';
@@ -10,7 +15,6 @@ import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_widgets.dart';
 import '../../widgets/mistake_style.dart';
-import '../../data/question_pool_repository.dart';
 import '../map/curriculum_map_screen.dart';
 import '../pool/received_questions_screen.dart';
 import '../practice/practice_screen.dart';
@@ -69,6 +73,16 @@ class _HomeDashboardState extends State<HomeDashboard> {
       _incomingCount = incoming;
       gameProgress.syncDailyDone(doneToday);
       gameProgress.setDueRemaining(due.length);
+      // Günün hatırlatma planını gerçek verilerle kur.
+      unawaited(notifications.planDay(
+        enabled: userProfile.notifyEnabled,
+        mascot: userProfile.mascot ?? Mascot.evHanimi,
+        reviewHour: userProfile.reviewHour,
+        streakHour: userProfile.streakHour,
+        dueCount: due.length,
+        streak: gameProgress.currentStreak,
+        activeToday: gameProgress.activeToday,
+      ));
       setState(() {
         _due = due;
         _loading = false;

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../data/mascot_lines.dart';
 import '../../models/mascot.dart';
+import '../../services/notification_service.dart';
 import '../../services/sound_service.dart';
 import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
@@ -22,6 +24,7 @@ enum _Step {
   nickname,
   examYear,
   mascot,
+  notifications,
   howPhoto,
   howReview,
   howGamify,
@@ -37,6 +40,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   int? _year;
   Mascot? _mascot;
   bool _consent = false;
+  bool? _notify; // null = henüz seçilmedi
   bool _saving = false;
 
   static const List<int> _years = <int>[2026, 2027, 2028, 2029, 2030];
@@ -52,6 +56,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       if (userProfile.nickname == null) _Step.nickname,
       _Step.examYear,
       _Step.mascot,
+      // İzin, maskot seçildikten hemen sonra: kullanıcı karakterine yeni
+      // yatırım yapmışken "seni ben hatırlatayım mı?" en doğal an.
+      _Step.notifications,
       _Step.howPhoto,
       _Step.howReview,
       _Step.howGamify,
@@ -74,6 +81,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         _Step.nickname => _nickname.text.trim().length >= 2,
         _Step.examYear => _year != null,
         _Step.mascot => _mascot != null,
+        _Step.notifications => _notify != null,
         _ => true,
       };
 
@@ -90,6 +98,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           await userProfile.setExamYear(_year!);
         case _Step.mascot:
           await userProfile.setMascot(_mascot!);
+        case _Step.notifications:
+          // Sistem izni ancak "evet" dendiyse istenir.
+          bool granted = false;
+          if (_notify == true) granted = await notifications.requestPermission();
+          await userProfile.setNotifyEnabled(granted);
         case _Step.shareConsent:
           await userProfile.setShareConsent(_consent);
         default:
@@ -224,7 +237,145 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                 'zorlandığını görürsün.',
           ),
         _Step.shareConsent => _consentPage(),
+        _Step.notifications => _notifyPage(),
       };
+
+  /// Bildirim izni — maskotun ağzından. Sistem penceresi ancak kullanıcı
+  /// "Evet, hatırlat" dedikten sonra açılır (soğuk sorulursa reddedilir ve
+  /// Android'de izni tekrar sorma hakkı harcanır).
+  Widget _notifyPage() {
+    final Mascot m = _mascot ?? userProfile.mascot ?? Mascot.evHanimi;
+    return _pad(
+      SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const SizedBox(height: 8),
+            Center(
+              child: Container(
+                width: 96,
+                height: 96,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: m.color.withValues(alpha: 0.16),
+                  shape: BoxShape.circle,
+                ),
+                child: Text(m.emoji, style: const TextStyle(fontSize: 44)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            _title('Sana hatırlatayım mı?'),
+            _subtitle('Tekrar zamanın geldiğinde ve serin tehlikedeyken '
+                'haber vereyim. Günde en fazla iki kez, gece rahatsız etmem.'),
+            const SizedBox(height: 16),
+            // Karakterin sesinden örnek bildirim.
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: m.color.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: m.color.withValues(alpha: 0.30)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(m.emoji, style: const TextStyle(fontSize: 22)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(MascotLines.title(NotifyKind.streakRisk),
+                            style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                                color: m.color)),
+                        const SizedBox(height: 2),
+                        Text(
+                          MascotLines.pick(NotifyKind.streakRisk, m, n: 7),
+                          style: const TextStyle(
+                              fontSize: 13, height: 1.3, color: AppColors.ink),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            _notifyChoice(
+              selected: _notify == true,
+              color: m.color,
+              icon: Icons.notifications_active_rounded,
+              title: 'Evet, hatırlat',
+              body: 'Tekrar ve seri hatırlatmalarını gönder.',
+              onTap: () => setState(() => _notify = true),
+            ),
+            const SizedBox(height: 8),
+            _notifyChoice(
+              selected: _notify == false,
+              color: AppColors.inkLight,
+              icon: Icons.notifications_off_outlined,
+              title: 'Şimdilik istemiyorum',
+              body: 'Profilden istediğin zaman açabilirsin.',
+              onTap: () => setState(() => _notify = false),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _notifyChoice({
+    required bool selected,
+    required Color color,
+    required IconData icon,
+    required String title,
+    required String body,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        sound.tap();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: selected ? color.withValues(alpha: 0.10) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? color : AppColors.line,
+            width: selected ? 2.5 : 1.5,
+          ),
+        ),
+        child: Row(
+          children: <Widget>[
+            Icon(icon, color: selected ? color : AppColors.inkLight, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(title,
+                      style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14.5,
+                          color: selected ? color : AppColors.ink)),
+                  const SizedBox(height: 2),
+                  Text(body,
+                      style: const TextStyle(
+                          color: AppColors.inkLight, fontSize: 12.5)),
+                ],
+              ),
+            ),
+            if (selected)
+              Icon(Icons.check_circle_rounded, color: color, size: 22),
+          ],
+        ),
+      ),
+    );
+  }
 
   /// Soru havuzu paylaşım onayı — bir kez alınır, profilden değiştirilebilir.
   Widget _consentPage() {
