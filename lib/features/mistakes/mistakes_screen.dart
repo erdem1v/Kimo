@@ -4,6 +4,7 @@ import '../../data/mistake_repository.dart';
 import '../../models/models.dart';
 import '../../services/supabase_config.dart';
 import '../../state/mistake_store.dart';
+import '../../state/refresh_bus.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_button.dart';
 import '../../widgets/mistake_photo.dart';
@@ -29,7 +30,22 @@ class _MistakesScreenState extends State<MistakesScreen> {
   @override
   void initState() {
     super.initState();
-    if (_remote) _load();
+    if (_remote) {
+      _load();
+      refreshBus.addListener(_onRefresh);
+    }
+  }
+
+  @override
+  void dispose() {
+    refreshBus.removeListener(_onRefresh);
+    super.dispose();
+  }
+
+  /// Sekmeye dönüldüğünde tazele: başka ekranda (ör. yönetim) yapılan
+  /// düzeltmeler burada da görünsün.
+  void _onRefresh() {
+    if (mounted && !_loading) _load();
   }
 
   Future<void> _load() async {
