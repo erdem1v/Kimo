@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/public_question.dart';
 import '../models/received_question.dart';
+import '../models/report_reason.dart';
 
 /// Soru havuzu: kullanıcıların paylaşıma açtığı hataları rastgele getirir ve
 /// çözüm denemelerini kaydeder.
@@ -111,6 +112,20 @@ class QuestionPoolRepository {
     } catch (_) {
       // Akışı bloklamayalım.
     }
+  }
+
+  /// Soruyu şikayet eder. Eşiğe ulaşan sorular veritabanındaki trigger ile
+  /// havuzdan düşer; şikayet ettiğin soru sana bir daha gösterilmez.
+  Future<void> report({
+    required String questionId,
+    required ReportReason reason,
+    String? note,
+  }) async {
+    await _client.from('question_reports').insert(<String, dynamic>{
+      'mistake_id': questionId,
+      'reason': reason.dbValue,
+      'note': (note == null || note.trim().isEmpty) ? null : note.trim(),
+    });
   }
 
   /// Çözüm denemesini kaydeder (kullanıcı başına soru başına bir kez sayılır).

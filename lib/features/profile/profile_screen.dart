@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/auth_repository.dart';
+import '../../data/moderation_repository.dart';
 import '../../data/mock_data.dart';
 import '../../models/models.dart';
 import '../../services/sound_service.dart';
@@ -11,6 +12,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/game_widgets.dart';
 import '../../models/mascot.dart';
 import '../../models/social.dart';
+import '../admin/moderation_screen.dart';
 import '../onboarding/exam_year_sheet.dart';
 import '../onboarding/mascot_sheet.dart';
 
@@ -23,6 +25,18 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  bool _isAdmin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (SupabaseConfig.isConfigured) {
+      moderationRepository.isAdmin().then((bool v) {
+        if (mounted && v) setState(() => _isAdmin = true);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -57,6 +71,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _shareConsentTile(),
                 const SizedBox(height: 12),
                 _curriculumTile(),
+                if (_isAdmin) ...<Widget>[
+                  const SizedBox(height: 12),
+                  _moderationTile(),
+                ],
                 const SizedBox(height: 12),
                 _logoutButton(),
               ],
@@ -365,6 +383,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
       },
+    );
+  }
+
+  /// Yalnızca moderatörlere görünen şikayet kuyruğu girişi.
+  Widget _moderationTile() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.red.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.red.withValues(alpha: 0.30)),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.shield_outlined, color: AppColors.red),
+        title: const Text('Moderasyon kuyruğu',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        subtitle: const Text('Bildirilen soruları incele',
+            style: TextStyle(color: AppColors.inkLight, fontSize: 13)),
+        trailing:
+            const Icon(Icons.chevron_right_rounded, color: AppColors.inkLight),
+        onTap: () => Navigator.of(context).push<void>(
+          MaterialPageRoute<void>(builder: (_) => const ModerationScreen()),
+        ),
+      ),
     );
   }
 

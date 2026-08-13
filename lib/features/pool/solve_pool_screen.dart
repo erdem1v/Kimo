@@ -11,6 +11,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/drawing_canvas.dart';
 import '../../widgets/game_button.dart';
 import '../../widgets/mistake_photo.dart';
+import 'report_question_sheet.dart';
 import 'send_question_sheet.dart';
 
 /// Soru havuzu: başka öğrencilerin paylaştığı hataları rastgele çözdürür.
@@ -117,6 +118,27 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
     });
   }
 
+  /// Soruyu bildir; gönderilirse listeden çıkarıp sıradakine geç.
+  Future<void> _report() async {
+    final String id = _current.id;
+    final bool sent = await showReportQuestionSheet(context, questionId: id);
+    if (!sent || !mounted) return;
+    setState(() {
+      _items.removeWhere((PublicQuestion q) => q.id == id);
+      if (_index >= _items.length) _index = 0;
+      _selected = null;
+      _answered = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Bildirildi, teşekkürler 🙏'),
+        backgroundColor: AppColors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    if (_items.isEmpty) _load();
+  }
+
   void _next() {
     if (_isLast) {
       _load(); // yeni bir tur getir
@@ -202,6 +224,12 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
                   mistakeId: _current.id,
                   title: '${_current.subject} · ${_current.concept}',
                 ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.flag_outlined,
+                    color: AppColors.inkLight),
+                tooltip: 'Bu soruyu bildir',
+                onPressed: _report,
               ),
             ],
           ),
