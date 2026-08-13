@@ -149,6 +149,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
         exam: _current.exam,
         correct: correct,
         mistakeId: _current.id,
+        extraConcepts: _current.extraConcepts,
       );
     }
   }

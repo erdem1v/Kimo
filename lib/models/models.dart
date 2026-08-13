@@ -134,6 +134,7 @@ class MistakeEntry {
     this.mastered = false,
     this.isLeech = false,
     this.exam,
+    this.extraConcepts = const <String>[],
   });
 
   /// Supabase satır kimliği (tekrar güncellemesi için).
@@ -154,6 +155,13 @@ class MistakeEntry {
 
   /// Sınav türü: 'TYT' | 'AYT' | null (AI belirler).
   final String? exam;
+
+  /// Sorunun ayrıca değdiği konular. Soru [concept] altında gruplanır ama
+  /// çözüldüğünde ölçüm bu konulara da yazılır (ör. hem mitoz hem mayoz).
+  final List<String> extraConcepts;
+
+  /// Ana konu + ek konular.
+  List<String> get allConcepts => <String>[concept, ...extraConcepts];
 
   /// Yeni seçilen fotoğrafın ham baytları (yerel önizleme için).
   final Uint8List? imageBytes;

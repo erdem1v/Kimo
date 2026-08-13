@@ -61,6 +61,7 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
         "Hücre ve Organelleri", "Hücre Zarından Madde Geçişi",
         "Canlıların Sınıflandırılması", "Mitoz ve Eşeysiz Üreme",
         "Mayoz ve Eşeyli Üreme", "Kalıtım", "Ekosistem Ekolojisi",
+        "Madde Döngüleri",
         "Güncel Çevre Sorunları",
       ],
       "Tarih": [

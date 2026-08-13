@@ -32,6 +32,10 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
   double? _imageAspect; // en/boy — foto alanını orana göre boyutlamak için
   String? _subject;
   String? _concept; // müfredat listesinden seçilir; serbest metin yok
+  // Soru birden çok konuya değiyorsa (ör. hem mitoz hem mayoz): çözüldüğünde
+  // ölçüm bu konulara da yazılır, haritada hepsi ilerler.
+  final List<String> _extras = <String>[];
+  static const int _maxExtras = 2;
   String _exam = 'TYT'; // AI önerir, kullanıcı düzenleyebilir
   MistakeType? _type;
   bool _saving = false;
@@ -236,6 +240,7 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
           // Paylaşım izni karşılama akışında bir kez alınır (profilden
           // değiştirilebilir); soru başına ayrıca sorulmaz.
           isPublic: userProfile.shareConsent,
+          extraConcepts: _extras,
         );
       } else {
         mistakeStore.add(
@@ -303,6 +308,8 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
                         !_topicsOf(_subject!).contains(_concept)) {
                       _concept = null;
                     }
+                    _extras.removeWhere((String c) =>
+                        _subject == null || !_topicsOf(_subject!).contains(c));
                   }),
                   labelStyle: TextStyle(
                     color: _exam == e ? Colors.white : AppColors.ink,
@@ -342,6 +349,8 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
                     _subject = s;
                     // Ders değişince konu seçimi geçersiz olabilir.
                     if (!_topicsOf(s).contains(_concept)) _concept = null;
+                    _extras.removeWhere(
+                        (String c) => !_topicsOf(s).contains(c));
                   }),
                   labelStyle: TextStyle(
                     color: _subject == s ? Colors.white : AppColors.ink,
@@ -359,6 +368,7 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
           _label('Konu', emoji: '🏷️'),
           const SizedBox(height: 8),
           _conceptPicker(),
+          if (_concept != null) _extraConcepts(),
           const SizedBox(height: 22),
           _label('Hata türü', emoji: '⚠️'),
           const SizedBox(height: 8),
@@ -635,6 +645,66 @@ class _AddMistakeScreenState extends State<AddMistakeScreen> {
         ),
       ),
     );
+  }
+
+  /// Ek konular: soru birden çok konuya değiyorsa işaretlenir.
+  Widget _extraConcepts() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              for (final String c in _extras)
+                Chip(
+                  label: Text(c, style: const TextStyle(fontSize: 12.5)),
+                  labelStyle: const TextStyle(fontWeight: FontWeight.w700),
+                  backgroundColor:
+                      AppColors.purple.withValues(alpha: 0.12),
+                  side: BorderSide(
+                      color: AppColors.purple.withValues(alpha: 0.35)),
+                  deleteIconColor: AppColors.purpleDark,
+                  onDeleted: () => setState(() => _extras.remove(c)),
+                ),
+              if (_extras.length < _maxExtras)
+                ActionChip(
+                  avatar: const Icon(Icons.add_rounded,
+                      size: 16, color: AppColors.inkLight),
+                  label: const Text('Başka konuya da değiyor',
+                      style: TextStyle(fontSize: 12.5)),
+                  backgroundColor: const Color(0xFFF4F4F4),
+                  side: BorderSide.none,
+                  onPressed: _pickExtra,
+                ),
+            ],
+          ),
+          if (_extras.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 6),
+              child: Text(
+                'Bu soruyu çözdüğünde haritada bu konular da ilerler.',
+                style: TextStyle(color: AppColors.inkLight, fontSize: 11.5),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickExtra() async {
+    if (_subject == null) return;
+    final String? picked = await showTopicPicker(
+      context,
+      curriculum: userProfile.curriculum,
+      exam: _exam,
+      subject: _subject!,
+    );
+    if (picked == null) return;
+    if (picked == _concept || _extras.contains(picked)) return;
+    setState(() => _extras.add(picked));
   }
 
   /// Konu seçimi: yalnızca müfredat listesinden. Önce ders seçilmeli.

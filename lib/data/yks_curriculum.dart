@@ -133,7 +133,7 @@ class YksCurriculum {
       ]),
       Unit('Kalıtım', <String>['Kalıtım']),
       Unit('Ekosistem Ekolojisi', <String>[
-        'Ekosistem Ekolojisi', 'Güncel Çevre Sorunları',
+        'Ekosistem Ekolojisi', 'Madde Döngüleri', 'Güncel Çevre Sorunları',
       ]),
     ],
     'Tarih': <Unit>[

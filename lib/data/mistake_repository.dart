@@ -96,6 +96,10 @@ class MistakeRepository {
       mastered: row['mastered'] == true,
       isLeech: row['is_leech'] == true,
       exam: row['exam'] as String?,
+      extraConcepts: (row['extra_concepts'] as List<dynamic>?)
+              ?.map((dynamic e) => e as String)
+              .toList() ??
+          const <String>[],
     );
   }
 
@@ -120,6 +124,7 @@ class MistakeRepository {
     int? correctIndex,
     String? exam,
     bool isPublic = false,
+    List<String> extraConcepts = const <String>[],
   }) async {
     String? path;
     if (imageBytes != null) {
@@ -147,6 +152,7 @@ class MistakeRepository {
       'correct_index': correctIndex,
       'exam': (exam == null || exam.isEmpty) ? null : exam,
       'is_public': isPublic,
+      'extra_concepts': extraConcepts.isEmpty ? null : extraConcepts,
     });
     // step/next_review_date DB varsayılanlarıyla gelir (adım 0, ertesi gün).
   }
