@@ -334,15 +334,21 @@ class _QuestionEditorState extends State<_QuestionEditor> {
   late String _subject = widget.question.subject;
   late String? _concept = widget.question.concept;
   late int? _correctIndex = widget.question.correctIndex;
+  late final List<String> _extras =
+      List<String>.of(widget.question.extraConcepts);
   bool _saving = false;
+  static const int _maxExtras = 2;
 
   Map<String, List<Unit>> get _subjects => YksCurriculum.forExam(
       userProfile.curriculum, _exam == 'AYT' ? 'AYT' : 'TYT');
 
-  bool get _conceptValid {
-    if (_exam == null || _concept == null) return false;
+  bool get _conceptValid =>
+      _exam != null && _concept != null && _topicExists(_concept!);
+
+  /// Konu, seçili sınav+ders altında müfredatta var mı?
+  bool _topicExists(String topic) {
     final List<Unit>? units = _subjects[_subject];
-    return units?.any((Unit u) => u.topics.contains(_concept)) ?? false;
+    return units?.any((Unit u) => u.topics.contains(topic)) ?? false;
   }
 
   Future<void> _pickTopic() async {
@@ -357,6 +363,19 @@ class _QuestionEditorState extends State<_QuestionEditor> {
     if (picked != null) setState(() => _concept = picked);
   }
 
+  Future<void> _pickExtra() async {
+    if (_exam == null) return;
+    final String? picked = await showTopicPicker(
+      context,
+      curriculum: userProfile.curriculum,
+      exam: _exam!,
+      subject: _subject,
+    );
+    if (picked == null) return;
+    if (picked == _concept || _extras.contains(picked)) return;
+    setState(() => _extras.add(picked));
+  }
+
   Future<void> _save() async {
     if (_saving || !_conceptValid) return;
     setState(() => _saving = true);
@@ -367,6 +386,7 @@ class _QuestionEditorState extends State<_QuestionEditor> {
         concept: _concept,
         exam: _exam,
         correctIndex: _correctIndex,
+        extraConcepts: _extras,
       );
       if (mounted) Navigator.of(context).pop(true);
     } catch (_) {
@@ -453,6 +473,7 @@ class _QuestionEditorState extends State<_QuestionEditor> {
                       _subject = _subjects.keys.first;
                     }
                     if (!_conceptValid) _concept = null;
+                    _extras.removeWhere((String c) => !_topicExists(c));
                   }),
                   labelStyle: TextStyle(
                     color: _exam == e ? Colors.white : AppColors.ink,
@@ -480,6 +501,7 @@ class _QuestionEditorState extends State<_QuestionEditor> {
                   onSelected: (_) => setState(() {
                     _subject = s;
                     _concept = null;
+                    _extras.removeWhere((String c) => !_topicExists(c));
                   }),
                   labelStyle: TextStyle(
                     color: _subject == s ? Colors.white : AppColors.ink,
@@ -527,6 +549,35 @@ class _QuestionEditorState extends State<_QuestionEditor> {
               ),
             ),
           ),
+          if (_concept != null) ...<Widget>[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                for (final String c in _extras)
+                  Chip(
+                    label: Text(c, style: const TextStyle(fontSize: 12.5)),
+                    labelStyle: const TextStyle(fontWeight: FontWeight.w700),
+                    backgroundColor: AppColors.purple.withValues(alpha: 0.12),
+                    side: BorderSide(
+                        color: AppColors.purple.withValues(alpha: 0.35)),
+                    deleteIconColor: AppColors.purpleDark,
+                    onDeleted: () => setState(() => _extras.remove(c)),
+                  ),
+                if (_extras.length < _maxExtras)
+                  ActionChip(
+                    avatar: const Icon(Icons.add_rounded,
+                        size: 16, color: AppColors.inkLight),
+                    label: const Text('Başka konuya da değiyor',
+                        style: TextStyle(fontSize: 12.5)),
+                    backgroundColor: const Color(0xFFF4F4F4),
+                    side: BorderSide.none,
+                    onPressed: _pickExtra,
+                  ),
+              ],
+            ),
+          ],
           if (q.options.isNotEmpty) ...<Widget>[
             const SizedBox(height: 18),
             _label('Doğru şık'),

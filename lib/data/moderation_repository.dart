@@ -123,6 +123,7 @@ class AdminQuestion {
     this.photoPath,
     this.options = const <QuestionOption>[],
     this.correctIndex,
+    this.extraConcepts = const <String>[],
   });
 
   final String id;
@@ -136,6 +137,9 @@ class AdminQuestion {
   final String? photoPath;
   final List<QuestionOption> options;
   final int? correctIndex;
+
+  /// Sorunun ayrıca değdiği konular.
+  final List<String> extraConcepts;
 
   bool get inPool => isPublic && moderation == 'ok';
 
@@ -158,6 +162,10 @@ class AdminQuestion {
               .toList()
           : const <QuestionOption>[],
       correctIndex: row['correct_index'] as int?,
+      extraConcepts: (row['extra_concepts'] as List<dynamic>?)
+              ?.map((dynamic e) => e as String)
+              .toList() ??
+          const <String>[],
     );
   }
 }
@@ -185,6 +193,7 @@ extension AdminQuestions on ModerationRepository {
     String? concept,
     String? exam,
     int? correctIndex,
+    List<String>? extraConcepts,
   }) async {
     await _c.rpc<void>('admin_update_question', params: <String, dynamic>{
       'p_id': id,
@@ -192,6 +201,8 @@ extension AdminQuestions on ModerationRepository {
       'p_concept': concept,
       'p_exam': exam,
       'p_correct_index': correctIndex,
+      // Boş liste "ek konu yok" demek; null ise dokunulmaz.
+      'p_extra_concepts': extraConcepts,
     });
   }
 
