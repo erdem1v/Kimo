@@ -148,7 +148,7 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
         "Değişim Çağında Avrupa ve Osmanlı",
         "Uluslararası İlişkilerde Denge (1774-1914)", "Devrimler Çağı",
         "Sermaye ve Emek", "XIX-XX. Yüzyılda Gündelik Hayat", "Nüfus Politikaları",
-        "XX. Yüzyıl Başlarında Osmanlı", "Millî Mücadele (Cepheler)",
+        "XX. Yüzyıl Başlarında Osmanlı", "Millî Mücadele",
         "Atatürkçülük ve Türk İnkılabı", "Atatürk İlkeleri", "İki Savaş Arası Dönem",
         "II. Dünya Savaşı", "Soğuk Savaş Dönemi",
       ],
@@ -187,10 +187,14 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
         "Üslü İfadeler", "Köklü İfadeler", "Sayı Kümeleri",
         "Özdeşlikler (İki Kare Farkı-Tam Kare)", "Doğrusal Fonksiyonlar",
         "Mutlak Değer", "Denklem-Eşitsizlik", "Mantıksal Çıkarım",
-        "Algoritma ve Bilişim", "Üçgende Eşlik ve Benzerlik",
-        "Veriden Olasılığa", "Trigonometriye Giriş",
-        "Analitik Geometriye Giriş", "Fonksiyonlar ve Denklemler", "Çokgenler",
-        "Dörtgenler", "Çember",
+        "Algoritma ve Bilişim", "Fonksiyonlar ve Denklemler",
+        "Trigonometriye Giriş", "Veriden Olasılığa",
+      ],
+      // Geometri, Maarif'te matematik programının içinde geçse de uygulamada
+      // AYRI DERS olarak tutulur (eski müfredatla tutarlı olsun diye).
+      "Geometri": [
+        "Üçgende Eşlik ve Benzerlik", "Çokgenler", "Dörtgenler", "Çember",
+        "Analitik Geometriye Giriş",
       ],
       "Fizik": [
         "Fizik Bilimi ve Kariyer", "Kuvvet ve Hareket", "Akışkanlar (Basınç)",
@@ -230,9 +234,10 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
     },
     AYT: {
       "Matematik": [
-        "Nicelikler ve Değişimler", "Geometrik Şekiller",
-        "İstatistiksel Araştırma Süreci", "Türev", "İntegral", "Logaritma",
+        "Nicelikler ve Değişimler", "İstatistiksel Araştırma Süreci", "Türev",
+        "İntegral", "Logaritma",
       ],
+      "Geometri": ["Geometrik Şekiller"],
       "Fizik": [
         "Kuvvet ve Hareket (Newton Yasaları)", "Çembersel Hareket",
         "Elektriksel ve Manyetik Alan", "İndüksiyon ve Transformatörler",

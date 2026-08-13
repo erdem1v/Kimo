@@ -16,13 +16,16 @@ class YksSubjects {
     'Tarih', 'Coğrafya', 'Felsefe Grubu', 'Din Kültürü',
   ];
 
+  // Geometri, Maarif programında matematiğin içinde geçse de uygulamada AYRI
+  // DERS olarak tutulur (eski müfredatla tutarlı olsun diye).
   static const List<String> _maarifTyt = <String>[
-    'Türkçe', 'Matematik', 'Fizik', 'Kimya', 'Biyoloji',
+    'Türkçe', 'Matematik', 'Geometri', 'Fizik', 'Kimya', 'Biyoloji',
     'Tarih', 'Coğrafya', 'Felsefe', 'Din Kültürü',
   ];
 
   static const List<String> _maarifAyt = <String>[
-    'Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Edebiyat', 'Tarih', 'Coğrafya',
+    'Matematik', 'Geometri', 'Fizik', 'Kimya', 'Biyoloji', 'Edebiyat',
+    'Tarih', 'Coğrafya',
   ];
 
   /// [curriculum] ('eski'|'maarif') ve [exam] ('TYT'|'AYT') için ders adları.

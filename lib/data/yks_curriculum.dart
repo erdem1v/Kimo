@@ -311,7 +311,7 @@ class YksCurriculum {
         'Nüfus Politikaları', 'XX. Yüzyıl Başlarında Osmanlı',
       ]),
       Unit('Millî Mücadele ve İnkılaplar', <String>[
-        'Millî Mücadele', 'Atatürkçülük ve Türk İnkılabı',
+        'Millî Mücadele', 'Atatürkçülük ve Türk İnkılabı', 'Atatürk İlkeleri',
       ]),
       Unit('Çağdaş Türk ve Dünya Tarihi', <String>[
         'İki Savaş Arası Dönem', 'II. Dünya Savaşı', 'Soğuk Savaş Dönemi',
@@ -319,7 +319,7 @@ class YksCurriculum {
     ],
     'Coğrafya': <Unit>[
       Unit('Doğal Sistemler', <String>[
-        'Ekosistem ve Madde Döngüsü', 'Doğal Sistemler',
+        'Ekosistem ve Madde Döngüsü', 'Doğal Sistemler (Biyoçeşitlilik)',
       ]),
       Unit('Beşerî Sistemler', <String>[
         'Nüfus Politikaları', 'Göç ve Şehirleşme',
@@ -390,34 +390,44 @@ class YksCurriculum {
       Unit('Mantıksal Çıkarım', <String>[
         'Mantıksal Çıkarım', 'Algoritma ve Bilişim',
       ]),
-      Unit('Geometri', <String>[
-        'Üçgende Eşlik ve Benzerlik', 'Çokgenler ve Dörtgenler', 'Çember',
-        'Trigonometriye Giriş', 'Analitik Geometriye Giriş',
-      ]),
+      Unit('Trigonometri', <String>['Trigonometriye Giriş']),
       Unit('Veriden Olasılığa', <String>['Veriden Olasılığa']),
+    ],
+    // Maarif programında geometri matematiğin içinde geçse de uygulamada AYRI
+    // DERS olarak tutulur (eski müfredatla tutarlı olsun diye).
+    'Geometri': <Unit>[
+      Unit('Üçgenler', <String>['Üçgende Eşlik ve Benzerlik']),
+      Unit('Çokgenler ve Dörtgenler', <String>['Çokgenler', 'Dörtgenler']),
+      Unit('Çember', <String>['Çember']),
+      Unit('Analitik Geometri', <String>['Analitik Geometriye Giriş']),
     ],
     'Fizik': <Unit>[
       Unit('Fizik Bilimi', <String>['Fizik Bilimi ve Kariyer']),
       Unit('Kuvvet ve Hareket', <String>['Kuvvet ve Hareket']),
-      Unit('Akışkanlar', <String>['Akışkanlar']),
-      Unit('Enerji', <String>['Enerji']),
+      Unit('Akışkanlar', <String>[
+        'Akışkanlar (Basınç)', 'Akışkanlar (Kaldırma Kuvveti-Bernoulli)',
+      ]),
+      Unit('Enerji', <String>['Enerji (Isı-Hâl Değişimi)']),
       Unit('Elektrik', <String>['Elektrik']),
       Unit('Dalgalar', <String>['Dalgalar']),
     ],
     'Kimya': <Unit>[
       Unit('Etkileşim', <String>[
-        'Etkileşim (Kimya Hayattır, Periyodik Tablo)',
+        'Kimya Hayattır', 'Atomdan Periyodik Tabloya',
+        'Kimyasal Türler Arası Etkileşimler',
       ]),
       Unit('Çeşitlilik', <String>[
-        'Çeşitlilik (Türler Arası Etkileşim, Tepkimeler, Gazlar, Çözeltiler)',
+        'Kimyasal Tepkimeler', 'Gazlar', 'Çözeltiler', 'Redoks (Etkileşim)',
       ]),
       Unit('Sürdürülebilirlik', <String>['Sürdürülebilirlik']),
     ],
     'Biyoloji': <Unit>[
-      Unit('Yaşam', <String>['Yaşam (Canlıların Ortak Özellikleri)']),
-      Unit('Organizasyon', <String>['Organizasyon (Hücre)']),
-      Unit('Enerji', <String>['Enerji (Fotosentez-Solunum)']),
-      Unit('Ekoloji', <String>['Ekoloji']),
+      Unit('Yaşam', <String>[
+        'Canlıların Ortak Özellikleri', 'Üç Âlem/Domain Sistemi',
+      ]),
+      Unit('Organizasyon', <String>['Hücre', 'Organik Moleküller']),
+      Unit('Enerji', <String>['Fotosentez', 'Hücresel Solunum']),
+      Unit('Ekoloji', <String>['Ekosistem Ekolojisi']),
     ],
     'Tarih': <Unit>[
       Unit('Tarih Bilimi', <String>[
@@ -465,11 +475,13 @@ class YksCurriculum {
   static const Map<String, List<Unit>> _maarifAyt = <String, List<Unit>>{
     'Matematik': <Unit>[
       Unit('Nicelikler ve Değişimler', <String>['Nicelikler ve Değişimler']),
-      Unit('Geometrik Şekiller', <String>['Geometrik Şekiller']),
       Unit('İstatistiksel Araştırma', <String>[
         'İstatistiksel Araştırma Süreci',
       ]),
       Unit('Analiz', <String>['Türev', 'İntegral', 'Logaritma']),
+    ],
+    'Geometri': <Unit>[
+      Unit('Geometrik Şekiller', <String>['Geometrik Şekiller']),
     ],
     'Fizik': <Unit>[
       Unit('Kuvvet ve Hareket', <String>[
