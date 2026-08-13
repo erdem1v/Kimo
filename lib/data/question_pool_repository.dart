@@ -40,6 +40,21 @@ class QuestionPoolRepository {
         .toList();
   }
 
+  /// Konu başına çözülebilir soru sayısı: 'Ders|Konu' → adet. Haritada boş
+  /// konuya tıklanmasın diye önceden gösterilir.
+  Future<Map<String, int>> availableCounts() async {
+    try {
+      final List<dynamic> rows =
+          await _client.rpc<List<dynamic>>('available_question_counts');
+      return <String, int>{
+        for (final dynamic r in rows)
+          '${(r as Map)['subject']}|${r['concept']}': (r['cnt'] as int?) ?? 0,
+      };
+    } catch (_) {
+      return <String, int>{};
+    }
+  }
+
   /// Havuz sorusunun fotoğrafı için imzalı URL.
   Future<String?> signedUrl(String path) async {
     try {

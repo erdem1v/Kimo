@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../data/progress_repository.dart';
+import '../../data/question_pool_repository.dart';
 import '../../data/yks_curriculum.dart';
 import '../../models/topic_progress.dart';
 import '../../services/sound_service.dart';
@@ -31,6 +32,8 @@ const double _amplitude = 78; // yolun yanal salınımı
 
 class _CurriculumMapScreenState extends State<CurriculumMapScreen> {
   Map<String, TopicProgress> _progress = <String, TopicProgress>{};
+  // 'Ders|Konu' → havuzda çözebileceğin soru sayısı.
+  Map<String, int> _available = <String, int>{};
   bool _loading = true;
   String _exam = 'TYT';
   String? _subject;
@@ -45,9 +48,12 @@ class _CurriculumMapScreenState extends State<CurriculumMapScreen> {
     setState(() => _loading = true);
     try {
       final Map<String, TopicProgress> p = await progressRepository.myProgress();
+      final Map<String, int> counts =
+          await questionPoolRepository.availableCounts();
       if (!mounted) return;
       setState(() {
         _progress = p;
+        _available = counts;
         _loading = false;
       });
     } catch (_) {
@@ -59,6 +65,19 @@ class _CurriculumMapScreenState extends State<CurriculumMapScreen> {
   TopicProgress _of(String subject, String concept) =>
       _progress['$subject|$concept'] ??
       TopicProgress(subject: subject, concept: concept);
+
+  int _availableFor(String subject, String concept) =>
+      _available['$subject|$concept'] ?? 0;
+
+  /// Havuzdan karışık soru (konu seçmeden). Havuz seyrekken boş konulara
+  /// tıklamak yerine buradan devam edilir.
+  Future<void> _solveMixed() async {
+    sound.tap();
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const SolvePoolScreen()),
+    );
+    await _load();
+  }
 
   Map<String, List<Unit>> get _subjects =>
       YksCurriculum.forExam(userProfile.curriculum, _exam);
@@ -101,6 +120,16 @@ class _CurriculumMapScreenState extends State<CurriculumMapScreen> {
           ),
         ],
       ),
+      floatingActionButton: _loading
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _solveMixed,
+              backgroundColor: AppColors.purple,
+              foregroundColor: Colors.white,
+              icon: const Text('🎲', style: TextStyle(fontSize: 18)),
+              label: const Text('Karışık çöz',
+                  style: TextStyle(fontWeight: FontWeight.w800)),
+            ),
       body: Column(
         children: <Widget>[
           _examSelector(),
@@ -113,6 +142,7 @@ class _CurriculumMapScreenState extends State<CurriculumMapScreen> {
                     subject: subject,
                     units: _subjects[subject]!,
                     progressOf: (String c) => _of(subject, c),
+                    availableOf: (String c) => _availableFor(subject, c),
                     onTapTopic: _openTopic,
                   ),
           ),
@@ -249,6 +279,7 @@ class _CurriculumMapScreenState extends State<CurriculumMapScreen> {
       ),
       builder: (BuildContext ctx) => _TopicSheet(
         progress: p,
+        available: _availableFor(p.subject, p.concept),
         onSolve: () async {
           Navigator.of(ctx).pop();
           await Navigator.of(context).push<void>(
@@ -285,12 +316,14 @@ class _MapTrail extends StatelessWidget {
     required this.subject,
     required this.units,
     required this.progressOf,
+    required this.availableOf,
     required this.onTapTopic,
   });
 
   final String subject;
   final List<Unit> units;
   final TopicProgress Function(String concept) progressOf;
+  final int Function(String concept) availableOf;
   final void Function(TopicProgress) onTapTopic;
 
   @override
@@ -378,6 +411,7 @@ class _MapTrail extends StatelessWidget {
                       top: ys[i],
                       child: _TopicStop(
                         progress: progressOf(stops[i].concept!),
+                        available: availableOf(stops[i].concept!),
                         onTap: onTapTopic,
                       ),
                     ),
@@ -450,9 +484,16 @@ class _UnitBanner extends StatelessWidget {
 
 /// 3B basılabilir durak düğmesi.
 class _TopicStop extends StatefulWidget {
-  const _TopicStop({required this.progress, required this.onTap});
+  const _TopicStop({
+    required this.progress,
+    required this.available,
+    required this.onTap,
+  });
 
   final TopicProgress progress;
+
+  /// Bu konuda havuzdan çözebileceğin soru sayısı.
+  final int available;
   final void Function(TopicProgress) onTap;
 
   @override
@@ -548,6 +589,26 @@ class _TopicStopState extends State<_TopicStop> {
                     const Positioned(
                       top: -2,
                       child: Text('👑', style: TextStyle(fontSize: 16)),
+                    ),
+                  // Havuzda çözülebilir soru varsa: kaç tane olduğu.
+                  if (widget.available > 0)
+                    Positioned(
+                      bottom: 0,
+                      right: 2,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: AppColors.purple,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                        child: Text('${widget.available}',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 10)),
+                      ),
                     ),
                 ],
               ),
@@ -729,9 +790,14 @@ class _TrailPainter extends CustomPainter {
 
 /// Konuya dokununca açılan detay: maskotun yorumu + istatistik + test.
 class _TopicSheet extends StatelessWidget {
-  const _TopicSheet({required this.progress, required this.onSolve});
+  const _TopicSheet({
+    required this.progress,
+    required this.available,
+    required this.onSolve,
+  });
 
   final TopicProgress progress;
+  final int available;
   final VoidCallback onSolve;
 
   @override
@@ -814,10 +880,39 @@ class _TopicSheet extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 6),
-            GameButton(
-              label: p.attempts == 0 ? 'BU KONUYU TEST ET' : 'SORU ÇÖZ',
-              onPressed: onSolve,
-            ),
+            if (available > 0)
+              GameButton(
+                label: p.attempts == 0
+                    ? 'BU KONUYU TEST ET ($available)'
+                    : 'SORU ÇÖZ ($available)',
+                onPressed: onSolve,
+              )
+            else
+              // Boş konuya girip duvara toslamasın: durumu önden söyle.
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF7F7F7),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Row(
+                  children: <Widget>[
+                    Icon(Icons.hourglass_empty_rounded,
+                        size: 18, color: AppColors.inkLight),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Bu konuda havuzda henüz soru yok. Aşağıdaki '
+                        '"Karışık çöz" ile başka konulardan çözebilirsin.',
+                        style: TextStyle(
+                            color: AppColors.inkLight,
+                            fontSize: 12.5,
+                            height: 1.3),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
