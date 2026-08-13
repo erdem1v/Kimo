@@ -23,7 +23,7 @@ void main() {
     });
 
     test('grup, terfi ve düşme sayıları', () {
-      expect(League.cohortSize, 15);
+      expect(League.cohortSize, 12);
       expect(League.promotionCount, 5);
       expect(League.demotionCount, 5);
     });

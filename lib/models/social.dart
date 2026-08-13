@@ -42,7 +42,7 @@ enum League {
   static const int demotionCount = 5;
 
   /// Bir grubun en fazla kaç kişi olabileceği.
-  static const int cohortSize = 15;
+  static const int cohortSize = 12;
 
   /// Bir alt lig (en alttaysa null).
   League? get previous => switch (this) {
