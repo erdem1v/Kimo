@@ -88,8 +88,9 @@ class YksCurriculum {
         'Kuvvet ve Denge (Vektörler)', 'Basit Makineler', 'Doğrusal Hareket',
         'İş-Güç-Enerji',
       ]),
-      Unit('Elektrik', <String>[
+      Unit('Elektrik ve Manyetizma', <String>[
         'Elektrostatik', 'Elektrik Akımı ve Devreler',
+        'Mıknatıslar ve Manyetik Alan',
       ]),
       Unit('Optik', <String>[
         'Işık ve Gölge', 'Düzlem Ayna', 'Küresel Aynalar', 'Kırılma ve Renkler',

@@ -43,6 +43,7 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
         "Sıvıların Kaldırma Kuvveti", "Basınç", "Isı ve Sıcaklık", "Genleşme",
         "Kuvvet ve Denge (Vektörler)", "Basit Makineler", "Doğrusal Hareket",
         "İş-Güç-Enerji", "Elektrostatik", "Elektrik Akımı ve Devreler",
+        "Mıknatıslar ve Manyetik Alan",
         "Işık ve Gölge", "Düzlem Ayna", "Küresel Aynalar", "Kırılma ve Renkler",
         "Mercekler", "Dalgalar (Temel)", "Yay ve Su Dalgaları",
         "Ses ve Deprem Dalgaları",
