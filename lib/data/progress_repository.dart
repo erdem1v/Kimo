@@ -18,6 +18,7 @@ class ProgressRepository {
     required String concept,
     required bool correct,
     String? exam,
+    String? mistakeId,
     String source = 'review',
   }) async {
     if (!SupabaseConfig.isConfigured) return;
@@ -29,6 +30,8 @@ class ProgressRepository {
         'exam': exam,
         'correct': correct,
         'source': source,
+        // Sorunun konusu sonradan düzeltilirse ölçüm de düzelsin diye bağ.
+        'mistake_id': mistakeId,
       });
     } catch (_) {
       // İlerleme kaydı akışı bloklamamalı.

@@ -111,6 +111,7 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
       exam: _current.exam,
       correct: correct,
       source: 'pool',
+      mistakeId: _current.id,
     );
     setState(() {
       _selected = i;

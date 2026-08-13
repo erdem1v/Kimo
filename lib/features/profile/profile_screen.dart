@@ -12,6 +12,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/game_widgets.dart';
 import '../../models/mascot.dart';
 import '../../models/social.dart';
+import '../admin/all_questions_screen.dart';
 import '../admin/moderation_screen.dart';
 import '../onboarding/exam_year_sheet.dart';
 import '../onboarding/mascot_sheet.dart';
@@ -74,6 +75,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 if (_isAdmin) ...<Widget>[
                   const SizedBox(height: 12),
                   _moderationTile(),
+                  const SizedBox(height: 12),
+                  _allQuestionsTile(),
                 ],
                 const SizedBox(height: 12),
                 _logoutButton(),
@@ -404,6 +407,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const Icon(Icons.chevron_right_rounded, color: AppColors.inkLight),
         onTap: () => Navigator.of(context).push<void>(
           MaterialPageRoute<void>(builder: (_) => const ModerationScreen()),
+        ),
+      ),
+    );
+  }
+
+  /// Moderatör: tüm soruları görüp düzeltme.
+  Widget _allQuestionsTile() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.purple.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.purple.withValues(alpha: 0.30)),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.fact_check_outlined, color: AppColors.purple),
+        title: const Text('Tüm sorular',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        subtitle: const Text('Ders/konu/sınav düzelt, havuzdan çıkar, sil',
+            style: TextStyle(color: AppColors.inkLight, fontSize: 13)),
+        trailing:
+            const Icon(Icons.chevron_right_rounded, color: AppColors.inkLight),
+        onTap: () => Navigator.of(context).push<void>(
+          MaterialPageRoute<void>(builder: (_) => const AllQuestionsScreen()),
         ),
       ),
     );

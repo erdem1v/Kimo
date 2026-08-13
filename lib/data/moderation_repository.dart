@@ -107,3 +107,97 @@ class ModerationRepository {
 }
 
 final ModerationRepository moderationRepository = ModerationRepository.instance;
+
+/// Yönetim ekranındaki bir soru (moderatör tüm kullanıcıların sorularını
+/// görür ve düzeltebilir).
+class AdminQuestion {
+  const AdminQuestion({
+    required this.id,
+    required this.subject,
+    required this.concept,
+    required this.ownerNickname,
+    required this.isPublic,
+    required this.moderation,
+    required this.reportCount,
+    this.exam,
+    this.photoPath,
+    this.options = const <QuestionOption>[],
+    this.correctIndex,
+  });
+
+  final String id;
+  final String subject;
+  final String concept;
+  final String? exam;
+  final String ownerNickname;
+  final bool isPublic;
+  final String moderation; // ok | hidden | removed
+  final int reportCount;
+  final String? photoPath;
+  final List<QuestionOption> options;
+  final int? correctIndex;
+
+  bool get inPool => isPublic && moderation == 'ok';
+
+  factory AdminQuestion.fromRow(Map<String, dynamic> row) {
+    final dynamic raw = row['options'];
+    return AdminQuestion(
+      id: row['id'] as String,
+      subject: (row['subject'] as String?) ?? '',
+      concept: (row['concept'] as String?) ?? '',
+      exam: row['exam'] as String?,
+      ownerNickname: (row['owner_nickname'] as String?) ?? '—',
+      isPublic: row['is_public'] == true,
+      moderation: (row['moderation'] as String?) ?? 'ok',
+      reportCount: (row['report_count'] as int?) ?? 0,
+      photoPath: row['photo_path'] as String?,
+      options: raw is List
+          ? raw
+              .map((dynamic o) =>
+                  QuestionOption.fromJson((o as Map).cast<String, dynamic>()))
+              .toList()
+          : const <QuestionOption>[],
+      correctIndex: row['correct_index'] as int?,
+    );
+  }
+}
+
+/// Moderatörün tüm soruları görüp düzeltebildiği katman.
+extension AdminQuestions on ModerationRepository {
+  SupabaseClient get _c => Supabase.instance.client;
+
+  Future<List<AdminQuestion>> allQuestions({int limit = 300}) async {
+    final List<dynamic> rows = await _c.rpc<List<dynamic>>(
+      'admin_all_questions',
+      params: <String, dynamic>{'p_limit': limit, 'p_offset': 0},
+    );
+    return rows
+        .map((dynamic r) =>
+            AdminQuestion.fromRow((r as Map).cast<String, dynamic>()))
+        .toList();
+  }
+
+  /// Ders/konu/sınav (ve gerekirse doğru şık) düzeltir; bağlı ölçümler de
+  /// veritabanında güncellenir.
+  Future<void> updateQuestion(
+    String id, {
+    String? subject,
+    String? concept,
+    String? exam,
+    int? correctIndex,
+  }) async {
+    await _c.rpc<void>('admin_update_question', params: <String, dynamic>{
+      'p_id': id,
+      'p_subject': subject,
+      'p_concept': concept,
+      'p_exam': exam,
+      'p_correct_index': correctIndex,
+    });
+  }
+
+  /// 'hide' havuzdan çıkarır, 'restore' geri alır, 'delete' tamamen siler.
+  Future<void> questionAction(String id, String action) async {
+    await _c.rpc<void>('admin_question_action',
+        params: <String, dynamic>{'p_id': id, 'p_action': action});
+  }
+}
