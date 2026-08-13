@@ -35,14 +35,11 @@ enum League {
         League.efsane => AppColors.purple,
       };
 
-  /// Lige giriş eşiği (toplam XP).
-  int get minXp => switch (this) {
-        League.bronz => 0,
-        League.gumus => 500,
-        League.altin => 1500,
-        League.elmas => 3500,
-        League.efsane => 7500,
-      };
+  /// Sıralamada kaçıncıya kadar üst lige çıkılır.
+  static const int promotionCount = 5;
+
+  /// Bir grubun en fazla kaç kişi olabileceği.
+  static const int cohortSize = 15;
 
   /// Bir sonraki lig (en üstteyse null).
   League? get next => switch (this) {
@@ -70,12 +67,51 @@ enum League {
         _ => League.bronz,
       };
 
-  static League fromXp(int xp) {
-    League result = League.bronz;
-    for (final League l in League.values) {
-      if (xp >= l.minXp) result = l;
-    }
-    return result;
+}
+
+/// Lig grubundaki bir oyuncu (haftalık XP'ye göre sıralanır).
+class LeagueEntry {
+  const LeagueEntry({
+    required this.userId,
+    required this.nickname,
+    required this.xp,
+    required this.streak,
+    this.mascot,
+  });
+
+  final String userId;
+  final String nickname;
+  final int xp;
+  final int streak;
+  final Mascot? mascot;
+
+  factory LeagueEntry.fromRow(Map<String, dynamic> row) => LeagueEntry(
+        userId: row['user_id'] as String,
+        nickname: (row['nickname'] as String?) ?? 'Öğrenci',
+        xp: (row['xp'] as int?) ?? 0,
+        streak: (row['streak'] as int?) ?? 0,
+        mascot: Mascot.fromDb(row['mascot'] as String?),
+      );
+}
+
+/// Kullanıcının bu haftaki lig grubu.
+class LeagueBoard {
+  const LeagueBoard({
+    required this.tier,
+    required this.entries,
+    required this.weekStart,
+  });
+
+  final League tier;
+  final List<LeagueEntry> entries;
+  final DateTime weekStart;
+
+  /// Haftanın bitimine kalan gün (pazartesi sıfırlanır).
+  int get daysLeft {
+    final DateTime end = weekStart.add(const Duration(days: 7));
+    final DateTime now = DateTime.now();
+    final int d = end.difference(DateTime(now.year, now.month, now.day)).inDays;
+    return d < 0 ? 0 : d;
   }
 }
 
@@ -94,6 +130,7 @@ class PublicProfile {
     required this.streak,
     this.weeklyXp = 0,
     this.mascot,
+    this.league = League.bronz,
   });
 
   final String id;
@@ -105,7 +142,8 @@ class PublicProfile {
   final int weeklyXp;
   final Mascot? mascot;
 
-  League get league => League.fromXp(xp);
+  /// Ligi sunucu belirler (haftalık sıralamayla değişir).
+  final League league;
 
   factory PublicProfile.fromRow(Map<String, dynamic> row) => PublicProfile(
         id: row['id'] as String,
@@ -114,6 +152,7 @@ class PublicProfile {
         streak: (row['streak'] as int?) ?? 0,
         weeklyXp: (row['weekly_xp'] as int?) ?? 0,
         mascot: Mascot.fromDb(row['mascot'] as String?),
+        league: League.fromDb(row['league'] as String?),
       );
 }
 

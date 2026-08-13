@@ -52,6 +52,7 @@ class _HomeShellState extends State<HomeShell> {
           streak: (stats['streak'] as int?) ?? 0,
           weeklyXp: _weeklyXpFor(stats),
           lastActive: last is String ? DateTime.tryParse(last) : null,
+          league: League.fromDb(stats['league'] as String?),
         );
       }
     } catch (_) {

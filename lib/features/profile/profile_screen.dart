@@ -199,7 +199,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _leagueCard() {
-    final League league = League.fromXp(gameProgress.xp);
+    // Lig sunucudan gelir: her hafta grubunda ilk 5'e girersen yükselirsin.
+    final League league = gameProgress.league;
     final League? next = league.next;
     return Container(
       padding: const EdgeInsets.all(18),
@@ -228,8 +229,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text(
                   next == null
                       ? '${gameProgress.xp} XP · en üst lig 👑'
-                      : '${gameProgress.xp} XP · ${next.label} için '
-                          '${next.minXp - gameProgress.xp} XP',
+                      : '${gameProgress.xp} XP · grubunda ilk '
+                          '${League.promotionCount} → ${next.label}',
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
               ],

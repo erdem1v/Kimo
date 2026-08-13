@@ -73,7 +73,8 @@ class SocialRepository {
     try {
       return await _client
           .from('profiles')
-          .select('xp, streak, weekly_xp, week_start, last_activity_date')
+          .select(
+              'xp, streak, weekly_xp, week_start, last_activity_date, league')
           .eq('id', uid)
           .maybeSingle();
     } catch (_) {
@@ -81,17 +82,27 @@ class SocialRepository {
     }
   }
 
-  /// Kendi ligimdeki oyuncular, bu haftaki XP'ye göre sıralı.
-  Future<List<PublicProfile>> leagueBoard(League league,
-      {int limit = 30}) async {
-    final List<Map<String, dynamic>> rows = await _client
-        .from(_publicView)
-        .select()
-        .eq('league', league.dbValue)
-        .order('weekly_xp', ascending: false)
-        .order('xp', ascending: false)
-        .limit(limit);
-    return rows.map(PublicProfile.fromRow).toList();
+  /// Bu haftaki lig grubum: 15 kişilik gruba yerleştirir (gerekirse yenisini
+  /// açar), geçmiş haftaları sonuçlandırır ve sıralamayı döndürür.
+  Future<LeagueBoard?> myLeagueBoard() async {
+    try {
+      await _client.rpc<dynamic>('ensure_league_membership');
+      final List<dynamic> rows =
+          await _client.rpc<List<dynamic>>('my_league_board');
+      if (rows.isEmpty) return null;
+      final Map<String, dynamic> first = (rows.first as Map).cast<String, dynamic>();
+      return LeagueBoard(
+        tier: League.fromDb(first['tier'] as String?),
+        weekStart: DateTime.tryParse(first['week_start'] as String? ?? '') ??
+            weekStart(DateTime.now()),
+        entries: rows
+            .map((dynamic r) =>
+                LeagueEntry.fromRow((r as Map).cast<String, dynamic>()))
+            .toList(),
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   static String _dateStr(DateTime d) =>

@@ -29,14 +29,11 @@ class _SocialScreenState extends State<SocialScreen>
   List<Friendship> _relations = <Friendship>[];
   Map<String, PublicProfile> _people = <String, PublicProfile>{};
   List<PublicProfile> _results = <PublicProfile>[];
-  List<PublicProfile> _board = <PublicProfile>[]; // lig sıralaması
+  LeagueBoard? _board; // bu haftaki 15 kişilik lig grubum
   bool _loading = true;
   bool _searching = false;
   String? _error;
   final Set<String> _busy = <String>{}; // işlem sürerken kilitlenen kullanıcılar
-
-  /// Lig içinde üst lige yükselme bölgesi (ilk N kişi).
-  static const int promotionZone = 10;
 
   bool get _remote => SupabaseConfig.isConfigured;
 
@@ -78,8 +75,7 @@ class _SocialScreenState extends State<SocialScreen>
           rels.map((Friendship f) => f.otherId(me)).toSet().toList();
       final List<PublicProfile> people =
           await socialRepository.profilesByIds(ids);
-      final List<PublicProfile> board = await socialRepository
-          .leagueBoard(League.fromXp(gameProgress.xp));
+      final LeagueBoard? board = await socialRepository.myLeagueBoard();
       if (!mounted) return;
       setState(() {
         _relations = rels;
@@ -87,6 +83,7 @@ class _SocialScreenState extends State<SocialScreen>
           for (final PublicProfile p in people) p.id: p,
         };
         _board = board;
+        if (board != null) gameProgress.league = board.tier;
         _loading = false;
       });
     } catch (_) {
@@ -264,11 +261,12 @@ class _SocialScreenState extends State<SocialScreen>
           )
         else ...<Widget>[
           const SizedBox(height: 20),
-          _sectionTitle('Bu haftanın sıralaması'),
+          _sectionTitle('Grubun'),
           const SizedBox(height: 4),
-          const Text(
-            'Pazartesi sıfırlanır. İlk 10 yükselme bölgesinde.',
-            style: TextStyle(color: AppColors.inkLight, fontSize: 12.5),
+          Text(
+            '${_board?.entries.length ?? 0} kişilik gruptasın. Hafta sonunda '
+            'ilk ${League.promotionCount} üst lige çıkar.',
+            style: const TextStyle(color: AppColors.inkLight, fontSize: 12.5),
           ),
           const SizedBox(height: 12),
           _leagueBoard(),
@@ -278,44 +276,48 @@ class _SocialScreenState extends State<SocialScreen>
   }
 
   Widget _leagueBoard() {
-    final String me = _meId ?? '';
-    // Sunucudan gelen listeyi kendi güncel haftalık XP'mle tazele (henüz
-    // senkronlanmamış puanlar da görünsün).
-    final List<PublicProfile> rows = _board
-        .map((PublicProfile p) => p.id == me
-            ? PublicProfile(
-                id: p.id,
-                nickname: p.nickname,
-                xp: gameProgress.xp,
-                streak: p.streak,
-                weeklyXp: gameProgress.weeklyXp,
-                mascot: p.mascot,
-              )
-            : p)
-        .toList()
-      ..sort((PublicProfile a, PublicProfile b) {
-        final int c = b.weeklyXp.compareTo(a.weeklyXp);
-        return c != 0 ? c : b.xp.compareTo(a.xp);
-      });
-
-    if (rows.isEmpty) {
+    final LeagueBoard? board = _board;
+    if (board == null || board.entries.isEmpty) {
       return _card(
         child: const Padding(
-          padding: EdgeInsets.symmetric(vertical: 12),
-          child: Center(
-            child: Text('Ligde henüz kimse yok.',
-                style: TextStyle(color: AppColors.inkLight)),
+          padding: EdgeInsets.symmetric(vertical: 14),
+          child: Column(
+            children: <Widget>[
+              Text('⚔️', style: TextStyle(fontSize: 30)),
+              SizedBox(height: 8),
+              Text(
+                'Henüz bir gruba katılmadın.\nBu hafta bir soru çöz, '
+                'rakiplerin belirlensin.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.inkLight, fontSize: 13.5),
+              ),
+            ],
           ),
         ),
       );
     }
 
+    // Kendi satırımı henüz sunucuya yazılmamış XP ile tazele.
+    final String me = _meId ?? '';
+    final List<LeagueEntry> rows = board.entries
+        .map((LeagueEntry e) => e.userId == me
+            ? LeagueEntry(
+                userId: e.userId,
+                nickname: e.nickname,
+                xp: gameProgress.weeklyXp,
+                streak: gameProgress.streak,
+                mascot: e.mascot,
+              )
+            : e)
+        .toList()
+      ..sort((LeagueEntry a, LeagueEntry b) => b.xp.compareTo(a.xp));
+
     return Column(
       children: <Widget>[
         for (int i = 0; i < rows.length; i++) ...<Widget>[
-          _boardTile(i + 1, rows[i], rows[i].id == me),
-          // Yükselme bölgesinin sınırını göster.
-          if (i + 1 == promotionZone && rows.length > promotionZone)
+          _boardTile(i + 1, rows[i], rows[i].userId == me),
+          if (i + 1 == League.promotionCount &&
+              rows.length > League.promotionCount)
             _zoneDivider(),
         ],
       ],
@@ -349,8 +351,8 @@ class _SocialScreenState extends State<SocialScreen>
     );
   }
 
-  Widget _boardTile(int rank, PublicProfile p, bool isMe) {
-    final bool promo = rank <= promotionZone;
+  Widget _boardTile(int rank, LeagueEntry p, bool isMe) {
+    final bool promo = rank <= League.promotionCount;
     final Color medal = switch (rank) {
       1 => AppColors.gold,
       2 => const Color(0xFF9AA5B1),
@@ -378,13 +380,16 @@ class _SocialScreenState extends State<SocialScreen>
                     fontWeight: FontWeight.w800, fontSize: 16, color: medal)),
           ),
           const SizedBox(width: 6),
-          _avatar(p),
+          _avatarOf(p.mascot),
           const SizedBox(width: 12),
-          Expanded(child: _nameBlock(p, isMe: isMe)),
+          Expanded(
+            child: _nameOf(
+                nickname: p.nickname, streak: p.streak, isMe: isMe),
+          ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: <Widget>[
-              Text('${p.weeklyXp} XP',
+              Text('${p.xp} XP',
                   style: const TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 14,
@@ -471,12 +476,14 @@ class _SocialScreenState extends State<SocialScreen>
   // --- Lig kartı ---
 
   Widget _leagueCard() {
-    final int xp = gameProgress.xp;
-    final League league = League.fromXp(xp);
+    final LeagueBoard? board = _board;
+    final League league = board?.tier ?? gameProgress.league;
     final League? next = league.next;
-    final double progress = next == null
-        ? 1
-        : ((xp - league.minXp) / (next.minXp - league.minXp)).clamp(0.0, 1.0);
+    // Grubumdaki sıram (yükselme bölgesinde miyim?).
+    final int myRank = board == null
+        ? 0
+        : board.entries.indexWhere((LeagueEntry e) => e.userId == _meId) + 1;
+    final bool promoting = myRank > 0 && myRank <= League.promotionCount;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -510,7 +517,8 @@ class _SocialScreenState extends State<SocialScreen>
                             fontWeight: FontWeight.w800)),
                     const SizedBox(height: 2),
                     Text(
-                      'Bu hafta ${gameProgress.weeklyXp} XP · toplam $xp XP',
+                      'Bu hafta ${gameProgress.weeklyXp} XP · '
+                      'toplam ${gameProgress.xp} XP',
                       style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 13,
@@ -521,26 +529,55 @@ class _SocialScreenState extends State<SocialScreen>
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-              backgroundColor: Colors.white.withValues(alpha: 0.28),
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.22),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  promoting
+                      ? Icons.trending_up_rounded
+                      : Icons.emoji_events_outlined,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    board == null
+                        ? 'Bu hafta bir soru çöz, gruba katıl.'
+                        : myRank == 0
+                            ? 'Gruba katıldın, sıralamaya girmek için çöz.'
+                            : promoting
+                                ? '$myRank. sıradasın — ilk ${League.promotionCount} '
+                                    '${next == null ? "zirvede kalır" : "${next.label}'ne çıkar"}!'
+                                : '$myRank. sıradasın — ilk '
+                                    '${League.promotionCount}\'e girmen lazım.',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              next == null
-                  ? 'En üst ligdesin 👑'
-                  : '${next.label} için ${next.minXp - xp} XP kaldı',
-              style: const TextStyle(color: Colors.white70, fontSize: 12.5),
+          if (board != null) ...<Widget>[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                board.daysLeft <= 1
+                    ? 'Hafta bugün kapanıyor!'
+                    : 'Haftanın bitimine ${board.daysLeft} gün',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -768,8 +805,9 @@ class _SocialScreenState extends State<SocialScreen>
 
   // --- Ortak parçalar ---
 
-  Widget _avatar(PublicProfile p) {
-    final Mascot? m = p.mascot;
+  Widget _avatar(PublicProfile p) => _avatarOf(p.mascot);
+
+  Widget _avatarOf(Mascot? m) {
     final Color c = m?.color ?? AppColors.purple;
     return Container(
       width: 42,
@@ -784,7 +822,19 @@ class _SocialScreenState extends State<SocialScreen>
     );
   }
 
-  Widget _nameBlock(PublicProfile p, {bool isMe = false}) {
+  Widget _nameBlock(PublicProfile p, {bool isMe = false}) => _nameOf(
+        nickname: p.nickname,
+        league: p.league,
+        streak: p.streak,
+        isMe: isMe,
+      );
+
+  Widget _nameOf({
+    required String nickname,
+    required int streak,
+    League? league,
+    bool isMe = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -792,7 +842,7 @@ class _SocialScreenState extends State<SocialScreen>
           children: <Widget>[
             Flexible(
               child: Text(
-                p.nickname,
+                nickname,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -821,15 +871,17 @@ class _SocialScreenState extends State<SocialScreen>
         const SizedBox(height: 2),
         Row(
           children: <Widget>[
-            Text(p.league.emoji, style: const TextStyle(fontSize: 12)),
-            const SizedBox(width: 4),
-            Text(p.league.label,
-                style: const TextStyle(
-                    color: AppColors.inkLight, fontSize: 12)),
-            if (p.streak > 0) ...<Widget>[
-              const SizedBox(width: 8),
+            if (league != null) ...<Widget>[
+              Text(league.emoji, style: const TextStyle(fontSize: 12)),
+              const SizedBox(width: 4),
+              Text(league.label,
+                  style: const TextStyle(
+                      color: AppColors.inkLight, fontSize: 12)),
+            ],
+            if (streak > 0) ...<Widget>[
+              if (league != null) const SizedBox(width: 8),
               const Text('🔥', style: TextStyle(fontSize: 12)),
-              Text('${p.streak}',
+              Text('$streak',
                   style: const TextStyle(
                       color: AppColors.inkLight, fontSize: 12)),
             ],

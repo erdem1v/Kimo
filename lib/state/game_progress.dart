@@ -19,6 +19,10 @@ class GameProgress extends ChangeNotifier {
   int streak = 0;
   int gems = 0;
 
+  /// Ligi sunucu belirler: her hafta grubunda ilk 5'e girersen yükselirsin.
+  /// XP eşiğiyle lig atlama YOK.
+  League league = League.bronz;
+
   static const int xpPerLevel = 500;
   static const int xpPerCorrect = 10;
 
@@ -166,9 +170,11 @@ class GameProgress extends ChangeNotifier {
     required int streak,
     int weeklyXp = 0,
     DateTime? lastActive,
+    League? league,
   }) {
     this.xp = xp;
     this.streak = streak;
+    if (league != null) this.league = league;
     _weekStart = weekStart(DateTime.now());
     this.weeklyXp = weeklyXp;
     _lastActive = lastActive == null ? null : _dateOnly(lastActive);

@@ -2,21 +2,42 @@ import 'package:ai_yks_coach/models/social.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('League.fromXp', () {
-    test('eşiklere göre doğru lige yerleştirir', () {
-      expect(League.fromXp(0), League.bronz);
-      expect(League.fromXp(499), League.bronz);
-      expect(League.fromXp(500), League.gumus);
-      expect(League.fromXp(1499), League.gumus);
-      expect(League.fromXp(1500), League.altin);
-      expect(League.fromXp(3500), League.elmas);
-      expect(League.fromXp(7500), League.efsane);
-      expect(League.fromXp(999999), League.efsane);
+  group('League', () {
+    test('lig veritabanı değerinden okunur (XP eşiği yok)', () {
+      expect(League.fromDb('bronz'), League.bronz);
+      expect(League.fromDb('gumus'), League.gumus);
+      expect(League.fromDb('altin'), League.altin);
+      expect(League.fromDb('elmas'), League.elmas);
+      expect(League.fromDb('efsane'), League.efsane);
+      // Bilinmeyen/boş değer en alt lige düşer.
+      expect(League.fromDb(null), League.bronz);
+      expect(League.fromDb('saçma'), League.bronz);
     });
 
-    test('en üst ligin sonrası yoktur', () {
-      expect(League.efsane.next, isNull);
+    test('terfi zinciri doğru, en üstün sonrası yok', () {
       expect(League.bronz.next, League.gumus);
+      expect(League.gumus.next, League.altin);
+      expect(League.altin.next, League.elmas);
+      expect(League.elmas.next, League.efsane);
+      expect(League.efsane.next, isNull);
+    });
+
+    test('grup ve terfi sayıları', () {
+      expect(League.cohortSize, 15);
+      expect(League.promotionCount, 5);
+    });
+  });
+
+  group('LeagueBoard.daysLeft', () {
+    test('hafta başından itibaren geri sayar', () {
+      final DateTime monday = weekStart(DateTime.now());
+      LeagueBoard board(DateTime ws) =>
+          LeagueBoard(tier: League.bronz, entries: const <LeagueEntry>[],
+              weekStart: ws);
+      // Bu haftanın pazartesisi → 7 güne kadar kalan gün pozitif olmalı.
+      expect(board(monday).daysLeft, inInclusiveRange(1, 7));
+      // Geçmiş hafta → 0
+      expect(board(monday.subtract(const Duration(days: 14))).daysLeft, 0);
     });
   });
 
