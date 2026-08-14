@@ -27,8 +27,7 @@ class NotificationService {
   static const int _idLeague = 4;
   static const int _idComeback = 5;
 
-  static const AndroidNotificationDetails _android =
-      AndroidNotificationDetails(
+  static const AndroidNotificationDetails _android = AndroidNotificationDetails(
     'daily_reminders',
     'Günlük hatırlatmalar',
     channelDescription: 'Tekrar, seri ve lig hatırlatmaları',
@@ -36,8 +35,10 @@ class NotificationService {
     priority: Priority.high,
   );
 
-  static const NotificationDetails _details =
-      NotificationDetails(android: _android, iOS: DarwinNotificationDetails());
+  static const NotificationDetails _details = NotificationDetails(
+    android: _android,
+    iOS: DarwinNotificationDetails(),
+  );
 
   Future<void> init() async {
     if (_ready) return;
@@ -59,8 +60,8 @@ class NotificationService {
       );
 
       // Uygulama kapalıyken bildirime dokunulup açıldıysa onu da yakala.
-      final NotificationAppLaunchDetails? launch =
-          await _plugin.getNotificationAppLaunchDetails();
+      final NotificationAppLaunchDetails? launch = await _plugin
+          .getNotificationAppLaunchDetails();
       if (launch?.didNotificationLaunchApp ?? false) {
         NotificationRouter.handle(launch!.notificationResponse?.payload);
       }
@@ -75,20 +76,46 @@ class NotificationService {
   Future<bool> requestPermission() async {
     await init();
     try {
-      final AndroidFlutterLocalNotificationsPlugin? android =
-          _plugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+      final AndroidFlutterLocalNotificationsPlugin? android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (android != null) {
         return await android.requestNotificationsPermission() ?? false;
       }
-      final IOSFlutterLocalNotificationsPlugin? ios =
-          _plugin.resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin>();
+      final IOSFlutterLocalNotificationsPlugin? ios = _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
       if (ios != null) {
-        return await ios.requestPermissions(alert: true, badge: true, sound: true) ??
+        return await ios.requestPermissions(
+              alert: true,
+              badge: true,
+              sound: true,
+            ) ??
             false;
       }
       return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Sistem düzeyinde bildirimler açık mı? Kullanıcı ayarlardan kapatmış
+  /// olabilir; uygulama içindeki anahtar buna göre düzeltilir.
+  Future<bool> areEnabled() async {
+    await init();
+    if (!_ready) return false;
+    try {
+      final AndroidFlutterLocalNotificationsPlugin? android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      if (android != null) {
+        return await android.areNotificationsEnabled() ?? false;
+      }
+      // iOS'ta ayrı bir sorgu yok; izin isteme sonucu tek gerçek kaynak.
+      return true;
     } catch (_) {
       return false;
     }

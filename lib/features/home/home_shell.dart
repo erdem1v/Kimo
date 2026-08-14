@@ -4,6 +4,7 @@ import '../../data/social_repository.dart';
 import '../../models/social.dart';
 import '../../services/sound_service.dart';
 import '../../services/notification_router.dart';
+import '../../services/notification_service.dart';
 import '../../services/push_service.dart';
 import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
@@ -34,7 +35,16 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     // hazır olmuş vb.); uygulama öne geldikçe sessizce tekrar dene.
     if (state == AppLifecycleState.resumed && SupabaseConfig.isConfigured) {
       push.registerDevice();
+      _syncNotifyPermission();
     }
+  }
+
+  /// Kullanıcı telefon ayarlarından bildirimleri kapatmış olabilir; uygulama
+  /// içindeki anahtar gerçeği göstersin (yoksa "açık" der ama bildirim gelmez).
+  Future<void> _syncNotifyPermission() async {
+    if (!userProfile.notifyEnabled) return;
+    final bool enabled = await notifications.areEnabled();
+    if (!enabled) await userProfile.setNotifyEnabled(false);
   }
 
   @override
@@ -113,12 +123,12 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
 
   static const List<({IconData icon, String label})> _items =
       <({IconData icon, String label})>[
-    (icon: Icons.bolt, label: 'Bugün'),
-    (icon: Icons.menu_book_rounded, label: 'Hatalarım'),
-    (icon: Icons.groups_rounded, label: 'Sosyal'),
-    (icon: Icons.forum_rounded, label: 'Koç'),
-    (icon: Icons.person_rounded, label: 'Profil'),
-  ];
+        (icon: Icons.bolt, label: 'Bugün'),
+        (icon: Icons.menu_book_rounded, label: 'Hatalarım'),
+        (icon: Icons.groups_rounded, label: 'Sosyal'),
+        (icon: Icons.forum_rounded, label: 'Koç'),
+        (icon: Icons.person_rounded, label: 'Profil'),
+      ];
 
   void _select(int i) {
     if (_index == i) return;
@@ -168,7 +178,10 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
           Text(
             _items[i].label,
             style: TextStyle(
-                color: color, fontSize: 11, fontWeight: FontWeight.w700),
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),

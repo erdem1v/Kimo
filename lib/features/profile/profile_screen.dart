@@ -8,6 +8,7 @@ import '../../services/notification_service.dart';
 import '../../services/push_service.dart';
 import '../../services/sound_service.dart';
 import '../../services/supabase_config.dart';
+import '../../services/system_settings.dart';
 import '../../state/game_progress.dart';
 import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
@@ -100,17 +101,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           height: 64,
           alignment: Alignment.center,
           decoration: const BoxDecoration(
-              color: AppColors.greenBg, shape: BoxShape.circle),
-          child: Text(userProfile.mascot?.emoji ?? '🎓',
-              style: const TextStyle(fontSize: 30)),
+            color: AppColors.greenBg,
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            userProfile.mascot?.emoji ?? '🎓',
+            style: const TextStyle(fontSize: 30),
+          ),
         ),
         const SizedBox(width: 14),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(userProfile.nickname ?? 'Öğrenci',
-                style: const TextStyle(
-                    fontSize: 22, fontWeight: FontWeight.w800)),
+            Text(
+              userProfile.nickname ?? 'Öğrenci',
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+            ),
             const SizedBox(height: 4),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -118,11 +124,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: AppColors.gold.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Text('⚡ Seviye ${gameProgress.level}',
-                  style: const TextStyle(
-                      color: AppColors.goldDark,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13)),
+              child: Text(
+                '⚡ Seviye ${gameProgress.level}',
+                style: const TextStyle(
+                  color: AppColors.goldDark,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              ),
             ),
           ],
         ),
@@ -144,20 +153,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              const Text('Seviye ilerlemesi',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+              const Text(
+                'Seviye ilerlemesi',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+              ),
               Text(
-                  '${gameProgress.xpIntoLevel} / ${GameProgress.xpPerLevel} XP',
-                  style: const TextStyle(
-                      color: AppColors.inkLight, fontWeight: FontWeight.w700)),
+                '${gameProgress.xpIntoLevel} / ${GameProgress.xpPerLevel} XP',
+                style: const TextStyle(
+                  color: AppColors.inkLight,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
           RoundedProgressBar(
-              value: gameProgress.levelProgress, color: AppColors.gold),
+            value: gameProgress.levelProgress,
+            color: AppColors.gold,
+          ),
           const SizedBox(height: 8),
-          Text('Seviye ${gameProgress.level + 1}\'e az kaldı!',
-              style: const TextStyle(color: AppColors.inkLight, fontSize: 13)),
+          Text(
+            'Seviye ${gameProgress.level + 1}\'e az kaldı!',
+            style: const TextStyle(color: AppColors.inkLight, fontSize: 13),
+          ),
         ],
       ),
     );
@@ -167,16 +185,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Row(
       children: <Widget>[
         Expanded(
-            child: _statCard('🔥', '${gameProgress.currentStreak}', 'Gün seri',
-                AppColors.orange)),
+          child: _statCard(
+            '🔥',
+            '${gameProgress.currentStreak}',
+            'Gün seri',
+            AppColors.orange,
+          ),
+        ),
         const SizedBox(width: 12),
         Expanded(
-            child:
-                _statCard('💎', '${gameProgress.gems}', 'Elmas', AppColors.blue)),
+          child: _statCard(
+            '💎',
+            '${gameProgress.gems}',
+            'Elmas',
+            AppColors.blue,
+          ),
+        ),
         const SizedBox(width: 12),
         Expanded(
-            child: _statCard(
-                '❤️', '${gameProgress.hearts}', 'Can', AppColors.red)),
+          child: _statCard(
+            '❤️',
+            '${gameProgress.hearts}',
+            'Can',
+            AppColors.red,
+          ),
+        ),
       ],
     );
   }
@@ -192,11 +225,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: <Widget>[
           Text(emoji, style: const TextStyle(fontSize: 24)),
           const SizedBox(height: 6),
-          Text(value,
-              style: TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.w800, color: color)),
-          Text(label,
-              style: const TextStyle(fontSize: 12, color: AppColors.inkLight)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: AppColors.inkLight),
+          ),
         ],
       ),
     );
@@ -224,17 +264,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(league.label,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800)),
+                Text(
+                  league.label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   next == null
                       ? '${gameProgress.xp} XP · en üst lig 👑'
                       : '${gameProgress.xp} XP · grubunda ilk '
-                          '${League.promotionCount} → ${next.label}',
+                            '${League.promotionCount} → ${next.label}',
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
               ],
@@ -270,20 +313,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
             height: 60,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: b.earned ? AppColors.gold.withValues(alpha: 0.2) : AppColors.line,
+              color: b.earned
+                  ? AppColors.gold.withValues(alpha: 0.2)
+                  : AppColors.line,
               shape: BoxShape.circle,
             ),
-            child: Text(b.earned ? b.emoji : '🔒',
-                style: const TextStyle(fontSize: 26)),
+            child: Text(
+              b.earned ? b.emoji : '🔒',
+              style: const TextStyle(fontSize: 26),
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             b.title,
             textAlign: TextAlign.center,
             style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppColors.ink),
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.ink,
+            ),
           ),
         ],
       ),
@@ -298,8 +346,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: SwitchListTile(
         value: sound.enabled,
-        title: const Text('Ses efektleri',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text(
+          'Ses efektleri',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
         secondary: const Icon(Icons.volume_up_rounded, color: AppColors.green),
         onChanged: (bool v) => setState(() => sound.enabled = v),
       ),
@@ -325,21 +375,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: (m?.color ?? AppColors.purple).withValues(alpha: 0.16),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(m?.emoji ?? '🐻',
-                  style: const TextStyle(fontSize: 20)),
+              child: Text(
+                m?.emoji ?? '🐻',
+                style: const TextStyle(fontSize: 20),
+              ),
             ),
-            title: const Text('Koçun',
-                style: TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: Text(m?.label ?? 'Seçilmedi — dokunup seç',
-                style: const TextStyle(
-                    color: AppColors.inkLight, fontSize: 13)),
-            trailing: const Icon(Icons.chevron_right_rounded,
-                color: AppColors.inkLight),
+            title: const Text(
+              'Koçun',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            subtitle: Text(
+              m?.label ?? 'Seçilmedi — dokunup seç',
+              style: const TextStyle(color: AppColors.inkLight, fontSize: 13),
+            ),
+            trailing: const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.inkLight,
+            ),
             onTap: () => showMascotSheet(context),
           ),
         );
       },
     );
+  }
+
+  /// İzin alınamadığında: tek dokunuşla telefonun bildirim ayarına götür.
+  Future<void> _offerSettings() async {
+    final Mascot m = userProfile.mascot ?? Mascot.evHanimi;
+    final bool? go = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: Row(
+          children: <Widget>[
+            Text(m.emoji, style: const TextStyle(fontSize: 24)),
+            const SizedBox(width: 8),
+            const Expanded(child: Text('Bildirimler kapalı')),
+          ],
+        ),
+        content: const Text(
+          'Telefonun bildirim iznini kapatmış. Ayarlarda "Bildirimleri göster" '
+          'anahtarını açarsan seni tekrar zamanı geldiğinde dürtebilirim.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Şimdi değil'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Ayarları aç'),
+          ),
+        ],
+      ),
+    );
+    if (go == true) await SystemSettings.openNotificationSettings();
   }
 
   /// Maskot hatırlatmaları: açma/kapama ve saat ayarı.
@@ -356,12 +445,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             value: userProfile.notifyEnabled,
             activeThumbColor: m.color,
             secondary: Text(m.emoji, style: const TextStyle(fontSize: 22)),
-            title: const Text('Hatırlatmalar',
-                style: TextStyle(fontWeight: FontWeight.w700)),
+            title: const Text(
+              'Hatırlatmalar',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
             subtitle: Text(
               userProfile.notifyEnabled
                   ? 'Tekrar ${userProfile.reviewHour}:00 · '
-                      'seri ${userProfile.streakHour}:00'
+                        'seri ${userProfile.streakHour}:00'
                   : 'Kapalı',
               style: const TextStyle(color: AppColors.inkLight, fontSize: 12.5),
             ),
@@ -372,6 +463,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               await userProfile.setNotifyEnabled(ok);
               if (!ok) await notifications.cancelAll();
               if (mounted) setState(() {});
+              // İzin reddedildiyse (ya da daha önce kalıcı reddedilmişse)
+              // sistem penceresi açılmaz; kullanıcıyı ayara yönlendir.
+              if (v && !ok && mounted) await _offerSettings();
             },
           ),
           // Cihaz kaydı durumu: bildirim gelmiyorsa sorun burada görünür.
@@ -389,12 +483,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: Text(
                   ok ? 'Cihaz bildirimlere kayıtlı' : 'Cihaz kaydı yapılmadı',
                   style: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 13),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
                 ),
                 subtitle: Text(
                   err ?? (ok ? '' : 'Dokun, tekrar denensin'),
                   style: const TextStyle(
-                      color: AppColors.inkLight, fontSize: 11.5),
+                    color: AppColors.inkLight,
+                    fontSize: 11.5,
+                  ),
                 ),
                 onTap: () async {
                   await push.registerDevice();
@@ -412,8 +510,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: _hourPicker(
                       label: 'Tekrar',
                       value: userProfile.reviewHour,
-                      onPick: (int h) =>
-                          userProfile.setNotifyHours(review: h),
+                      onPick: (int h) => userProfile.setNotifyHours(review: h),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -421,8 +518,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: _hourPicker(
                       label: 'Seri',
                       value: userProfile.streakHour,
-                      onPick: (int h) =>
-                          userProfile.setNotifyHours(streak: h),
+                      onPick: (int h) => userProfile.setNotifyHours(streak: h),
                     ),
                   ),
                 ],
@@ -443,8 +539,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         labelText: label,
         isDense: true,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<int>(
@@ -456,8 +551,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             for (int h = 8; h <= 21; h++)
               DropdownMenuItem<int>(
                 value: h,
-                child: Text('$h:00',
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                child: Text(
+                  '$h:00',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
               ),
           ],
           onChanged: (int? h) {
@@ -480,8 +577,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         onChanged: (bool v) => userProfile.setShareConsent(v),
         activeThumbColor: AppColors.purple,
         secondary: const Text('🌍', style: TextStyle(fontSize: 22)),
-        title: const Text('Sorularımı havuzda paylaş',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text(
+          'Sorularımı havuzda paylaş',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
         subtitle: Text(
           userProfile.shareConsent
               ? 'Yeni yüklediğin sorular diğer öğrencilerce çözülebilir.'
@@ -507,12 +606,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           child: ListTile(
             leading: const Icon(Icons.school_rounded, color: AppColors.blue),
-            title: const Text('Sınav yılı / müfredat',
-                style: TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: Text(subtitle,
-                style: const TextStyle(color: AppColors.inkLight, fontSize: 13)),
-            trailing: const Icon(Icons.chevron_right_rounded,
-                color: AppColors.inkLight),
+            title: const Text(
+              'Sınav yılı / müfredat',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            subtitle: Text(
+              subtitle,
+              style: const TextStyle(color: AppColors.inkLight, fontSize: 13),
+            ),
+            trailing: const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.inkLight,
+            ),
             onTap: () => showExamYearSheet(context),
           ),
         );
@@ -530,12 +635,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: ListTile(
         leading: const Icon(Icons.shield_outlined, color: AppColors.red),
-        title: const Text('Moderasyon kuyruğu',
-            style: TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: const Text('Bildirilen soruları incele',
-            style: TextStyle(color: AppColors.inkLight, fontSize: 13)),
-        trailing:
-            const Icon(Icons.chevron_right_rounded, color: AppColors.inkLight),
+        title: const Text(
+          'Moderasyon kuyruğu',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        subtitle: const Text(
+          'Bildirilen soruları incele',
+          style: TextStyle(color: AppColors.inkLight, fontSize: 13),
+        ),
+        trailing: const Icon(
+          Icons.chevron_right_rounded,
+          color: AppColors.inkLight,
+        ),
         onTap: () => Navigator.of(context).push<void>(
           MaterialPageRoute<void>(builder: (_) => const ModerationScreen()),
         ),
@@ -553,12 +664,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: ListTile(
         leading: const Icon(Icons.fact_check_outlined, color: AppColors.purple),
-        title: const Text('Tüm sorular',
-            style: TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: const Text('Ders/konu/sınav düzelt, havuzdan çıkar, sil',
-            style: TextStyle(color: AppColors.inkLight, fontSize: 13)),
-        trailing:
-            const Icon(Icons.chevron_right_rounded, color: AppColors.inkLight),
+        title: const Text(
+          'Tüm sorular',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        subtitle: const Text(
+          'Ders/konu/sınav düzelt, havuzdan çıkar, sil',
+          style: TextStyle(color: AppColors.inkLight, fontSize: 13),
+        ),
+        trailing: const Icon(
+          Icons.chevron_right_rounded,
+          color: AppColors.inkLight,
+        ),
         onTap: () => Navigator.of(context).push<void>(
           MaterialPageRoute<void>(builder: (_) => const AllQuestionsScreen()),
         ),
@@ -578,13 +695,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           await authRepository.signOut();
         },
         icon: const Icon(Icons.logout_rounded, color: AppColors.red),
-        label: const Text('Çıkış yap',
-            style:
-                TextStyle(color: AppColors.red, fontWeight: FontWeight.w700)),
+        label: const Text(
+          'Çıkış yap',
+          style: TextStyle(color: AppColors.red, fontWeight: FontWeight.w700),
+        ),
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(52),
           side: const BorderSide(color: AppColors.red),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
       ),
     );
