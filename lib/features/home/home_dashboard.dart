@@ -74,15 +74,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
       gameProgress.syncDailyDone(doneToday);
       gameProgress.setDueRemaining(due.length);
       // Günün hatırlatma planını gerçek verilerle kur.
-      unawaited(notifications.planDay(
-        enabled: userProfile.notifyEnabled,
-        mascot: userProfile.mascot ?? Mascot.evHanimi,
-        reviewHour: userProfile.reviewHour,
-        streakHour: userProfile.streakHour,
-        dueCount: due.length,
-        streak: gameProgress.currentStreak,
-        activeToday: gameProgress.activeToday,
-      ));
+      unawaited(
+        notifications.planDay(
+          enabled: userProfile.notifyEnabled,
+          mascot: userProfile.mascot ?? Mascot.evHanimi,
+          dueCount: due.length,
+          streak: gameProgress.currentStreak,
+          activeToday: gameProgress.activeToday,
+        ),
+      );
       setState(() {
         _due = due;
         _loading = false;
@@ -175,8 +175,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final String subtitle = streak == 0
         ? 'Bugün bir soru çöz, seri başlasın.'
         : (doneToday
-            ? 'Bugünü tamamladın, seri devam ediyor 💪'
-            : 'Bugün çözmezsen sıfırlanır.');
+              ? 'Bugünü tamamladın, seri devam ediyor 💪'
+              : 'Bugün çözmezsen sıfırlanır.');
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -190,25 +190,32 @@ class _HomeDashboardState extends State<HomeDashboard> {
           // Seri sönükse alev de sönük.
           Opacity(
             opacity: doneToday || streak == 0 ? 1 : 0.55,
-            child: Text(streak == 0 ? '🕯️' : '🔥',
-                style: const TextStyle(fontSize: 32)),
+            child: Text(
+              streak == 0 ? '🕯️' : '🔥',
+              style: const TextStyle(fontSize: 32),
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(title,
-                    style: TextStyle(
-                        color: color == AppColors.inkLight
-                            ? AppColors.ink
-                            : color,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: color == AppColors.inkLight ? AppColors.ink : color,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(subtitle,
-                    style: const TextStyle(
-                        color: AppColors.inkLight, fontSize: 12.5)),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: AppColors.inkLight,
+                    fontSize: 12.5,
+                  ),
+                ),
               ],
             ),
           ),
@@ -225,7 +232,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
       onTap: () async {
         await Navigator.of(context).push<void>(
           MaterialPageRoute<void>(
-              builder: (_) => const ReceivedQuestionsScreen()),
+            builder: (_) => const ReceivedQuestionsScreen(),
+          ),
         );
         await _loadDue();
       },
@@ -240,9 +248,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: <BoxShadow>[
             BoxShadow(
-                color: AppColors.orange.withValues(alpha: 0.30),
-                blurRadius: 12,
-                offset: const Offset(0, 4)),
+              color: AppColors.orange.withValues(alpha: 0.30),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Row(
@@ -256,13 +265,16 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   Text(
                     'Arkadaşından $_incomingCount soru',
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800),
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: 2),
-                  const Text('Sana gönderilen soruları çöz.',
-                      style: TextStyle(color: Colors.white70, fontSize: 12.5)),
+                  const Text(
+                    'Sana gönderilen soruları çöz.',
+                    style: TextStyle(color: Colors.white70, fontSize: 12.5),
+                  ),
                 ],
               ),
             ),
@@ -293,9 +305,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: <BoxShadow>[
             BoxShadow(
-                color: AppColors.teal.withValues(alpha: 0.30),
-                blurRadius: 12,
-                offset: const Offset(0, 4)),
+              color: AppColors.teal.withValues(alpha: 0.30),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Row(
@@ -306,14 +319,19 @@ class _HomeDashboardState extends State<HomeDashboard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text('Konu Haritan',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800)),
+                  Text(
+                    'Konu Haritan',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                   SizedBox(height: 2),
-                  Text('Konu seç, soru çöz, haritanı doldur.',
-                      style: TextStyle(color: Colors.white70, fontSize: 12.5)),
+                  Text(
+                    'Konu seç, soru çöz, haritanı doldur.',
+                    style: TextStyle(color: Colors.white70, fontSize: 12.5),
+                  ),
                 ],
               ),
             ),
@@ -342,7 +360,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   Widget _examTab(String exam) {
     final bool selected = _exam == exam;
-    final int total = _countsForExam(exam).values.fold(0, (int a, int b) => a + b);
+    final int total = _countsForExam(
+      exam,
+    ).values.fold(0, (int a, int b) => a + b);
     // TYT ve AYT'ye ayrı canlı gradyanlar.
     final List<Color> grad = exam == 'TYT'
         ? <Color>[AppColors.blue, AppColors.indigo]
@@ -353,16 +373,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
         duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.symmetric(vertical: 13),
         decoration: BoxDecoration(
-          gradient: selected
-              ? LinearGradient(colors: grad)
-              : null,
+          gradient: selected ? LinearGradient(colors: grad) : null,
           borderRadius: BorderRadius.circular(13),
           boxShadow: selected
               ? <BoxShadow>[
                   BoxShadow(
-                      color: grad.last.withValues(alpha: 0.35),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4))
+                    color: grad.last.withValues(alpha: 0.35),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
                 ]
               : null,
         ),
@@ -413,8 +432,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final Map<String, int> counts = _countsForExam(_exam);
     // Tüm dersler sabit sırada; listede olmayan (ör. AI'nın ürettiği) ekstra
     // dersler varsa sona eklenir. Soru olmasa da hepsi gösterilir.
-    final List<String> subjects =
-        List<String>.of(YksSubjects.forExam(userProfile.curriculum, _exam));
+    final List<String> subjects = List<String>.of(
+      YksSubjects.forExam(userProfile.curriculum, _exam),
+    );
     for (final String s in counts.keys) {
       if (!subjects.contains(s)) subjects.add(s);
     }
@@ -437,7 +457,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: active ? color.withValues(alpha: 0.09) : const Color(0xFFFAFAFA),
+          color: active
+              ? color.withValues(alpha: 0.09)
+              : const Color(0xFFFAFAFA),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: active ? color.withValues(alpha: 0.30) : AppColors.line,
@@ -456,10 +478,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     : const Color(0xFFF0F0F0),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Text(subjectEmoji(subject),
-                  style: TextStyle(
-                      fontSize: 24,
-                      color: active ? null : Colors.black.withValues(alpha: 0.35))),
+              child: Text(
+                subjectEmoji(subject),
+                style: TextStyle(
+                  fontSize: 24,
+                  color: active ? null : Colors.black.withValues(alpha: 0.35),
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -469,17 +494,19 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   Text(
                     subject,
                     style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15.5,
-                        color: active ? AppColors.ink : AppColors.inkLight),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15.5,
+                      color: active ? AppColors.ink : AppColors.inkLight,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     active ? '$count soru seni bekliyor' : 'Bekleyen soru yok',
                     style: TextStyle(
-                        color: active ? color : AppColors.inkLight,
-                        fontWeight: active ? FontWeight.w700 : FontWeight.w400,
-                        fontSize: 13),
+                      color: active ? color : AppColors.inkLight,
+                      fontWeight: active ? FontWeight.w700 : FontWeight.w400,
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
@@ -501,11 +528,14 @@ class _HomeDashboardState extends State<HomeDashboard> {
           color: Color(0xFFF0F0F0),
           shape: BoxShape.circle,
         ),
-        child: const Text('0',
-            style: TextStyle(
-                color: AppColors.inkLight,
-                fontWeight: FontWeight.w800,
-                fontSize: 13)),
+        child: const Text(
+          '0',
+          style: TextStyle(
+            color: AppColors.inkLight,
+            fontWeight: FontWeight.w800,
+            fontSize: 13,
+          ),
+        ),
       );
     }
     return Container(
@@ -515,19 +545,23 @@ class _HomeDashboardState extends State<HomeDashboard> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: <BoxShadow>[
           BoxShadow(
-              color: color.withValues(alpha: 0.35),
-              blurRadius: 8,
-              offset: const Offset(0, 3)),
+            color: color.withValues(alpha: 0.35),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
         ],
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text('Çöz',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13)),
+          Text(
+            'Çöz',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+            ),
+          ),
           SizedBox(width: 2),
           Icon(Icons.play_arrow_rounded, color: Colors.white, size: 18),
         ],
@@ -539,8 +573,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
   Widget _mockNotice() {
     return Column(
       children: <Widget>[
-        const Text('Demo modunda tüm hatalar birlikte çözülür.',
-            style: TextStyle(color: AppColors.inkLight, fontSize: 13)),
+        const Text(
+          'Demo modunda tüm hatalar birlikte çözülür.',
+          style: TextStyle(color: AppColors.inkLight, fontSize: 13),
+        ),
         const SizedBox(height: 12),
         GestureDetector(
           onTap: () => _practice(),
@@ -551,11 +587,14 @@ class _HomeDashboardState extends State<HomeDashboard> {
               color: AppColors.green,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Text('HATALARINI ÇÖZ',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16)),
+            child: const Text(
+              'HATALARINI ÇÖZ',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+              ),
+            ),
           ),
         ),
       ],
@@ -567,8 +606,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final int target = gameProgress.dailyTarget;
     // "Bugün için iş yok" durumu: kalan da yapılan da yoksa.
     final bool nothingToday = target == 0 && !gameProgress.dailyGoalReached;
-    final bool done = gameProgress.dailyGoalReached ||
-        (target > 0 && doneCount >= target);
+    final bool done =
+        gameProgress.dailyGoalReached || (target > 0 && doneCount >= target);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -590,19 +629,24 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     value: nothingToday ? 1 : gameProgress.dailyProgress,
                     strokeWidth: 7,
                     backgroundColor: Colors.white,
-                    valueColor:
-                        const AlwaysStoppedAnimation<Color>(AppColors.green),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      AppColors.green,
+                    ),
                   ),
                 ),
                 (done || nothingToday)
-                    ? const Icon(Icons.check_rounded,
-                        color: AppColors.greenDark, size: 28)
+                    ? const Icon(
+                        Icons.check_rounded,
+                        color: AppColors.greenDark,
+                        size: 28,
+                      )
                     : Text(
                         '$doneCount',
                         style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 18,
-                            color: AppColors.greenDark),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 18,
+                          color: AppColors.greenDark,
+                        ),
                       ),
               ],
             ),
@@ -615,18 +659,22 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 const Text(
                   'Günlük Tekrar Hedefi',
                   style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                      color: AppColors.ink),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    color: AppColors.ink,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   done
                       ? 'Tamamladın! 🎉'
                       : nothingToday
-                          ? 'Bugün için tekrar yok'
-                          : '$doneCount / $target tekrar',
-                  style: const TextStyle(color: AppColors.greenDark, fontSize: 14),
+                      ? 'Bugün için tekrar yok'
+                      : '$doneCount / $target tekrar',
+                  style: const TextStyle(
+                    color: AppColors.greenDark,
+                    fontSize: 14,
+                  ),
                 ),
               ],
             ),

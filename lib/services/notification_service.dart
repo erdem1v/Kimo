@@ -132,11 +132,14 @@ class NotificationService {
   ///
   /// Kurallar: sessiz saat 22:00–08:00 · geçmiş saate planlama yapılmaz ·
   /// bugün zaten çözülmüşse hatırlatma gönderilmez.
+  /// Bildirim saatleri sabittir: tekrar için okul sonrası, seri için akşam.
+  /// Kullanıcıya "kaçta hatırlatayım?" diye sormuyoruz; bu bizim kararımız.
+  static const int reviewHour = 17;
+  static const int streakHour = 20;
+
   Future<void> planDay({
     required bool enabled,
     required Mascot mascot,
-    required int reviewHour,
-    required int streakHour,
     required int dueCount,
     required int streak,
     required bool activeToday,

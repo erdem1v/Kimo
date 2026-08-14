@@ -407,7 +407,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (go == true) await SystemSettings.openNotificationSettings();
   }
 
-  /// Maskot hatırlatmaları: açma/kapama ve saat ayarı.
+  /// Maskot hatırlatmaları: tek anahtar. Saatleri kullanıcıya sordurmuyoruz —
+  /// hangi bildirimin saat kaçta geleceği bizim işimiz, onun değil.
   Widget _notifyTile() {
     final Mascot m = userProfile.mascot ?? Mascot.evHanimi;
     return Container(
@@ -415,95 +416,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
         color: const Color(0xFFF7F7F7),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Column(
-        children: <Widget>[
-          SwitchListTile(
-            value: userProfile.notifyEnabled,
-            activeThumbColor: m.color,
-            secondary: Text(m.emoji, style: const TextStyle(fontSize: 22)),
-            title: const Text(
-              'Hatırlatmalar',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-            subtitle: Text(
-              userProfile.notifyEnabled
-                  ? 'Tekrar ${userProfile.reviewHour}:00 · '
-                        'seri ${userProfile.streakHour}:00'
-                  : 'Kapalı',
-              style: const TextStyle(color: AppColors.inkLight, fontSize: 12.5),
-            ),
-            onChanged: (bool v) async {
-              // Açarken sistem izni gerekebilir.
-              bool ok = v;
-              if (v) ok = await notifications.requestPermission();
-              await userProfile.setNotifyEnabled(ok);
-              if (!ok) await notifications.cancelAll();
-              if (mounted) setState(() {});
-              // İzin reddedildiyse (ya da daha önce kalıcı reddedilmişse)
-              // sistem penceresi açılmaz; kullanıcıyı ayara yönlendir.
-              if (v && !ok && mounted) await _offerSettings();
-            },
-          ),
-          if (userProfile.notifyEnabled)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: _hourPicker(
-                      label: 'Tekrar',
-                      value: userProfile.reviewHour,
-                      onPick: (int h) => userProfile.setNotifyHours(review: h),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _hourPicker(
-                      label: 'Seri',
-                      value: userProfile.streakHour,
-                      onPick: (int h) => userProfile.setNotifyHours(streak: h),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _hourPicker({
-    required String label,
-    required int value,
-    required void Function(int) onPick,
-  }) {
-    return InputDecorator(
-      decoration: InputDecoration(
-        labelText: label,
-        isDense: true,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int>(
-          value: value,
-          isDense: true,
-          isExpanded: true,
-          // Sessiz saat dışı: 08:00–21:00
-          items: <DropdownMenuItem<int>>[
-            for (int h = 8; h <= 21; h++)
-              DropdownMenuItem<int>(
-                value: h,
-                child: Text(
-                  '$h:00',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-          ],
-          onChanged: (int? h) {
-            if (h != null) onPick(h);
-          },
+      child: SwitchListTile(
+        value: userProfile.notifyEnabled,
+        activeThumbColor: m.color,
+        secondary: Text(m.emoji, style: const TextStyle(fontSize: 22)),
+        title: const Text(
+          'Hatırlatmalar',
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
+        subtitle: Text(
+          userProfile.notifyEnabled
+              ? 'Koçun tekrar ve seri zamanlarında haber verir'
+              : 'Kapalı',
+          style: const TextStyle(color: AppColors.inkLight, fontSize: 12.5),
+        ),
+        onChanged: (bool v) async {
+          // Açarken sistem izni gerekebilir.
+          bool ok = v;
+          if (v) ok = await notifications.requestPermission();
+          await userProfile.setNotifyEnabled(ok);
+          if (!ok) await notifications.cancelAll();
+          if (mounted) setState(() {});
+          // İzin reddedildiyse (ya da daha önce kalıcı reddedilmişse)
+          // sistem penceresi açılmaz; kullanıcıyı ayara yönlendir.
+          if (v && !ok && mounted) await _offerSettings();
+        },
       ),
     );
   }
