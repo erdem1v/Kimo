@@ -25,8 +25,17 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   int _index = 0;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Cihaz kaydı ilk denemede düşmüş olabilir (ağ yok, Play Servisleri geç
+    // hazır olmuş vb.); uygulama öne geldikçe sessizce tekrar dene.
+    if (state == AppLifecycleState.resumed && SupabaseConfig.isConfigured) {
+      push.registerDevice();
+    }
+  }
 
   @override
   void initState() {
@@ -42,10 +51,12 @@ class _HomeShellState extends State<HomeShell> {
     // Bildirimden gelen sekme isteklerini dinle ve bekleyeni uygula.
     NotificationRouter.tabRequest.addListener(_onTabRequest);
     NotificationRouter.ready();
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     NotificationRouter.tabRequest.removeListener(_onTabRequest);
     super.dispose();
   }

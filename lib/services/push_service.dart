@@ -23,6 +23,12 @@ class PushService {
   bool _started = false;
   String? _token;
 
+  /// Teşhis için: cihaz kaydı yapıldı mı, yapılamadıysa neden?
+  /// (Kullanıcının telefonunda log göremediğimiz için profilde gösteriliyor.)
+  final ValueNotifier<String?> status = ValueNotifier<String?>(null);
+
+  bool get isRegistered => _token != null;
+
   /// Uygulama ön plandayken gelen bildirimi göstermek için kanal.
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'social_events',
@@ -60,6 +66,7 @@ class PushService {
       _started = true;
     } catch (e) {
       debugPrint('Push başlatılamadı: $e');
+      status.value = 'Firebase başlatılamadı: $e';
     }
   }
 
@@ -67,20 +74,35 @@ class PushService {
   /// Bildirim izni yoksa jeton yine alınır ama bildirim görünmez; izin
   /// NotificationService üzerinden istenir.
   Future<void> registerDevice() async {
-    if (!_started || !SupabaseConfig.isConfigured) return;
+    if (!SupabaseConfig.isConfigured) {
+      status.value = 'Supabase yapılandırılmamış';
+      return;
+    }
+    if (!_started) {
+      // init() başarısızsa bir kez daha dene (ağ geç gelmiş olabilir).
+      await init();
+      if (!_started) return;
+    }
     try {
       final String? token = await FirebaseMessaging.instance.getToken();
-      if (token != null) await _saveToken(token);
+      if (token == null) {
+        status.value = 'Jeton alınamadı (Google Play Servisleri?)';
+        return;
+      }
+      await _saveToken(token);
     } catch (e) {
       debugPrint('Jeton alınamadı: $e');
+      status.value = 'Jeton alınamadı: $e';
     }
   }
 
   Future<void> _saveToken(String token) async {
     if (!SupabaseConfig.isConfigured) return;
     final String? uid = Supabase.instance.client.auth.currentUser?.id;
-    if (uid == null) return;
-    _token = token;
+    if (uid == null) {
+      status.value = 'Oturum yok';
+      return;
+    }
     try {
       await Supabase.instance.client.from('device_tokens').upsert(
         <String, dynamic>{
@@ -90,8 +112,11 @@ class PushService {
           'updated_at': DateTime.now().toIso8601String(),
         },
       );
+      _token = token;
+      status.value = null; // sorun yok
     } catch (e) {
       debugPrint('Jeton kaydedilemedi: $e');
+      status.value = 'Sunucuya yazılamadı: $e';
     }
   }
 
