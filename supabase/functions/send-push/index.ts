@@ -103,9 +103,26 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { user_id, title, body, kind } = await req.json();
+    // Gövdeyi savunmacı ayrıştır: boş/bozuk gelirse net söyle.
+    const raw = await req.text();
+    let payload: Record<string, unknown> = {};
+    try {
+      payload = raw ? JSON.parse(raw) : {};
+    } catch (_e) {
+      return new Response(
+        JSON.stringify({ error: "gövde JSON değil", uzunluk: raw.length }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    const user_id = payload.user_id as string | undefined;
+    const title = payload.title as string | undefined;
+    const body = payload.body as string | undefined;
+    const kind = payload.kind as string | undefined;
     if (!user_id || !body) {
-      return new Response("eksik alan", { status: 400 });
+      return new Response(
+        JSON.stringify({ error: "eksik alan", govde_uzunlugu: raw.length }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
     }
 
     const supabase = createClient(
@@ -123,9 +140,34 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ sent: 0 }), { status: 200 });
     }
 
-    const sa: ServiceAccount = JSON.parse(
-      Deno.env.get("FIREBASE_SERVICE_ACCOUNT")!,
-    );
+    // Servis hesabı: en sık hata kaynağı, o yüzden ayrı ayrı kontrol et.
+    const saRaw = Deno.env.get("FIREBASE_SERVICE_ACCOUNT") ?? "";
+    if (saRaw.trim().length === 0) {
+      return new Response(
+        JSON.stringify({
+          error: "FIREBASE_SERVICE_ACCOUNT boş ya da tanımsız",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    let sa: ServiceAccount;
+    try {
+      sa = JSON.parse(saRaw);
+    } catch (_e) {
+      return new Response(
+        JSON.stringify({
+          error: "FIREBASE_SERVICE_ACCOUNT geçerli JSON değil",
+          uzunluk: saRaw.length,
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    if (!sa.client_email || !sa.private_key || !sa.project_id) {
+      return new Response(
+        JSON.stringify({ error: "servis hesabı JSON'ında alan eksik" }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      );
+    }
     const accessToken = await getAccessToken(sa);
     const endpoint =
       `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`;
