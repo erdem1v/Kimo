@@ -16,20 +16,17 @@ class AuthRepository {
     return _client.auth.signInWithPassword(email: email, password: password);
   }
 
+  /// Hesap açar. Takma ad burada alınmaz: karşılama akışında Kimo sorar ve
+  /// oradan metadata'ya yazılır.
   Future<void> signUp({
     required String email,
     required String password,
-    required String displayName,
     required bool guardianConsent,
   }) {
     return _client.auth.signUp(
       email: email,
       password: password,
-      data: <String, dynamic>{
-        'display_name': displayName,
-        'nickname': displayName,
-        'guardian_consent': guardianConsent,
-      },
+      data: <String, dynamic>{'guardian_consent': guardianConsent},
     );
   }
 

@@ -39,9 +39,15 @@ enum Mascot {
     Mascot.ceo => 'Günlük hedefin %25. Aksiyon zamanı.',
   };
 
-  /// Görsel gelene kadar yer tutucu. Maskotun adı Kimo ve hepsi aynı ayı;
-  /// karakterler yüzle değil renkle ve sesle ayrışır.
-  String get emoji => '🐻';
+  /// Karakteri ayırt eden simge (görsel gelene kadar yer tutucu). Maskotun
+  /// kendisi ayıdır; bunlar onun karakterlerini gösterir.
+  String get emoji => switch (this) {
+    Mascot.evHanimi => '🧸',
+    Mascot.arabeskci => '🎤',
+    Mascot.sanayiUstasi => '🔧',
+    Mascot.akademisyen => '🎓',
+    Mascot.ceo => '💼',
+  };
 
   Color get color => switch (this) {
     Mascot.evHanimi => AppColors.pink,

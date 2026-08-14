@@ -84,8 +84,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   Color get _kimoColor =>
       (_mascot ?? userProfile.mascot)?.color ?? AppColors.purple;
 
-  /// Kimo'nun yüzü: karakter seçilene kadar ayının kendisi.
-  String get _kimoFace => (_mascot ?? userProfile.mascot)?.emoji ?? '🐻';
+  /// Kimo her zaman ayıdır; karakter seçimi yüzünü değil rengini ve sesini
+  /// değiştirir (karakter simgeleri yalnızca seçim listesinde görünür).
+  static const String _kimoFace = '🐻';
 
   String get _buttonLabel {
     if (_saving) return 'Kaydediliyor...';

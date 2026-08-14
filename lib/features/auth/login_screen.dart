@@ -5,9 +5,9 @@ import '../../data/auth_repository.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_button.dart';
 
-/// Giriş / kayıt ekranı. Kayıtta takma ad (nickname) alınır; kalan tercihler
-/// (sınav yılı, maskot) karşılama akışında sorulur. Başarılı oturumda AuthGate
-/// otomatik geçiş yapar.
+/// Giriş / kayıt ekranı. Yalnızca hesabın teknik gereği (e-posta, şifre)
+/// burada sorulur; takma ad dahil bütün kişisel sorular karşılama akışında
+/// Kimo'nun ağzından gelir. Başarılı oturumda AuthGate otomatik geçiş yapar.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.startWithSignUp = false});
 
@@ -21,7 +21,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
-  final TextEditingController _name = TextEditingController();
 
   late bool _isSignUp = widget.startWithSignUp;
   bool _guardianConsent = false;
@@ -31,12 +30,13 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _email.dispose();
     _password.dispose();
-    _name.dispose();
     super.dispose();
   }
 
   void _snack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _submit() async {
@@ -44,10 +44,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final String password = _password.text;
     if (email.isEmpty || password.isEmpty) {
       _snack('E-posta ve şifre gerekli.');
-      return;
-    }
-    if (_isSignUp && _name.text.trim().length < 2) {
-      _snack('En az 2 karakterlik bir takma ad gir.');
       return;
     }
     if (_isSignUp && !_guardianConsent) {
@@ -58,10 +54,10 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
     try {
       if (_isSignUp) {
+        // Takma ad burada sorulmaz; Kimo karşılama akışında sorar.
         await authRepository.signUp(
           email: email,
           password: password,
-          displayName: _name.text.trim(),
           guardianConsent: _guardianConsent,
         );
         if (authRepository.currentSession == null && mounted) {
@@ -96,29 +92,72 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                const SizedBox(height: 12),
-                const Text('🐻', style: TextStyle(fontSize: 64), textAlign: TextAlign.center),
-                const SizedBox(height: 12),
-                const Text(
-                  'AI YKS Coach',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                const SizedBox(height: 8),
+                Center(
+                  child: Container(
+                    width: 128,
+                    height: 128,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.purple.withValues(alpha: 0.14),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.purple.withValues(alpha: 0.30),
+                        width: 2,
+                      ),
+                    ),
+                    child: const Text('🐻', style: TextStyle(fontSize: 68)),
+                  ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  _isSignUp ? 'Hesap oluştur' : 'Tekrar hoş geldin',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.inkLight, fontSize: 15),
+                const SizedBox(height: 18),
+                // Kimo bu ekranda da konuşur; asıl sorular hemen ardından.
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.purple.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: AppColors.purple.withValues(alpha: 0.30),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Text(
+                    _isSignUp
+                        ? 'Önce kapıyı açalım:\nbir e-posta ve şifre yeter.'
+                        : 'Tekrar hoş geldin!\nSeni bekliyordum.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 19,
+                      height: 1.4,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink,
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 28),
                 if (_isSignUp) ...<Widget>[
-                  _field(_name, 'Takma adın', TextInputType.name),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Adını, sınav yılını ve gerisini birazdan ben soracağım.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.inkLight,
+                      fontSize: 13.5,
+                      height: 1.35,
+                    ),
+                  ),
                 ],
+                const SizedBox(height: 22),
                 _field(_email, 'E-posta', TextInputType.emailAddress),
                 const SizedBox(height: 12),
-                _field(_password, 'Şifre', TextInputType.visiblePassword,
-                    obscure: true),
+                _field(
+                  _password,
+                  'Şifre',
+                  TextInputType.visiblePassword,
+                  obscure: true,
+                ),
                 if (_isSignUp) ...<Widget>[
                   const SizedBox(height: 8),
                   CheckboxListTile(
@@ -152,7 +191,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ? 'Zaten hesabın var mı? Giriş yap'
                         : 'Hesabın yok mu? Kayıt ol',
                     style: const TextStyle(
-                        color: AppColors.blueDark, fontWeight: FontWeight.w700),
+                      color: AppColors.blueDark,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -177,8 +218,10 @@ class _LoginScreenState extends State<LoginScreen> {
         hintText: hint,
         filled: true,
         fillColor: const Color(0xFFF4F4F4),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
