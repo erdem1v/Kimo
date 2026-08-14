@@ -23,12 +23,6 @@ class PushService {
   bool _started = false;
   String? _token;
 
-  /// Teşhis için: cihaz kaydı yapıldı mı, yapılamadıysa neden?
-  /// (Kullanıcının telefonunda log göremediğimiz için profilde gösteriliyor.)
-  final ValueNotifier<String?> status = ValueNotifier<String?>(null);
-
-  bool get isRegistered => _token != null;
-
   /// Uygulama ön plandayken gelen bildirimi göstermek için kanal.
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'social_events',
@@ -46,7 +40,8 @@ class PushService {
       // Ön planda gelen mesajı gösterebilmek için kanalı oluştur.
       await _local
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
+            AndroidFlutterLocalNotificationsPlugin
+          >()
           ?.createNotificationChannel(_channel);
 
       FirebaseMessaging.onMessage.listen(_showForeground);
@@ -54,11 +49,12 @@ class PushService {
 
       // Uygulama arka plandayken bildirime dokunuldu.
       FirebaseMessaging.onMessageOpenedApp.listen(
-        (RemoteMessage m) => NotificationRouter.handle(m.data['kind'] as String?),
+        (RemoteMessage m) =>
+            NotificationRouter.handle(m.data['kind'] as String?),
       );
       // Uygulama tamamen kapalıyken bildirime dokunulup açıldı.
-      final RemoteMessage? initial =
-          await FirebaseMessaging.instance.getInitialMessage();
+      final RemoteMessage? initial = await FirebaseMessaging.instance
+          .getInitialMessage();
       if (initial != null) {
         NotificationRouter.handle(initial.data['kind'] as String?);
       }
@@ -66,7 +62,6 @@ class PushService {
       _started = true;
     } catch (e) {
       debugPrint('Push başlatılamadı: $e');
-      status.value = 'Firebase başlatılamadı: $e';
     }
   }
 
@@ -74,10 +69,7 @@ class PushService {
   /// Bildirim izni yoksa jeton yine alınır ama bildirim görünmez; izin
   /// NotificationService üzerinden istenir.
   Future<void> registerDevice() async {
-    if (!SupabaseConfig.isConfigured) {
-      status.value = 'Supabase yapılandırılmamış';
-      return;
-    }
+    if (!SupabaseConfig.isConfigured) return;
     if (!_started) {
       // init() başarısızsa bir kez daha dene (ağ geç gelmiş olabilir).
       await init();
@@ -85,38 +77,29 @@ class PushService {
     }
     try {
       final String? token = await FirebaseMessaging.instance.getToken();
-      if (token == null) {
-        status.value = 'Jeton alınamadı (Google Play Servisleri?)';
-        return;
-      }
+      if (token == null) return;
       await _saveToken(token);
     } catch (e) {
       debugPrint('Jeton alınamadı: $e');
-      status.value = 'Jeton alınamadı: $e';
     }
   }
 
   Future<void> _saveToken(String token) async {
     if (!SupabaseConfig.isConfigured) return;
     final String? uid = Supabase.instance.client.auth.currentUser?.id;
-    if (uid == null) {
-      status.value = 'Oturum yok';
-      return;
-    }
+    if (uid == null) return;
     try {
-      await Supabase.instance.client.from('device_tokens').upsert(
-        <String, dynamic>{
-          'user_id': uid,
-          'token': token,
-          'platform': defaultTargetPlatform.name,
-          'updated_at': DateTime.now().toIso8601String(),
-        },
-      );
+      await Supabase.instance.client
+          .from('device_tokens')
+          .upsert(<String, dynamic>{
+            'user_id': uid,
+            'token': token,
+            'platform': defaultTargetPlatform.name,
+            'updated_at': DateTime.now().toIso8601String(),
+          });
       _token = token;
-      status.value = null; // sorun yok
     } catch (e) {
       debugPrint('Jeton kaydedilemedi: $e');
-      status.value = 'Sunucuya yazılamadı: $e';
     }
   }
 

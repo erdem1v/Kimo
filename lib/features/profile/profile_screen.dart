@@ -444,39 +444,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               if (v && !ok && mounted) await _offerSettings();
             },
           ),
-          // Cihaz kaydı durumu: bildirim gelmiyorsa sorun burada görünür.
-          ValueListenableBuilder<String?>(
-            valueListenable: push.status,
-            builder: (BuildContext context, String? err, _) {
-              final bool ok = push.isRegistered && err == null;
-              return ListTile(
-                dense: true,
-                leading: Icon(
-                  ok ? Icons.check_circle_rounded : Icons.error_outline_rounded,
-                  size: 20,
-                  color: ok ? AppColors.green : AppColors.orange,
-                ),
-                title: Text(
-                  ok ? 'Cihaz bildirimlere kayıtlı' : 'Cihaz kaydı yapılmadı',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-                subtitle: Text(
-                  err ?? (ok ? '' : 'Dokun, tekrar denensin'),
-                  style: const TextStyle(
-                    color: AppColors.inkLight,
-                    fontSize: 11.5,
-                  ),
-                ),
-                onTap: () async {
-                  await push.registerDevice();
-                  if (mounted) setState(() {});
-                },
-              );
-            },
-          ),
           if (userProfile.notifyEnabled)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
