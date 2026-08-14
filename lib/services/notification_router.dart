@@ -67,6 +67,8 @@ class NotificationRouter {
         case 'league_result':
         case 'friend_request':
         case 'question_solved':
+        case 'friend_league_up':
+        case 'friend_streak':
           tabRequest.value = tabSocial;
 
         default:
