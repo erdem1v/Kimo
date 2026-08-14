@@ -19,12 +19,13 @@ begin
   where nsp.nspname = 'public'
     and rel.relname = 'question_sends'
     and con.contype = 'u'
+    -- attname 'name' tipindedir; text[] ile karşılaştırmak için cast şart.
     and (
-      select array_agg(att.attname order by att.attname)
+      select array_agg(att.attname::text order by att.attname::text)
       from unnest(con.conkey) as k(attnum)
       join pg_attribute att
         on att.attrelid = con.conrelid and att.attnum = k.attnum
-    ) = array['mistake_id', 'receiver_id', 'sender_id']
+    ) = array['mistake_id', 'receiver_id', 'sender_id']::text[]
   limit 1;
 
   if v_name is not null then
