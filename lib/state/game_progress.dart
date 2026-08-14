@@ -23,16 +23,14 @@ class GameProgress extends ChangeNotifier {
   /// XP eşiğiyle lig atlama YOK.
   League league = League.bronz;
 
-  static const int xpPerLevel = 500;
   static const int xpPerCorrect = 10;
 
   /// Günlük tekrar hedefi (üst sınır) ve hedefi tamamlama bonusu.
   static const int dailyReviewCap = 20;
   static const int dailyGoalBonus = 50;
 
-  int get level => xp ~/ xpPerLevel + 1;
-  int get xpIntoLevel => xp % xpPerLevel;
-  double get levelProgress => xpIntoLevel / xpPerLevel;
+  // Seviye sistemi kaldırıldı: ilerlemeyi toplam XP ve lig gösteriyor,
+  // ayrıca bir "seviye" sayısı aynı şeyi üçüncü kez söylüyordu.
 
   // ------------------------------------------------------------------ seri
   // Seri, soru çözülen gün sayısıdır. Art arda günlerde çözülürse büyür,

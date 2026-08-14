@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/mascot.dart';
@@ -51,15 +52,18 @@ class SocialRepository {
     final String? uid = _uid;
     if (uid == null) return;
     try {
-      await _client.from('profiles').update(<String, dynamic>{
-        'xp': xp,
-        'streak': streak,
-        'weekly_xp': ?weeklyXp,
-        if (weekStartDate != null) 'week_start': _dateStr(weekStartDate),
-        if (lastActiveDate != null)
-          'last_activity_date': _dateStr(lastActiveDate),
-        'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', uid);
+      await _client
+          .from('profiles')
+          .update(<String, dynamic>{
+            'xp': xp,
+            'streak': streak,
+            'weekly_xp': ?weeklyXp,
+            if (weekStartDate != null) 'week_start': _dateStr(weekStartDate),
+            if (lastActiveDate != null)
+              'last_activity_date': _dateStr(lastActiveDate),
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', uid);
     } catch (_) {
       // Ağ hatası akışı bloklamasın.
     }
@@ -74,7 +78,8 @@ class SocialRepository {
       return await _client
           .from('profiles')
           .select(
-              'xp, streak, weekly_xp, week_start, last_activity_date, league')
+            'xp, streak, weekly_xp, week_start, last_activity_date, league',
+          )
           .eq('id', uid)
           .maybeSingle();
     } catch (_) {
@@ -87,17 +92,22 @@ class SocialRepository {
   Future<LeagueBoard?> myLeagueBoard() async {
     try {
       await _client.rpc<dynamic>('ensure_league_membership');
-      final List<dynamic> rows =
-          await _client.rpc<List<dynamic>>('my_league_board');
+      final List<dynamic> rows = await _client.rpc<List<dynamic>>(
+        'my_league_board',
+      );
       if (rows.isEmpty) return null;
-      final Map<String, dynamic> first = (rows.first as Map).cast<String, dynamic>();
+      final Map<String, dynamic> first = (rows.first as Map)
+          .cast<String, dynamic>();
       return LeagueBoard(
         tier: League.fromDb(first['tier'] as String?),
-        weekStart: DateTime.tryParse(first['week_start'] as String? ?? '') ??
+        weekStart:
+            DateTime.tryParse(first['week_start'] as String? ?? '') ??
             weekStart(DateTime.now()),
         entries: rows
-            .map((dynamic r) =>
-                LeagueEntry.fromRow((r as Map).cast<String, dynamic>()))
+            .map(
+              (dynamic r) =>
+                  LeagueEntry.fromRow((r as Map).cast<String, dynamic>()),
+            )
             .toList(),
       );
     } catch (_) {
@@ -157,6 +167,84 @@ class SocialRepository {
         .inFilter('id', ids)
         .order('xp', ascending: false);
     return rows.map(PublicProfile.fromRow).toList();
+  }
+
+  /// Tek bir kullanıcının açık profili (profil kartı ekranı için).
+  Future<PublicProfile?> profileById(String id) async {
+    try {
+      final Map<String, dynamic>? row = await _client
+          .from(_publicView)
+          .select()
+          .eq('id', id)
+          .maybeSingle();
+      return row == null ? null : PublicProfile.fromRow(row);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ------------------------------------------------------ profil fotoğrafı
+
+  static const String _avatarBucket = 'avatars';
+
+  /// İmzalı URL'ler kısa ömürlü; aynı yolu tekrar tekrar imzalamayalım.
+  final Map<String, String> _avatarUrls = <String, String>{};
+
+  /// Profil fotoğrafı için gösterilebilir URL (yoksa null).
+  Future<String?> avatarUrl(String? path) async {
+    if (path == null || path.isEmpty) return null;
+    final String? cached = _avatarUrls[path];
+    if (cached != null) return cached;
+    try {
+      final String url = await _client.storage
+          .from(_avatarBucket)
+          .createSignedUrl(path, 3600);
+      _avatarUrls[path] = url;
+      return url;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Yeni profil fotoğrafı yükler ve yolunu profile yazar; yolu döndürür.
+  /// Dosya adına zaman damgası konur ki eski imzalı URL önbellekte kalmasın.
+  Future<String?> uploadAvatar(Uint8List bytes) async {
+    final String? uid = _uid;
+    if (uid == null) return null;
+    final String path = '$uid/${DateTime.now().millisecondsSinceEpoch}.jpg';
+    try {
+      await _client.storage
+          .from(_avatarBucket)
+          .uploadBinary(
+            path,
+            bytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
+          );
+      await _client
+          .from('profiles')
+          .update(<String, dynamic>{'avatar_path': path})
+          .eq('id', uid);
+      return path;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Profil fotoğrafını kaldırır (maskot simgesine döner).
+  Future<void> removeAvatar() async {
+    final String? uid = _uid;
+    if (uid == null) return;
+    try {
+      await _client
+          .from('profiles')
+          .update(<String, dynamic>{'avatar_path': null})
+          .eq('id', uid);
+    } catch (_) {
+      // Dosyayı silmiyoruz: eski imzalı URL'ler zaten kısa sürede ölür.
+    }
   }
 
   Future<void> sendRequest(String userId) async {

@@ -24,6 +24,7 @@ class UserProfile extends ChangeNotifier {
   bool _notifyEnabled = false;
   int _reviewHour = 17;
   int _streakHour = 20;
+  String? _avatarPath;
 
   /// Müfredat belirlendi mi?
   bool get isSet => _curriculum != null;
@@ -34,6 +35,9 @@ class UserProfile extends ChangeNotifier {
   int? get examYear => _examYear;
   String? get nickname => _nickname;
   Mascot? get mascot => _mascot;
+
+  /// Profil fotoğrafının Storage yolu (yoksa maskot simgesi gösterilir).
+  String? get avatarPath => _avatarPath;
 
   /// Yüklenen soruların soru havuzunda paylaşılmasına izin verildi mi?
   /// Karşılama akışında bir kez sorulur, profilden değiştirilebilir.
@@ -69,7 +73,18 @@ class UserProfile extends ChangeNotifier {
     _notifyEnabled = meta?['notify_enabled'] == true;
     _reviewHour = _hour(meta?['notify_review_hour'], 17);
     _streakHour = _hour(meta?['notify_streak_hour'], 20);
+    final Object? a = meta?['avatar_path'];
+    _avatarPath = (a is String && a.isNotEmpty) ? a : null;
     notifyListeners();
+  }
+
+  /// Profil fotoğrafının yolunu saklar. Asıl dosya ve `profiles.avatar_path`
+  /// SocialRepository tarafından yazılır; burada yalnızca yerel kopyası tutulur
+  /// (diğer cihazlarda da görünsün diye metadata'ya da yazılır).
+  Future<void> setAvatarPath(String? path) async {
+    _avatarPath = (path != null && path.isNotEmpty) ? path : null;
+    notifyListeners();
+    await _save(<String, dynamic>{'avatar_path': _avatarPath});
   }
 
   /// Sessiz saatlerin (22:00–08:00) dışına kırpar.
@@ -136,6 +151,7 @@ class UserProfile extends ChangeNotifier {
     _examYear = null;
     _nickname = null;
     _mascot = null;
+    _avatarPath = null;
     notifyListeners();
   }
 }

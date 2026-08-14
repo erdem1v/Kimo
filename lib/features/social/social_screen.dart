@@ -12,6 +12,8 @@ import '../../state/game_progress.dart';
 import '../../state/refresh_bus.dart';
 import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/user_avatar.dart';
+import 'public_profile_screen.dart';
 
 /// Sosyal sekme: ligin, arkadaş araması, gelen istekler ve arkadaş sıralaması.
 class SocialScreen extends StatefulWidget {
@@ -34,7 +36,8 @@ class _SocialScreenState extends State<SocialScreen>
   bool _loading = true;
   bool _searching = false;
   String? _error;
-  final Set<String> _busy = <String>{}; // işlem sürerken kilitlenen kullanıcılar
+  final Set<String> _busy =
+      <String>{}; // işlem sürerken kilitlenen kullanıcılar
 
   bool get _remote => SupabaseConfig.isConfigured;
 
@@ -72,10 +75,13 @@ class _SocialScreenState extends State<SocialScreen>
     try {
       final List<Friendship> rels = await socialRepository.relations();
       final String me = _meId ?? '';
-      final List<String> ids =
-          rels.map((Friendship f) => f.otherId(me)).toSet().toList();
-      final List<PublicProfile> people =
-          await socialRepository.profilesByIds(ids);
+      final List<String> ids = rels
+          .map((Friendship f) => f.otherId(me))
+          .toSet()
+          .toList();
+      final List<PublicProfile> people = await socialRepository.profilesByIds(
+        ids,
+      );
       final LeagueBoard? board = await socialRepository.myLeagueBoard();
       if (!mounted) return;
       setState(() {
@@ -91,13 +97,15 @@ class _SocialScreenState extends State<SocialScreen>
       if (board != null) {
         final int rank =
             board.entries.indexWhere((LeagueEntry e) => e.userId == _meId) + 1;
-        unawaited(notifications.planLeagueReminder(
-          enabled: userProfile.notifyEnabled,
-          mascot: userProfile.mascot ?? Mascot.evHanimi,
-          rank: rank,
-          leagueLabel: board.tier.label,
-          daysLeft: board.daysLeft,
-        ));
+        unawaited(
+          notifications.planLeagueReminder(
+            enabled: userProfile.notifyEnabled,
+            mascot: userProfile.mascot ?? Mascot.evHanimi,
+            rank: rank,
+            leagueLabel: board.tier.label,
+            daysLeft: board.daysLeft,
+          ),
+        );
       }
     } catch (_) {
       if (!mounted) return;
@@ -177,8 +185,10 @@ class _SocialScreenState extends State<SocialScreen>
   List<PublicProfile> get _incoming {
     final String me = _meId ?? '';
     return _relations
-        .where((Friendship f) =>
-            !f.accepted && f.stateFor(me) == FriendState.incoming)
+        .where(
+          (Friendship f) =>
+              !f.accepted && f.stateFor(me) == FriendState.incoming,
+        )
         .map((Friendship f) => _people[f.otherId(me)])
         .whereType<PublicProfile>()
         .toList();
@@ -207,8 +217,10 @@ class _SocialScreenState extends State<SocialScreen>
                 unselectedLabelColor: AppColors.inkLight,
                 indicatorColor: AppColors.green,
                 indicatorWeight: 3,
-                labelStyle:
-                    const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
                 tabs: <Widget>[
                   const Tab(text: 'Lig'),
                   Tab(
@@ -220,16 +232,21 @@ class _SocialScreenState extends State<SocialScreen>
                           const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 1),
+                              horizontal: 6,
+                              vertical: 1,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.red,
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Text('${_incoming.length}',
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 11)),
+                            child: Text(
+                              '${_incoming.length}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 11,
+                              ),
+                            ),
                           ),
                         ],
                       ],
@@ -313,18 +330,21 @@ class _SocialScreenState extends State<SocialScreen>
 
     // Kendi satırımı henüz sunucuya yazılmamış XP ile tazele.
     final String me = _meId ?? '';
-    final List<LeagueEntry> rows = board.entries
-        .map((LeagueEntry e) => e.userId == me
-            ? LeagueEntry(
-                userId: e.userId,
-                nickname: e.nickname,
-                xp: gameProgress.weeklyXp,
-                streak: gameProgress.streak,
-                mascot: e.mascot,
-              )
-            : e)
-        .toList()
-      ..sort((LeagueEntry a, LeagueEntry b) => b.xp.compareTo(a.xp));
+    final List<LeagueEntry> rows =
+        board.entries
+            .map(
+              (LeagueEntry e) => e.userId == me
+                  ? LeagueEntry(
+                      userId: e.userId,
+                      nickname: e.nickname,
+                      xp: gameProgress.weeklyXp,
+                      streak: gameProgress.streak,
+                      mascot: e.mascot,
+                    )
+                  : e,
+            )
+            .toList()
+          ..sort((LeagueEntry a, LeagueEntry b) => b.xp.compareTo(a.xp));
 
     return Column(
       children: <Widget>[
@@ -357,17 +377,21 @@ class _SocialScreenState extends State<SocialScreen>
             child: Row(
               children: <Widget>[
                 Icon(
-                    promotion
-                        ? Icons.arrow_upward_rounded
-                        : Icons.arrow_downward_rounded,
-                    size: 14,
-                    color: dark),
+                  promotion
+                      ? Icons.arrow_upward_rounded
+                      : Icons.arrow_downward_rounded,
+                  size: 14,
+                  color: dark,
+                ),
                 const SizedBox(width: 4),
-                Text(promotion ? 'yükselme bölgesi' : 'düşme bölgesi',
-                    style: TextStyle(
-                        color: dark,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 11.5)),
+                Text(
+                  promotion ? 'yükselme bölgesi' : 'düşme bölgesi',
+                  style: TextStyle(
+                    color: dark,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11.5,
+                  ),
+                ),
               ],
             ),
           ),
@@ -380,56 +404,75 @@ class _SocialScreenState extends State<SocialScreen>
   Widget _boardTile(int rank, LeagueEntry p, bool isMe, int total) {
     final bool promo = rank <= League.promotionCount;
     // Düşme bölgesi yalnızca grup yeterince kalabalıksa gösterilir.
-    final bool demo = total > League.promotionCount + League.demotionCount &&
+    final bool demo =
+        total > League.promotionCount + League.demotionCount &&
         rank > total - League.demotionCount;
     final Color medal = switch (rank) {
       1 => AppColors.gold,
       2 => const Color(0xFF9AA5B1),
       3 => const Color(0xFFB07242),
-      _ => promo
-          ? AppColors.greenDark
-          : (demo ? AppColors.redDark : AppColors.inkLight),
+      _ =>
+        promo
+            ? AppColors.greenDark
+            : (demo ? AppColors.redDark : AppColors.inkLight),
     };
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isMe ? AppColors.greenBg.withValues(alpha: 0.5) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isMe ? AppColors.green : AppColors.line,
-          width: isMe ? 2 : 1.5,
+    // Ligdeki herkesin profiline girilebilir.
+    return GestureDetector(
+      onTap: () => _openProfile(p.userId),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isMe ? AppColors.greenBg.withValues(alpha: 0.5) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isMe ? AppColors.green : AppColors.line,
+            width: isMe ? 2 : 1.5,
+          ),
         ),
-      ),
-      child: Row(
-        children: <Widget>[
-          SizedBox(
-            width: 26,
-            child: Text('$rank',
+        child: Row(
+          children: <Widget>[
+            SizedBox(
+              width: 26,
+              child: Text(
+                '$rank',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    fontWeight: FontWeight.w800, fontSize: 16, color: medal)),
-          ),
-          const SizedBox(width: 6),
-          _avatarOf(p.mascot),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _nameOf(
-                nickname: p.nickname, streak: p.streak, isMe: isMe),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: <Widget>[
-              Text('${p.xp} XP',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  color: medal,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            _avatarOf(p.mascot, avatarPath: p.avatarPath),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _nameOf(
+                nickname: p.nickname,
+                streak: p.streak,
+                isMe: isMe,
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: <Widget>[
+                Text(
+                  '${p.xp} XP',
                   style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                      color: AppColors.ink)),
-              const Text('bu hafta',
-                  style: TextStyle(color: AppColors.inkLight, fontSize: 10.5)),
-            ],
-          ),
-        ],
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    color: AppColors.ink,
+                  ),
+                ),
+                const Text(
+                  'bu hafta',
+                  style: TextStyle(color: AppColors.inkLight, fontSize: 10.5),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -482,9 +525,14 @@ class _SocialScreenState extends State<SocialScreen>
   Widget _sectionTitle(String text, {int? badge}) {
     return Row(
       children: <Widget>[
-        Text(text,
-            style: const TextStyle(
-                fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.ink)),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            color: AppColors.ink,
+          ),
+        ),
         if (badge != null) ...<Widget>[
           const SizedBox(width: 8),
           Container(
@@ -493,11 +541,14 @@ class _SocialScreenState extends State<SocialScreen>
               color: AppColors.red,
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Text('$badge',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12)),
+            child: Text(
+              '$badge',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+            ),
           ),
         ],
       ],
@@ -517,7 +568,8 @@ class _SocialScreenState extends State<SocialScreen>
     final int members = board?.entries.length ?? 0;
     final bool promoting = myRank > 0 && myRank <= League.promotionCount;
     // Düşme yalnızca grup kalabalıkken işler.
-    final bool demoting = myRank > 0 &&
+    final bool demoting =
+        myRank > 0 &&
         members > League.promotionCount + League.demotionCount &&
         myRank > members - League.demotionCount;
     return Container(
@@ -531,9 +583,10 @@ class _SocialScreenState extends State<SocialScreen>
         borderRadius: BorderRadius.circular(22),
         boxShadow: <BoxShadow>[
           BoxShadow(
-              color: league.color.withValues(alpha: 0.35),
-              blurRadius: 14,
-              offset: const Offset(0, 5)),
+            color: league.color.withValues(alpha: 0.35),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
         ],
       ),
       child: Column(
@@ -546,19 +599,23 @@ class _SocialScreenState extends State<SocialScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(league.label,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800)),
+                    Text(
+                      league.label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       'Bu hafta ${gameProgress.weeklyXp} XP · '
                       'toplam ${gameProgress.xp} XP',
                       style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600),
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -578,8 +635,8 @@ class _SocialScreenState extends State<SocialScreen>
                   promoting
                       ? Icons.trending_up_rounded
                       : (demoting
-                          ? Icons.trending_down_rounded
-                          : Icons.emoji_events_outlined),
+                            ? Icons.trending_down_rounded
+                            : Icons.emoji_events_outlined),
                   color: Colors.white,
                   size: 18,
                 ),
@@ -589,20 +646,21 @@ class _SocialScreenState extends State<SocialScreen>
                     board == null
                         ? 'Bu hafta bir soru çöz, gruba katıl.'
                         : myRank == 0
-                            ? 'Gruba katıldın, sıralamaya girmek için çöz.'
-                            : promoting
-                                ? '$myRank. sıradasın — ilk ${League.promotionCount} '
-                                    '${next == null ? "zirvede kalır" : "${next.label}'ne çıkar"}!'
-                                : demoting
-                                    ? '$myRank. sıradasın — düşme bölgesindesin, '
-                                        '${league.previous?.label ?? "alt lige"} '
-                                        'düşmemek için çöz!'
-                                    : '$myRank. sıradasın — ilk '
-                                        '${League.promotionCount}\'e girmen lazım.',
+                        ? 'Gruba katıldın, sıralamaya girmek için çöz.'
+                        : promoting
+                        ? '$myRank. sıradasın — ilk ${League.promotionCount} '
+                              '${next == null ? "zirvede kalır" : "${next.label}'ne çıkar"}!'
+                        : demoting
+                        ? '$myRank. sıradasın — düşme bölgesindesin, '
+                              '${league.previous?.label ?? "alt lige"} '
+                              'düşmemek için çöz!'
+                        : '$myRank. sıradasın — ilk '
+                              '${League.promotionCount}\'e girmen lazım.',
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700),
+                      color: Colors.white,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -662,8 +720,10 @@ class _SocialScreenState extends State<SocialScreen>
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
         child: Center(
-          child: Text('Kimse bulunamadı.',
-              style: TextStyle(color: AppColors.inkLight)),
+          child: Text(
+            'Kimse bulunamadı.',
+            style: TextStyle(color: AppColors.inkLight),
+          ),
         ),
       );
     }
@@ -677,14 +737,17 @@ class _SocialScreenState extends State<SocialScreen>
   /// Arama sonucundaki kişi + duruma göre aksiyon.
   Widget _personTile(PublicProfile p) {
     final FriendState state = _stateOf(p.id);
-    return _card(
-      child: Row(
-        children: <Widget>[
-          _avatar(p),
-          const SizedBox(width: 12),
-          Expanded(child: _nameBlock(p)),
-          _actionFor(p, state),
-        ],
+    return GestureDetector(
+      onTap: () => _openProfile(p.id, initial: p),
+      child: _card(
+        child: Row(
+          children: <Widget>[
+            _avatar(p),
+            const SizedBox(width: 12),
+            Expanded(child: _nameBlock(p)),
+            _actionFor(p, state),
+          ],
+        ),
       ),
     );
   }
@@ -699,30 +762,30 @@ class _SocialScreenState extends State<SocialScreen>
     }
     return switch (state) {
       FriendState.none => _pill(
-          label: 'Ekle',
-          icon: Icons.person_add_alt_1_rounded,
-          color: AppColors.green,
-          onTap: () => _act(p.id, () => socialRepository.sendRequest(p.id)),
-        ),
+        label: 'Ekle',
+        icon: Icons.person_add_alt_1_rounded,
+        color: AppColors.green,
+        onTap: () => _act(p.id, () => socialRepository.sendRequest(p.id)),
+      ),
       FriendState.outgoing => _pill(
-          label: 'İstek gönderildi',
-          color: AppColors.inkLight,
-          filled: false,
-          onTap: () => _act(p.id, () => socialRepository.removeRelation(p.id)),
-        ),
+        label: 'İstek gönderildi',
+        color: AppColors.inkLight,
+        filled: false,
+        onTap: () => _act(p.id, () => socialRepository.removeRelation(p.id)),
+      ),
       FriendState.incoming => _pill(
-          label: 'Kabul et',
-          icon: Icons.check_rounded,
-          color: AppColors.blue,
-          onTap: () => _act(p.id, () => socialRepository.acceptRequest(p.id)),
-        ),
+        label: 'Kabul et',
+        icon: Icons.check_rounded,
+        color: AppColors.blue,
+        onTap: () => _act(p.id, () => socialRepository.acceptRequest(p.id)),
+      ),
       FriendState.friends => _pill(
-          label: 'Arkadaşsınız',
-          icon: Icons.check_circle_rounded,
-          color: AppColors.green,
-          filled: false,
-          onTap: null,
-        ),
+        label: 'Arkadaşsınız',
+        icon: Icons.check_circle_rounded,
+        color: AppColors.green,
+        filled: false,
+        onTap: null,
+      ),
     };
   }
 
@@ -738,9 +801,10 @@ class _SocialScreenState extends State<SocialScreen>
           Expanded(child: _nameBlock(p)),
           if (busy)
             const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2))
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
           else ...<Widget>[
             IconButton(
               icon: const Icon(Icons.close_rounded, color: AppColors.inkLight),
@@ -809,67 +873,77 @@ class _SocialScreenState extends State<SocialScreen>
       3 => const Color(0xFFB07242),
       _ => AppColors.inkLight,
     };
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isMe ? AppColors.greenBg.withValues(alpha: 0.5) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isMe ? AppColors.green : AppColors.line,
-          width: isMe ? 2 : 1.5,
-        ),
-      ),
-      child: Row(
-        children: <Widget>[
-          SizedBox(
-            width: 26,
-            child: Text(
-              '$rank',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontWeight: FontWeight.w800, fontSize: 16, color: medal),
-            ),
+    // Arkadaşların profiline dokunarak girilebilir.
+    return GestureDetector(
+      onTap: () => _openProfile(p.id, initial: p),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isMe ? AppColors.greenBg.withValues(alpha: 0.5) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isMe ? AppColors.green : AppColors.line,
+            width: isMe ? 2 : 1.5,
           ),
-          const SizedBox(width: 6),
-          _avatar(p),
-          const SizedBox(width: 12),
-          Expanded(child: _nameBlock(p, isMe: isMe)),
-          Text('${p.xp} XP',
-              style: const TextStyle(
+        ),
+        child: Row(
+          children: <Widget>[
+            SizedBox(
+              width: 26,
+              child: Text(
+                '$rank',
+                textAlign: TextAlign.center,
+                style: TextStyle(
                   fontWeight: FontWeight.w800,
-                  fontSize: 14,
-                  color: AppColors.ink)),
-        ],
+                  fontSize: 16,
+                  color: medal,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            _avatar(p),
+            const SizedBox(width: 12),
+            Expanded(child: _nameBlock(p, isMe: isMe)),
+            Text(
+              '${p.xp} XP',
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 14,
+                color: AppColors.ink,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   // --- Ortak parçalar ---
 
-  Widget _avatar(PublicProfile p) => _avatarOf(p.mascot);
+  Widget _avatar(PublicProfile p) =>
+      _avatarOf(p.mascot, avatarPath: p.avatarPath);
 
-  Widget _avatarOf(Mascot? m) {
-    final Color c = m?.color ?? AppColors.purple;
-    return Container(
-      width: 42,
-      height: 42,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: c.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(12),
+  Widget _avatarOf(Mascot? m, {String? avatarPath}) =>
+      UserAvatar(size: 42, mascot: m, avatarPath: avatarPath);
+
+  /// Bir kullanıcının açık profilini açar (kendine dokunmak bir şey yapmaz).
+  void _openProfile(String userId, {PublicProfile? initial}) {
+    if (userId == _meId) return;
+    sound.tap();
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => PublicProfileScreen(userId: userId, initial: initial),
       ),
-      // Maskot görselleri eklenince buradaki emoji değişecek.
-      child: Text(m?.emoji ?? '🐻', style: const TextStyle(fontSize: 20)),
     );
   }
 
   Widget _nameBlock(PublicProfile p, {bool isMe = false}) => _nameOf(
-        nickname: p.nickname,
-        league: p.league,
-        streak: p.streak,
-        isMe: isMe,
-      );
+    nickname: p.nickname,
+    league: p.league,
+    streak: p.streak,
+    isMe: isMe,
+  );
 
   Widget _nameOf({
     required String nickname,
@@ -888,9 +962,10 @@ class _SocialScreenState extends State<SocialScreen>
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14.5,
-                    color: AppColors.ink),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14.5,
+                  color: AppColors.ink,
+                ),
               ),
             ),
             if (isMe) ...<Widget>[
@@ -901,11 +976,14 @@ class _SocialScreenState extends State<SocialScreen>
                   color: AppColors.green,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Text('sen',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 10)),
+                child: const Text(
+                  'sen',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 10,
+                  ),
+                ),
               ),
             ],
           ],
@@ -916,16 +994,18 @@ class _SocialScreenState extends State<SocialScreen>
             if (league != null) ...<Widget>[
               Text(league.emoji, style: const TextStyle(fontSize: 12)),
               const SizedBox(width: 4),
-              Text(league.label,
-                  style: const TextStyle(
-                      color: AppColors.inkLight, fontSize: 12)),
+              Text(
+                league.label,
+                style: const TextStyle(color: AppColors.inkLight, fontSize: 12),
+              ),
             ],
             if (streak > 0) ...<Widget>[
               if (league != null) const SizedBox(width: 8),
               const Text('🔥', style: TextStyle(fontSize: 12)),
-              Text('$streak',
-                  style: const TextStyle(
-                      color: AppColors.inkLight, fontSize: 12)),
+              Text(
+                '$streak',
+                style: const TextStyle(color: AppColors.inkLight, fontSize: 12),
+              ),
             ],
           ],
         ),
@@ -973,11 +1053,14 @@ class _SocialScreenState extends State<SocialScreen>
               Icon(icon, size: 15, color: filled ? Colors.white : color),
               const SizedBox(width: 4),
             ],
-            Text(label,
-                style: TextStyle(
-                    color: filled ? Colors.white : color,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12.5)),
+            Text(
+              label,
+              style: TextStyle(
+                color: filled ? Colors.white : color,
+                fontWeight: FontWeight.w800,
+                fontSize: 12.5,
+              ),
+            ),
           ],
         ),
       ),

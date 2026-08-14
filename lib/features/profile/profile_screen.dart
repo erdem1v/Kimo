@@ -1,8 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../data/auth_repository.dart';
 import '../../data/moderation_repository.dart';
 import '../../data/mock_data.dart';
+import '../../data/social_repository.dart';
 import '../../models/models.dart';
 import '../../services/notification_service.dart';
 import '../../services/push_service.dart';
@@ -10,9 +13,12 @@ import '../../services/sound_service.dart';
 import '../../services/supabase_config.dart';
 import '../../services/system_settings.dart';
 import '../../state/game_progress.dart';
+import '../../state/refresh_bus.dart';
 import '../../state/user_profile.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_widgets.dart';
+import '../../widgets/user_avatar.dart';
+import '../social/public_profile_screen.dart';
 import '../../models/mascot.dart';
 import '../../models/social.dart';
 import '../admin/all_questions_screen.dart';
@@ -30,6 +36,9 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isAdmin = false;
+  int _friendCount = 0;
+  bool _uploadingAvatar = false;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -38,7 +47,118 @@ class _ProfileScreenState extends State<ProfileScreen> {
       moderationRepository.isAdmin().then((bool v) {
         if (mounted && v) setState(() => _isAdmin = true);
       });
+      _loadFriendCount();
+      refreshBus.addListener(_loadFriendCount);
     }
+  }
+
+  @override
+  void dispose() {
+    refreshBus.removeListener(_loadFriendCount);
+    super.dispose();
+  }
+
+  /// Arkadaş sayısı kendi açık profilimden okunur (görünüm sayıyor).
+  Future<void> _loadFriendCount() async {
+    final PublicProfile? me = await socialRepository.myProfile();
+    if (mounted && me != null) setState(() => _friendCount = me.friendCount);
+  }
+
+  /// Profil fotoğrafı seç → yükle → profile yaz.
+  Future<void> _pickAvatar(ImageSource source) async {
+    try {
+      final XFile? file = await _picker.pickImage(
+        source: source,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+      if (file == null) return;
+      final Uint8List bytes = await file.readAsBytes();
+      if (!mounted) return;
+      setState(() => _uploadingAvatar = true);
+      final String? path = await socialRepository.uploadAvatar(bytes);
+      if (path != null) await userProfile.setAvatarPath(path);
+      if (!mounted) return;
+      setState(() => _uploadingAvatar = false);
+      if (path == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Fotoğraf yüklenemedi. Tekrar dene.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
+  }
+
+  Future<void> _removeAvatar() async {
+    await socialRepository.removeAvatar();
+    await userProfile.setAvatarPath(null);
+    if (mounted) setState(() {});
+  }
+
+  /// Fotoğraf kaynağı seçimi (kamera / galeri / kaldır).
+  void _avatarSheet() {
+    sound.tap();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (BuildContext ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const SizedBox(height: 12),
+            const Text(
+              'Profil fotoğrafı',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(
+                Icons.photo_camera_rounded,
+                color: AppColors.purple,
+              ),
+              title: const Text('Fotoğraf çek'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _pickAvatar(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.photo_library_rounded,
+                color: AppColors.blue,
+              ),
+              title: const Text('Galeriden seç'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _pickAvatar(ImageSource.gallery);
+              },
+            ),
+            if (userProfile.avatarPath != null)
+              ListTile(
+                leading: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: AppColors.red,
+                ),
+                title: const Text('Fotoğrafı kaldır'),
+                subtitle: const Text(
+                  'Koçunun simgesi görünür',
+                  style: TextStyle(fontSize: 12),
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _removeAvatar();
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -56,12 +176,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
             children: <Widget>[
               _header(),
-              const SizedBox(height: 20),
-              _levelCard(),
+              const SizedBox(height: 22),
+              ProfileStatsRow(
+                xp: gameProgress.xp,
+                streak: gameProgress.currentStreak,
+                friends: _friendCount,
+              ),
               const SizedBox(height: 16),
-              _statsRow(),
-              const SizedBox(height: 16),
-              _leagueCard(),
+              LeagueBanner(league: gameProgress.league, xp: gameProgress.xp),
               const SizedBox(height: 24),
               const SectionTitle('Rozetler'),
               const SizedBox(height: 12),
@@ -94,197 +216,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _header() {
-    return Row(
+    return Column(
       children: <Widget>[
-        Container(
-          width: 64,
-          height: 64,
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            color: AppColors.greenBg,
-            shape: BoxShape.circle,
-          ),
-          child: Text(
-            userProfile.mascot?.emoji ?? '🎓',
-            style: const TextStyle(fontSize: 30),
-          ),
-        ),
-        const SizedBox(width: 14),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              userProfile.nickname ?? 'Öğrenci',
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.gold.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '⚡ Seviye ${gameProgress.level}',
-                style: const TextStyle(
-                  color: AppColors.goldDark,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _levelCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.line, width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        // Fotoğrafa dokununca değiştirme sayfası açılır.
+        GestureDetector(
+          onTap: _uploadingAvatar ? null : _avatarSheet,
+          child: Stack(
+            alignment: Alignment.bottomRight,
             children: <Widget>[
-              const Text(
-                'Seviye ilerlemesi',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+              UserAvatar(
+                size: 104,
+                avatarPath: userProfile.avatarPath,
+                mascot: userProfile.mascot,
               ),
-              Text(
-                '${gameProgress.xpIntoLevel} / ${GameProgress.xpPerLevel} XP',
-                style: const TextStyle(
-                  color: AppColors.inkLight,
-                  fontWeight: FontWeight.w700,
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.purple,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2.5),
                 ),
+                child: _uploadingAvatar
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.photo_camera_rounded,
+                        size: 14,
+                        color: Colors.white,
+                      ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          RoundedProgressBar(
-            value: gameProgress.levelProgress,
-            color: AppColors.gold,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Seviye ${gameProgress.level + 1}\'e az kaldı!',
-            style: const TextStyle(color: AppColors.inkLight, fontSize: 13),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _statsRow() {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: _statCard(
-            '🔥',
-            '${gameProgress.currentStreak}',
-            'Gün seri',
-            AppColors.orange,
-          ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _statCard(
-            '💎',
-            '${gameProgress.gems}',
-            'Elmas',
-            AppColors.blue,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _statCard(
-            '❤️',
-            '${gameProgress.hearts}',
-            'Can',
-            AppColors.red,
-          ),
+        const SizedBox(height: 12),
+        Text(
+          userProfile.nickname ?? 'Öğrenci',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
         ),
       ],
-    );
-  }
-
-  Widget _statCard(String emoji, String value, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: <Widget>[
-          Text(emoji, style: const TextStyle(fontSize: 24)),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
-          ),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: AppColors.inkLight),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _leagueCard() {
-    // Lig sunucudan gelir: her hafta grubunda ilk 5'e girersen yükselirsin.
-    final League league = gameProgress.league;
-    final League? next = league.next;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: <Color>[league.color, league.color.withValues(alpha: 0.72)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: <Widget>[
-          Text(league.emoji, style: const TextStyle(fontSize: 40)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  league.label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  next == null
-                      ? '${gameProgress.xp} XP · en üst lig 👑'
-                      : '${gameProgress.xp} XP · grubunda ilk '
-                            '${League.promotionCount} → ${next.label}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 

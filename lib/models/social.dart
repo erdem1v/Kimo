@@ -12,28 +12,28 @@ enum League {
   efsane;
 
   String get label => switch (this) {
-        League.bronz => 'Bronz Ligi',
-        League.gumus => 'Gümüş Ligi',
-        League.altin => 'Altın Ligi',
-        League.elmas => 'Elmas Ligi',
-        League.efsane => 'Efsane Ligi',
-      };
+    League.bronz => 'Bronz Ligi',
+    League.gumus => 'Gümüş Ligi',
+    League.altin => 'Altın Ligi',
+    League.elmas => 'Elmas Ligi',
+    League.efsane => 'Efsane Ligi',
+  };
 
   String get emoji => switch (this) {
-        League.bronz => '🥉',
-        League.gumus => '🥈',
-        League.altin => '🥇',
-        League.elmas => '💎',
-        League.efsane => '👑',
-      };
+    League.bronz => '🥉',
+    League.gumus => '🥈',
+    League.altin => '🥇',
+    League.elmas => '💎',
+    League.efsane => '👑',
+  };
 
   Color get color => switch (this) {
-        League.bronz => const Color(0xFFB07242),
-        League.gumus => const Color(0xFF9AA5B1),
-        League.altin => AppColors.gold,
-        League.elmas => AppColors.cyan,
-        League.efsane => AppColors.purple,
-      };
+    League.bronz => const Color(0xFFB07242),
+    League.gumus => const Color(0xFF9AA5B1),
+    League.altin => AppColors.gold,
+    League.elmas => AppColors.cyan,
+    League.efsane => AppColors.purple,
+  };
 
   /// Sıralamada kaçıncıya kadar üst lige çıkılır.
   static const int promotionCount = 5;
@@ -46,39 +46,38 @@ enum League {
 
   /// Bir alt lig (en alttaysa null).
   League? get previous => switch (this) {
-        League.bronz => null,
-        League.gumus => League.bronz,
-        League.altin => League.gumus,
-        League.elmas => League.altin,
-        League.efsane => League.elmas,
-      };
+    League.bronz => null,
+    League.gumus => League.bronz,
+    League.altin => League.gumus,
+    League.elmas => League.altin,
+    League.efsane => League.elmas,
+  };
 
   /// Bir sonraki lig (en üstteyse null).
   League? get next => switch (this) {
-        League.bronz => League.gumus,
-        League.gumus => League.altin,
-        League.altin => League.elmas,
-        League.elmas => League.efsane,
-        League.efsane => null,
-      };
+    League.bronz => League.gumus,
+    League.gumus => League.altin,
+    League.altin => League.elmas,
+    League.elmas => League.efsane,
+    League.efsane => null,
+  };
 
   /// Veritabanındaki değer (profiles.league).
   String get dbValue => switch (this) {
-        League.bronz => 'bronz',
-        League.gumus => 'gumus',
-        League.altin => 'altin',
-        League.elmas => 'elmas',
-        League.efsane => 'efsane',
-      };
+    League.bronz => 'bronz',
+    League.gumus => 'gumus',
+    League.altin => 'altin',
+    League.elmas => 'elmas',
+    League.efsane => 'efsane',
+  };
 
   static League fromDb(String? value) => switch (value) {
-        'gumus' => League.gumus,
-        'altin' => League.altin,
-        'elmas' => League.elmas,
-        'efsane' => League.efsane,
-        _ => League.bronz,
-      };
-
+    'gumus' => League.gumus,
+    'altin' => League.altin,
+    'elmas' => League.elmas,
+    'efsane' => League.efsane,
+    _ => League.bronz,
+  };
 }
 
 /// Lig grubundaki bir oyuncu (haftalık XP'ye göre sıralanır).
@@ -89,6 +88,7 @@ class LeagueEntry {
     required this.xp,
     required this.streak,
     this.mascot,
+    this.avatarPath,
   });
 
   final String userId;
@@ -97,13 +97,17 @@ class LeagueEntry {
   final int streak;
   final Mascot? mascot;
 
+  /// Storage'daki profil fotoğrafının yolu (yoksa maskot simgesi gösterilir).
+  final String? avatarPath;
+
   factory LeagueEntry.fromRow(Map<String, dynamic> row) => LeagueEntry(
-        userId: row['user_id'] as String,
-        nickname: (row['nickname'] as String?) ?? 'Öğrenci',
-        xp: (row['xp'] as int?) ?? 0,
-        streak: (row['streak'] as int?) ?? 0,
-        mascot: Mascot.fromDb(row['mascot'] as String?),
-      );
+    userId: row['user_id'] as String,
+    nickname: (row['nickname'] as String?) ?? 'Öğrenci',
+    xp: (row['xp'] as int?) ?? 0,
+    streak: (row['streak'] as int?) ?? 0,
+    mascot: Mascot.fromDb(row['mascot'] as String?),
+    avatarPath: row['avatar_path'] as String?,
+  );
 }
 
 /// Kullanıcının bu haftaki lig grubu.
@@ -143,6 +147,8 @@ class PublicProfile {
     this.weeklyXp = 0,
     this.mascot,
     this.league = League.bronz,
+    this.avatarPath,
+    this.friendCount = 0,
   });
 
   final String id;
@@ -157,15 +163,23 @@ class PublicProfile {
   /// Ligi sunucu belirler (haftalık sıralamayla değişir).
   final League league;
 
+  /// Storage'daki profil fotoğrafının yolu (yoksa maskot simgesi gösterilir).
+  final String? avatarPath;
+
+  /// Kabul edilmiş arkadaşlık sayısı.
+  final int friendCount;
+
   factory PublicProfile.fromRow(Map<String, dynamic> row) => PublicProfile(
-        id: row['id'] as String,
-        nickname: (row['nickname'] as String?) ?? 'Öğrenci',
-        xp: (row['xp'] as int?) ?? 0,
-        streak: (row['streak'] as int?) ?? 0,
-        weeklyXp: (row['weekly_xp'] as int?) ?? 0,
-        mascot: Mascot.fromDb(row['mascot'] as String?),
-        league: League.fromDb(row['league'] as String?),
-      );
+    id: row['id'] as String,
+    nickname: (row['nickname'] as String?) ?? 'Öğrenci',
+    xp: (row['xp'] as int?) ?? 0,
+    streak: (row['streak'] as int?) ?? 0,
+    weeklyXp: (row['weekly_xp'] as int?) ?? 0,
+    mascot: Mascot.fromDb(row['mascot'] as String?),
+    league: League.fromDb(row['league'] as String?),
+    avatarPath: row['avatar_path'] as String?,
+    friendCount: (row['friend_count'] as int?) ?? 0,
+  );
 }
 
 /// Bana göre bir kullanıcının arkadaşlık durumu.
@@ -189,10 +203,10 @@ class Friendship {
   final bool accepted;
 
   factory Friendship.fromRow(Map<String, dynamic> row) => Friendship(
-        requesterId: row['requester_id'] as String,
-        addresseeId: row['addressee_id'] as String,
-        accepted: row['status'] == 'accepted',
-      );
+    requesterId: row['requester_id'] as String,
+    addresseeId: row['addressee_id'] as String,
+    accepted: row['status'] == 'accepted',
+  );
 
   /// [me] dışındaki taraf.
   String otherId(String me) => requesterId == me ? addresseeId : requesterId;
