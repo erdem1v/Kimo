@@ -3,12 +3,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'services/notification_service.dart';
+import 'services/push_service.dart';
 import 'services/supabase_config.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Bildirim altyapısı (izin ayrıca istenir; burada yalnızca hazırlanır).
   await notifications.init();
+  await push.init();
   // Anahtarlar tanımlıysa Supabase'i başlat; değilse uygulama mock modda açılır.
   if (SupabaseConfig.isConfigured) {
     await Supabase.initialize(

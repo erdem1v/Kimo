@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/social_repository.dart';
 import '../../models/social.dart';
 import '../../services/sound_service.dart';
+import '../../services/push_service.dart';
 import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
 import '../../state/refresh_bus.dart';
@@ -34,6 +35,8 @@ class _HomeShellState extends State<HomeShell> {
     if (SupabaseConfig.isConfigured) {
       userProfile.loadFromAuth();
       _bootstrapSocial();
+      // Bu cihazı bildirim için kaydet (oturum açıkken).
+      push.registerDevice();
     }
   }
 

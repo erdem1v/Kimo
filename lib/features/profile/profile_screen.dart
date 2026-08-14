@@ -5,6 +5,7 @@ import '../../data/moderation_repository.dart';
 import '../../data/mock_data.dart';
 import '../../models/models.dart';
 import '../../services/notification_service.dart';
+import '../../services/push_service.dart';
 import '../../services/sound_service.dart';
 import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
@@ -540,7 +541,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: () => authRepository.signOut(),
+        onPressed: () async {
+          // Bu cihazın bildirim kaydını sil, sonra çık: başkasının
+          // bildirimleri bu telefona düşmesin.
+          await push.unregisterDevice();
+          await notifications.cancelAll();
+          await authRepository.signOut();
+        },
         icon: const Icon(Icons.logout_rounded, color: AppColors.red),
         label: const Text('Çıkış yap',
             style:
