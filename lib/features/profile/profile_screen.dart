@@ -19,6 +19,7 @@ import '../admin/all_questions_screen.dart';
 import '../admin/moderation_screen.dart';
 import '../onboarding/exam_year_sheet.dart';
 import '../onboarding/mascot_sheet.dart';
+import '../onboarding/onboarding_flow.dart';
 
 /// Profil / oyunlaştırma vitrini: seviye, seri, lig ve rozetler.
 class ProfileScreen extends StatefulWidget {
@@ -77,6 +78,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _shareConsentTile(),
                 const SizedBox(height: 12),
                 _curriculumTile(),
+                const SizedBox(height: 12),
+                _introTile(),
                 if (_isAdmin) ...<Widget>[
                   const SizedBox(height: 12),
                   _moderationTile(),
@@ -622,6 +625,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
       },
+    );
+  }
+
+  /// Karşılama akışı yalnızca ilk girişte çıkar; buradan tekrar izlenebilir.
+  /// (Kimo'nun tanıtımını görmek için yeni hesap açmak gerekmesin.)
+  Widget _introTile() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F7F7),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: ListTile(
+        leading: const Text('🐻', style: TextStyle(fontSize: 22)),
+        title: const Text(
+          'Kimo\'yla tanışmayı tekrar izle',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        subtitle: const Text(
+          'Karşılama akışını baştan gör',
+          style: TextStyle(color: AppColors.inkLight, fontSize: 13),
+        ),
+        trailing: const Icon(
+          Icons.chevron_right_rounded,
+          color: AppColors.inkLight,
+        ),
+        onTap: () {
+          sound.tap();
+          Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              builder: (BuildContext ctx) =>
+                  OnboardingFlow(onDone: () => Navigator.of(ctx).pop()),
+            ),
+          );
+        },
+      ),
     );
   }
 

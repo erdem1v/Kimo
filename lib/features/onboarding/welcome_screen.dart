@@ -43,19 +43,29 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      'Yanlış yaptığın soruyu çek, gerisini bize bırak.',
+                      'Yanlış yaptığın soruyu çek, gerisini Kimo\'ya bırak.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: AppColors.inkLight, fontSize: 15),
                     ),
                     const SizedBox(height: 26),
-                    _bullet('📸', 'Soruyu çek', 'AI şıkları, dersi ve konuyu çıkarsın.',
-                        AppColors.purple),
-                    _bullet('🔁', 'Doğru zamanda tekrar',
-                        '1 → 3 → 7 → 30 gün aralıklarla karşına gelsin.',
-                        AppColors.blue),
-                    _bullet('🏆', 'Seri ve XP kazan',
-                        'Her gün küçük hedefler, kalıcı öğrenme.',
-                        AppColors.gold),
+                    _bullet(
+                      '📸',
+                      'Sen çek, gerisi bende',
+                      'Şıkları, dersi ve konuyu ben bulurum.',
+                      AppColors.purple,
+                    ),
+                    _bullet(
+                      '🔁',
+                      'Tam unutacakken çıkarım',
+                      '1 → 3 → 7 → 30 gün: soru peşini bırakmaz.',
+                      AppColors.blue,
+                    ),
+                    _bullet(
+                      '🏆',
+                      'Seri, XP ve lig',
+                      'Arkadaşlarınla aynı ligde yarışırsın.',
+                      AppColors.gold,
+                    ),
                   ],
                 ),
               ),
@@ -74,8 +84,9 @@ class WelcomeScreen extends StatelessWidget {
                     child: const Text(
                       'Zaten hesabım var',
                       style: TextStyle(
-                          color: AppColors.blueDark,
-                          fontWeight: FontWeight.w700),
+                        color: AppColors.blueDark,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ],
@@ -111,13 +122,16 @@ class WelcomeScreen extends StatelessWidget {
           Text('🐻', style: TextStyle(fontSize: 76)),
           SizedBox(height: 8),
           Text(
-            'AI YKS Coach',
+            'Merhaba, ben Kimo!',
             style: TextStyle(
-                color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800),
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           SizedBox(height: 2),
           Text(
-            'Kişisel hata bankan',
+            'AI YKS Coach\'un ayısı ve senin koçun 🐾',
             style: TextStyle(color: Colors.white70, fontSize: 14),
           ),
         ],
@@ -151,15 +165,23 @@ class WelcomeScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                        color: AppColors.ink)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                    color: AppColors.ink,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(subtitle,
-                    style: const TextStyle(
-                        color: AppColors.inkLight, fontSize: 13, height: 1.25)),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: AppColors.inkLight,
+                    fontSize: 13,
+                    height: 1.25,
+                  ),
+                ),
               ],
             ),
           ),
