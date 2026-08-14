@@ -21,6 +21,7 @@ class OnboardingFlow extends StatefulWidget {
 }
 
 enum _Step {
+  hello,
   nickname,
   examYear,
   mascot,
@@ -52,6 +53,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     _year = userProfile.examYear;
     _mascot = userProfile.mascot;
     _steps = <_Step>[
+      // Kimo önce kendini tanıtır; sorular ondan sonra ve onun ağzından gelir.
+      _Step.hello,
       // Takma ad kayıtta alınır; yoksa (eski hesap) burada sorulur.
       if (userProfile.nickname == null) _Step.nickname,
       _Step.examYear,
@@ -77,13 +80,31 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   _Step get _current => _steps[_index];
 
+  /// Kimo'nun rengi: karakter seçilince onun tonuna bürünür.
+  Color get _kimoColor =>
+      (_mascot ?? userProfile.mascot)?.color ?? AppColors.purple;
+
+  /// Kimo'nun yüzü: karakter seçilene kadar ayının kendisi.
+  String get _kimoFace => (_mascot ?? userProfile.mascot)?.emoji ?? '🐻';
+
+  String get _buttonLabel {
+    if (_saving) return 'Kaydediliyor...';
+    if (_index == _steps.length - 1) return 'BAŞLA 🎉';
+    return switch (_current) {
+      _Step.hello => 'MERHABA KİMO 👋',
+      _Step.mascot => 'BU KAFA İYİ',
+      _Step.shareConsent => 'DEVAM',
+      _ => 'DEVAM',
+    };
+  }
+
   bool get _canContinue => switch (_current) {
-        _Step.nickname => _nickname.text.trim().length >= 2,
-        _Step.examYear => _year != null,
-        _Step.mascot => _mascot != null,
-        _Step.notifications => _notify != null,
-        _ => true,
-      };
+    _Step.nickname => _nickname.text.trim().length >= 2,
+    _Step.examYear => _year != null,
+    _Step.mascot => _mascot != null,
+    _Step.notifications => _notify != null,
+    _ => true,
+  };
 
   Future<void> _next() async {
     if (_saving) return;
@@ -101,7 +122,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         case _Step.notifications:
           // Sistem izni ancak "evet" dendiyse istenir.
           bool granted = false;
-          if (_notify == true) granted = await notifications.requestPermission();
+          if (_notify == true) {
+            granted = await notifications.requestPermission();
+          }
           await userProfile.setNotifyEnabled(granted);
         case _Step.shareConsent:
           await userProfile.setShareConsent(_consent);
@@ -156,17 +179,13 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               child: PageView(
                 controller: _pager,
                 physics: const NeverScrollableScrollPhysics(),
-                children: <Widget>[
-                  for (final _Step s in _steps) _page(s),
-                ],
+                children: <Widget>[for (final _Step s in _steps) _page(s)],
               ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
               child: GameButton(
-                label: _saving
-                    ? 'Kaydediliyor...'
-                    : (_index == _steps.length - 1 ? 'BAŞLA 🎉' : 'DEVAM'),
+                label: _buttonLabel,
                 enabled: _canContinue && !_saving,
                 onPressed: _next,
               ),
@@ -194,51 +213,172 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                 value: (_index + 1) / _steps.length,
                 minHeight: 8,
                 backgroundColor: AppColors.line,
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(AppColors.green),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.green,
+                ),
               ),
             ),
           ),
           const SizedBox(width: 12),
-          Text('${_index + 1}/${_steps.length}',
-              style: const TextStyle(
-                  fontWeight: FontWeight.w800, color: AppColors.inkLight)),
+          Text(
+            '${_index + 1}/${_steps.length}',
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: AppColors.inkLight,
+            ),
+          ),
         ],
       ),
     );
   }
 
+  /// Kimo'nun konuşma balonu. Akıştaki her soru bunun altından çıkar; böylece
+  /// kullanıcı bir forma değil, bir ayıyla sohbete girdiğini hisseder.
+  Widget _kimoSays(String text) {
+    final Color c = _kimoColor;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            width: 46,
+            height: 46,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: c.withValues(alpha: 0.16),
+              shape: BoxShape.circle,
+            ),
+            child: Text(_kimoFace, style: const TextStyle(fontSize: 24)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(14, 11, 14, 12),
+              decoration: BoxDecoration(
+                color: c.withValues(alpha: 0.09),
+                border: Border.all(color: c.withValues(alpha: 0.28)),
+                // Sol üst köşe küçük: balonun "kuyruğu" hissi.
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(4),
+                  topRight: Radius.circular(18),
+                  bottomLeft: Radius.circular(18),
+                  bottomRight: Radius.circular(18),
+                ),
+              ),
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  height: 1.35,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.ink,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Tanışma: Kimo kendini tanıtır, akışın geri kalanının sesi burada kurulur.
+  Widget _helloPage() {
+    return _pad(
+      SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            const SizedBox(height: 12),
+            TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0.6, end: 1),
+              duration: const Duration(milliseconds: 520),
+              curve: Curves.elasticOut,
+              builder: (BuildContext context, double v, Widget? child) =>
+                  Transform.scale(scale: v, child: child),
+              child: Container(
+                width: 128,
+                height: 128,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.purple.withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: const Text('🐻', style: TextStyle(fontSize: 62)),
+              ),
+            ),
+            const SizedBox(height: 22),
+            const Text(
+              'Ben Kimo!',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                color: AppColors.ink,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Bir ayıyım, biraz da koçun. İşim gücüm senin yanlışların:\n'
+              'onları toplarım, saklarım ve tam unutmak üzereyken\n'
+              'karşına çıkarırım. 😈',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.inkLight,
+                fontSize: 15,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 20),
+            _kimoSays(
+              'Başlamadan önce üç beş şey soracağım. Uzun sürmez, '
+              'söz veriyorum — ayı sözü. 🐾',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _page(_Step step) => switch (step) {
-        _Step.nickname => _nicknamePage(),
-        _Step.examYear => _examYearPage(),
-        _Step.mascot => _mascotPage(),
-        _Step.howPhoto => _infoPage(
-            emoji: '📸',
-            color: AppColors.purple,
-            title: 'Hatanı fotoğrafla',
-            body: 'Yanlış yaptığın soruyu çek. AI şıkları okur, dersini ve '
-                'konusunu senin için belirler. Sen sadece doğru şıkkı '
-                'işaretlersin.',
-          ),
-        _Step.howReview => _infoPage(
-            emoji: '🔁',
-            color: AppColors.blue,
-            title: 'Doğru zamanda karşına çıksın',
-            body: 'Her soru 1 → 3 → 7 → 30 gün aralıklarıyla tekrar gelir. '
-                'Bildiklerin seyrekleşir, zorlandıkların sıklaşır. Böylece '
-                'unutmadan öğrenirsin.',
-          ),
-        _Step.howGamify => _infoPage(
-            emoji: '🏆',
-            color: AppColors.gold,
-            title: 'Her gün küçük bir hedef',
-            body: 'Günde 20 tekrar hedefin var. Çözdükçe XP kazanır, serini '
-                'büyütürsün. Hatalarım sekmesinde derslere göre nerede '
-                'zorlandığını görürsün.',
-          ),
-        _Step.shareConsent => _consentPage(),
-        _Step.notifications => _notifyPage(),
-      };
+    _Step.hello => _helloPage(),
+    _Step.nickname => _nicknamePage(),
+    _Step.examYear => _examYearPage(),
+    _Step.mascot => _mascotPage(),
+    _Step.howPhoto => _infoPage(
+      emoji: '📸',
+      color: AppColors.purple,
+      kimo:
+          'Soruları bitirdim, sıra bende: nasıl çalıştığımızı '
+          'anlatayım.',
+      title: 'Sen çek, gerisi bende',
+      body:
+          'Yanlış yaptığın soruyu fotoğrafla. Şıkları ben okurum, '
+          'dersini ve konusunu ben bulurum. Sana kalan tek iş: doğru '
+          'şıkkı işaretlemek.',
+    ),
+    _Step.howReview => _infoPage(
+      emoji: '🔁',
+      color: AppColors.blue,
+      kimo: 'Peki o soruya ne mi oluyor? İşte burada sinsileşiyorum.',
+      title: 'Tam unutacakken karşına çıkarırım',
+      body:
+          'Her soru 1 → 3 → 7 → 30 gün sonra geri gelir. İyi bildiğin '
+          'seyrekleşir, takıldığın peşini bırakmaz. Ezber değil, '
+          'kalıcı öğrenme.',
+    ),
+    _Step.howGamify => _infoPage(
+      emoji: '🏆',
+      color: AppColors.gold,
+      kimo: 'Bir de işin eğlenceli tarafı var. Ben yarışmayı severim.',
+      title: 'Seri, XP ve lig',
+      body:
+          'Her gün küçük bir hedefin olur. Çözdükçe XP kazanır, '
+          'serini büyütür, arkadaşlarınla aynı ligde yarışırsın. '
+          'Bir gün bile atlarsan… serini ben kırmam, sen kırarsın.',
+    ),
+    _Step.shareConsent => _consentPage(),
+    _Step.notifications => _notifyPage(),
+  };
 
   /// Bildirim izni — maskotun ağzından. Sistem penceresi ancak kullanıcı
   /// "Evet, hatırlat" dedikten sonra açılır (soğuk sorulursa reddedilir ve
@@ -251,22 +391,15 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             const SizedBox(height: 8),
-            Center(
-              child: Container(
-                width: 96,
-                height: 96,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: m.color.withValues(alpha: 0.16),
-                  shape: BoxShape.circle,
-                ),
-                child: Text(m.emoji, style: const TextStyle(fontSize: 44)),
-              ),
+            _kimoSays(
+              'Bu kafayla konuşuyorum artık. Peki zamanı gelince seni '
+              'dürteyim mi, yoksa sessiz ayı mı olayım?',
             ),
-            const SizedBox(height: 20),
             _title('Sana hatırlatayım mı?'),
-            _subtitle('Tekrar zamanın geldiğinde ve serin tehlikedeyken '
-                'haber vereyim. Günde en fazla iki kez, gece rahatsız etmem.'),
+            _subtitle(
+              'Tekrar zamanın geldiğinde ve serin tehlikedeyken '
+              'haber veririm. Günde en fazla iki kez — gece uyurum.',
+            ),
             const SizedBox(height: 16),
             // Karakterin sesinden örnek bildirim.
             Container(
@@ -285,16 +418,22 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text(MascotLines.title(NotifyKind.streakRisk),
-                            style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 13,
-                                color: m.color)),
+                        Text(
+                          MascotLines.title(NotifyKind.streakRisk),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                            color: m.color,
+                          ),
+                        ),
                         const SizedBox(height: 2),
                         Text(
                           MascotLines.pick(NotifyKind.streakRisk, m, n: 7),
                           style: const TextStyle(
-                              fontSize: 13, height: 1.3, color: AppColors.ink),
+                            fontSize: 13,
+                            height: 1.3,
+                            color: AppColors.ink,
+                          ),
                         ),
                       ],
                     ),
@@ -357,15 +496,22 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(title,
-                      style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14.5,
-                          color: selected ? color : AppColors.ink)),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14.5,
+                      color: selected ? color : AppColors.ink,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(body,
-                      style: const TextStyle(
-                          color: AppColors.inkLight, fontSize: 12.5)),
+                  Text(
+                    body,
+                    style: const TextStyle(
+                      color: AppColors.inkLight,
+                      fontSize: 12.5,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -398,6 +544,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               ),
             ),
             const SizedBox(height: 20),
+            _kimoSays(
+              'Son bir şey, sonra kapıyı açıyorum. Bu kısmı dikkatli oku, '
+              'ciddi konuşuyorum.',
+            ),
             _title('Soru havuzu'),
             _subtitle(
               'Yüklediğin sorular, diğer öğrencilerin çözebilmesi için ortak '
@@ -405,10 +555,16 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               'herkesin katkısıyla büyür.',
             ),
             const SizedBox(height: 16),
-            _consentBullet('👀', 'Paylaşılan',
-                'Sorunun fotoğrafı, şıkları ve takma adın.'),
-            _consentBullet('🔒', 'Paylaşılmayan',
-                'Notların, hata türün, tekrar durumun ve e-postan.'),
+            _consentBullet(
+              '👀',
+              'Paylaşılan',
+              'Sorunun fotoğrafı, şıkları ve takma adın.',
+            ),
+            _consentBullet(
+              '🔒',
+              'Paylaşılmayan',
+              'Notların, hata türün, tekrar durumun ve e-postan.',
+            ),
             const SizedBox(height: 18),
             GestureDetector(
               onTap: () {
@@ -442,10 +598,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                         'Yüklediğim soruların diğer öğrencilerle '
                         'paylaşılacağını okudum, anladım ve kabul ediyorum.',
                         style: TextStyle(
-                            fontSize: 13.5,
-                            height: 1.35,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.ink),
+                          fontSize: 13.5,
+                          height: 1.35,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.ink,
+                        ),
                       ),
                     ),
                   ],
@@ -458,7 +615,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               'yine de kullanabilirsin. Bu tercihi profilinden '
               'değiştirebilirsin.',
               style: TextStyle(
-                  color: AppColors.inkLight, fontSize: 12, height: 1.3),
+                color: AppColors.inkLight,
+                fontSize: 12,
+                height: 1.3,
+              ),
             ),
             const SizedBox(height: 8),
           ],
@@ -482,7 +642,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                   TextSpan(
                     text: '$title: ',
                     style: const TextStyle(
-                        fontWeight: FontWeight.w800, color: AppColors.ink),
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink,
+                    ),
                   ),
                   TextSpan(
                     text: body,
@@ -505,8 +667,14 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _title('Sana nasıl seslenelim?'),
-          _subtitle('Takma adın uygulamada ve liderlik tablosunda görünecek.'),
+          _kimoSays(
+            'Sana ne diyeyim? "Hey sen" diye seslenmek biraz kaba kaçar.',
+          ),
+          _title('Takma adın ne olsun?'),
+          _subtitle(
+            'Liderlik tablosunda arkadaşların bunu görecek. '
+            'İyi seç, ünlü olabilirsin.',
+          ),
           const SizedBox(height: 24),
           TextField(
             controller: _nickname,
@@ -517,8 +685,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               counterText: '',
               filled: true,
               fillColor: const Color(0xFFF4F4F4),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide.none,
@@ -531,14 +701,19 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   }
 
   Widget _examYearPage() {
-    final String? curr =
-        _year == null ? null : UserProfile.curriculumForYear(_year!);
+    final String? curr = _year == null
+        ? null
+        : UserProfile.curriculumForYear(_year!);
     return _pad(
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          _kimoSays(
+            'Şimdi takvim işi. Hangi yıl gireceğini bilmezsem yanlış '
+            'müfredattan konu sorarım, ikimiz de rezil oluruz.',
+          ),
           _title('YKS\'ye hangi yıl gireceksin?'),
-          _subtitle('Konuları doğru müfredata göre eşleştirmemiz için gerekli.'),
+          _subtitle('Konularını doğru müfredata göre eşleştireceğim.'),
           const SizedBox(height: 24),
           Wrap(
             spacing: 10,
@@ -555,8 +730,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                   ),
                   selectedColor: AppColors.green,
                   backgroundColor: const Color(0xFFF4F4F4),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
                   shape: const StadiumBorder(),
                   side: BorderSide.none,
                   showCheckmark: false,
@@ -573,8 +750,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               ),
               child: Row(
                 children: <Widget>[
-                  const Icon(Icons.info_outline,
-                      size: 16, color: AppColors.blueDark),
+                  const Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: AppColors.blueDark,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -582,9 +762,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                           ? 'Yeni müfredat (Maarif Modeli) konuları kullanılacak.'
                           : 'Mevcut müfredat (2018) konuları kullanılacak.',
                       style: const TextStyle(
-                          color: AppColors.blueDark,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13),
+                        color: AppColors.blueDark,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
@@ -602,9 +783,15 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _title('Koçun kim olsun?'),
-          _subtitle('Bildirimleri ve motivasyon sözlerini o yazacak. '
-              'Sonradan değiştirebilirsin.'),
+          _kimoSays(
+            'Gelelim en eğlenceli soruya: ben hangi kafada olayım? '
+            'Beşi de benim, birini seç.',
+          ),
+          _title('Kimo hangi karakterde olsun?'),
+          _subtitle(
+            'Bildirimleri ve motivasyon sözlerini bu ağızdan '
+            'yazacağım. Sıkılırsan profilden değiştirirsin.',
+          ),
           const SizedBox(height: 16),
           Expanded(
             child: ListView(
@@ -659,22 +846,30 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                   Text(
                     m.label,
                     style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14.5,
-                        color: selected ? m.color : AppColors.ink),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14.5,
+                      color: selected ? m.color : AppColors.ink,
+                    ),
                   ),
                   const SizedBox(height: 2),
-                  Text(m.tagline,
-                      style: const TextStyle(
-                          color: AppColors.inkLight, fontSize: 12.5)),
+                  Text(
+                    m.tagline,
+                    style: const TextStyle(
+                      color: AppColors.inkLight,
+                      fontSize: 12.5,
+                    ),
+                  ),
                   if (selected) ...<Widget>[
                     const SizedBox(height: 6),
-                    Text('“${m.sample}”',
-                        style: TextStyle(
-                            color: m.color,
-                            fontSize: 12.5,
-                            height: 1.25,
-                            fontStyle: FontStyle.italic)),
+                    Text(
+                      '“${m.sample}”',
+                      style: TextStyle(
+                        color: m.color,
+                        fontSize: 12.5,
+                        height: 1.25,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -692,12 +887,14 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     required Color color,
     required String title,
     required String body,
+    String? kimo,
   }) {
     return _pad(
       Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
+          if (kimo != null) _kimoSays(kimo),
           Container(
             width: 120,
             height: 120,
@@ -713,35 +910,47 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
-                fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.ink),
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: AppColors.ink,
+            ),
           ),
           const SizedBox(height: 12),
           Text(
             body,
             textAlign: TextAlign.center,
             style: const TextStyle(
-                color: AppColors.inkLight, fontSize: 15, height: 1.4),
+              color: AppColors.inkLight,
+              fontSize: 15,
+              height: 1.4,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _pad(Widget child) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-        child: child,
-      );
+  Widget _pad(Widget child) =>
+      Padding(padding: const EdgeInsets.fromLTRB(24, 8, 24, 0), child: child);
 
   Widget _title(String text) => Text(
-        text,
-        style: const TextStyle(
-            fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.ink),
-      );
+    text,
+    style: const TextStyle(
+      fontSize: 22,
+      fontWeight: FontWeight.w800,
+      color: AppColors.ink,
+    ),
+  );
 
   Widget _subtitle(String text) => Padding(
-        padding: const EdgeInsets.only(top: 6),
-        child: Text(text,
-            style: const TextStyle(
-                color: AppColors.inkLight, fontSize: 14, height: 1.3)),
-      );
+    padding: const EdgeInsets.only(top: 6),
+    child: Text(
+      text,
+      style: const TextStyle(
+        color: AppColors.inkLight,
+        fontSize: 14,
+        height: 1.3,
+      ),
+    ),
+  );
 }
