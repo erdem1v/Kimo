@@ -95,27 +95,8 @@ class QuestionPoolRepository {
 
   // ------------------------------------------------ arkadaşa soru gönderme
 
-  /// Bu soruyu daha önce kimlere gönderdiğim. Listede tekrar seçilmesinler.
-  Future<Set<String>> alreadySentTo(String mistakeId) async {
-    final String? uid = _client.auth.currentUser?.id;
-    if (uid == null) return <String>{};
-    try {
-      final List<Map<String, dynamic>> rows = await _client
-          .from('question_sends')
-          .select('receiver_id')
-          .eq('sender_id', uid)
-          .eq('mistake_id', mistakeId);
-      return rows
-          .map((Map<String, dynamic> r) => r['receiver_id'] as String)
-          .toSet();
-    } catch (_) {
-      return <String>{};
-    }
-  }
-
   /// Bir soruyu arkadaşlara gönderir. Arkadaşlık kontrolü RLS'te zorunludur.
-  /// Zaten gönderilmiş olanlar hata değildir; ayrıca sayılır ki kullanıcıya
-  /// doğru sebep gösterilebilsin.
+  /// Aynı soru aynı kişiye tekrar gönderilebilir (bkz. 0022 göçü).
   Future<SendResult> sendToFriends({
     required String mistakeId,
     required List<String> receiverIds,
@@ -140,7 +121,8 @@ class QuestionPoolRepository {
         sent++;
       } on PostgrestException catch (e) {
         if (e.code == '23505') {
-          duplicate++; // aynı soru, aynı kişi: hata değil
+          // 0022 göçü çalıştırılmamış eski veritabanlarında hâlâ olabilir.
+          duplicate++;
         } else if (e.code == '42501') {
           error ??= 'Arkadaşlık onaylı değil';
         } else {

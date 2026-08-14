@@ -40,7 +40,6 @@ class _SendSheetState extends State<_SendSheet> {
   final TextEditingController _note = TextEditingController();
   final Set<String> _selected = <String>{};
   List<PublicProfile> _friends = <PublicProfile>[];
-  Set<String> _alreadySent = <String>{};
   bool _loading = true;
   bool _sending = false;
 
@@ -67,15 +66,9 @@ class _SendSheetState extends State<_SendSheet> {
       final List<PublicProfile> people = await socialRepository.profilesByIds(
         ids,
       );
-      // Bu soruyu daha önce kime gönderdiysem işaretlensin; tekrar seçip
-      // "gönderilemedi" hatası almasın.
-      final Set<String> sent = await questionPoolRepository.alreadySentTo(
-        widget.mistakeId,
-      );
       if (!mounted) return;
       setState(() {
         _friends = people;
-        _alreadySent = sent;
         _loading = false;
       });
     } catch (_) {
@@ -208,79 +201,63 @@ class _SendSheetState extends State<_SendSheet> {
 
   Widget _friendTile(PublicProfile p) {
     final bool selected = _selected.contains(p.id);
-    final bool done = _alreadySent.contains(p.id);
     return GestureDetector(
-      onTap: done
-          ? null
-          : () {
-              sound.tap();
-              setState(() {
-                selected ? _selected.remove(p.id) : _selected.add(p.id);
-              });
-            },
-      child: Opacity(
-        opacity: done ? 0.5 : 1,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: selected
-                ? AppColors.green.withValues(alpha: 0.10)
-                : Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: selected ? AppColors.green : AppColors.line,
-              width: selected ? 2 : 1.5,
+      onTap: () {
+        sound.tap();
+        setState(() {
+          selected ? _selected.remove(p.id) : _selected.add(p.id);
+        });
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.green.withValues(alpha: 0.10)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? AppColors.green : AppColors.line,
+            width: selected ? 2 : 1.5,
+          ),
+        ),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 38,
+              height: 38,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: (p.mascot?.color ?? AppColors.purple).withValues(
+                  alpha: 0.16,
+                ),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Text(
+                p.mascot?.emoji ?? '🐻',
+                style: const TextStyle(fontSize: 18),
+              ),
             ),
-          ),
-          child: Row(
-            children: <Widget>[
-              Container(
-                width: 38,
-                height: 38,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: (p.mascot?.color ?? AppColors.purple).withValues(
-                    alpha: 0.16,
-                  ),
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                child: Text(
-                  p.mascot?.emoji ?? '🐻',
-                  style: const TextStyle(fontSize: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                p.nickname,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14.5,
+                  color: AppColors.ink,
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  p.nickname,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14.5,
-                    color: AppColors.ink,
-                  ),
-                ),
-              ),
-              if (done)
-                const Text(
-                  'gönderildi',
-                  style: TextStyle(
-                    color: AppColors.inkLight,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                )
-              else
-                Icon(
-                  selected
-                      ? Icons.check_circle_rounded
-                      : Icons.radio_button_unchecked_rounded,
-                  color: selected ? AppColors.green : AppColors.line,
-                ),
-            ],
-          ),
+            ),
+            Icon(
+              selected
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              color: selected ? AppColors.green : AppColors.line,
+            ),
+          ],
         ),
       ),
     );
