@@ -640,36 +640,40 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   // --- Adımlar ---
 
   Widget _nicknamePage() {
+    // Klavye açılınca yer daralır; sayfa kaydırılabilir olmalı.
     return _pad(
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          _kimoSays('Sana ne diyeyim?\n"Hey sen" demek biraz kaba kaçar.'),
-          _subtitle(
-            'Liderlik tablosunda arkadaşların bunu görecek. '
-            'İyi seç, ünlü olabilirsin.',
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _nickname,
-            textCapitalization: TextCapitalization.words,
-            maxLength: 20,
-            decoration: InputDecoration(
-              hintText: 'Takma adın',
-              counterText: '',
-              filled: true,
-              fillColor: const Color(0xFFF4F4F4),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
+      SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            _kimoSays('Sana ne diyeyim?\n"Hey sen" demek biraz kaba kaçar.'),
+            _subtitle(
+              'Liderlik tablosunda arkadaşların bunu görecek. '
+              'İyi seç, ünlü olabilirsin.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _nickname,
+              textCapitalization: TextCapitalization.words,
+              maxLength: 20,
+              decoration: InputDecoration(
+                hintText: 'Takma adın',
+                counterText: '',
+                filled: true,
+                fillColor: const Color(0xFFF4F4F4),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
@@ -679,73 +683,79 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         ? null
         : UserProfile.curriculumForYear(_year!);
     return _pad(
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          _kimoSays(
-            'YKS\'ye hangi yıl gireceksin?\n'
-            'Yanlış bilirsem yanlış müfredattan\nkonu sorarım, rezil oluruz.',
-          ),
-          _subtitle('Konularını doğru müfredata göre eşleştireceğim.'),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: <Widget>[
-              for (final int y in _years)
-                ChoiceChip(
-                  label: Text('$y'),
-                  selected: _year == y,
-                  onSelected: (_) => setState(() => _year = y),
-                  labelStyle: TextStyle(
-                    color: _year == y ? Colors.white : AppColors.ink,
-                    fontWeight: FontWeight.w800,
+      SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            _kimoSays(
+              'YKS\'ye hangi yıl gireceksin?\n'
+              'Yanlış bilirsem yanlış müfredattan\nkonu sorarım, rezil oluruz.',
+            ),
+            _subtitle('Konularını doğru müfredata göre eşleştireceğim.'),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: <Widget>[
+                for (final int y in _years)
+                  ChoiceChip(
+                    label: Text('$y'),
+                    selected: _year == y,
+                    onSelected: (_) => setState(() => _year = y),
+                    labelStyle: TextStyle(
+                      color: _year == y ? Colors.white : AppColors.ink,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    selectedColor: AppColors.green,
+                    backgroundColor: const Color(0xFFF4F4F4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    shape: const StadiumBorder(),
+                    side: BorderSide.none,
+                    showCheckmark: false,
                   ),
-                  selectedColor: AppColors.green,
-                  backgroundColor: const Color(0xFFF4F4F4),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
-                  ),
-                  shape: const StadiumBorder(),
-                  side: BorderSide.none,
-                  showCheckmark: false,
+              ],
+            ),
+            if (curr != null) ...<Widget>[
+              const SizedBox(height: 18),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
                 ),
-            ],
-          ),
-          if (curr != null) ...<Widget>[
-            const SizedBox(height: 18),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppColors.blueBg,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: <Widget>[
-                  const Icon(
-                    Icons.info_outline,
-                    size: 16,
-                    color: AppColors.blueDark,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      curr == UserProfile.maarif
-                          ? 'Yeni müfredat (Maarif Modeli) konuları kullanılacak.'
-                          : 'Mevcut müfredat (2018) konuları kullanılacak.',
-                      style: const TextStyle(
-                        color: AppColors.blueDark,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
+                decoration: BoxDecoration(
+                  color: AppColors.blueBg,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    const Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: AppColors.blueDark,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        curr == UserProfile.maarif
+                            ? 'Yeni müfredat (Maarif Modeli) konuları kullanılacak.'
+                            : 'Mevcut müfredat (2018) konuları kullanılacak.',
+                        style: const TextStyle(
+                          color: AppColors.blueDark,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+            ],
+            const SizedBox(height: 8),
           ],
-        ],
+        ),
       ),
     );
   }
