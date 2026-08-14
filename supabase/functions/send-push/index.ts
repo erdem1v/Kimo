@@ -88,16 +88,16 @@ Deno.serve(async (req: Request) => {
   try {
     // Yetki: veritabanı tetikleyicisinin bildiği paylaşılan sır.
     const secret = Deno.env.get("PUSH_SECRET");
-    const sent = req.headers.get("x-push-secret");
-    if (!secret || sent !== secret) {
+    const headerSecret = req.headers.get("x-push-secret");
+    if (!secret || headerSecret !== secret) {
       // Sırrı sızdırmadan neyin uyuşmadığını söyle (teşhis için).
       return new Response(
         JSON.stringify({
           error: "yetkisiz",
           sunucuda_sir_var: Boolean(secret),
           sunucudaki_uzunluk: secret?.length ?? 0,
-          gelen_baslik_var: sent !== null,
-          gelen_uzunluk: sent?.length ?? 0,
+          gelen_baslik_var: headerSecret !== null,
+          gelen_uzunluk: headerSecret?.length ?? 0,
         }),
         { status: 401, headers: { "Content-Type": "application/json" } },
       );
