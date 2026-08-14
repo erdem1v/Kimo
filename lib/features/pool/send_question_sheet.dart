@@ -40,6 +40,7 @@ class _SendSheetState extends State<_SendSheet> {
   final TextEditingController _note = TextEditingController();
   final Set<String> _selected = <String>{};
   List<PublicProfile> _friends = <PublicProfile>[];
+  Set<String> _alreadySent = <String>{};
   bool _loading = true;
   bool _sending = false;
 
@@ -63,11 +64,18 @@ class _SendSheetState extends State<_SendSheet> {
           .where((Friendship f) => f.accepted)
           .map((Friendship f) => f.otherId(me))
           .toList();
-      final List<PublicProfile> people =
-          await socialRepository.profilesByIds(ids);
+      final List<PublicProfile> people = await socialRepository.profilesByIds(
+        ids,
+      );
+      // Bu soruyu daha önce kime gönderdiysem işaretlensin; tekrar seçip
+      // "gönderilemedi" hatası almasın.
+      final Set<String> sent = await questionPoolRepository.alreadySentTo(
+        widget.mistakeId,
+      );
       if (!mounted) return;
       setState(() {
         _friends = people;
+        _alreadySent = sent;
         _loading = false;
       });
     } catch (_) {
@@ -79,20 +87,22 @@ class _SendSheetState extends State<_SendSheet> {
   Future<void> _send() async {
     if (_selected.isEmpty || _sending) return;
     setState(() => _sending = true);
-    final int sent = await questionPoolRepository.sendToFriends(
+    final SendResult result = await questionPoolRepository.sendToFriends(
       mistakeId: widget.mistakeId,
       receiverIds: _selected.toList(),
       note: _note.text,
     );
     if (!mounted) return;
     Navigator.of(context).pop();
-    sound.correct();
+    if (result.ok) sound.correct();
+    // "Zaten göndermiştin" bir hata değil: kırmızı yerine nötr göster.
+    final bool failed = !result.ok && result.error != null;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(sent > 0
-            ? '$sent arkadaşına gönderildi 🚀'
-            : 'Gönderilemedi (zaten göndermiş olabilirsin).'),
-        backgroundColor: sent > 0 ? AppColors.green : AppColors.red,
+        content: Text(result.message),
+        backgroundColor: result.ok
+            ? AppColors.green
+            : (failed ? AppColors.red : AppColors.ink),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -103,7 +113,11 @@ class _SendSheetState extends State<_SendSheet> {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-            20, 14, 20, 16 + MediaQuery.of(context).viewInsets.bottom),
+          20,
+          14,
+          20,
+          16 + MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,13 +127,16 @@ class _SendSheetState extends State<_SendSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                    color: AppColors.line,
-                    borderRadius: BorderRadius.circular(2)),
+                  color: AppColors.line,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             const SizedBox(height: 16),
-            const Text('Arkadaşına gönder',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            const Text(
+              'Arkadaşına gönder',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            ),
             const SizedBox(height: 2),
             Text(
               widget.title,
@@ -163,7 +180,9 @@ class _SendSheetState extends State<_SendSheet> {
                   filled: true,
                   fillColor: const Color(0xFFF4F4F4),
                   contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide.none,
@@ -175,8 +194,8 @@ class _SendSheetState extends State<_SendSheet> {
                 label: _sending
                     ? 'Gönderiliyor...'
                     : (_selected.isEmpty
-                        ? 'GÖNDER'
-                        : 'GÖNDER (${_selected.length})'),
+                          ? 'GÖNDER'
+                          : 'GÖNDER (${_selected.length})'),
                 enabled: _selected.isNotEmpty && !_sending,
                 onPressed: _send,
               ),
@@ -189,59 +208,79 @@ class _SendSheetState extends State<_SendSheet> {
 
   Widget _friendTile(PublicProfile p) {
     final bool selected = _selected.contains(p.id);
+    final bool done = _alreadySent.contains(p.id);
     return GestureDetector(
-      onTap: () {
-        sound.tap();
-        setState(() {
-          selected ? _selected.remove(p.id) : _selected.add(p.id);
-        });
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: selected
-              ? AppColors.green.withValues(alpha: 0.10)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? AppColors.green : AppColors.line,
-            width: selected ? 2 : 1.5,
-          ),
-        ),
-        child: Row(
-          children: <Widget>[
-            Container(
-              width: 38,
-              height: 38,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: (p.mascot?.color ?? AppColors.purple)
-                    .withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: Text(p.mascot?.emoji ?? '🐻',
-                  style: const TextStyle(fontSize: 18)),
+      onTap: done
+          ? null
+          : () {
+              sound.tap();
+              setState(() {
+                selected ? _selected.remove(p.id) : _selected.add(p.id);
+              });
+            },
+      child: Opacity(
+        opacity: done ? 0.5 : 1,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.green.withValues(alpha: 0.10)
+                : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? AppColors.green : AppColors.line,
+              width: selected ? 2 : 1.5,
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                p.nickname,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+          ),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: (p.mascot?.color ?? AppColors.purple).withValues(
+                    alpha: 0.16,
+                  ),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Text(
+                  p.mascot?.emoji ?? '🐻',
+                  style: const TextStyle(fontSize: 18),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  p.nickname,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 14.5,
-                    color: AppColors.ink),
+                    color: AppColors.ink,
+                  ),
+                ),
               ),
-            ),
-            Icon(
-              selected
-                  ? Icons.check_circle_rounded
-                  : Icons.radio_button_unchecked_rounded,
-              color: selected ? AppColors.green : AppColors.line,
-            ),
-          ],
+              if (done)
+                const Text(
+                  'gönderildi',
+                  style: TextStyle(
+                    color: AppColors.inkLight,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                )
+              else
+                Icon(
+                  selected
+                      ? Icons.check_circle_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  color: selected ? AppColors.green : AppColors.line,
+                ),
+            ],
+          ),
         ),
       ),
     );

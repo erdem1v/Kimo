@@ -4,6 +4,32 @@ import '../models/public_question.dart';
 import '../models/received_question.dart';
 import '../models/report_reason.dart';
 
+/// Soru gönderiminin sonucu. "Zaten göndermiştin" ile gerçek hatayı ayırır;
+/// aksi halde kullanıcıya sebebi tahmin ettiren bir mesaj gösteriliyordu.
+class SendResult {
+  const SendResult({this.sent = 0, this.duplicate = 0, this.error});
+
+  final int sent;
+  final int duplicate;
+  final String? error;
+
+  bool get ok => sent > 0;
+
+  /// Kullanıcıya gösterilecek mesaj.
+  String get message {
+    if (sent > 0) {
+      final String base = '$sent arkadaşına gönderildi 🚀';
+      return duplicate > 0 ? '$base ($duplicate kişide zaten vardı)' : base;
+    }
+    if (duplicate > 0 && error == null) {
+      return duplicate == 1
+          ? 'Bu soruyu ona zaten göndermiştin.'
+          : 'Bu soruyu onlara zaten göndermiştin.';
+    }
+    return 'Gönderilemedi: ${error ?? 'bilinmeyen hata'}';
+  }
+}
+
 /// Soru havuzu: kullanıcıların paylaşıma açtığı hataları rastgele getirir ve
 /// çözüm denemelerini kaydeder.
 class QuestionPoolRepository {
@@ -35,8 +61,10 @@ class QuestionPoolRepository {
             },
           );
     return rows
-        .map((dynamic r) =>
-            PublicQuestion.fromRow((r as Map).cast<String, dynamic>()))
+        .map(
+          (dynamic r) =>
+              PublicQuestion.fromRow((r as Map).cast<String, dynamic>()),
+        )
         .toList();
   }
 
@@ -44,8 +72,9 @@ class QuestionPoolRepository {
   /// konuya tıklanmasın diye önceden gösterilir.
   Future<Map<String, int>> availableCounts() async {
     try {
-      final List<dynamic> rows =
-          await _client.rpc<List<dynamic>>('available_question_counts');
+      final List<dynamic> rows = await _client.rpc<List<dynamic>>(
+        'available_question_counts',
+      );
       return <String, int>{
         for (final dynamic r in rows)
           '${(r as Map)['subject']}|${r['concept']}': (r['cnt'] as int?) ?? 0,
@@ -66,16 +95,40 @@ class QuestionPoolRepository {
 
   // ------------------------------------------------ arkadaşa soru gönderme
 
+  /// Bu soruyu daha önce kimlere gönderdiğim. Listede tekrar seçilmesinler.
+  Future<Set<String>> alreadySentTo(String mistakeId) async {
+    final String? uid = _client.auth.currentUser?.id;
+    if (uid == null) return <String>{};
+    try {
+      final List<Map<String, dynamic>> rows = await _client
+          .from('question_sends')
+          .select('receiver_id')
+          .eq('sender_id', uid)
+          .eq('mistake_id', mistakeId);
+      return rows
+          .map((Map<String, dynamic> r) => r['receiver_id'] as String)
+          .toSet();
+    } catch (_) {
+      return <String>{};
+    }
+  }
+
   /// Bir soruyu arkadaşlara gönderir. Arkadaşlık kontrolü RLS'te zorunludur.
-  /// Zaten gönderilmiş olanlar sessizce atlanır.
-  Future<int> sendToFriends({
+  /// Zaten gönderilmiş olanlar hata değildir; ayrıca sayılır ki kullanıcıya
+  /// doğru sebep gösterilebilsin.
+  Future<SendResult> sendToFriends({
     required String mistakeId,
     required List<String> receiverIds,
     String? note,
   }) async {
     final String? uid = _client.auth.currentUser?.id;
-    if (uid == null || receiverIds.isEmpty) return 0;
+    if (uid == null) {
+      return const SendResult(error: 'Oturum yok');
+    }
+    if (receiverIds.isEmpty) return const SendResult();
     int sent = 0;
+    int duplicate = 0;
+    String? error;
     for (final String receiver in receiverIds) {
       try {
         await _client.from('question_sends').insert(<String, dynamic>{
@@ -85,11 +138,19 @@ class QuestionPoolRepository {
           'note': (note == null || note.trim().isEmpty) ? null : note.trim(),
         });
         sent++;
+      } on PostgrestException catch (e) {
+        if (e.code == '23505') {
+          duplicate++; // aynı soru, aynı kişi: hata değil
+        } else if (e.code == '42501') {
+          error ??= 'Arkadaşlık onaylı değil';
+        } else {
+          error ??= e.message;
+        }
       } catch (_) {
-        // Aynı soruyu aynı kişiye ikinci kez göndermek (unique) ya da ağ hatası.
+        error ??= 'Bağlantı hatası';
       }
     }
-    return sent;
+    return SendResult(sent: sent, duplicate: duplicate, error: error);
   }
 
   /// Bana gelen sorular (en yeni önce).
@@ -98,8 +159,9 @@ class QuestionPoolRepository {
         .from('received_questions')
         .select()
         .order('created_at', ascending: false);
-    final List<ReceivedQuestion> items =
-        rows.map(ReceivedQuestion.fromRow).toList();
+    final List<ReceivedQuestion> items = rows
+        .map(ReceivedQuestion.fromRow)
+        .toList();
     if (!onlyUnsolved) return items;
     return items.where((ReceivedQuestion q) => !q.solved).toList();
   }
@@ -120,10 +182,13 @@ class QuestionPoolRepository {
   /// Gelen soruyu çözüldü olarak işaretler.
   Future<void> markSolved(String sendId, bool correct) async {
     try {
-      await _client.from('question_sends').update(<String, dynamic>{
-        'solved_at': DateTime.now().toIso8601String(),
-        'correct': correct,
-      }).eq('id', sendId);
+      await _client
+          .from('question_sends')
+          .update(<String, dynamic>{
+            'solved_at': DateTime.now().toIso8601String(),
+            'correct': correct,
+          })
+          .eq('id', sendId);
     } catch (_) {
       // Akışı bloklamayalım.
     }
