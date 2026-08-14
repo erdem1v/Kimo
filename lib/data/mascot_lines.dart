@@ -61,6 +61,19 @@ class MascotLines {
     return s;
   }
 
+  /// Bildirime dokunulunca nereye gidileceğini belirleyen anahtar.
+  /// Sunucudaki push_lines.kind ile aynı yazımı kullanır.
+  static String payload(NotifyKind kind) => switch (kind) {
+        NotifyKind.streakRisk => 'streak_risk',
+        NotifyKind.reviewsDue => 'reviews_due',
+        NotifyKind.leagueLastDay => 'league_last_day',
+        NotifyKind.leagueResult => 'league_result',
+        NotifyKind.questionReceived => 'question_received',
+        NotifyKind.friendRequest => 'friend_request',
+        NotifyKind.questionSolved => 'question_solved',
+        NotifyKind.comeback => 'comeback',
+      };
+
   /// Bildirim başlığı (kısa, senaryoya göre sabit).
   static String title(NotifyKind kind) => switch (kind) {
         NotifyKind.streakRisk => 'Serin tehlikede 🔥',

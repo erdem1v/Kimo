@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/social_repository.dart';
 import '../../models/social.dart';
 import '../../services/sound_service.dart';
+import '../../services/notification_router.dart';
 import '../../services/push_service.dart';
 import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
@@ -38,6 +39,24 @@ class _HomeShellState extends State<HomeShell> {
       // Bu cihazı bildirim için kaydet (oturum açıkken).
       push.registerDevice();
     }
+    // Bildirimden gelen sekme isteklerini dinle ve bekleyeni uygula.
+    NotificationRouter.tabRequest.addListener(_onTabRequest);
+    NotificationRouter.ready();
+  }
+
+  @override
+  void dispose() {
+    NotificationRouter.tabRequest.removeListener(_onTabRequest);
+    super.dispose();
+  }
+
+  void _onTabRequest() {
+    final int? tab = NotificationRouter.tabRequest.value;
+    if (tab == null || !mounted) return;
+    NotificationRouter.tabRequest.value = null;
+    if (tab == _index) return;
+    setState(() => _index = tab);
+    refreshBus.ping();
   }
 
   /// Herkese açık profil satırını hazırlar ve XP/seriyi sunucudan yükler.

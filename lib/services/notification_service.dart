@@ -5,6 +5,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../data/mascot_lines.dart';
 import '../models/mascot.dart';
+import 'notification_router.dart';
 
 /// Yerel (cihaz üstü) bildirimler. Sunucu gerektirmez: uygulama her açıldığında
 /// o günün planı yeniden kurulur.
@@ -52,7 +53,17 @@ class NotificationService {
             requestSoundPermission: false,
           ),
         ),
+        // Bildirime dokunulunca ilgili ekrana götür.
+        onDidReceiveNotificationResponse: (NotificationResponse r) =>
+            NotificationRouter.handle(r.payload),
       );
+
+      // Uygulama kapalıyken bildirime dokunulup açıldıysa onu da yakala.
+      final NotificationAppLaunchDetails? launch =
+          await _plugin.getNotificationAppLaunchDetails();
+      if (launch?.didNotificationLaunchApp ?? false) {
+        NotificationRouter.handle(launch!.notificationResponse?.payload);
+      }
       _ready = true;
     } catch (e) {
       debugPrint('Bildirim servisi başlatılamadı: $e');
@@ -207,6 +218,7 @@ class NotificationService {
         body: MascotLines.pick(kind, mascot, n: n, sira: sira, lig: lig),
         scheduledDate: when,
         notificationDetails: _details,
+        payload: MascotLines.payload(kind),
         // Kesin alarm izni istemeyelim; dakikalık sapma sorun değil.
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       );

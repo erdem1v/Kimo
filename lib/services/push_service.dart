@@ -5,6 +5,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/supabase_config.dart';
+import 'notification_router.dart';
 
 /// Anlık bildirimler (FCM). Sosyal olaylar için: arkadaşlık isteği, gelen
 /// soru, gönderdiğin sorunun çözülmesi.
@@ -44,6 +45,18 @@ class PushService {
 
       FirebaseMessaging.onMessage.listen(_showForeground);
       FirebaseMessaging.instance.onTokenRefresh.listen(_saveToken);
+
+      // Uygulama arka plandayken bildirime dokunuldu.
+      FirebaseMessaging.onMessageOpenedApp.listen(
+        (RemoteMessage m) => NotificationRouter.handle(m.data['kind'] as String?),
+      );
+      // Uygulama tamamen kapalıyken bildirime dokunulup açıldı.
+      final RemoteMessage? initial =
+          await FirebaseMessaging.instance.getInitialMessage();
+      if (initial != null) {
+        NotificationRouter.handle(initial.data['kind'] as String?);
+      }
+
       _started = true;
     } catch (e) {
       debugPrint('Push başlatılamadı: $e');
@@ -105,6 +118,8 @@ class PushService {
         id: message.hashCode,
         title: n.title,
         body: n.body,
+        // Dokunulunca doğru ekrana gidebilmesi için türü taşı.
+        payload: message.data['kind'] as String?,
         notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             _channel.id,

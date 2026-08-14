@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'features/auth/auth_gate.dart';
 import 'features/home/home_shell.dart';
+import 'services/notification_router.dart';
 import 'services/supabase_config.dart';
 import 'theme/app_theme.dart';
 
@@ -15,6 +16,8 @@ class AiYksCoachApp extends StatelessWidget {
     return MaterialApp(
       title: 'AI YKS Coach',
       debugShowCheckedModeBanner: false,
+      // Bildirimden gelen yönlendirmeler widget ağacının dışından çağrılır.
+      navigatorKey: NotificationRouter.navigatorKey,
       theme: AppTheme.light(),
       localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
         GlobalMaterialLocalizations.delegate,
