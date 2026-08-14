@@ -89,9 +89,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   String get _buttonLabel {
     if (_saving) return 'Kaydediliyor...';
-    if (_index == _steps.length - 1) return 'BAŞLA 🎉';
+    if (_index == _steps.length - 1) return 'HADİ BAŞLAYALIM';
     return switch (_current) {
-      _Step.hello => 'MERHABA KİMO 👋',
+      _Step.hello => 'MERHABA KİMO',
       _Step.mascot => 'BU KAFA İYİ',
       _Step.shareConsent => 'DEVAM',
       _ => 'DEVAM',
@@ -232,53 +232,45 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     );
   }
 
-  /// Kimo'nun konuşma balonu. Akıştaki her soru bunun altından çıkar; böylece
-  /// kullanıcı bir forma değil, bir ayıyla sohbete girdiğini hisseder.
+  /// Kimo'nun sorusu: sayfanın başrolü. Ortada, büyük ve renkli — kullanıcı
+  /// bir form doldurduğunu değil, bir ayıyla konuştuğunu hissetsin.
   Widget _kimoSays(String text) {
     final Color c = _kimoColor;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Container(
-            width: 46,
-            height: 46,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: c.withValues(alpha: 0.16),
-              shape: BoxShape.circle,
-            ),
-            child: Text(_kimoFace, style: const TextStyle(fontSize: 24)),
+    return Column(
+      children: <Widget>[
+        Container(
+          width: 96,
+          height: 96,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: c.withValues(alpha: 0.16),
+            shape: BoxShape.circle,
+            border: Border.all(color: c.withValues(alpha: 0.35), width: 2),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(14, 11, 14, 12),
-              decoration: BoxDecoration(
-                color: c.withValues(alpha: 0.09),
-                border: Border.all(color: c.withValues(alpha: 0.28)),
-                // Sol üst köşe küçük: balonun "kuyruğu" hissi.
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(18),
-                  bottomLeft: Radius.circular(18),
-                  bottomRight: Radius.circular(18),
-                ),
-              ),
-              child: Text(
-                text,
-                style: const TextStyle(
-                  fontSize: 14.5,
-                  height: 1.35,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.ink,
-                ),
-              ),
+          child: Text(_kimoFace, style: const TextStyle(fontSize: 50)),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(
+            color: c.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: c.withValues(alpha: 0.30), width: 1.5),
+          ),
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 19,
+              height: 1.4,
+              fontWeight: FontWeight.w800,
+              color: AppColors.ink,
             ),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 20),
+      ],
     );
   }
 
@@ -309,29 +301,37 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             ),
             const SizedBox(height: 22),
             const Text(
-              'Ben Kimo!',
+              'Tanıştığımıza sevindim!',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
                 color: AppColors.ink,
               ),
             ),
-            const SizedBox(height: 10),
-            const Text(
-              'Bir ayıyım, biraz da koçun. İşim gücüm senin yanlışların:\n'
-              'onları toplarım, saklarım ve tam unutmak üzereyken\n'
-              'karşına çıkarırım. 😈',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.inkLight,
-                fontSize: 15,
-                height: 1.45,
-              ),
-            ),
             const SizedBox(height: 20),
-            _kimoSays(
-              'Başlamadan önce üç beş şey soracağım. Uzun sürmez, '
-              'söz veriyorum — ayı sözü. 🐾',
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+              decoration: BoxDecoration(
+                color: AppColors.purple.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: AppColors.purple.withValues(alpha: 0.30),
+                  width: 1.5,
+                ),
+              ),
+              child: const Text(
+                'Seni tanımak için üç beş şey soracağım.\n'
+                'Uzun sürmez, söz veriyorum — ayı sözü.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 19,
+                  height: 1.4,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.ink,
+                ),
+              ),
             ),
           ],
         ),
@@ -345,32 +345,21 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     _Step.examYear => _examYearPage(),
     _Step.mascot => _mascotPage(),
     _Step.howPhoto => _infoPage(
-      emoji: '📸',
-      color: AppColors.purple,
-      kimo:
-          'Soruları bitirdim, sıra bende: nasıl çalıştığımızı '
-          'anlatayım.',
-      title: 'Sen çek, gerisi bende',
+      kimo: 'Sen çek, gerisi bende.',
       body:
           'Yanlış yaptığın soruyu fotoğrafla. Şıkları ben okurum, '
           'dersini ve konusunu ben bulurum. Sana kalan tek iş: doğru '
           'şıkkı işaretlemek.',
     ),
     _Step.howReview => _infoPage(
-      emoji: '🔁',
-      color: AppColors.blue,
-      kimo: 'Peki o soruya ne mi oluyor? İşte burada sinsileşiyorum.',
-      title: 'Tam unutacakken karşına çıkarırım',
+      kimo: 'Tam unutacakken\nkarşına çıkarırım.',
       body:
           'Her soru 1 → 3 → 7 → 30 gün sonra geri gelir. İyi bildiğin '
           'seyrekleşir, takıldığın peşini bırakmaz. Ezber değil, '
           'kalıcı öğrenme.',
     ),
     _Step.howGamify => _infoPage(
-      emoji: '🏆',
-      color: AppColors.gold,
-      kimo: 'Bir de işin eğlenceli tarafı var. Ben yarışmayı severim.',
-      title: 'Seri, XP ve lig',
+      kimo: 'Bir de yarış var.\nBen yarışmayı severim.',
       body:
           'Her gün küçük bir hedefin olur. Çözdükçe XP kazanır, '
           'serini büyütür, arkadaşlarınla aynı ligde yarışırsın. '
@@ -392,13 +381,12 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           children: <Widget>[
             const SizedBox(height: 8),
             _kimoSays(
-              'Bu kafayla konuşuyorum artık. Peki zamanı gelince seni '
-              'dürteyim mi, yoksa sessiz ayı mı olayım?',
+              'Bu kafayla konuşuyorum artık.\n'
+              'Zamanı gelince seni dürteyim mi?',
             ),
-            _title('Sana hatırlatayım mı?'),
             _subtitle(
-              'Tekrar zamanın geldiğinde ve serin tehlikedeyken '
-              'haber veririm. Günde en fazla iki kez — gece uyurum.',
+              'Tekrar zamanın geldiğinde ve serin tehlikedeyken haber '
+              'veririm. Günde en fazla iki kez — gece uyurum.',
             ),
             const SizedBox(height: 16),
             // Karakterin sesinden örnek bildirim.
@@ -531,24 +519,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             const SizedBox(height: 8),
-            Center(
-              child: Container(
-                width: 96,
-                height: 96,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.purple.withValues(alpha: 0.14),
-                  shape: BoxShape.circle,
-                ),
-                child: const Text('🌍', style: TextStyle(fontSize: 44)),
-              ),
-            ),
-            const SizedBox(height: 20),
-            _kimoSays(
-              'Son bir şey, sonra kapıyı açıyorum. Bu kısmı dikkatli oku, '
-              'ciddi konuşuyorum.',
-            ),
-            _title('Soru havuzu'),
+            _kimoSays('Son bir şey,\nsonra kapıyı açıyorum.'),
             _subtitle(
               'Yüklediğin sorular, diğer öğrencilerin çözebilmesi için ortak '
               'havuza eklenir. Sen de onların sorularını çözersin — havuz '
@@ -556,12 +527,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             ),
             const SizedBox(height: 16),
             _consentBullet(
-              '👀',
               'Paylaşılan',
               'Sorunun fotoğrafı, şıkları ve takma adın.',
             ),
             _consentBullet(
-              '🔒',
               'Paylaşılmayan',
               'Notların, hata türün, tekrar durumun ve e-postan.',
             ),
@@ -627,14 +596,21 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     );
   }
 
-  Widget _consentBullet(String emoji, String title, String body) {
+  Widget _consentBullet(String title, String body) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(emoji, style: const TextStyle(fontSize: 15)),
-          const SizedBox(width: 8),
+          Container(
+            width: 6,
+            height: 6,
+            margin: const EdgeInsets.only(top: 6, right: 8),
+            decoration: const BoxDecoration(
+              color: AppColors.purple,
+              shape: BoxShape.circle,
+            ),
+          ),
           Expanded(
             child: Text.rich(
               TextSpan(
@@ -667,15 +643,12 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _kimoSays(
-            'Sana ne diyeyim? "Hey sen" diye seslenmek biraz kaba kaçar.',
-          ),
-          _title('Takma adın ne olsun?'),
+          _kimoSays('Sana ne diyeyim?\n"Hey sen" demek biraz kaba kaçar.'),
           _subtitle(
             'Liderlik tablosunda arkadaşların bunu görecek. '
             'İyi seç, ünlü olabilirsin.',
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           TextField(
             controller: _nickname,
             textCapitalization: TextCapitalization.words,
@@ -709,12 +682,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           _kimoSays(
-            'Şimdi takvim işi. Hangi yıl gireceğini bilmezsem yanlış '
-            'müfredattan konu sorarım, ikimiz de rezil oluruz.',
+            'YKS\'ye hangi yıl gireceksin?\n'
+            'Yanlış bilirsem yanlış müfredattan\nkonu sorarım, rezil oluruz.',
           ),
-          _title('YKS\'ye hangi yıl gireceksin?'),
           _subtitle('Konularını doğru müfredata göre eşleştireceğim.'),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           Wrap(
             spacing: 10,
             runSpacing: 10,
@@ -783,16 +755,12 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _kimoSays(
-            'Gelelim en eğlenceli soruya: ben hangi kafada olayım? '
-            'Beşi de benim, birini seç.',
-          ),
-          _title('Kimo hangi karakterde olsun?'),
+          _kimoSays('En eğlenceli soru:\nben hangi kafada olayım?'),
           _subtitle(
-            'Bildirimleri ve motivasyon sözlerini bu ağızdan '
-            'yazacağım. Sıkılırsan profilden değiştirirsin.',
+            'Bildirimleri ve motivasyon sözlerini bu ağızdan yazacağım. '
+            'Sıkılırsan profilden değiştirirsin.',
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.only(bottom: 8),
@@ -882,47 +850,20 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     );
   }
 
-  Widget _infoPage({
-    required String emoji,
-    required Color color,
-    required String title,
-    required String body,
-    String? kimo,
-  }) {
+  Widget _infoPage({required String kimo, required String body}) {
     return _pad(
       Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
-          if (kimo != null) _kimoSays(kimo),
-          Container(
-            width: 120,
-            height: 120,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
-              shape: BoxShape.circle,
-            ),
-            child: Text(emoji, style: const TextStyle(fontSize: 56)),
-          ),
-          const SizedBox(height: 28),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AppColors.ink,
-            ),
-          ),
-          const SizedBox(height: 12),
+          _kimoSays(kimo),
           Text(
             body,
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: AppColors.inkLight,
-              fontSize: 15,
-              height: 1.4,
+              fontSize: 15.5,
+              height: 1.45,
             ),
           ),
         ],
@@ -933,23 +874,16 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   Widget _pad(Widget child) =>
       Padding(padding: const EdgeInsets.fromLTRB(24, 8, 24, 0), child: child);
 
-  Widget _title(String text) => Text(
-    text,
-    style: const TextStyle(
-      fontSize: 22,
-      fontWeight: FontWeight.w800,
-      color: AppColors.ink,
-    ),
-  );
-
+  /// Kimo'nun sorusunun altındaki küçük açıklama; başrol onun kartında.
   Widget _subtitle(String text) => Padding(
-    padding: const EdgeInsets.only(top: 6),
+    padding: const EdgeInsets.only(top: 2),
     child: Text(
       text,
+      textAlign: TextAlign.center,
       style: const TextStyle(
         color: AppColors.inkLight,
-        fontSize: 14,
-        height: 1.3,
+        fontSize: 13.5,
+        height: 1.35,
       ),
     ),
   );

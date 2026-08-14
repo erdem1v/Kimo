@@ -4,8 +4,8 @@ import '../../theme/app_colors.dart';
 import '../../widgets/game_button.dart';
 import '../auth/login_screen.dart';
 
-/// Uygulamanın karşılama (landing) ekranı: ne işe yaradığını anlatır ve
-/// kayıt/giriş akışına yönlendirir.
+/// Uygulamanın karşılama (landing) ekranı. Kimo kendini tanıtır ve ilk soruyu
+/// kendisi sorar: yeni misin, yoksa hesabın var mı?
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
@@ -26,66 +26,93 @@ class WelcomeScreen extends StatelessWidget {
           children: <Widget>[
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    _hero(),
-                    const SizedBox(height: 26),
+                    const SizedBox(height: 12),
+                    _kimo(),
+                    const SizedBox(height: 22),
                     const Text(
-                      'Hatalarından öğren,\nbir daha unutma.',
+                      'Merhaba, ben Kimo!',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 26,
-                        height: 1.25,
+                        fontSize: 30,
                         fontWeight: FontWeight.w800,
                         color: AppColors.ink,
                       ),
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      'Yanlış yaptığın soruyu çek, gerisini Kimo\'ya bırak.',
+                      'Bir ayıyım, biraz da koçun.\n'
+                      'Yanlışlarını toplarım, tam unutacakken\n'
+                      'karşına çıkarırım.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.inkLight, fontSize: 15),
+                      style: TextStyle(
+                        color: AppColors.inkLight,
+                        fontSize: 16,
+                        height: 1.45,
+                      ),
                     ),
                     const SizedBox(height: 26),
-                    _bullet(
-                      '📸',
-                      'Sen çek, gerisi bende',
-                      'Şıkları, dersi ve konuyu ben bulurum.',
-                      AppColors.purple,
-                    ),
-                    _bullet(
-                      '🔁',
-                      'Tam unutacakken çıkarım',
-                      '1 → 3 → 7 → 30 gün: soru peşini bırakmaz.',
-                      AppColors.blue,
-                    ),
-                    _bullet(
-                      '🏆',
-                      'Seri, XP ve lig',
-                      'Arkadaşlarınla aynı ligde yarışırsın.',
-                      AppColors.gold,
+                    // İlk soruyu da Kimo sorar.
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 20,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.purple.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: AppColors.purple.withValues(alpha: 0.30),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: const Text(
+                        'Seninle yeni mi tanışıyoruz,\nyoksa hesabın var mı?',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 20,
+                          height: 1.4,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.ink,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 4, 24, 16),
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
               child: Column(
                 children: <Widget>[
                   GameButton(
-                    label: 'HADİ BAŞLAYALIM',
+                    label: 'YENİYİM, TANIŞALIM',
                     onPressed: () => _open(context, signUp: true),
                   ),
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: () => _open(context, signUp: false),
-                    child: const Text(
-                      'Zaten hesabım var',
-                      style: TextStyle(
-                        color: AppColors.blueDark,
-                        fontWeight: FontWeight.w700,
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => _open(context, signUp: false),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(color: AppColors.line, width: 2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text(
+                        'HESABIM VAR',
+                        style: TextStyle(
+                          color: AppColors.inkLight,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                     ),
                   ),
@@ -98,94 +125,35 @@ class WelcomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _hero() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 28),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: <Color>[AppColors.purple, AppColors.blue],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  /// Kimo'nun kendisi: büyük, ortada, gözden kaçmaz.
+  Widget _kimo() {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.7, end: 1),
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.elasticOut,
+      builder: (BuildContext context, double v, Widget? child) =>
+          Transform.scale(scale: v, child: child),
+      child: Container(
+        width: 168,
+        height: 168,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: <Color>[AppColors.purple, AppColors.blue],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          shape: BoxShape.circle,
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: AppColors.purple.withValues(alpha: 0.32),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: AppColors.purple.withValues(alpha: 0.30),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: const Column(
-        children: <Widget>[
-          // Maskot görseli sonra eklenecek.
-          Text('🐻', style: TextStyle(fontSize: 76)),
-          SizedBox(height: 8),
-          Text(
-            'Merhaba, ben Kimo!',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          SizedBox(height: 2),
-          Text(
-            'AI YKS Coach\'un ayısı ve senin koçun 🐾',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _bullet(String emoji, String title, String subtitle, Color color) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.09),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.25), width: 1.5),
-      ),
-      child: Row(
-        children: <Widget>[
-          Container(
-            width: 44,
-            height: 44,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.20),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(emoji, style: const TextStyle(fontSize: 22)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                    color: AppColors.ink,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: AppColors.inkLight,
-                    fontSize: 13,
-                    height: 1.25,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        // Maskot görseli sonra eklenecek.
+        child: const Text('🐻', style: TextStyle(fontSize: 92)),
       ),
     );
   }

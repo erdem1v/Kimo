@@ -19,10 +19,8 @@ Future<void> showExamYearSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    builder: (BuildContext ctx) => PopScope(
-      canPop: dismissible,
-      child: const _ExamYearForm(),
-    ),
+    builder: (BuildContext ctx) =>
+        PopScope(canPop: dismissible, child: const _ExamYearForm()),
   );
 }
 
@@ -59,7 +57,11 @@ class _ExamYearFormState extends State<_ExamYearForm> {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-            20, 16, 20, 16 + MediaQuery.of(context).viewInsets.bottom),
+          20,
+          16,
+          20,
+          16 + MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,13 +71,16 @@ class _ExamYearFormState extends State<_ExamYearForm> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                    color: AppColors.line,
-                    borderRadius: BorderRadius.circular(2)),
+                  color: AppColors.line,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             const SizedBox(height: 18),
-            const Text('YKS\'ye hangi yıl gireceksin?',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            const Text(
+              'YKS\'ye hangi yıl gireceksin?',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            ),
             const SizedBox(height: 6),
             const Text(
               'Konuları doğru müfredata göre eşleştirebilmemiz için gerekli.',
@@ -106,7 +111,10 @@ class _ExamYearFormState extends State<_ExamYearForm> {
             if (curr != null) ...<Widget>[
               const SizedBox(height: 14),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.blueBg,
                   borderRadius: BorderRadius.circular(12),
@@ -114,17 +122,21 @@ class _ExamYearFormState extends State<_ExamYearForm> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    const Icon(Icons.info_outline,
-                        size: 16, color: AppColors.blueDark),
+                    const Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: AppColors.blueDark,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       curr == UserProfile.maarif
                           ? 'Yeni müfredat (Maarif Modeli)'
                           : 'Mevcut müfredat (2018)',
                       style: const TextStyle(
-                          color: AppColors.blueDark,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13),
+                        color: AppColors.blueDark,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),

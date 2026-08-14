@@ -40,16 +40,21 @@ class _MascotSheetState extends State<_MascotSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                    color: AppColors.line,
-                    borderRadius: BorderRadius.circular(2)),
+                  color: AppColors.line,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             const SizedBox(height: 18),
-            const Text('Koçun kim olsun?',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            const Text(
+              'Koçun kim olsun?',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            ),
             const SizedBox(height: 4),
-            const Text('Bildirimleri ve motivasyon sözlerini o yazar.',
-                style: TextStyle(color: AppColors.inkLight, fontSize: 13)),
+            const Text(
+              'Bildirimleri ve motivasyon sözlerini o yazar.',
+              style: TextStyle(color: AppColors.inkLight, fontSize: 13),
+            ),
             const SizedBox(height: 16),
             Flexible(
               child: ListView(
@@ -101,15 +106,22 @@ class _MascotSheetState extends State<_MascotSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(m.label,
-                      style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                          color: selected ? m.color : AppColors.ink)),
+                  Text(
+                    m.label,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      color: selected ? m.color : AppColors.ink,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(m.tagline,
-                      style: const TextStyle(
-                          color: AppColors.inkLight, fontSize: 12.5)),
+                  Text(
+                    m.tagline,
+                    style: const TextStyle(
+                      color: AppColors.inkLight,
+                      fontSize: 12.5,
+                    ),
+                  ),
                 ],
               ),
             ),
