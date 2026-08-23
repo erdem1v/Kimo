@@ -240,6 +240,7 @@ class YksCurriculum {
       Unit('Dalgalar', <String>['Dalga Mekaniği (Girişim-Kırınım-Doppler)']),
       Unit('Modern Fizik', <String>[
         'Atom Fiziği ve Radyoaktivite', 'Özel Görelilik', 'Fotoelektrik Olay',
+        'Modern Fiziğin Teknolojideki Uygulamaları',
         'Compton ve de Broglie',
       ]),
     ],

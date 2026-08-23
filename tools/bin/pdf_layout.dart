@@ -138,27 +138,67 @@ List<QuestionBox> boxesForPage(PageLayout page, int pageNo) {
 /// daha kalabalık olanı alıyoruz — yoksa hizalamalardan biri hep bozuluyor.
 List<Word> _numberColumn(List<Word> candidates) {
   if (candidates.length < 2) return candidates;
-  final List<Word> byLeft = _cluster(candidates, (Word w) => w.xMin);
-  final List<Word> byRight = _cluster(candidates, (Word w) => w.xMax);
-  final List<Word> best = byLeft.length >= byRight.length ? byLeft : byRight;
-  return best..sort((Word a, Word b) => a.yMin.compareTo(b.yMin));
+
+  // Hem sol hem sağ kenara göre kümele; hangisinin doğru olduğunu hizalama
+  // belirlesin diye ikisinin de bütün kümeleri havuza girer.
+  final List<List<Word>> groups = <List<Word>>[
+    ..._clusters(candidates, (Word w) => w.xMin),
+    ..._clusters(candidates, (Word w) => w.xMax),
+  ];
+
+  // Tek başına duran sayılar (şekil etiketleri) elenir; hiçbiri çoklu değilse
+  // elimizde ne varsa onunla devam ederiz.
+  final List<List<Word>> multi =
+      groups.where((List<Word> g) => g.length >= 2).toList();
+  final List<List<Word>> pool = multi.isEmpty ? groups : multi;
+
+  // Kazanan EN SOLDAKİ kümedir, en kalabalık olan değil: soru numarası sütunun
+  // başında durur, sorunun içindeki "I. II. III." listeleri daha sağdadır ve
+  // kimi zaman onlardan daha çok olur.
+  pool.sort((List<Word> a, List<Word> b) {
+    final int byEdge = _leftEdge(a).compareTo(_leftEdge(b));
+    return byEdge != 0 ? byEdge : b.length.compareTo(a.length);
+  });
+
+  final List<Word> best = pool.first.toList()
+    ..sort((Word a, Word b) => a.yMin.compareTo(b.yMin));
+  return _increasingOnly(best);
 }
 
-/// [key] değerine göre en kalabalık yakın-değer kümesi (tolerans 2.5 punto).
-List<Word> _cluster(List<Word> words, double Function(Word) key) {
+double _leftEdge(List<Word> ws) =>
+    ws.map((Word w) => w.xMin).reduce((double a, double b) => a < b ? a : b);
+
+/// Numaralar sayfada yukarıdan aşağı ARTAR. Bu sırayı bozanları atar: şekil
+/// içindeki etiketler ve tekrar eden numaralar böylece elenir.
+List<Word> _increasingOnly(List<Word> sortedByY) {
+  final List<Word> kept = <Word>[];
+  int last = 0;
+  for (final Word w in sortedByY) {
+    final int n = int.parse(_numberRe.firstMatch(w.text)!.group(1)!);
+    if (n > last) {
+      kept.add(w);
+      last = n;
+    }
+  }
+  return kept;
+}
+
+/// [key] değerine göre yakın duran kelimeleri kümeler (tolerans 2.5 punto).
+List<List<Word>> _clusters(List<Word> words, double Function(Word) key) {
   final List<Word> sorted = words.toList()
     ..sort((Word a, Word b) => key(a).compareTo(key(b)));
-  List<Word> best = <Word>[];
+  final List<List<Word>> out = <List<Word>>[];
   List<Word> run = <Word>[sorted.first];
-  for (int i = 1; i <= sorted.length; i++) {
-    if (i < sorted.length && key(sorted[i]) - key(run.last) <= 2.5) {
+  for (int i = 1; i < sorted.length; i++) {
+    if (key(sorted[i]) - key(run.last) <= 2.5) {
       run.add(sorted[i]);
-      continue;
+    } else {
+      out.add(run);
+      run = <Word>[sorted[i]];
     }
-    if (run.length > best.length) best = run;
-    if (i < sorted.length) run = <Word>[sorted[i]];
   }
-  return best;
+  out.add(run);
+  return out;
 }
 
 /// İki sütun arasındaki oluk: sayfanın ortasında, yan yazılmış MEB künyesinin

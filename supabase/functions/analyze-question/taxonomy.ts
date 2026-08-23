@@ -119,6 +119,7 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
         "Kondansatörler", "Manyetizma ve İndüksiyon", "Alternatif Akım",
         "Dalga Mekaniği (Girişim-Kırınım-Doppler)",
         "Atom Fiziği ve Radyoaktivite", "Özel Görelilik", "Fotoelektrik Olay",
+        "Modern Fiziğin Teknolojideki Uygulamaları",
         "Compton ve de Broglie",
       ],
       "Kimya": [

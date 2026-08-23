@@ -68,8 +68,11 @@ doğru şıkkı AI'ya sordurmuyoruz, güvenilmez.
 1. PDF indirilir (`.cache/`, ikinci kez indirilmez)
 2. `pdftotext -bbox` ile kelime koordinatları çıkarılır — Türkçe harfler bu
    PDF'lerde bozuk okunuyor ama koordinatlar sağlam, bize o yetiyor
-3. Soru numaraları bulunur; en kalabalık hiza kümesi alınır (soru metninin
-   içindeki "5." gibi sayılar böyle elenir)
+3. Soru numaraları bulunur. Aynı hizada duran sayılar kümelenir ve **en
+   soldaki** küme seçilir — en kalabalık olan değil: sorunun içindeki
+   "I. II. III." listeleri kimi zaman gerçek numaralardan çok olur ama hep
+   daha sağda durur. Numaralar ayrıca yukarıdan aşağı artmak zorunda, bu da
+   şekil etiketlerini ve tekrarları eler.
 4. Sütun sınırı, ortadaki dikey MEB künyesinin solunda kesilir
 5. `pdftoppm` 200 dpi PNG üretir, kutular kesilir, alttaki boşluk kırpılır
 6. Numaralar `1..N` olarak eksiksiz çıkmazsa **o test atlanır** ve rapora
