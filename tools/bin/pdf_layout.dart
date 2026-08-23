@@ -300,10 +300,13 @@ List<QuestionBox> _column(
   ];
 }
 
-/// `pdftotext -bbox` çalıştırır.
-Future<List<PageLayout>> layoutOf(String pdfPath) async {
+/// `pdftotext -bbox` çalıştırır. [from]/[to] verilirse yalnızca o sayfalar
+/// okunur — kazanım kavrama kitapları tek PDF'te onlarca test taşıyor.
+Future<List<PageLayout>> layoutOf(String pdfPath, {int? from, int? to}) async {
   final ProcessResult r = await Process.run('pdftotext', <String>[
     '-bbox',
+    if (from != null) ...<String>['-f', '$from'],
+    if (to != null) ...<String>['-l', '$to'],
     pdfPath,
     '-',
   ], stdoutEncoding: SystemEncoding());

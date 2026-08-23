@@ -125,6 +125,7 @@ class YksCurriculum {
         'Organik Bileşikler (Karbonhidrat-Lipit-Protein)', 'Enzimler',
       ]),
       Unit('Hücre', <String>[
+        'Nükleik Asitler',
         'Hücre ve Organelleri', 'Hücre Zarından Madde Geçişi',
       ]),
       Unit('Canlılar Dünyası', <String>['Canlıların Sınıflandırılması']),

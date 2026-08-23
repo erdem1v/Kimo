@@ -58,6 +58,7 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
       "Biyoloji": [
         "Canlıların Ortak Özellikleri", "İnorganik Bileşikler",
         "Organik Bileşikler (Karbonhidrat-Lipit-Protein)", "Enzimler",
+        "Nükleik Asitler",
         "Hücre ve Organelleri", "Hücre Zarından Madde Geçişi",
         "Canlıların Sınıflandırılması", "Mitoz ve Eşeysiz Üreme",
         "Mayoz ve Eşeyli Üreme", "Kalıtım", "Ekosistem Ekolojisi",

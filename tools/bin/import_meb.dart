@@ -66,9 +66,19 @@ Future<void> main(List<String> args) async {
         .toUpperCase();
     final String label = '#$no ${t['subject']} · $concept';
 
+    // Kazanım kavrama kitaplarında tek PDF onlarca test taşıyor; testin
+    // sayfa aralığı manifestte verilir. Yoksa dosyanın tamamı bir testtir.
+    final List<dynamic>? range = t['pages'] as List<dynamic>?;
+    final int? fromPage = range == null ? null : range.first as int;
+    final int? toPage = range == null ? null : range.last as int;
+
     try {
       final File pdf = await _download(url, cache);
-      final List<PageLayout> pages = await layoutOf(pdf.path);
+      final List<PageLayout> pages = await layoutOf(
+        pdf.path,
+        from: fromPage,
+        to: toPage,
+      );
 
       // Soru kutuları: sayfa sayfa çıkar, sonra numaraya göre birleştir.
       final List<QuestionBox> boxes = <QuestionBox>[];
@@ -96,7 +106,12 @@ Future<void> main(List<String> args) async {
         continue;
       }
 
-      final List<img.Image> rendered = await _renderPages(pdf, pages.length);
+      final List<img.Image> rendered = await _renderPages(
+        pdf,
+        pages.length,
+        from: fromPage,
+        to: toPage,
+      );
 
       for (final QuestionBox box in boxes) {
         final img.Image crop = _crop(rendered[box.page - 1], box);
@@ -169,13 +184,20 @@ Future<File> _download(String url, Directory cache) async {
 }
 
 /// Sayfaları PNG'ye çevirir (pdftoppm) ve belleğe alır.
-Future<List<img.Image>> _renderPages(File pdf, int pageCount) async {
+Future<List<img.Image>> _renderPages(
+  File pdf,
+  int pageCount, {
+  int? from,
+  int? to,
+}) async {
   final Directory tmp = Directory.systemTemp.createTempSync('mebpdf');
   try {
     final ProcessResult r = await Process.run('pdftoppm', <String>[
       '-r',
       '$_dpi',
       '-png',
+      if (from != null) ...<String>['-f', '$from'],
+      if (to != null) ...<String>['-l', '$to'],
       pdf.path,
       '${tmp.path}/p',
     ]);
