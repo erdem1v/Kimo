@@ -20,14 +20,14 @@ alter table public.mistakes
   drop constraint if exists mistakes_source_check;
 alter table public.mistakes
   add constraint mistakes_source_check
-  check (source in ('user', 'osym'));
+  check (source in ('user', 'osym', 'meb'));
 
 comment on column public.mistakes.source is
-  'user = kullanıcının kendi hatası · osym = çıkmış soru';
+  'user = kullanıcının kendi hatası · osym = ÖSYM çıkmış sorusu · meb = MEB kazanım testi';
 comment on column public.mistakes.source_year is
-  'Çıkmış soruysa sınav yılı (ör. 2026)';
+  'Hazır soruysa kaynağın yılı (ör. 2026)';
 comment on column public.mistakes.source_session is
-  'Çıkmış soruysa oturum (ör. TYT, AYT)';
+  'Hazır soruysa alt küme (ör. TYT, AYT, Kazanım Testi)';
 
 create index if not exists mistakes_source_idx
   on public.mistakes (source, source_year) where source <> 'user';

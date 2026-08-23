@@ -33,19 +33,27 @@ class PublicQuestion {
   final int solvedCorrect;
   final int solvedWrong;
 
-  /// 'user' = birinin hatası · 'osym' = çıkmış soru.
+  /// 'user' = birinin hatası · 'osym' = ÖSYM çıkmışı · 'meb' = kazanım testi.
   final String source;
   final int? sourceYear;
   final String? sourceSession;
 
-  /// Çıkmış soru mu? Künye buna göre değişir ("X'in hatası" demek yanlış olur).
-  bool get isOfficial => source == 'osym';
+  /// Hazır soru mu? Bir kuruma ait soruya "falancanın hatası" demek yanlış
+  /// olur; künye buna göre değişir.
+  bool get isOfficial => source != 'user';
 
-  /// Çıkmış soruların künyesi: "2026 TYT".
-  String get officialLabel => <String>[
-    if (sourceYear != null) '$sourceYear',
-    if (sourceSession != null && sourceSession!.isNotEmpty) sourceSession!,
-  ].join(' ');
+  /// Künye satırı: "2026 TYT çıkmış sorusu" · "MEB · Kazanım Testi".
+  String get sourceLabel {
+    final String detail = <String>[
+      if (sourceYear != null) '$sourceYear',
+      if (sourceSession != null && sourceSession!.isNotEmpty) sourceSession!,
+    ].join(' ');
+    return switch (source) {
+      'osym' => detail.isEmpty ? 'ÖSYM çıkmış sorusu' : '$detail çıkmış sorusu',
+      'meb' => detail.isEmpty ? 'MEB kazanım testi' : 'MEB · $detail',
+      _ => detail,
+    };
+  }
 
   int get totalAttempts => solvedCorrect + solvedWrong;
 

@@ -289,18 +289,11 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
               const SizedBox(width: 6),
               Expanded(
                 child: Text.rich(
-                  // Çıkmış soruya "birinin hatası" demek yanlış olur.
+                  // Kuruma ait soruya "birinin hatası" demek yanlış olur.
                   q.isOfficial
                       ? TextSpan(
-                          children: <TextSpan>[
-                            TextSpan(
-                              text: q.officialLabel,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const TextSpan(text: ' çıkmış sorusu'),
-                          ],
+                          text: q.sourceLabel,
+                          style: const TextStyle(fontWeight: FontWeight.w800),
                         )
                       : TextSpan(
                           children: <TextSpan>[
