@@ -229,7 +229,10 @@ class YksCurriculum {
     ],
     'Fizik': <Unit>[
       Unit('Kuvvet ve Hareket', <String>[
-        'Vektörler', 'Kuvvet, Tork ve Denge', 'İtme ve Momentum',
+        'Vektörler', 'Bağıl Hareket', "Newton'un Hareket Yasaları",
+        'Bir Boyutta Sabit İvmeli Hareket',
+        'İki Boyutta Sabit İvmeli Hareket', 'Enerji ve Hareket',
+        'Kuvvet, Tork ve Denge', 'İtme ve Momentum',
         'Çembersel Hareket', 'Basit Harmonik Hareket',
         'Kütle Çekimi ve Kepler Yasaları',
       ]),
@@ -245,6 +248,9 @@ class YksCurriculum {
       ]),
     ],
     'Kimya': <Unit>[
+      Unit('Modern Atom Teorisi ve Gazlar', <String>[
+        'Modern Atom Teorisi', 'Gazlar', 'Sıvı Çözeltiler ve Çözünürlük',
+      ]),
       Unit('Tepkimelerde Enerji, Hız ve Denge', <String>[
         'Kimyasal Tepkimelerde Enerji', 'Kimyasal Tepkimelerde Hız',
         'Kimyasal Tepkimelerde Denge',
@@ -275,6 +281,7 @@ class YksCurriculum {
         'Fotosentez', 'Kemosentez', 'Hücresel Solunum',
       ]),
       Unit('Bitki Biyolojisi', <String>[
+        'Bitkisel Hormonlar',
         'Bitkisel Dokular', 'Bitkilerde Taşıma-Beslenme-Terleme',
         'Bitkilerde Üreme',
       ]),
@@ -285,6 +292,7 @@ class YksCurriculum {
         'Üreme Sistemi ve Embriyonik Gelişim',
       ]),
       Unit('Ekoloji', <String>[
+        'Komünite Ekolojisi',
         'Ekosistem Ekolojisi', 'Madde Döngüleri', 'Popülasyon Ekolojisi',
       ]),
     ],

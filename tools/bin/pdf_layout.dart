@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:io';
 
 /// PDF'ten çıkarılan bir kelimenin yeri (birim: PDF puntosu, 1/72 inç).
@@ -148,8 +149,9 @@ List<Word> _numberColumn(List<Word> candidates) {
 
   // Tek başına duran sayılar (şekil etiketleri) elenir; hiçbiri çoklu değilse
   // elimizde ne varsa onunla devam ederiz.
-  final List<List<Word>> multi =
-      groups.where((List<Word> g) => g.length >= 2).toList();
+  final List<List<Word>> multi = groups
+      .where((List<Word> g) => g.length >= 2)
+      .toList();
   final List<List<Word>> pool = multi.isEmpty ? groups : multi;
 
   // Kazanan EN SOLDAKİ kümedir, en kalabalık olan değil: soru numarası sütunun
@@ -160,9 +162,27 @@ List<Word> _numberColumn(List<Word> candidates) {
     return byEdge != 0 ? byEdge : b.length.compareTo(a.length);
   });
 
-  final List<Word> best = pool.first.toList()
+  // Kazanan küme seçildikten sonra hizası biraz kayan numaraları geri al:
+  // MEB sayfalarında tek tük soru numarası birkaç punto içeride/dışarıda
+  // başlıyor ve dar toleransla kümenin dışında kalıyordu. Uzaktaki şekil
+  // etiketleri bu pencereye giremez, sıra kuralı da ayrıca süzer.
+  final List<Word> best = _widen(pool.first, candidates)
     ..sort((Word a, Word b) => a.yMin.compareTo(b.yMin));
   return _increasingOnly(best);
+}
+
+List<Word> _widen(List<Word> chosen, List<Word> all) {
+  const double window = 8;
+  final double lo = chosen.map((Word w) => w.xMin).reduce(min);
+  final double hi = chosen.map((Word w) => w.xMax).reduce(max);
+  return all
+      .where(
+        (Word w) =>
+            chosen.contains(w) ||
+            (w.xMin - lo).abs() <= window ||
+            (w.xMax - hi).abs() <= window,
+      )
+      .toList();
 }
 
 double _leftEdge(List<Word> ws) =>

@@ -113,7 +113,10 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
         "Vektörler",
       ],
       "Fizik": [
-        "Vektörler", "Kuvvet, Tork ve Denge", "İtme ve Momentum",
+        "Vektörler", "Bağıl Hareket", "Newton'un Hareket Yasaları",
+        "Bir Boyutta Sabit İvmeli Hareket",
+        "İki Boyutta Sabit İvmeli Hareket", "Enerji ve Hareket",
+        "Kuvvet, Tork ve Denge", "İtme ve Momentum",
         "Çembersel Hareket", "Basit Harmonik Hareket",
         "Kütle Çekimi ve Kepler Yasaları", "Elektrik Alan ve Potansiyel",
         "Kondansatörler", "Manyetizma ve İndüksiyon", "Alternatif Akım",
@@ -124,6 +127,7 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
       ],
       "Kimya": [
         "Kimyasal Tepkimelerde Enerji", "Kimyasal Tepkimelerde Hız",
+        "Modern Atom Teorisi", "Gazlar", "Sıvı Çözeltiler ve Çözünürlük",
         "Kimyasal Tepkimelerde Denge", "Asit-Baz Dengesi", "Çözünürlük Dengesi",
         "Redoks Tepkimeleri", "Elektrokimyasal Hücreler ve Piller", "Elektroliz",
         "Korozyon", "Karbon Kimyasına Giriş (Hibritleşme)", "Hidrokarbonlar",
@@ -134,6 +138,7 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
         "Hücre Bölünmeleri (Mitoz-Mayoz)", "Kalıtım Kalıpları",
         "Soyağacı ve Akraba Evliliği", "Modern Genetik Uygulamaları",
         "Ekosistem Ekolojisi", "Madde Döngüleri", "Popülasyon Ekolojisi",
+        "Komünite Ekolojisi", "Bitkisel Hormonlar",
         "Fotosentez", "Kemosentez", "Hücresel Solunum", "Bitkisel Dokular",
         "Bitkilerde Taşıma-Beslenme-Terleme", "Bitkilerde Üreme",
         "Nükleik Asitler", "DNA Replikasyonu", "Protein Sentezi", "Sinir Sistemi",
