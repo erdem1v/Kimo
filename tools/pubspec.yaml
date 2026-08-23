@@ -1,0 +1,10 @@
+name: meb_import
+description: MEB kazanım testi PDF'lerini soru havuzuna aktaran yardımcı araç.
+publish_to: none
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  http: ^1.2.0
+  image: ^4.2.0

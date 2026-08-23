@@ -58,3 +58,4 @@ supabase.json
 *.jks
 *.keystore
 key.properties
+.tmp/
