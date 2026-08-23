@@ -63,7 +63,9 @@ class YksCurriculum {
       Unit('Fonksiyonlar ve Polinomlar', <String>[
         'Fonksiyonlar', 'Polinomlar', 'İkinci Dereceden Denklemler',
       ]),
-      Unit('Veri ve Olasılık', <String>['İstatistik', 'Olasılık']),
+      Unit('Veri ve Olasılık', <String>[
+        'Permütasyon-Kombinasyon', 'İstatistik', 'Olasılık',
+      ]),
     ],
     'Geometri': <Unit>[
       Unit('Açılar ve Üçgenler', <String>[
@@ -158,7 +160,8 @@ class YksCurriculum {
       Unit('Doğal Sistemler', <String>[
         "Dünya'nın Şekli ve Hareketleri", 'Harita Bilgisi',
         'Atmosfer ve Sıcaklık', 'Basınç ve Rüzgârlar', 'Nem-Yağış-Buharlaşma',
-        'İç Kuvvetler', 'Dış Kuvvetler', 'Toprak ve Bitki Örtüsü',
+        'İç Kuvvetler', 'Dış Kuvvetler', 'Su Kaynakları',
+        'Toprak ve Bitki Örtüsü',
       ]),
       Unit('Beşerî Sistemler', <String>[
         'Nüfus', 'Göç', 'Yerleşme', 'Ekonomik Faaliyetler',

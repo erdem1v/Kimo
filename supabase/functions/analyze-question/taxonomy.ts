@@ -28,8 +28,8 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
         "Kesir Problemleri", "Yaş Problemleri", "İşçi-Havuz Problemleri",
         "Hareket Problemleri", "Yüzde Problemleri", "Kâr-Zarar Problemleri",
         "Karışım Problemleri", "Grafik Problemleri", "Kümeler", "Mantık",
-        "Fonksiyonlar", "Polinomlar", "İkinci Dereceden Denklemler", "İstatistik",
-        "Olasılık",
+        "Fonksiyonlar", "Polinomlar", "İkinci Dereceden Denklemler",
+        "Permütasyon-Kombinasyon", "İstatistik", "Olasılık",
       ],
       "Geometri": [
         "Doğruda Açılar", "Üçgende Açılar", "Üçgende Açı-Kenar Bağıntıları",
@@ -76,7 +76,8 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
       "Coğrafya": [
         "Dünya'nın Şekli ve Hareketleri", "Harita Bilgisi", "Atmosfer ve Sıcaklık",
         "Basınç ve Rüzgârlar", "Nem-Yağış-Buharlaşma", "İç Kuvvetler",
-        "Dış Kuvvetler", "Toprak ve Bitki Örtüsü", "Nüfus", "Göç", "Yerleşme",
+        "Dış Kuvvetler", "Su Kaynakları", "Toprak ve Bitki Örtüsü", "Nüfus",
+        "Göç", "Yerleşme",
         "Ekonomik Faaliyetler", "Bölgeler", "Doğa ve İnsan", "Çevre ve Toplum",
         "Doğal Afetler",
       ],
