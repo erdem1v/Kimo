@@ -1,5 +1,5 @@
 {
-  "_aciklama": "MEB ÖDSGM 12. Sınıf Matematik Kazanım Testleri (2022-2023). Konu adları lib/data/yks_curriculum.dart ile BİREBİR aynı olmalı, yoksa soru haritada hiçbir yere düşmez. Trigonometri (11-18) ve Analitik Düzlemde Temel Dönüşümler (19-20) testleri bilerek dışarıda: birincisinde MEB alt konu adı vermiyor, ikincisinin müfredat listemizde karşılığı yok.",
+  "_aciklama": "MEB ÖDSGM 12. Sınıf Matematik Kazanım Testleri (2022-2023). Konu adları lib/data/yks_curriculum.dart ile BİREBİR aynı olmalı, yoksa soru haritada hiçbir yere düşmez. MEB 'Trigonometri 1-8' testlerine alt konu adı vermiyor; içeriklerine bakarak ayırdım: 11-14'te denklem çözümü hiç geçmiyor (formül testleri), 15-18'de her testte 8-12 kez geçiyor.",
   "source": "meb",
   "sourceYear": 2022,
   "sourceSession": "Kazanım Testi",
@@ -33,6 +33,17 @@
     { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/12kt/mat/37.pdf", "exam": "AYT", "subject": "Matematik", "concept": "İntegral ile Alan Hesabı", "answers": "BBABEDDCCBAE" },
     { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/12kt/mat/38.pdf", "exam": "AYT", "subject": "Matematik", "concept": "İntegral ile Alan Hesabı", "answers": "EACECECDEB" },
     { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/12kt/mat/39.pdf", "exam": "AYT", "subject": "Geometri", "concept": "Çemberin Analitik İncelenmesi", "answers": "CBDDEACADECC" },
-    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/12kt/mat/40.pdf", "exam": "AYT", "subject": "Geometri", "concept": "Çemberin Analitik İncelenmesi", "answers": "ECCDCCDCDB" }
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/12kt/mat/40.pdf", "exam": "AYT", "subject": "Geometri", "concept": "Çemberin Analitik İncelenmesi", "answers": "ECCDCCDCDB" },
+
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/12kt/mat/11.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Trigonometri: Toplam-Fark ve İki Kat Açı", "answers": "DCDDBECEBAAB" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/12kt/mat/12.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Trigonometri: Toplam-Fark ve İki Kat Açı", "answers": "DAACCAEAE" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/12kt/mat/13.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Trigonometri: Toplam-Fark ve İki Kat Açı", "answers": "BEDDACEBCACD" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/12kt/mat/14_1.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Trigonometri: Toplam-Fark ve İki Kat Açı", "answers": "BACCDDCBABA" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/12kt/mat/15.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Trigonometrik Denklemler", "answers": "BEECADABCDEB" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/12kt/mat/16.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Trigonometrik Denklemler", "answers": "DCDEDAABDCBE" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/12kt/mat/17.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Trigonometrik Denklemler", "answers": "CBCEBDBEDAAD" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/12kt/mat/18.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Trigonometrik Denklemler", "answers": "ADECBBAEECCC" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/12kt/mat/19_2.pdf", "exam": "AYT", "subject": "Geometri", "concept": "Analitik Düzlemde Temel Dönüşümler", "answers": "ADBEDABADDE" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/12kt/mat/20_2.pdf", "exam": "AYT", "subject": "Geometri", "concept": "Analitik Düzlemde Temel Dönüşümler", "answers": "DABDEBDAADAC" }
   ]
 }

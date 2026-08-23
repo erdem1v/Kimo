@@ -1,5 +1,5 @@
 {
-  "_aciklama": "MEB ÖDSGM 11. Sınıf Matematik Kazanım Testleri (2022-2023). Dışarıda bıraktıklarım: 5-10 (sinüs/kosinüs teoremi, trigonometrik grafikler, ters trigonometrik fonksiyonlar), 21-22 (fonksiyonların dönüşümleri), 35-36 (katı cisimler — prizma mı piramit mi belli değil). Bunların müfredat listemizde dürüst bir karşılığı yok; uydurup haritayı kirletmektense dışarıda kaldılar.",
+  "_aciklama": "MEB ÖDSGM 11. Sınıf Matematik Kazanım Testleri (2022-2023). Konu adları MEB'in verdiği adlarla müfredat listesine eklendi (bkz. yks_curriculum.dart + taxonomy.ts — ikisi birebir aynı olmak zorunda). Katı Cisimler testleri (35-36) MEB'de tek başlık altında ve her ikisi de hem prizma/silindir hem piramit/koni/küre sorusu içeriyor; listemizdeki ikili ayrıma bölüştürüldüler, tek tük soru komşu konuya düşebilir.",
   "source": "meb",
   "sourceYear": 2022,
   "sourceSession": "Kazanım Testi",
@@ -33,6 +33,17 @@
     { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/11kt/mat/37.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Binom ve Olasılık", "answers": "CBCEDADEBADB" },
     { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/11kt/mat/38.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Binom ve Olasılık", "answers": "CCADBADEDBD" },
     { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/11kt/mat/39_2.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Binom ve Olasılık", "answers": "CDBAEEBACDBC" },
-    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/11kt/mat/40_1.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Binom ve Olasılık", "answers": "BEADCBCEEADC" }
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/11kt/mat/40_1.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Binom ve Olasılık", "answers": "BEADCBCEEADC" },
+
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/11kt/mat/5_1.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Kosinüs ve Sinüs Teoremi", "answers": "ABCEBDCDAEDC" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/11kt/mat/6-1.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Kosinüs ve Sinüs Teoremi", "answers": "DCBCDDEECDC" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/11kt/mat/7.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Sinüs ve Kosinüs Fonksiyonlarının Grafikleri", "answers": "BEEDADBCED" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/11kt/mat/8_1.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Sinüs ve Kosinüs Fonksiyonlarının Grafikleri", "answers": "DBAECCAE" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/11kt/mat/9.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Ters Trigonometrik Fonksiyonlar", "answers": "ABCEEDEBEBDC" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/11kt/mat/10.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Ters Trigonometrik Fonksiyonlar", "answers": "DABDBEDADEAE" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/11kt/mat/21.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Fonksiyonların Dönüşümleri", "answers": "ADAECEDAEDD" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/11kt/mat/22.pdf", "exam": "AYT", "subject": "Matematik", "concept": "Fonksiyonların Dönüşümleri", "answers": "CBCAADCC" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/11kt/mat/35.pdf", "exam": "AYT", "subject": "Geometri", "concept": "Katı Cisimler (Prizma-Silindir)", "answers": "BCDACECADBAE" },
+    { "url": "https://cdn.eba.gov.tr/yardimcikaynaklar/2022/11/kt/11kt/mat/36.pdf", "exam": "AYT", "subject": "Geometri", "concept": "Katı Cisimler (Piramit-Koni-Küre)", "answers": "EBCCDDCCD" }
   ]
 }

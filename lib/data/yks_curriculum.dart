@@ -195,12 +195,16 @@ class YksCurriculum {
     'Matematik': <Unit>[
       Unit('Fonksiyonlar', <String>[
         'Fonksiyonlarda Uygulamalar (Ters-Bileşke)',
+        'Fonksiyonların Dönüşümleri',
       ]),
       Unit('Polinomlar ve Denklemler', <String>[
         'Polinomlar', 'İkinci Dereceden Denklemler', 'Parabol', 'Eşitsizlikler',
       ]),
       Unit('Trigonometri', <String>[
         'Trigonometri: Yönlü Açılar',
+        'Kosinüs ve Sinüs Teoremi',
+        'Sinüs ve Kosinüs Fonksiyonlarının Grafikleri',
+        'Ters Trigonometrik Fonksiyonlar',
         'Trigonometri: Toplam-Fark ve İki Kat Açı', 'Trigonometrik Denklemler',
       ]),
       Unit('Logaritma', <String>['Logaritma']),
@@ -215,7 +219,8 @@ class YksCurriculum {
     ],
     'Geometri': <Unit>[
       Unit('Analitik Geometri', <String>[
-        'Analitik Geometri (Doğru)', 'Çemberin Analitik İncelenmesi',
+        'Analitik Geometri (Doğru)', 'Analitik Düzlemde Temel Dönüşümler',
+        'Çemberin Analitik İncelenmesi',
       ]),
       Unit('Katı Cisimler', <String>[
         'Katı Cisimler (Prizma-Silindir)', 'Katı Cisimler (Piramit-Koni-Küre)',

@@ -93,9 +93,13 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
     },
     AYT: {
       "Matematik": [
-        "Fonksiyonlarda Uygulamalar (Ters-Bileşke)", "Polinomlar",
+        "Fonksiyonlarda Uygulamalar (Ters-Bileşke)",
+        "Fonksiyonların Dönüşümleri", "Polinomlar",
         "İkinci Dereceden Denklemler", "Parabol", "Eşitsizlikler",
         "Trigonometri: Yönlü Açılar",
+        "Kosinüs ve Sinüs Teoremi",
+        "Sinüs ve Kosinüs Fonksiyonlarının Grafikleri",
+        "Ters Trigonometrik Fonksiyonlar",
         "Trigonometri: Toplam-Fark ve İki Kat Açı", "Trigonometrik Denklemler",
         "Logaritma", "Diziler", "Limit ve Süreklilik", "Türev",
         "Türev Uygulamaları (Optimizasyon)", "İntegral",
@@ -103,7 +107,8 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
         "Binom ve Olasılık",
       ],
       "Geometri": [
-        "Analitik Geometri (Doğru)", "Çemberin Analitik İncelenmesi",
+        "Analitik Geometri (Doğru)", "Analitik Düzlemde Temel Dönüşümler",
+        "Çemberin Analitik İncelenmesi",
         "Katı Cisimler (Prizma-Silindir)", "Katı Cisimler (Piramit-Koni-Küre)",
         "Vektörler",
       ],
