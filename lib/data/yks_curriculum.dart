@@ -328,6 +328,7 @@ class YksCurriculum {
     ],
     'Tarih': <Unit>[
       Unit('Değişim Çağında Osmanlı', <String>[
+        'Değişen Dünya Dengeleri ve Osmanlı Siyaseti (1595-1774)',
         'Değişim Çağında Avrupa ve Osmanlı',
         'Uluslararası İlişkilerde Denge (1774-1914)', 'Devrimler Çağı',
         'Sermaye ve Emek', 'XIX-XX. Yüzyılda Gündelik Hayat',
@@ -338,6 +339,8 @@ class YksCurriculum {
       ]),
       Unit('Çağdaş Türk ve Dünya Tarihi', <String>[
         'İki Savaş Arası Dönem', 'II. Dünya Savaşı', 'Soğuk Savaş Dönemi',
+        'Toplumsal Devrim Çağında Dünya ve Türkiye',
+        'XXI. Yüzyılın Eşiğinde Türkiye ve Dünya',
       ]),
     ],
     'Coğrafya': <Unit>[
@@ -347,10 +350,13 @@ class YksCurriculum {
       Unit('Beşerî Sistemler', <String>[
         'Nüfus Politikaları', 'Göç ve Şehirleşme',
         "Türkiye'de Nüfus ve Yerleşme", 'Beşerî Sistemler',
+        'Doğal Kaynaklar',
       ]),
       Unit('Türkiye Ekonomisi', <String>[
         "Türkiye'de Tarım", "Türkiye'de Sanayi",
         "Türkiye'de Ticaret-Ulaşım-Turizm", 'Bölgesel Kalkınma Projeleri',
+        'Türkiye Ekonomisinin Sektörel Dağılımı',
+        "Türkiye'de Madenler ve Enerji Kaynakları",
       ]),
       Unit('Küresel Ortam', <String>['Küresel Ortam: Bölgeler ve Ülkeler']),
       Unit('Çevre ve Toplum', <String>[

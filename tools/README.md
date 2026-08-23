@@ -33,12 +33,56 @@ dart run bin/import_meb.dart manifests/meb_12_matematik.json
 
 Tek bir testi denemek için: `--only 3,7`
 
+Hepsini sırayla yüklemek için (PowerShell):
+
+```powershell
+foreach ($m in Get-ChildItem manifests/*.json) { dart run bin/import_meb.dart $m.FullName }
+```
+
 > **service_role anahtarı RLS'i tamamen atlar.** Yalnızca ortam değişkeninden
 > okunur; dosyaya yazma, depoya ekleme, uygulamaya koyma. Bu araç senin
 > bilgisayarında elle çalışır.
 
+Fotoğraf yolu `<sistem hesabı>/meb/<manifest adı>/<konu>-<test>-<soru>.jpg`
+biçimindedir. Manifest adı yola girer çünkü aynı konu birden çok sette
+geçiyor: 11. ve 12. sınıfın "Roman" testleri de, iki sınıfın "Popülasyon
+Ekolojisi" testleri de aynı numarayı taşıyor. Manifest adı olmadan ikincisi
+birincinin kopyası sanılıp sessizce atlanıyordu.
+
+Bu düzen 2026-08-24'te değişti. Daha önce yüklenmiş MEB soruları eski
+yoldadır; hepsini yeniden yüklemeden önce SQL editöründe temizle, yoksa
+havuzda çift kayıt kalır:
+
+```sql
+delete from storage.objects
+ where bucket_id = 'mistake-photos' and name like '%/meb/%';
+delete from public.mistakes where source = 'meb';
+```
+
 Betik aynı soruyu iki kez yüklemez (fotoğraf yolundan kontrol eder), yani
 yarıda kalırsa tekrar çalıştırmak güvenlidir.
+
+## Manifestler
+
+21 manifest var, hepsi MEB kazanım testlerinden:
+
+| Set | Test | Soru |
+|---|---|---|
+| 9. sınıf sayısal / sözel | 78 / 78 | 918 / 873 |
+| 10. sınıf sayısal / sözel | 78 / 91 | 892 / 1034 |
+| 11. sınıf mat / fiz / kim / biyo | 40 / 40 / 40 / 40 | 445 / 438 / 461 / 412 |
+| 12. sınıf mat / fiz / kim / biyo | 40 / 39 / 40 / 40 | 465 / 438 / 457 / 414 |
+| 11. sınıf edebiyat / tarih / coğrafya | 40 / 40 / 40 | 399 / 480 / 465 |
+| 12. sınıf edebiyat / tarih / coğrafya | 40 / 40 / 40 | 387 / 480 / 459 |
+| 11. sınıf felsefe / din | 32 / 32 | 360 / 374 |
+| 12. sınıf din | 32 | 370 |
+
+9 ve 10. sınıf setleri tek bir e-kitaptan geliyor, o yüzden testlerin
+`pages` alanı var. Kalan setler test başına ayrı PDF.
+
+Cevap anahtarları AYT setlerinde ayrı bir PDF olarak yayımlanıyor
+(`<ders>_ca_mayis.pdf`); konu adları da odsgm.meb.gov.tr'deki resmî test
+listesinden alındı — PDF'in kendi metin katmanındaki Türkçe harfler bozuk.
 
 ## Manifest
 

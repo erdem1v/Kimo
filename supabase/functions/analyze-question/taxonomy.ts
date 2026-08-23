@@ -162,12 +162,15 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
         "Şiir Bilgisi (Nazım Biçimleri-Ölçü)",
       ],
       "Tarih": [
+        "Değişen Dünya Dengeleri ve Osmanlı Siyaseti (1595-1774)",
         "Değişim Çağında Avrupa ve Osmanlı",
         "Uluslararası İlişkilerde Denge (1774-1914)", "Devrimler Çağı",
         "Sermaye ve Emek", "XIX-XX. Yüzyılda Gündelik Hayat", "Nüfus Politikaları",
         "XX. Yüzyıl Başlarında Osmanlı", "Millî Mücadele",
         "Atatürkçülük ve Türk İnkılabı", "Atatürk İlkeleri", "İki Savaş Arası Dönem",
         "II. Dünya Savaşı", "Soğuk Savaş Dönemi",
+        "Toplumsal Devrim Çağında Dünya ve Türkiye",
+        "XXI. Yüzyılın Eşiğinde Türkiye ve Dünya",
       ],
       "Coğrafya": [
         "Ekosistem ve Madde Döngüsü", "Nüfus Politikaları", "Göç ve Şehirleşme",
@@ -176,6 +179,8 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
         "Doğal Sistemler (Biyoçeşitlilik)", "Beşerî Sistemler",
         "Küresel Ortam: Bölgeler ve Ülkeler", "Çevre ve Toplum",
         "Doğal Afetler ve Toplum",
+        "Doğal Kaynaklar", "Türkiye Ekonomisinin Sektörel Dağılımı",
+        "Türkiye'de Madenler ve Enerji Kaynakları",
       ],
       "Felsefe Grubu": [
         "İlk Çağ Felsefesi", "Ortaçağ Felsefesi", "Yeni Çağ Felsefesi",

@@ -34,6 +34,12 @@ Future<void> main(List<String> args) async {
   final bool dryRun = args.contains('--dry-run');
   final Set<int>? only = _onlyFilter(args);
 
+  // Aynı konu adı birden çok manifestte geçiyor (11. ve 12. sınıfın
+  // "Roman" testleri gibi); dosya adları çakışmasın diye her set kendi
+  // klasörüne yazılır.
+  final String setName = File(
+    positional.first,
+  ).uri.pathSegments.last.replaceAll('.json', '');
   final Map<String, dynamic> manifest =
       jsonDecode(await File(positional.first).readAsString())
           as Map<String, dynamic>;
@@ -116,10 +122,12 @@ Future<void> main(List<String> args) async {
       for (final QuestionBox box in boxes) {
         final img.Image crop = _crop(rendered[box.page - 1], box);
         final List<int> jpg = img.encodeJpg(crop, quality: _jpegQuality);
-        final String name = '${_slug(concept)}-$no-${box.number}.jpg';
+        final String name = '$setName/${_slug(concept)}-$no-${box.number}.jpg';
 
         if (dryRun) {
-          File('${out.path}/$name').writeAsBytesSync(jpg);
+          File('${out.path}/$name')
+            ..parent.createSync(recursive: true)
+            ..writeAsBytesSync(jpg);
         } else {
           await admin!.publishQuestion(
             jpeg: jpg,
@@ -260,12 +268,18 @@ bool _rowIsBlank(img.Image im, int y) {
 
 String _slug(String s) {
   const Map<String, String> tr = <String, String>{
+    'â': 'a',
+    'î': 'i',
+    'û': 'u',
     'ç': 'c',
     'ğ': 'g',
     'ı': 'i',
     'ö': 'o',
     'ş': 's',
     'ü': 'u',
+    'Â': 'a',
+    'Î': 'i',
+    'Û': 'u',
     'Ç': 'c',
     'Ğ': 'g',
     'İ': 'i',
