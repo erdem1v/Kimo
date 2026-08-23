@@ -1,7 +1,8 @@
 import 'models.dart';
 
-/// Havuzdaki bir soru: başka bir kullanıcının paylaşıma açtığı hatası.
-/// Sahibinden yalnızca takma ad taşınır (not/hata türü paylaşılmaz).
+/// Havuzdaki bir soru: başka bir kullanıcının paylaşıma açtığı hatası ya da
+/// yüklediğimiz bir çıkmış soru. Sahibinden yalnızca takma ad taşınır
+/// (not/hata türü paylaşılmaz).
 class PublicQuestion {
   const PublicQuestion({
     required this.id,
@@ -14,6 +15,9 @@ class PublicQuestion {
     this.exam,
     this.solvedCorrect = 0,
     this.solvedWrong = 0,
+    this.source = 'user',
+    this.sourceYear,
+    this.sourceSession,
   });
 
   final String id;
@@ -29,20 +33,35 @@ class PublicQuestion {
   final int solvedCorrect;
   final int solvedWrong;
 
+  /// 'user' = birinin hatası · 'osym' = çıkmış soru.
+  final String source;
+  final int? sourceYear;
+  final String? sourceSession;
+
+  /// Çıkmış soru mu? Künye buna göre değişir ("X'in hatası" demek yanlış olur).
+  bool get isOfficial => source == 'osym';
+
+  /// Çıkmış soruların künyesi: "2026 TYT".
+  String get officialLabel => <String>[
+    if (sourceYear != null) '$sourceYear',
+    if (sourceSession != null && sourceSession!.isNotEmpty) sourceSession!,
+  ].join(' ');
+
   int get totalAttempts => solvedCorrect + solvedWrong;
 
   /// Doğru çözenlerin yüzdesi (deneme yoksa null).
-  int? get successRate => totalAttempts == 0
-      ? null
-      : (solvedCorrect / totalAttempts * 100).round();
+  int? get successRate =>
+      totalAttempts == 0 ? null : (solvedCorrect / totalAttempts * 100).round();
 
   factory PublicQuestion.fromRow(Map<String, dynamic> row) {
     final dynamic raw = row['options'];
     final List<QuestionOption> options = raw is List
         ? raw
-            .map((dynamic o) =>
-                QuestionOption.fromJson((o as Map).cast<String, dynamic>()))
-            .toList()
+              .map(
+                (dynamic o) =>
+                    QuestionOption.fromJson((o as Map).cast<String, dynamic>()),
+              )
+              .toList()
         : <QuestionOption>[];
     return PublicQuestion(
       id: row['id'] as String,
@@ -55,6 +74,9 @@ class PublicQuestion {
       correctIndex: (row['correct_index'] as int?) ?? 0,
       solvedCorrect: (row['solved_correct'] as int?) ?? 0,
       solvedWrong: (row['solved_wrong'] as int?) ?? 0,
+      source: (row['source'] as String?) ?? 'user',
+      sourceYear: row['source_year'] as int?,
+      sourceSession: row['source_session'] as String?,
     );
   }
 }

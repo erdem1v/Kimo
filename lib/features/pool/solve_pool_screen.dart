@@ -36,8 +36,9 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
   int? _selected;
   bool _answered = false;
 
-  late final ConfettiController _confetti =
-      ConfettiController(duration: const Duration(milliseconds: 900));
+  late final ConfettiController _confetti = ConfettiController(
+    duration: const Duration(milliseconds: 900),
+  );
 
   static const List<Color> _confettiColors = <Color>[
     AppColors.green,
@@ -65,10 +66,8 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
       _error = null;
     });
     try {
-      final List<PublicQuestion> items = await questionPoolRepository.fetchRandom(
-        subject: widget.subject,
-        concept: widget.concept,
-      );
+      final List<PublicQuestion> items = await questionPoolRepository
+          .fetchRandom(subject: widget.subject, concept: widget.concept);
       if (!mounted) return;
       setState(() {
         _items = items;
@@ -185,9 +184,9 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
       return _message(
         widget.concept != null
             ? '"${widget.concept}" konusunda havuzda henüz soru yok.\n'
-                'Havuz doldukça burası da dolacak.'
+                  'Havuz doldukça burası da dolacak.'
             : 'Havuzda şu an çözebileceğin soru yok.\n'
-                'Sen de sorularını paylaşarak havuzu büyütebilirsin.',
+                  'Sen de sorularını paylaşarak havuzu büyütebilirsin.',
         emoji: '🫙',
       );
     }
@@ -204,19 +203,28 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
           child: Row(
             children: <Widget>[
               IconButton(
-                icon: const Icon(Icons.close_rounded, color: AppColors.inkLight),
+                icon: const Icon(
+                  Icons.close_rounded,
+                  color: AppColors.inkLight,
+                ),
                 onPressed: () => Navigator.of(context).maybePop(),
               ),
               Expanded(
                 child: Text(
                   '${_index + 1} / ${_items.length}',
                   style: const TextStyle(
-                      fontWeight: FontWeight.w800, color: AppColors.inkLight),
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.inkLight,
+                  ),
                 ),
               ),
-              Text('$_correct doğru',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w800, color: AppColors.green)),
+              Text(
+                '$_correct doğru',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.green,
+                ),
+              ),
               IconButton(
                 icon: const Icon(Icons.send_rounded, color: AppColors.purple),
                 tooltip: 'Arkadaşına gönder',
@@ -227,8 +235,10 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.flag_outlined,
-                    color: AppColors.inkLight),
+                icon: const Icon(
+                  Icons.flag_outlined,
+                  color: AppColors.inkLight,
+                ),
                 tooltip: 'Bu soruyu bildir',
                 onPressed: _report,
               ),
@@ -248,7 +258,11 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
         ),
         Padding(
           padding: EdgeInsets.fromLTRB(
-              16, 8, 16, 12 + MediaQuery.of(context).padding.bottom),
+            16,
+            8,
+            16,
+            12 + MediaQuery.of(context).padding.bottom,
+          ),
           child: _options(q),
         ),
       ],
@@ -275,20 +289,37 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
               const SizedBox(width: 6),
               Expanded(
                 child: Text.rich(
-                  TextSpan(
-                    children: <TextSpan>[
-                      const TextSpan(text: 'Bu soru '),
-                      TextSpan(
-                        text: q.ownerNickname,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      const TextSpan(text: '\'in bir hatası'),
-                    ],
-                  ),
+                  // Çıkmış soruya "birinin hatası" demek yanlış olur.
+                  q.isOfficial
+                      ? TextSpan(
+                          children: <TextSpan>[
+                            TextSpan(
+                              text: q.officialLabel,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const TextSpan(text: ' çıkmış sorusu'),
+                          ],
+                        )
+                      : TextSpan(
+                          children: <TextSpan>[
+                            const TextSpan(text: 'Bu soru '),
+                            TextSpan(
+                              text: q.ownerNickname,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const TextSpan(text: '\'in bir hatası'),
+                          ],
+                        ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      color: AppColors.purpleDark, fontSize: 13),
+                    color: AppColors.purpleDark,
+                    fontSize: 13,
+                  ),
                 ),
               ),
               if (q.exam != null || q.subject.isNotEmpty)
@@ -298,35 +329,49 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
                     if (q.subject.isNotEmpty) q.subject,
                   ].join(' · '),
                   style: const TextStyle(
-                      color: AppColors.inkLight,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700),
+                    color: AppColors.inkLight,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
             ],
           ),
           const SizedBox(height: 6),
           Row(
             children: <Widget>[
-              _stat(Icons.check_circle_rounded, AppColors.green,
-                  '${q.solvedCorrect} kişi doğru'),
+              _stat(
+                Icons.check_circle_rounded,
+                AppColors.green,
+                '${q.solvedCorrect} kişi doğru',
+              ),
               const SizedBox(width: 12),
-              _stat(Icons.cancel_rounded, AppColors.red,
-                  '${q.solvedWrong} kişi yanlış'),
+              _stat(
+                Icons.cancel_rounded,
+                AppColors.red,
+                '${q.solvedWrong} kişi yanlış',
+              ),
               if (rate != null) ...<Widget>[
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: (rate >= 50 ? AppColors.green : AppColors.red)
                         .withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text('%$rate başarı',
-                      style: TextStyle(
-                          color: rate >= 50 ? AppColors.greenDark : AppColors.redDark,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 11.5)),
+                  child: Text(
+                    '%$rate başarı',
+                    style: TextStyle(
+                      color: rate >= 50
+                          ? AppColors.greenDark
+                          : AppColors.redDark,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11.5,
+                    ),
+                  ),
                 ),
               ],
             ],
@@ -342,8 +387,10 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
       children: <Widget>[
         Icon(icon, size: 13, color: color),
         const SizedBox(width: 4),
-        Text(text,
-            style: const TextStyle(color: AppColors.inkLight, fontSize: 11.5)),
+        Text(
+          text,
+          style: const TextStyle(color: AppColors.inkLight, fontSize: 11.5),
+        ),
       ],
     );
   }
@@ -400,9 +447,14 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
           shape: BoxShape.circle,
           border: Border.all(color: border, width: 2.5),
         ),
-        child: Text(label,
-            style:
-                TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: fg)),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 20,
+            color: fg,
+          ),
+        ),
       ),
     );
   }
@@ -416,9 +468,11 @@ class _SolvePoolScreenState extends State<SolvePoolScreen> {
           children: <Widget>[
             Text(emoji, style: const TextStyle(fontSize: 64)),
             const SizedBox(height: 16),
-            Text(text,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.inkLight, fontSize: 15)),
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.inkLight, fontSize: 15),
+            ),
             const SizedBox(height: 24),
             GameButton(
               label: retry ? 'Tekrar dene' : 'TAMAM',
