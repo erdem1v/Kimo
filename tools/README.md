@@ -54,9 +54,16 @@ yoldadır; hepsini yeniden yüklemeden önce SQL editöründe temizle, yoksa
 havuzda çift kayıt kalır:
 
 ```sql
-delete from storage.objects
- where bucket_id = 'mistake-photos' and name like '%/meb/%';
 delete from public.mistakes where source = 'meb';
+```
+
+Depodaki fotoğraflar SQL ile silinemez (Supabase `storage.objects`'e
+doğrudan silmeyi engelliyor). Satırları sildikten sonra sahipsiz kalan
+dosyaları Storage API üzerinden temizle:
+
+```bash
+dart run bin/prune_orphans.dart --dry-run
+dart run bin/prune_orphans.dart
 ```
 
 Betik aynı soruyu iki kez yüklemez (fotoğraf yolundan kontrol eder), yani

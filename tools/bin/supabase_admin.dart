@@ -134,4 +134,97 @@ class SupabaseAdmin {
       throw Exception('Soru kaydedilemedi (${r.statusCode}): ${r.body}');
     }
   }
+
+  /// Depoda satırı kalmamış hazır soru fotoğraflarını bulur.
+  ///
+  /// Yalnızca `<sistem hesabı>/<source>/` altına bakar; gerçek kullanıcıların
+  /// fotoğrafları başka klasörlerde durduğu için asla listeye giremez.
+  Future<List<String>> findOrphans(String source) async {
+    final Set<String> used = await _usedPaths(source);
+    final List<String> all = await _listFolder('$ownerId/$source');
+    return all.where((String p) => !used.contains(p)).toList()..sort();
+  }
+
+  /// Depodan dosya siler (Storage API — storage.objects'e SQL ile dokunulmaz).
+  Future<void> deleteObjects(List<String> paths) async {
+    for (int i = 0; i < paths.length; i += 100) {
+      final List<String> chunk = paths.sublist(
+        i,
+        i + 100 > paths.length ? paths.length : i + 100,
+      );
+      final http.Response r = await http.delete(
+        Uri.parse('$_baseUrl/storage/v1/object/$_bucket'),
+        headers: <String, String>{
+          ..._headers,
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(<String, dynamic>{'prefixes': chunk}),
+      );
+      if (r.statusCode >= 300) {
+        throw Exception('Silinemedi (${r.statusCode}): ${r.body}');
+      }
+    }
+  }
+
+  /// `mistakes` tablosunun hâlâ işaret ettiği fotoğraf yolları.
+  Future<Set<String>> _usedPaths(String source) async {
+    final Set<String> out = <String>{};
+    for (int offset = 0; ; offset += 1000) {
+      final http.Response r = await http.get(
+        Uri.parse(
+          '$_baseUrl/rest/v1/mistakes?select=photo_path'
+          '&source=eq.$source&limit=1000&offset=$offset',
+        ),
+        headers: _headers,
+      );
+      if (r.statusCode != 200) {
+        throw Exception('mistakes okunamadı (${r.statusCode}): ${r.body}');
+      }
+      final List<dynamic> rows = jsonDecode(r.body) as List<dynamic>;
+      for (final dynamic row in rows) {
+        final Object? p = (row as Map)['photo_path'];
+        if (p is String) out.add(p);
+      }
+      if (rows.length < 1000) return out;
+    }
+  }
+
+  /// Bir klasörün altındaki tüm dosyaları (alt klasörler dahil) listeler.
+  Future<List<String>> _listFolder(String prefix) async {
+    final List<String> files = <String>[];
+    final List<String> folders = <String>[];
+    for (int offset = 0; ; offset += 1000) {
+      final http.Response r = await http.post(
+        Uri.parse('$_baseUrl/storage/v1/object/list/$_bucket'),
+        headers: <String, String>{
+          ..._headers,
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'prefix': prefix,
+          'limit': 1000,
+          'offset': offset,
+        }),
+      );
+      if (r.statusCode != 200) {
+        throw Exception('Depo listelenemedi (${r.statusCode}): ${r.body}');
+      }
+      final List<dynamic> rows = jsonDecode(r.body) as List<dynamic>;
+      for (final dynamic row in rows) {
+        final Map<String, dynamic> o = (row as Map).cast<String, dynamic>();
+        final String name = o['name'] as String;
+        // Klasörlerin id'si null gelir.
+        if (o['id'] == null) {
+          folders.add('$prefix/$name');
+        } else {
+          files.add('$prefix/$name');
+        }
+      }
+      if (rows.length < 1000) break;
+    }
+    for (final String f in folders) {
+      files.addAll(await _listFolder(f));
+    }
+    return files;
+  }
 }
