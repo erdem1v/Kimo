@@ -298,6 +298,10 @@ class YksCurriculum {
       ]),
     ],
     'Edebiyat': <Unit>[
+      Unit('Edebî Türler', <String>[
+        'Edebiyat Bilgisi ve Metin Türleri', 'Hikâye', 'Şiir Bilgisi',
+        'Roman', 'Tiyatro',
+      ]),
       Unit('İslamiyet Öncesi ve Geçiş Dönemi', <String>[
         'İslamiyet Öncesi Türk Edebiyatı', 'Geçiş Dönemi Eserleri',
       ]),

@@ -149,6 +149,8 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
         "Üreme Sistemi ve Embriyonik Gelişim",
       ],
       "Edebiyat": [
+        "Edebiyat Bilgisi ve Metin Türleri", "Hikâye", "Şiir Bilgisi",
+        "Roman", "Tiyatro",
         "İslamiyet Öncesi Türk Edebiyatı", "Geçiş Dönemi Eserleri",
         "Halk Edebiyatı (Âşık-Anonim)", "Dini-Tasavvufi Halk Edebiyatı",
         "Divan Edebiyatı", "Tanzimat Edebiyatı", "Servet-i Fünun Edebiyatı",
