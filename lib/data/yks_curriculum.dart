@@ -754,21 +754,97 @@ class YksCurriculum {
       ]),
     ],
     'Tarih': <Unit>[
-      Unit('Değişim Çağında Osmanlı', <String>[
-        'Değişen Dünya Dengeleri ve Osmanlı Siyaseti (1595-1774)',
-        'Değişim Çağında Avrupa ve Osmanlı',
-        'Uluslararası İlişkilerde Denge (1774-1914)', 'Devrimler Çağı',
-        'Sermaye ve Emek', 'XIX-XX. Yüzyılda Gündelik Hayat',
-        'Nüfus Politikaları', 'XX. Yüzyıl Başlarında Osmanlı',
+      Unit('Tarih ve Zaman', <String>[
+        'İnsanlığın Hafızası Tarih', 'Zamanın Taksimi',
       ]),
-      Unit('Millî Mücadele ve İnkılaplar', <String>[
-        'Millî Mücadele', 'Atatürkçülük ve Türk İnkılabı', 'Atatürk İlkeleri',
+      Unit('İlk ve Orta Çağlarda Türk Dünyası', <String>[
+        "Avrasya'da İlk Türk İzleri, Coğrafya ile Oluşan Yaşam Tarzı", 'Boylardan Devlete-I',
+        'Boylardan Devlete-II', 'Kavimler Göçü',
       ]),
-      Unit('Çağdaş Türk ve Dünya Tarihi', <String>[
-        'İki Savaş Arası Dönem', 'II. Dünya Savaşı', 'Soğuk Savaş Dönemi',
-        'Toplumsal Devrim Çağında Dünya ve Türkiye',
-        'XXI. Yüzyılın Eşiğinde Türkiye ve Dünya',
+      Unit('İslam Medeniyetinin Doğuşu', <String>[
+        "İslamiyet'in Doğduğu Dönemde Dünya, İslamiyet Yayılıyor", 'Emeviler',
+        'Abbasi Devleti ve Türkler-Bilim Medeniyeti',
       ]),
+      Unit("Türk İslam Tarihindeki Siyasi Gelişmeler, Türklerin İslamiyet'i Kabulü", <String>[
+        "Türklerin İslamiyet'i Kabulü", "İslamiyet'in Türk Devlet ve Toplum Yapısına Etkisi",
+        'Büyük Selçuklu Devleti',
+      ]),
+      Unit('Yerleşme ve Devletleşme Sürecinde Selçuklu Türkiyesi', <String>[
+        "Türklerin Anadolu'ya Yerleşme Süreci", "Anadolu'nun İlk Türk Siyasi Teşekkülleri",
+        'Hilal ve Haç Mücadelesi', 'Moğol İstilası ve Anadolu',
+      ]),
+      Unit('Beylikten Devlete Osmanlı Siyaseti (1302-1453)', <String>[
+        "Osmanlı Beyliği'nin Kuruluşu ve İlk Fetihleri", "Osmanlı Devleti'nin Rumeli'deki İskân ve İstimâlet Politikası",
+        "Anadolu'da Türk Siyasi Birliğini Sağlama Çabaları",
+      ]),
+      Unit('Devletleşme Sürecinde Savaşçılar ve Askerler', <String>[
+        'Devletleşme Sürecinde Savaşçılar ve Askerler',
+      ]),
+      Unit('Beylikten Devlete Osmanlı Medeniyeti', <String>[
+        'Beylikten Devlete Osmanlı Medeniyeti',
+      ]),
+      Unit('Dünya Gücü Osmanlı (1453-1595)', <String>[
+        "İstanbul'un Fethi ve Fethin Sonuçları", 'Türk İslam Dünyasında Birliği Sağlama Çabaları',
+        'Dünyanın Muhteşem Gücü Osmanlı', 'Stratejik Siyaset ve Dünya Gücü Olan Osmanlı Devleti',
+      ]),
+      Unit('Sultan ve Osmanlı Merkez Teşkilatı', <String>[
+        'Saray ve Şehir Kültürü, Gelenekler Işığında Devlet İdaresi',
+      ]),
+      Unit('Klasik Çağda Osmanlı Toplum Düzeni', <String>[
+        "Osmanlı Devleti'nde Millet Sistemi, Fethettiği Yerlerdeki Kültürel Değişim", 'Osmanlı Toprak Sistemi, Lonca Teşkilatı, Vakıflar',
+      ]),
+      Unit('Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti (1595-1774)', <String>[
+        'Uzun Savaşlardan Diplomasiye', 'Okyanusların Önem Kazanması ve Sömürgecilik Faaliyetleri',
+        'Fetihlerden Savunmaya',
+      ]),
+      Unit('Değişim Çağında Avrupa ve Osmanlı', <String>[
+        "Avrupa'da Değişim Çağı", "Osmanlı Devleti'nde Değişim",
+        "Osmanlı Devleti'nde İsyanlar ve Düzeni Koruma Çabaları",
+      ]),
+      Unit('Devrimler Çağında Değişen Devlet-Toplum İlişkileri', <String>[
+        'İhtilaller Çağı, Sömürgeciliğin Küresel Etkileri', "Osmanlı Devleti'nde Modern Orduya Geçiş",
+        'XIX. Yüzyılda Sosyal Hayattaki Değişimler',
+      ]),
+      Unit('Uluslararası İlişkilerde Denge Stratejisi (1774-1914)', <String>[
+        "Osmanlı Devleti'ne Yönelik Tehditler-I", "Osmanlı Devleti'nde Demokratikleşme Hareketleri",
+        "Osmanlı Devleti'nde Darbeler", 'Osmanlı Devletine Yönelik Tehditler-II',
+      ]),
+      Unit('XIX. ve XX. Yüzyılda Değişen Sosyo-Ekonomik Hayat', <String>[
+        "Osmanlı Devleti'nde Sanayileşme Çabaları", 'XIX ve XX. Yüzyılda Osmanlı Nüfusu, Metropoller, Salgınlar ve Kamuoyu',
+      ]),
+      Unit('XX. Yüzyıl Başlarında Osmanlı Devleti ve Dünya', <String>[
+        "Mustafa Kemal'in Lider Olarak Yetişmesinde Etkili Koşullar", '20. Yüzyıl Başlarında Osmanlı Devleti',
+        'I. Dünya Savaşı Sürecinde Osmanlı Devleti', "I. Dünya Savaşı'nın Sonuçları",
+      ]),
+      Unit('Millî Mücadele', <String>[
+        "Millî Mücadele'ye Hazırlık Dönemi-I", 'Büyük Millet Meclisinin Açılması-Sevr Antlaşması',
+        'Doğu, Güney ve Batı Cepheleri', "Millî Mücadele'nin Sona Ermesi ve Lozan Barış Antlaşması",
+        "Millî Mücadele'ye Hazırlık Dönemi-II",
+      ]),
+      Unit('Atatürkçülük ve Türk İnkılabı', <String>[
+        'Atatürk İlkeleri, Siyasi ve Hukuk Alanındaki Gelişmeler', "Atatürk Dönemi'nde Yapılan İnkılaplar",
+      ]),
+      Unit('İki Savaş Arasındaki Dönemde Türkiye ve Dünya', <String>[
+        'Atatürk Dönemi İç Politikadaki Gelişmeler',
+        'İki Dünya Savaşı Arasındaki Dönemde Dünya',
+        'Atatürk Dönemi Türk Dış Politikası',
+      ]),
+      Unit('II. Dünya Savaşı Sürecinde Türkiye ve Dünya', <String>[
+        "II. Dünya Savaşı Sürecinde Türkiye ve Savaşı'nın Sonuçları",
+      ]),
+      Unit('II. Dünya Savaşı Sonrasında Türkiye ve Dünya', <String>[
+        'II. Dünya Savaşı Sonrası Gelişmeler',
+      ]),
+      Unit('Toplumsal Devrim Çağında Dünya ve Türkiye', <String>[
+        '1960 Sonrası Dünyada Yaşanan Siyasi Gelişmeler',
+        '1960 Sonrasında Türk Dış Politikası',
+        "Türkiye'deki Siyasi, Ekonomik, Sosyokültürel Hayat",
+      ]),
+      Unit('XXI. Yüzyılın Eşiğinde Türkiye ve Dünya', <String>[
+        '1990 Sonrasında Türkiye',
+        "1990 Sonrasında Meydana Gelen Siyasi Gelişmelerin Türkiye'ye Etkileri",
+      ]),
+
     ],
     'Coğrafya': <Unit>[
       Unit('Doğal Sistemler', <String>[
