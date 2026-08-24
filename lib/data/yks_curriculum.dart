@@ -34,12 +34,10 @@ class YksCurriculum {
     'Türkçe': <Unit>[
       Unit('Anlam Bilgisi', <String>[
         'Sözcükte Anlam', 'Cümlede Anlam', 'Paragrafta Anlam',
-        'Paragrafta Yapı', 'Anlatım Teknikleri',
       ]),
       Unit('Dil Bilgisi', <String>[
-        'Ses Bilgisi', 'Sözcükte Yapı (Ekler)', 'İsim (Ad)', 'Sıfat', 'Zamir',
-        'Zarf', 'Edat-Bağlaç-Ünlem', 'Fiilde Anlam (Kip-Kişi)', 'Ek Fiil',
-        'Fiilimsi', 'Cümlenin Ögeleri', 'Cümle Türleri',
+        'Ses Bilgisi', 'Biçim Bilgisi', 'Sözcük Türleri', 'Fiiller',
+        'Cümlenin Ögeleri', 'Cümle Türleri',
       ]),
       Unit('Yazım ve Anlatım', <String>[
         'Yazım Kuralları', 'Noktalama İşaretleri', 'Anlatım Bozuklukları',
@@ -172,55 +170,67 @@ class YksCurriculum {
     ],
     'Tarih': <Unit>[
       Unit('Tarih Bilimi', <String>['Tarih ve Zaman']),
-      Unit('İlk ve Orta Çağlar', <String>[
-        'İnsanlığın İlk Dönemleri', "Orta Çağ'da Dünya",
-        'İlk ve Orta Çağlarda Türk Dünyası',
+      Unit('İlk Çağlardan Türk-İslam Dünyasına', <String>[
+        'İlk ve Orta Çağlarda Türk Dünyası', 'İslam Medeniyetinin Doğuşu',
+        "Türk İslam Tarihindeki Siyasi Gelişmeler, Türklerin İslamiyet'i Kabulü",
+        'Yerleşme ve Devletleşme Sürecinde Selçuklu Türkiyesi',
       ]),
-      Unit('İslam Tarihi ve Türk-İslam Devletleri', <String>[
-        'İslam Medeniyetinin Doğuşu', "Türklerin İslamiyet'i Kabulü",
-        'Selçuklu Türkiyesi',
-      ]),
-      Unit('Osmanlı: Kuruluş ve Yükseliş', <String>[
-        'Beylikten Devlete Osmanlı (1302-1453)', 'Osmanlı Medeniyeti',
-        'Dünya Gücü Osmanlı (1453-1595)', 'Osmanlı Merkez Teşkilatı',
+      Unit('Osmanlı Tarihi', <String>[
+        'Beylikten Devlete Osmanlı Siyaseti (1302-1453)',
+        'Devletleşme Sürecinde Savaşçılar ve Askerler',
+        'Beylikten Devlete Osmanlı Medeniyeti',
+        'Dünya Gücü Osmanlı (1453-1595)', 'Sultan ve Osmanlı Merkez Teşkilatı',
         'Klasik Çağda Osmanlı Toplum Düzeni',
+        'Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti (1595-1774)',
+        'Değişim Çağında Avrupa ve Osmanlı',
+        'Uluslararası İlişkilerde Denge Stratejisi (1774-1914)',
       ]),
-      Unit('Değişim Çağı', <String>['Değişen Dünya Dengeleri (1595-1774)']),
+      Unit('Yakın Çağ ve Cumhuriyet', <String>[
+        'Devrimler Çağında Değişen Devlet-Toplum İlişkileri',
+        'XIX. ve XX. Yüzyılda Değişen Sosyo-Ekonomik Hayat',
+        'XX. Yüzyıl Başlarında Osmanlı Devleti ve Dünya', 'Millî Mücadele',
+        'Atatürkçülük ve Türk İnkılabı',
+      ]),
     ],
     'Coğrafya': <Unit>[
       Unit('Doğal Sistemler', <String>[
-        "Dünya'nın Şekli ve Hareketleri", 'Harita Bilgisi',
-        'Atmosfer ve Sıcaklık', 'Basınç ve Rüzgârlar', 'Nem-Yağış-Buharlaşma',
-        'İç Kuvvetler', 'Dış Kuvvetler', 'Su Kaynakları',
-        'Toprak ve Bitki Örtüsü',
+        'Coğrafya Bilimi, İnsan ve Doğa', "Dünya'nın Şekli ve Hareketleri",
+        'Yer ve Zaman, Koordinat Sistemi', 'Harita Bilimi', 'İklim Bilimi',
+        "Dünya'nın Yapısı ve Oluşum Süreci",
+        'Su Kaynakları, Topraklar, Bitkiler',
       ]),
       Unit('Beşerî Sistemler', <String>[
-        'Nüfus', 'Göç', 'Yerleşme', 'Ekonomik Faaliyetler',
+        'Yerleşmeler', 'Nüfus, Göç, Ekonomik Faaliyetler', 'Ulaşım',
       ]),
-      Unit('Küresel Ortam', <String>['Bölgeler']),
-      Unit('Çevre ve Toplum', <String>[
-        'Doğa ve İnsan', 'Çevre ve Toplum', 'Doğal Afetler',
-      ]),
+      Unit('Küresel Ortam', <String>['Bölgeler ve Ülkeler']),
+      Unit('Çevre ve Toplum', <String>['İnsan ve Çevre', 'Afetler']),
     ],
     'Felsefe': <Unit>[
-      Unit('Felsefeye Giriş', <String>['Felsefenin Konusu']),
+      Unit('Felsefeye Giriş', <String>[
+        'Felsefeyi Tanıma', 'Felsefe ile Düşünme', 'Felsefi Okuma ve Yazma',
+      ]),
       Unit('Felsefenin Temel Konuları', <String>[
-        'Bilgi Felsefesi', 'Varlık Felsefesi', 'Din Felsefesi',
-        'Ahlak Felsefesi', 'Sanat Felsefesi', 'Bilim Felsefesi',
-        'Siyaset Felsefesi',
+        'Varlık Felsefesi', 'Bilgi Felsefesi', 'Bilim Felsefesi',
+        'Ahlak Felsefesi', 'Din Felsefesi', 'Siyaset Felsefesi',
+        'Sanat Felsefesi',
+      ]),
+      Unit('Felsefe Tarihi', <String>[
+        'MÖ 6. Yüzyıl-MS 2. Yüzyıl Felsefesi',
+        'MS 2. Yüzyıl-MS 15. Yüzyıl Felsefesi',
+        '15. Yüzyıl-17. Yüzyıl Felsefesi', '18. Yüzyıl-19. Yüzyıl Felsefesi',
+        '20. Yüzyıl Felsefesi',
       ]),
     ],
     'Din Kültürü': <Unit>[
       Unit('İnanç', <String>[
-        'Bilgi ve İnanç', 'Din ve İslam', 'Allah-İnsan İlişkisi',
+        'Bilgi ve İnanç', 'Din ve İslam', 'Allah İnsan İlişkisi',
+        'İslam Düşüncesinde İtikadi, Siyasi ve Fıkhi Yorumlar',
       ]),
-      Unit('İbadet', <String>['İslam ve İbadet']),
-      Unit('Ahlak ve Değerler', <String>[
-        'Gençlik ve Değerler', 'Ahlaki Tutum ve Davranışlar', 'Din ve Hayat',
+      Unit('İbadet ve Ahlak', <String>[
+        'İslam ve İbadet', 'Ahlaki Tutum Davranışlar', 'Din ve Hayat',
       ]),
-      Unit('Hz. Muhammed', <String>['Hz. Muhammed ve Gençlik']),
-      Unit('Din, Kültür ve Medeniyet', <String>[
-        'Gönül Coğrafyamız', 'İslam Düşüncesinde Yorumlar',
+      Unit('Değerler ve Kültür', <String>[
+        'Gençlik ve Değerler', 'Gönül Coğrafyamız', 'Hz. Muhammed ve Gençlik',
       ]),
     ],
   };
