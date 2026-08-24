@@ -585,46 +585,165 @@ class YksCurriculum {
   // ======================================================= ESKİ MÜFREDAT AYT
   static const Map<String, List<Unit>> _eskiAyt = <String, List<Unit>>{
     'Matematik': <Unit>[
-      Unit('Trigonometri', <String>[
-        'Yönlü Açılar', 'Trigonometrik Fonksiyonlar',
-        'Toplam-Fark ve İki Kat Açı Formülleri', 'Trigonometrik Denklemler',
+      Unit('Fonksiyonlar ile İlgili Uygulamalar', <String>[
+        'Fonksiyonun Grafikleri ile İlgili Uygulamalar',
+        'Fonksiyon Grafiğinin Eksenleri Kestiği Noktalar, Fonksiyonun Pozitif ve Negatif Olduğu Aralıklar',
+        'Fonksiyonun Artan ve Azalan Olduğu Aralıklar, Bir Fonksiyonun Maksimum ve Minimum Değerleri',
+        'Ortalama Değişim Hızı',
       ]),
-      Unit('Fonksiyonlarda Uygulamalar', <String>[
-        'Fonksiyonların Grafik ve Problemleri',
-        'İkinci Dereceden Fonksiyonlar ve Grafikleri',
-        'Fonksiyonların Dönüşümleri',
+      Unit('İkinci Dereceden Fonksiyon ve Grafikleri', <String>[
+        'İkinci Dereceden Bir Değişkenli Fonksiyonun Grafiğinin Çizimi',
+        'Parabolün Tepe Noktası, Simetri Ekseni ve Görüntü Kümesi ile İlgili Uygulamalar',
+        'Parabolün Grafik Çizimi',
+        'Bazı Elemanları Verilen Parabol Denklemini Yazma',
+        'Bir Parabol ile Bir Doğrunun Birbirlerine Göre Durumları',
+        'İkinci Dereceden Fonksiyonlarla Modellenebilen Problemler',
       ]),
-      Unit('Denklem ve Eşitsizlik Sistemleri', <String>[
+      Unit('Fonksiyon Dönüşümleri', <String>[
+        'Tek ve Çift Fonksiyonların Grafiklerinin Simetri Özellikleri',
+      ]),
+      Unit('İkinci Dereceden İki Bilinmeyenli Denklem Sistemleri', <String>[
         'İkinci Dereceden İki Bilinmeyenli Denklem Sistemleri',
-        'İkinci Dereceden Eşitsizlikler',
       ]),
-      Unit('Üstel ve Logaritmik Fonksiyonlar', <String>[
-        'Üstel Fonksiyon', 'Logaritma Fonksiyonu',
-        'Üstel ve Logaritmik Denklem ve Eşitsizlikler',
+      Unit('İkinci Dereceden Bir Bilinmeyenli Eşitsizlikler', <String>[
+        'İkinci Dereceden Bir Bilinmeyenli Eşitsizliklerin Çözüm Kümesi',
+        'İki İfadenin Çarpımı ve Bölümü Şeklinde Verilen Eşitsizliklerin Çözüm Kümesi',
       ]),
-      Unit('Diziler', <String>['Diziler']),
-      Unit('Türev', <String>[
-        'Limit ve Süreklilik', 'Türev', 'Türev Uygulamaları',
+      Unit('İkinci Dereceden Bir Bilinmeyenli Eşitsizlik Sistemleri', <String>[
+        'İkinci Dereceden Bir Bilinmeyenli Eşitsizlik Sistemleri',
       ]),
-      Unit('İntegral', <String>[
-        'Belirsiz İntegral', 'Belirli İntegral ve Alan Hesabı',
+      Unit('Koşullu Olasılık', <String>[
+        'Koşullu Olasılık',
+        'Bağımlı ve Bağımsız Olayların Olasılıkları',
+        'Bileşik Olayların Olasılığı',
       ]),
-      Unit('Olasılık', <String>[
-        'Koşullu Olasılık', 'Deneysel ve Teorik Olasılık',
+      Unit('Deneysel ve Teorik Olasılık', <String>[
+        'Deneysel ve Teorik Olasılık',
       ]),
+      Unit('Yönlü Açılar', <String>[
+        'Yönlü Açılar ve Esas Ölçü',
+      ]),
+      Unit('Trigonometrik Fonksiyonlar', <String>[
+        'Birim Çember',
+        'Sinüs ve Kosinüs Fonksiyonları',
+        'Tanjant ve Kotanjant Fonksiyonları',
+        'Sekant ve Kosekant Fonksiyonları',
+        'Trigonometrik Fonksiyonların Açı Değerlerine Göre Sıralanması',
+        'Bir Açının Trigonometrik Değerlerinin Dar Açı Cinsinden Yazılması',
+        'Kosinüs Teoremi',
+        'Sinüs Teoremi',
+        'Periyot ve Periyodik Fonksiyon',
+        'Trigonometrik Fonksiyonların Grafikleri',
+        'Ters Trigonometrik Fonksiyonlar',
+      ]),
+      Unit('Toplam-Fark ve İki Kat Açı Formülleri', <String>[
+        'Sinüs ve Kosinüs Fonksiyonlarının Toplam Fark Formülleri',
+        'Tanjant ve Kotanjant Fonksiyonlarının Toplam Fark Formülleri',
+        'Sinüs ve Kosinüs Fonksiyonlarının İki Kat Açı Formülleri',
+        'Tanjant ve Kotanjant Fonksiyonlarının İki Kat Açı Formülleri',
+      ]),
+      Unit('Trigonometrik Denklemler', <String>[
+        'sinx=a, cosx=a, tanx=a ve cotx=a Denklemlerinin Çözüm Kümesi',
+        'Lineer ve Homojen Denklemlerin Çözüm Kümesi',
+      ]),
+      Unit('Üstel Fonksiyon', <String>[
+        'Üstel Fonksiyon ve Üstel Fonksiyonun Grafiği',
+      ]),
+      Unit('Logaritma Fonksiyonu', <String>[
+        'Logaritma Fonksiyonu ve Logaritma Fonksiyonunun Grafiği',
+        '10 ve e Tabanında Logaritma Fonksiyonu',
+        'Logaritma Fonksiyonunun Özellikleri',
+      ]),
+      Unit('Üstel, Logaritmik Denklemler ve Eşitsizlikler', <String>[
+        'Üstel ve Logaritmik Denklemler',
+        'Üstel ve Logaritmik Eşitsizlikler',
+        'Gerçek Hayat Durumları ile İlgili Üstel ve Logaritmik Fonksiyon Problemleri',
+      ]),
+      Unit('Gerçek Sayı Dizileri', <String>[
+        'Dizi Kavramı ve Dizinin Terimleri',
+        'Dizi Çeşitleri ve İndirgeme Bağıntısı',
+        'Aritmetik Dizi ve Özellikleri',
+        'Geometrik Dizi ve Özellikleri',
+        'Aritmetik ve Geometrik Dizilerde Sonlu Toplamlar',
+        'Gerçek Hayat Durumları ile İlgili Dizi Problemleri',
+      ]),
+      Unit('Limit ve Süreklilik', <String>[
+        'Limit Kavramı',
+        'Limit Özellikleri ve Uygulamaları',
+        'Limitte Belirsizlik Durumları ve Uygulamaları',
+        'Süreklilik',
+      ]),
+      Unit('Anlık Değişim Oranı ve Türev', <String>[
+        'Türev Kavramı',
+        'Türev Alma Kuralları',
+        'Türevlenebilen İki Fonksiyonun Toplamının, Farkının, Çarpımının ve Bölümünün Türevi',
+        'İki Fonksiyonun Bileşkesinin Türevi',
+      ]),
+      Unit('Türevin Uygulamaları', <String>[
+        'Bir Fonksiyonun Artan ve Azalan Olduğu Aralıklar',
+        'Bir Fonksiyonun Ekstremum Noktaları',
+        'Türev Yardımıyla Bir Fonksiyonun Grafiğinin Çizimi',
+        'Maksimum ve Minimum Problemleri',
+      ]),
+      Unit('Belirsiz İntegral', <String>[
+        'Belirsiz İntegral ve İntegral Alma Kuralları',
+        'Değişken Değiştirme Yöntemi',
+      ]),
+      Unit('Belirli İntegral ve Uygulamaları', <String>[
+        'Riemann Toplamı',
+        'Belirli İntegral Kavramı',
+        'Belirli İntegralin Özellikleri',
+        'Belirli İntegral ile Alan Hesabı',
+        'İki Fonksiyonun Grafiği Arasında Kalan Sınırlı Bölgenin Alanı',
+      ]),
+
     ],
     'Geometri': <Unit>[
-      Unit('Analitik Geometri', <String>[
-        'Doğrunun Analitik İncelenmesi', 'Çemberin Analitik İncelenmesi',
+      Unit('Doğrunun Analitik İncelenmesi', <String>[
+        'Analitik Düzlem',
+        'Analitik Düzlemde İki Nokta Arasındaki Uzaklık',
+        'Bir Doğru Parçasının Orta Noktası ve Üçgenin Ağırlık Merkezinin Koordinatları',
+        'Doğrunun Eğimi',
+        'Doğru Denklemleri',
+        'Doğrunun Grafiği, Doğruların Birbirlerine Göre Durumları',
+        'Bir Noktanın Bir Doğruya Uzaklığı, Paralel İki Doğru Arasındaki Uzaklık',
+        'Bir Doğru Parçasını Belirli Bir Oranda İçten ve Dıştan Bölen Noktanın Koordinatları',
       ]),
-      Unit('Dönüşümler', <String>['Analitik Düzlemde Temel Dönüşümler']),
-      Unit('Çember ve Daire', <String>[
-        'Çemberde Temel Kavramlar', 'Çemberde Açılar', 'Çemberde Teğet',
-        'Dairenin Çevresi ve Alanı',
+      Unit('Çemberin Analitik İncelenmesi', <String>[
+        'Çemberin Standart Denklemi',
+        'Özel Çember Denklemleri',
+        'Çemberin Genel Denklemi',
+        'Bir Doğru ile Bir Çemberin Birbirine Göre Durumları',
       ]),
-      Unit('Uzay Geometri', <String>[
-        'Katı Cisimler (Küre, Silindir, Koni)',
+      Unit('Analitik Düzlemde Temel Dönüşümler', <String>[
+        'Öteleme Dönüşümü',
+        'Dönme Dönüşümü',
+        'Simetri Dönüşümü',
+        'Temel Dönüşümlerin Bileşkeleri',
       ]),
+      Unit('Çemberin Temel Elemanları', <String>[
+        'Çemberde Teğet, Kiriş, Çap, Yay ve Kesen',
+        'Çemberde Kirişin Özellikleri',
+      ]),
+      Unit('Çemberde Açılar', <String>[
+        'Çemberde Merkez Açı ve Çevre Açı',
+        'Çemberde Teğet-Kiriş Açı ve İç-Dış Açı',
+      ]),
+      Unit('Çemberde Teğet', <String>[
+        'Çevrel Çember, Çemberde Sinüs Teoremi, Çemberde Teğet Özellikleri, Üçgenin İç Teğet ve Dış Teğet Çemberleri',
+      ]),
+      Unit('Dairenin Çevresi ve Alanı', <String>[
+        'Dairenin Çevresi ile Daire Diliminin Çevresi',
+        'Dairenin Alanı ve Daire Diliminin Alanı',
+      ]),
+      Unit('Katı Cisimler', <String>[
+        'Dik Dairesel Silindirde Uzunluk ve Alan',
+        'Dik Dairesel Silindirde Hacim',
+        'Dik Dairesel Konide Uzunluk ve Alan',
+        'Dik Dairesel Konide Hacim',
+        'Kürede Uzunluk, Alan ve Hacim',
+      ]),
+
     ],
     'Fizik': <Unit>[
       Unit('Kuvvet ve Hareket', <String>[
