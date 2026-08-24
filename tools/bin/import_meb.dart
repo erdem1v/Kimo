@@ -17,6 +17,25 @@ import 'supabase_admin.dart';
 ///
 /// Yükleme için ortam değişkenleri gerekir (bkz. tools/README.md):
 ///   SUPABASE_URL, SUPABASE_SERVICE_KEY
+/// Müfredat listesindeki ders adları (yks_curriculum.dart). Manifestteki
+/// `subject` bunlardan biri olmazsa soru haritada hiçbir konuya düşmez —
+/// bozuk kodlanmış bir ders adı ("CoÄŸrafya") havuza sessizce girip
+/// görünmez soru yığını bırakmıştı, bir daha olmasın.
+const Set<String> _subjects = <String>{
+  'Türkçe',
+  'Matematik',
+  'Geometri',
+  'Fizik',
+  'Kimya',
+  'Biyoloji',
+  'Edebiyat',
+  'Tarih',
+  'Coğrafya',
+  'Felsefe',
+  'Felsefe Grubu',
+  'Din Kültürü',
+};
+
 const int _dpi = 200;
 const int _jpegQuality = 80;
 
@@ -65,6 +84,14 @@ Future<void> main(List<String> args) async {
     final int no = i + 1;
     if (only != null && !only.contains(no)) continue;
 
+    final String subject = t['subject'] as String;
+    if (!_subjects.contains(subject)) {
+      stderr.writeln(
+        'Bilinmeyen ders adi: "$subject" (test $no). '
+        'Manifest bozuk — yks_curriculum.dart ile ayni olmali.',
+      );
+      exit(65);
+    }
     final String url = t['url'] as String;
     final String concept = t['concept'] as String;
     final String answers = (t['answers'] as String)
@@ -133,7 +160,7 @@ Future<void> main(List<String> args) async {
             jpeg: jpg,
             fileName: name,
             exam: t['exam'] as String,
-            subject: t['subject'] as String,
+            subject: subject,
             concept: concept,
             correctIndex: _indexOf(answers[box.number - 1]),
             source: manifest['source'] as String,
