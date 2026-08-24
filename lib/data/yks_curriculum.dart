@@ -900,20 +900,187 @@ class YksCurriculum {
     ],
 
     'Felsefe Grubu': <Unit>[
-      Unit('Felsefe Tarihi', <String>[
-        'İlk Çağ Felsefesi', 'Ortaçağ Felsefesi', 'Yeni Çağ Felsefesi',
-        '19. Yüzyıl Felsefesi', '20. Yüzyıl Felsefesi',
+      Unit('Felsefeyi Tanıma', <String>[
+        'Felsefenin Anlamı', 'Felsefi Düşüncenin Ortaya Çıkışı ve Özellikleri - Felsefe Sorusu Nedir?',
+        'Felsefenin İnsan ve Toplum Hayatı Üzerindeki Rolü',
       ]),
-      Unit('Psikoloji', <String>[
-        'Psikolojiye Giriş', 'Öğrenme-Bellek-Düşünme', 'Kişilik ve Ruh Sağlığı',
+      Unit('Felsefe ile Düşünme', <String>[
+        'Düşünme ve Akıl Yürütmeye İlişkin Kavramlar', 'Düşünme ve Dil İlişkisi - Felsefi Bir Görüşü veya Argümanı Sorgulama',
       ]),
-      Unit('Sosyoloji', <String>[
-        'Sosyoloji: Toplum ve Kültür', 'Sosyoloji: Toplumsal Kurumlar',
-        'Sosyoloji: Toplumsal Değişme ve Küreselleşme',
+      Unit('Felsefi Okuma ve Yazma', <String>[
+        'Felsefi Okuma ve Yazma',
       ]),
-      Unit('Mantık', <String>[
-        'Klasik Mantık', 'Önermeler ve Çıkarım', 'Sembolik Mantık',
+      Unit('Varlık Felsefesi', <String>[
+        'Varlık Felsefesinin Konusu ve Problemleri', 'Varlık Felsefesi Alanındaki Çağdaş Yaklaşımlar',
+        'Evrende Amaçlılık ve Düzenlilik-Varlık Türlerinin Sınıflandırılması-Bir konunun Varlık Felsefesi Açısından Değerlendirilmesi',
       ]),
+      Unit('Bilgi Felsefesi', <String>[
+        'Bilgi Felsefesinin Konusu ve Bilginin İmkânı Problemi', 'Bilginin Kaynağı İle İlgili Görüşler',
+        'Bilginin Sınırları-Doğru Bilginin Ölçütü-Doğruluk ve Gerçeklik-Bilginin Değeri ve Güvenirliği',
+      ]),
+      Unit('Bilim Felsefesi', <String>[
+        'Bilim Felsefesinin Konusu ve Problemleri', 'Bilimin Değeri-Bilim Felsefe İlişkisi-Bilim ve Hayat İlişkisi',
+      ]),
+      Unit('Ahlak Felsefesi', <String>[
+        'Ahlak Felsefesinin Konusu ve Problemleri-İyi ve Kötünün Ölçütü', 'Özgürlük ve Sorumluluk',
+        'Evrensel Bir Ahlak Yasasını Kabul Eden Görüşler', 'Evrensel Bir Ahlak Yasasını Reddeden Görüşler ve Filozoflar',
+        'İyilik ve Mutluluk İlişkisi-Özgürlük, Sorumluluk ve Kural İlişkisi',
+      ]),
+      Unit('Din Felsefesi', <String>[
+        "Din Felsefesinin Konusu ve Soruları Tanrı'nın Varlığı İle İlgili Görüşler", 'Din Felsefesinin Soruları-Teoloji ve Din Felsefesi-Felsefe, Bilim ve Din Açısından Ben Kimim?',
+      ]),
+      Unit('Siyaset Felsefesi', <String>[
+        'Siyaset Felsefesinin Konusu ve Problemleri-Hak, Adalet, Özgürlük-İktidarın Kaynağı', 'İdeal Devlet Düzenine Yönelik Görüşler-Ütopya',
+        'Egemenlik Sorunu-Toplumsal Sorunlara Felsefi Bakış',
+      ]),
+      Unit('Sanat Felsefesi', <String>[
+        'Sanat Felsefesinin Konusu ve Problemleri-Güzellik-Sanat Nedir?', 'Sanat Kuramları-Sanat Eserinin Özellikleri-Sanat ve Duyarlılık-Şehir, İnsan ve Sanat',
+      ]),
+      Unit('MÖ 6. Yüzyıl-MS 2. Yüzyıl Felsefesi', <String>[
+        "İlk Medeniyetlerin Felsefenin Doğuşuna Etkisi-Anadolu'da Yaşamış Filozoflar", 'İlk Neden (Arkhe) ve Değişim Problemi',
+        "Sofistler ile Sokrates'in Bilgi ve Değer Anlayışları", "Platon'un Varlık, Bilgi ve Değer Anlayışı",
+        "Aristoteles'in Varlık, Bilgi ve Değer Anlayışı", 'Görüş Analizi: Konfüçyüs, Sokrates, Platon ve Aristoteles',
+      ]),
+      Unit('MS 2. Yüzyıl-MS 15. Yüzyıl Felsefesi', <String>[
+        'MS 2. Yüzyıl-MS 15. Yüzyıl Felsefesinin Ortaya Çıkışı-Hristiyan Felsefesinin Özellikleri ve Problemleri', 'İslam Felsefesinin Özellikleri ve Problemleri',
+        'İnanç-Akıl İlişkisi - Çeviri Faaliyetleri', 'Görüş Analizi (Augustinus, Fârâbî, İbn Sina, Gâzâlî ve İbn Rüşd)-Tasavvuf Düşüncesi',
+      ]),
+      Unit('15. Yüzyıl-17. Yüzyıl Felsefesi', <String>[
+        '15. Yüzyıl-17. Yüzyıl Felsefesinin Ortaya Çıkışı', '15. Yüzyıl-17. Yüzyıl Felsefesinde Öne Çıkan Görüşler',
+        'Bilimsel Çalışmaların 15. Yüzyıl-17. Yüzyıl Felsefesine Etkisi', 'Görüş Analizi: R. Descartes, B. Spinoza ve T. Hobbes',
+      ]),
+      Unit('18. Yüzyıl-19. Yüzyıl Felsefesi', <String>[
+        '18. Yüzyıl-19. Yüzyıl Felsefesinin Ortaya Çıkışı-Genel Özellikleri - Dil ve Edebiyatla İlişkisi', '18. Yüzyıl-19. Yüzyıl Felsefesinin Öne Çıkan Problemleri-1',
+        '18. Yüzyıl-19. Yüzyıl Felsefesinin Öne Çıkan Problemleri-2', 'Görüş Analizi: J. Locke, I. Kant ve F. Hegel',
+      ]),
+      Unit('20. Yüzyıl Felsefesi', <String>[
+        '20. Yüzyıl Felsefesinin Ortaya Çıkışı', '20. Yüzyıl Felsefesi: Fenomenoloji, Hermeneutik, Varoluşçuluk',
+        '20. Yüzyıl Felsefesi: Diyalektik Materyalizm, Mantıksal Pozitivizm, Yeni Ontoloji', "Türkiye'de Felsefi Düşünceye Katkıda Bulunan Felsefeciler-Çağımızın Felsefecileri-Yaşadıkları Yerler",
+        'Görüş Analizi: F. Nietzsche, H. Bergson, J. P. Sartre ve T. Kuhn', "N. Topçu, T. Mengüşoğlu ve K. Popper'ın Görüşlerinin Tartışılması",
+      ]),
+      Unit('Mantığa Giriş', <String>[
+        'Doğru Düşünme - Temel Kavramlar',
+        'Akıl İlkeleri',
+        'Akıl Yürütme Yöntemleri',
+        'Mantığın Uygulama Alanları',
+      ]),
+      Unit('Klasik Mantık', <String>[
+        'Aristoteles ve Mantık - Kavram ve Terim',
+        'Nelik, Gerçeklik, Kimlik - İçlem ve Kaplam',
+        'Kavram Çeşitleri',
+        'Beş Tümel',
+        'Kavramlar Arası İlişkiler - Tanım',
+        'Önerme ve Önerme Çeşitleri',
+        'Çıkarım - Karşı Olum Çıkarımları',
+        'Eşdeğerlik Çıkarımları',
+        'Dolaylı Çıkarım - Kıyas',
+        'Kıyas Çeşitleri',
+      ]),
+      Unit('Mantık ve Dil', <String>[
+        'Dil ve Düşünme İlişkisi - Dilin Görevleri',
+        'Bilgi Aktarma ve Dil - Anlama ve Tanımlama',
+      ]),
+      Unit('Sembolik Mantık', <String>[
+        'Sembolik Mantığa Geçiş - Önerme ve Yapısı - Basit ve Bileşik Önermeler - Çıkarım',
+        'Sembolleştirme - Önerme Eklemleri',
+        'Yorumlama - Önermelerin Doğruluk Değerleri - Doğruluk Çizelgesi',
+        'Tutarlılık, Geçerlilik, Eşdeğerlik Denetlemesi',
+        'Çözümleyici Çizelge Kuralları',
+        'Çözümleyici Çizelge ile Tutarlılık, Geçerlilik ve Eşdeğerlik Denetlemesi',
+        'Niceleme Mantığı - Temel Kurallar - Denetlemeler',
+        'Çok Değerli Mantık',
+      ]),
+      Unit('Psikoloji Bilimini Tanıyalım', <String>[
+        'Psikolojinin Konusu - Bir Bilim Dalı Olma Süreci',
+        'Psikolojideki Yaklaşımlar-1: Yapısalcılık, İşlevselcilik, Gestalt, Davranışçılık, Psikoanalitik',
+        'Psikolojideki Yaklaşımlar-2: İnsancıl, Varoluşçu, Bilişsel, Sosyokültürel',
+        'Psikolojinin Bilim Dalı Olarak Ölçütleri, Amaçları - Araştırmalarda Uyulması Gereken Etik Kurallar',
+        'Psikoloji Araştırmalarında Uygulanan Yöntem ve Teknikler',
+        'Psikolojinin Alt Dalları - İş Alanları - Diğer Bilim Dallarıyla İlişkisi',
+      ]),
+      Unit('Psikolojinin Temel Süreçleri', <String>[
+        'Davranışın Oluşumu - Kalıtım ve Çevrenin Davranışa Etkisi',
+        'Yaşam Boyu Gelişim - Gelişim Dönemleri ve Temel Özellikleri',
+        'Gelişim Kuramları',
+        'Ergenlik Dönemi - Temel Özellikleri ve Bu Dönemi Etkileyen Faktörler',
+        'Duyumun Özellikleri ve Temel Duyum Bilgileri',
+        'Uyarılmanın Davranışlara Etkisi - Alışma ve Duyarlılaşma',
+        'Algılama - Algı Yanılmaları',
+        'Algıyı Etkileyen Faktörler - Duyum ve Algı Arasındaki Farklar',
+        'Güdülenmeyi Ortaya Çıkaran Faktörler - Güdülenmiş Davranışın Özellikleri - İhtiyaçlar Hiyerarşisi',
+        'Duygu ve Duygu Türleri - Duyguların Davranışlara Etkisi',
+        'Bilinç - Dikkat - Bilinçlilik Türleri',
+        'Sosyoloji ve Sosyal Psikoloji - Sosyal Biliş ve Sosyal Etki Türleri - Davranış ve Sosyal Etkenler',
+      ]),
+      Unit('Öğrenme, Bellek, Düşünme', <String>[
+        'Öğrenme ve Öğrenme Türleri - Koşullanma Yoluyla Öğrenme',
+        'Bilişsel Öğrenme',
+        'Öğrenmeyi Etkileyen Faktörler',
+        'Öğrenme Stratejileri ve Görevleri - Hayat Boyu Öğrenme',
+        'Bellek ve Bellek Türleri',
+        'Belleğin Temel İşlevleri - Unutmaya Sebep Olan Faktörler - Bellek Geliştirme Teknikleri',
+        'Düşünmenin Yapı Taşları - Dilin Düşünmedeki Rolü - Doğru Karar Vermede İrdelemenin Önemi',
+        'Zekâ - Kalıtım ve Çevrenin Zekâ Üzerindeki Etkileri - Zekâ Testleri',
+        'Zekâ Türleri - Zekâ ve Yaratıcılık',
+      ]),
+      Unit('Ruh Sağlığının Temelleri', <String>[
+        'Kişilik ve Kişiliğin Gelişimi - Kişilik Kuramları',
+        'Bireysel Farklılıklar - Kişiliğin Ölçülmesi',
+        'Stres ve Stresin Nedenleri - Stresin Günlük Yaşama Etkileri',
+        'Stresle Başa Çıkma Yolları - Savunma Mekanizmaları',
+        'Ruh Sağlığının Önemi ve Ölçütleri - Ruh Sağlığını Korumada Denge - Empati ve Hoşgörü',
+        'Ruh Sağlığı Açısından Normal ve Normal Dışı Kavramları',
+        'Normal Dışı Davranışlar - Kişilik Bozuklukları - Şizofreni',
+        'Psikolojik Destek',
+      ]),
+      Unit('Sosyolojiye Giriş', <String>[
+        'Sosyolojiyi Tanıyalım',
+        'Sosyolojik Düşünmenin Bireye ve Topluma Katkısı - Sosyolojinin Diğer Sosyal Bilim Dallarıyla İlişkisi',
+        'Toplum ve Toplumu Oluşturan Ögeler',
+        'Sosyolojinin Doğuşunda Etkili Olan Olaylar - Sosyolojinin Kurucuları',
+        'Sosyolojide Kullanılan Başlıca Yöntemler',
+        'Sosyolojide Kullanılan Veri Toplama Teknikleri',
+        "Türkiye'de Sosyoloji",
+      ]),
+      Unit('Toplumsal Yapı', <String>[
+        'Toplumsal Yapı Nedir? Toplumsal Yapıya Etki Eden Faktörler - Toplumsal Yapıyı Oluşturan Unsurlar',
+        'Toplumsal Etkileşim Tipleri',
+        'Toplumsal Tabakalaşma - Toplumsal Hareketlilik',
+      ]),
+      Unit('Birey ve Toplum', <String>[
+        'Sosyalleşme ve Sosyalleşmeyi Etkileyen Unsurlar',
+        'Sosyalleşmenin Aşamaları ve Sosyalleşmenin Toplumsal İlişkiler Üzerindeki Etkisi',
+        'Toplumsal Statü - Toplumsal Rol - Toplumsal Saygınlık',
+        'Toplumsal Değer - Toplumsal Norm - Toplumsal Kontrol',
+        'Toplumsal Sapma ve Suç, Hak ve Görev Dengesi',
+      ]),
+      Unit('Toplum ve Kültür', <String>[
+        'Kültürün Anlamı',
+        'Kültürün İşlevleri',
+        'Kültüre İlişkin Kavramlar',
+        'Toplumsal Kültürün Önemi',
+        'Kültürel Tutumlar ve Kültürler Arası Etkileşim',
+      ]),
+      Unit('Toplumsal Kurumlar', <String>[
+        'Kurum Kavramı ve Kurumların İşlevleri',
+        'Aile Kurumu ve Evlilik',
+        'Ailenin İşlevleri ve Aile Türleri',
+        'Eğitim Kurumu - Önemi ve İşlevleri',
+        'Din Kurumu - Önemi ve İşlevleri',
+        'Ekonomi Kurumu - Önemi ve İşlevleri',
+        'Ekonominin Toplumsal Yaşamdaki Önemi',
+        'Toplumsal Yaşamda Ekonominin Temel Ögeleri',
+        'Temel Ekonomik Sistemler',
+        'Siyaset Kurumu ve Temel Kavramları',
+        'Siyasal Yönetim Biçimleri',
+      ]),
+      Unit('Toplumsal Değişme ve Gelişme', <String>[
+        'Toplumsal Değişme ve Toplumsal Değişmeyi Etkileyen Faktörler',
+        'Toplumsal Değişme ve Kültür',
+        'Modernleşme ve Küreselleşme',
+        'Toplumsal Gelişme ve Toplumsal Gelişmenin Ögeleri - Toplumsal Bütünleşme - Toplumsal Çözülme',
+      ]),
+
     ],
     'Din Kültürü': <Unit>[
       Unit('Dünya ve Ahiret', <String>[
