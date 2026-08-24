@@ -2,3 +2,6 @@
 pubspec.lock
 .cache/
 out/
+.kt/
+.mebi/
+tiles/
