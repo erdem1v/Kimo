@@ -85,88 +85,69 @@ class YksCurriculum {
       Unit('Katı Cisimler', <String>['Katı Cisimler']),
     ],
     'Fizik': <Unit>[
-      Unit('Fizik Bilimine Giriş', <String>[
-        'Fiziğin Doğası', 'Fiziğin Uygulama Alanları',
-        'Fiziksel Nicelikler ve Birimler', 'Bilim Araştırma Merkezleri',
+      Unit('Mekanik', <String>[
+        'Fizik Bilimine Giriş',
+        'Madde ve Özellikleri',
+        'Hareket ve Kuvvet',
+        'Enerji',
+        'Basınç ve Kaldırma Kuvveti',
       ]),
-      Unit('Madde ve Özellikleri', <String>[
-        'Özkütle', 'Dayanıklılık', 'Adezyon ve Kohezyon',
+      Unit('Isı, Elektrik ve Manyetizma', <String>[
+        'Isı ve Sıcaklık',
+        'Elektrostatik',
+        'Elektrik ve Manyetizma',
       ]),
-      Unit('Hareket ve Kuvvet', <String>[
-        'Hareket', 'Kuvvet', "Newton'un Hareket Yasaları", 'Sürtünme Kuvveti',
+      Unit('Dalgalar ve Optik', <String>[
+        'Dalgalar',
+        'Optik',
       ]),
-      Unit('Enerji', <String>[
-        'İş, Enerji ve Güç', 'Kinetik ve Potansiyel Enerji',
-        'Enerjinin Korunumu ve Dönüşümü', 'Verim', 'Enerji Kaynakları',
-      ]),
-      Unit('Isı ve Sıcaklık', <String>[
-        'Isı, Sıcaklık ve İç Enerji', 'Hâl Değişimi', 'Isıl Denge',
-        'Enerji İletim Yolları ve Yalıtım', 'Genleşme ve Büzülme',
-      ]),
-      Unit('Elektrostatik', <String>['Elektrostatik']),
-      Unit('Elektrik ve Manyetizma', <String>[
-        'Elektrik Akımı ve Direnç', 'Elektrik Devreleri',
-        'Mıknatıslar ve Manyetik Alan', 'Akım ve Manyetik Alan',
-      ]),
-      Unit('Basınç ve Kaldırma Kuvveti', <String>[
-        'Basınç', 'Kaldırma Kuvveti',
-      ]),
-      Unit('Dalgalar', <String>[
-        'Dalga Hareketi', 'Yay Dalgaları', 'Su Dalgaları', 'Ses Dalgaları',
-        'Deprem Dalgaları',
-      ]),
-      Unit('Optik', <String>[
-        'Işığın Doğası', 'Gölge', 'Yansıma', 'Düzlem Ayna', 'Küresel Aynalar',
-        'Kırılma', 'Mercekler', 'Prizmalar', 'Renk',
-      ]),
+
     ],
     'Kimya': <Unit>[
-      Unit('Kimya Bilimi', <String>[
-        'Kimya Biliminin Gelişimi', 'Kimyanın Çalışma Alanları',
-        'Kimyada Kullanılan Maddeler', 'Kimya Laboratuvarında Güvenlik',
+      Unit('Kimyanın Temelleri', <String>[
+        'Kimya Bilimi',
+        'Atom ve Periyodik Sistem',
+        'Kimyasal Türler Arası Etkileşimler',
       ]),
-      Unit('Atom ve Periyodik Sistem', <String>[
-        'Atom Modelleri', 'Atomun Yapısı', 'Periyodik Sistem',
+      Unit('Maddenin Hâlleri ve Karışımlar', <String>[
+        'Maddenin Hâlleri',
+        'Kimyanın Temel Kanunları ve Kimyasal Hesaplamalar',
+        'Karışımlar',
       ]),
-      Unit('Kimyasal Türler Arası Etkileşimler', <String>[
-        'Kimyasal Türler', 'Kimyasal Türler Arası Etkileşimler',
-        'Güçlü Etkileşimler (İyonik-Kovalent-Metalik Bağ)',
-        'Zayıf Etkileşimler', 'Fiziksel ve Kimyasal Değişimler',
+      Unit('Asitler, Bazlar ve Günlük Kimya', <String>[
+        'Asitler, Bazlar ve Tuzlar',
+        'Kimya Her Yerde',
+        'Doğa ve Kimya',
       ]),
-      Unit('Maddenin Hâlleri', <String>[
-        'Maddenin Hâlleri', 'Katılar', 'Sıvılar', 'Gazlar', 'Plazma',
-      ]),
-      Unit('Kimyanın Temel Kanunları ve Hesaplamalar', <String>[
-        'Kimyanın Temel Kanunları', 'Mol Kavramı', 'Kimyasal Tepkimeler',
-        'Kimyasal Hesaplamalar',
-      ]),
-      Unit('Karışımlar', <String>[
-        'Karışımların Sınıflandırılması', 'Karışımların Ayrılması',
-      ]),
-      Unit('Asitler, Bazlar ve Tuzlar', <String>[
-        'Asitler ve Bazlar', 'Asit-Baz Tepkimeleri',
-        'Asit ve Bazların Kullanımı', 'Tuzlar',
-      ]),
-      Unit('Kimya Her Yerde', <String>[
-        'Temizlik Maddeleri', 'Yaygın Kimyasallar',
-      ]),
+
     ],
     'Biyoloji': <Unit>[
-      Unit('Yaşam Bilimi Biyoloji', <String>[
-        'Canlıların Ortak Özellikleri', 'Canlıların Temel Bileşenleri',
+      Unit('Canlıların Temel Bileşenleri', <String>[
+        'Canlıların Ortak Özellikleri',
+        'Canlıların Yapısında Bulunan İnorganik Bileşikler',
+        'Canlıların Yapısında Bulunan Organik Bileşikler',
       ]),
-      Unit('Hücre', <String>['Hücre']),
-      Unit('Canlılar Dünyası', <String>[
-        'Canlıların Çeşitliliği ve Sınıflandırma', 'Canlı Âlemleri',
+      Unit('Hücre', <String>[
+        'Hücresel Yapılar ve Görevleri',
+        'Hücre Zarından Madde Geçişleri',
+        'Hücre Döngüsü ve Mitoz',
+        'Eşeysiz Üreme',
+        'Mayoz',
+        'Eşeyli Üreme',
       ]),
-      Unit('Hücre Bölünmeleri', <String>[
-        'Mitoz ve Eşeysiz Üreme', 'Mayoz ve Eşeyli Üreme',
+      Unit('Canlılar Dünyası ve Kalıtım', <String>[
+        'Canlıların Sınıflandırılması',
+        'Canlı Âlemleri',
+        'Kalıtım',
+        'Genetik Varyasyonlar',
       ]),
-      Unit('Kalıtım', <String>['Kalıtım']),
-      Unit('Ekosistem Ekolojisi', <String>[
-        'Ekosistem Ekolojisi', 'Güncel Çevre Sorunları',
+      Unit('Ekoloji', <String>[
+        'Ekosistem Ekolojisi',
+        'Güncel Çevre Sorunları',
         'Doğal Kaynakların Sürdürülebilirliği',
+        'Biyolojik Çeşitliliğin Korunması',
       ]),
+
     ],
     'Tarih': <Unit>[
       Unit('Tarih Bilimi', <String>['Tarih ve Zaman']),
@@ -280,99 +261,81 @@ class YksCurriculum {
       ]),
     ],
     'Fizik': <Unit>[
-      Unit('Kuvvet ve Hareket', <String>[
-        'Vektörler', 'Bağıl Hareket', "Newton'un Hareket Yasaları",
-        'Bir Boyutta Sabit İvmeli Hareket', 'İki Boyutta Hareket (Atışlar)',
-        'İş ve Enerji', 'İtme ve Momentum', 'Tork', 'Denge', 'Basit Makineler',
+      Unit('Mekanik', <String>[
+        'Kuvvet ve Hareket',
+        'Çembersel Hareket',
+        'Basit Harmonik Hareket',
       ]),
-      Unit('Elektrik ve Manyetizma', <String>[
-        'Elektriksel Kuvvet ve Alan', 'Elektriksel Potansiyel',
-        'Kondansatörler', 'Manyetizma ve İndüksiyon', 'Alternatif Akım',
-        'Transformatörler',
-      ]),
-      Unit('Çembersel Hareket', <String>[
-        'Düzgün Çembersel Hareket', 'Dönme Hareketi', 'Açısal Momentum',
-        'Kütle Çekimi', 'Kepler Kanunları',
-      ]),
-      Unit('Basit Harmonik Hareket', <String>['Basit Harmonik Hareket']),
-      Unit('Dalga Mekaniği', <String>[
-        'Su Dalgalarında Kırınım ve Girişim', 'Elektromanyetik Dalgalar',
-      ]),
-      Unit('Atom Fiziği ve Radyoaktivite', <String>[
-        'Atom Modelleri', 'Büyük Patlama', 'Radyoaktivite',
+      Unit('Elektromanyetizma ve Dalgalar', <String>[
+        'Elektrik ve Manyetizma',
+        'Dalga Mekaniği',
       ]),
       Unit('Modern Fizik', <String>[
-        'Özel Görelilik', 'Siyah Cisim Işıması', 'Fotoelektrik Olay',
-        'Compton Olayı',
+        'Atom Fiziğine Giriş ve Radyoaktivite',
+        'Modern Fizik',
+        'Modern Fiziğin Teknolojideki Uygulamaları',
       ]),
-      Unit('Modern Fiziğin Teknolojideki Uygulamaları', <String>[
-        'Görüntüleme Teknolojileri', 'Yarı İletkenler', 'Süper İletkenler',
-        'Nanoteknoloji', 'LASER',
-      ]),
+
     ],
     'Kimya': <Unit>[
-      Unit('Modern Atom Teorisi', <String>[
-        'Atomun Kuantum Modeli', 'Elektron Dizilimi', 'Periyodik Özellikler',
-        'Elementlerin Sınıflandırılması', 'Yükseltgenme Basamakları',
+      Unit('Atom, Gazlar ve Çözeltiler', <String>[
+        'Modern Atom Teorisi',
+        'Gazlar',
+        'Sıvı Çözeltiler ve Çözünürlük',
       ]),
-      Unit('Gazlar', <String>[
-        'Gazların Özellikleri', 'Gaz Yasaları', 'Kinetik Teori',
-        'Kısmi Basınçlar', 'Gerçek Gazlar',
+      Unit('Tepkimelerde Enerji, Hız ve Denge', <String>[
+        'Kimyasal Tepkimelerde Enerji',
+        'Kimyasal Tepkimelerde Hız',
+        'Kimyasal Tepkimelerde Denge',
       ]),
-      Unit('Sıvı Çözeltiler ve Çözünürlük', <String>[
-        'Çözücü-Çözünen Etkileşimleri', 'Derişim', 'Koligatif Özellikler',
-        'Çözünürlük', 'Çözünürlüğe Etki Eden Faktörler',
+      Unit('Elektrokimya ve Organik Kimya', <String>[
+        'Kimya ve Elektrik',
+        'Karbon Kimyasına Giriş',
+        'Organik Bileşikler',
+        'Enerji Kaynakları ve Bilimsel Gelişmeler',
       ]),
-      Unit('Kimyasal Tepkimelerde Enerji', <String>[
-        'Tepkime Entalpisi', 'Oluşum Entalpisi', 'Bağ Enerjileri',
-        'Hess Yasası',
-      ]),
-      Unit('Kimyasal Tepkimelerde Hız', <String>[
-        'Tepkime Hızı', 'Hıza Etki Eden Faktörler',
-      ]),
-      Unit('Kimyasal Tepkimelerde Denge', <String>[
-        'Kimyasal Denge', 'Dengeyi Etkileyen Faktörler',
-        'Asit-Baz Dengesi (pH-pOH)',
-      ]),
-      Unit('Kimya ve Elektrik', <String>[
-        'Redoks Tepkimeleri', 'Elektrokimyasal Hücreler', 'İstemlilik',
-        'Galvanik Piller', 'Elektroliz', 'Korozyon',
-      ]),
-      Unit('Karbon Kimyasına Giriş', <String>[
-        'Organik ve Anorganik Bileşikler', 'Basit ve Molekül Formülleri',
-        'Karbon Allotropları', 'Lewis Formülleri', 'Hibritleşme',
-      ]),
-      Unit('Organik Bileşikler', <String>[
-        'Hidrokarbonlar', 'Fonksiyonel Gruplar', 'Alkoller', 'Eterler',
-        'Karbonil Bileşikleri (Aldehit-Keton)', 'Karboksilik Asitler',
-        'Esterler',
-      ]),
-      Unit('Enerji Kaynakları ve Bilimsel Gelişmeler', <String>[
-        'Fosil Yakıtlar', 'Alternatif Enerji Kaynakları', 'Sürdürülebilirlik',
-        'Nanoteknoloji',
-      ]),
+
     ],
     'Biyoloji': <Unit>[
       Unit('İnsan Fizyolojisi', <String>[
-        'Sinir Sistemi', 'Destek ve Hareket Sistemi', 'Sindirim Sistemi',
-        'Dolaşım Sistemi', 'Solunum Sistemi', 'Üriner Sistem (Boşaltım)',
+        'Sinir Sistemi',
+        'Endokrin Sistem',
+        'İskelet Sistemi',
+        'Kas Sistemi',
+        'Duyu Organları',
+        'Kan Dolaşımı',
+        'Lenf Dolaşımı',
+        'Sindirim Sistemi',
+        'Solunum Sistemi',
+        'Üriner Sistem',
         'Üreme Sistemi',
+        'Bağışıklık Sistemi',
+        'Embriyonik Gelişim',
       ]),
-      Unit('Komünite ve Popülasyon Ekolojisi', <String>[
-        'Komünite Ekolojisi', 'Popülasyon Ekolojisi',
+      Unit('Ekoloji', <String>[
+        'Komünite Ekolojisi',
+        'Popülasyon Ekolojisi',
       ]),
-      Unit('Genden Proteine', <String>[
-        'Nükleik Asitler', 'Protein Sentezi',
-      ]),
-      Unit('Canlılarda Enerji Dönüşümleri', <String>[
-        'Canlılık ve Enerji (ATP)', 'Fotosentez', 'Kemosentez',
+      Unit('Genetik ve Enerji Dönüşümleri', <String>[
+        'Nükleik Asitler',
+        'Genetik Şifre ve Protein Sentezi',
+        'Genetik Mühendisliği ve Biyoteknoloji',
+        'Canlılık ve Enerji',
+        'Fotosentez',
+        'Kemosentez',
         'Hücresel Solunum',
+        'Fermantasyon',
       ]),
       Unit('Bitki Biyolojisi', <String>[
-        'Bitkilerin Yapısı', 'Bitkilerde Taşıma ve Beslenme',
-        'Bitkilerde Üreme',
+        'Bitkisel Dokular',
+        'Bitkisel Organlar',
+        'Bitkilerde Madde Taşınması',
+        'Bitkilerde Hareket',
+        'Bitki Hormonları',
+        'Bitkilerde Eşeyli Üreme',
+        'Canlılar ve Çevre',
       ]),
-      Unit('Canlılar ve Çevre', <String>['Canlılar ve Çevre']),
+
     ],
     'Edebiyat': <Unit>[
       Unit('Giriş ve Genel Konular', <String>[
