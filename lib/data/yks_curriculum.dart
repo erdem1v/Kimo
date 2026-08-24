@@ -44,45 +44,131 @@ class YksCurriculum {
       ]),
     ],
     'Matematik': <Unit>[
-      Unit('Mantık', <String>['Önermeler ve Bileşik Önermeler']),
-      Unit('Kümeler', <String>[
-        'Kümelerde Temel Kavramlar', 'Kümelerde İşlemler',
+      Unit('Önermeler ve Bileşik Önermeler', <String>[
+        'Önermeler', 'Bileşik Önermeler', 'Koşullu Önerme',
+        'İki Yönlü Koşullu Önerme', 'Niceleyiciler',
+        'Tanım, Aksiyom, Teorem ve İspat Kavramları',
       ]),
-      Unit('Sayılar ve Denklemler', <String>[
-        'Sayı Kümeleri', 'Bölünebilme Kuralları',
-        'Birinci Dereceden Denklemler ve Eşitsizlikler',
-        'Üslü İfadeler ve Denklemler',
-        'Denklemler ve Eşitsizlikler ile İlgili Uygulamalar',
+      Unit('Kümelerde Temel Kavramlar', <String>[
+        'Kümelerde Temel Kavramlar', 'Alt Küme',
       ]),
-      Unit('Veri', <String>[
-        'Merkezi Eğilim ve Yayılım Ölçüleri',
-        'Verilerin Grafikle Gösterilmesi',
+      Unit('Kümelerde İşlemler', <String>[
+        'Kümelerde Kesişim ve Birleşim İşlemleri',
+        'Kümelerde Fark ve Tümleme İşlemleri', 'Küme Problemleri',
+        'Sıralı İkililer ve Kartezyen Çarpım',
       ]),
-      Unit('Sayma ve Olasılık', <String>[
-        'Sıralama ve Seçme', 'Basit Olayların Olasılıkları',
+      Unit('Sayı Kümeleri', <String>[
+        'Sayı Kümeleri', 'Temel İşlemler', 'Tek ve Çift Sayılar',
+        'Pozitif ve Negatif Sayılar', 'Ardışık Sayılar', 'Sayı Basamakları',
+        'Asal ve Aralarında Asal Sayılar',
+        'Ondalık ve Devirli Ondalık Sayılar', 'Rasyonel Sayılarda İşlemler',
       ]),
-      Unit('Fonksiyonlar', <String>[
-        'Fonksiyon Kavramı ve Gösterimi',
-        'İki Fonksiyonun Bileşkesi ve Bir Fonksiyonun Tersi',
+      Unit('Bölünebilme Kuralları', <String>[
+        'Tamsayılarda Kalanlı Bölme İşlemi', 'Bölünebilme Kuralları 1',
+        'Bölünebilme Kuralları 2', 'Asal Çarpanlar',
+        'EBOB-EKOK Kavramı ve Özellikleri', 'EBOB-EKOK Problemleri',
+        'Periyodik Problemler',
       ]),
-      Unit('Polinomlar', <String>[
-        'Polinom Kavramı ve Polinomlarda İşlemler',
-        'Polinomların Çarpanlara Ayrılması',
+      Unit('Birinci Dereceden Denklemler ve Eşitsizlikler', <String>[
+        'Aralık Kavramı', 'Birinci Dereceden Bir Bilinmeyenli Denklemler',
+        'Basit Eşitsizlikler',
+        'Birinci Dereceden İki Bilinmeyenli Denklemler',
+        'Birinci Dereceden İki Bilinmeyenli Eşitsizlikler',
+        'Birinci Dereceden İki Bilinmeyenli Eşitsizlik Sistemleri',
+        'Mutlak Değer Kavramı ve Özellikleri',
+        'Mutlak Değerli Denklemler ve Eşitsizlikler',
       ]),
-      Unit('İkinci Dereceden Denklemler', <String>[
+      Unit('Üslü İfadeler ve Denklemler', <String>[
+        'Üslü İfadeler ve Özellikleri',
+        'Üslü İfade İçeren Denklem ve Eşitsizlikler',
+        'Köklü İfadeler ve Özellikleri',
+        'Köklü İfadeleri İçeren Denklem ve Eşitsizlikler',
+      ]),
+      Unit('Denklemler ve Eşitsizlikler ile İlgili Uygulamalar', <String>[
+        'Oran-Orantı Kavramları ve Özellikleri', 'Oran-Orantı Problemleri',
+        'Sayı Problemleri', 'Kesir Problemleri', 'Yaş Problemleri',
+        'İşçi Problemleri', 'Yüzde Problemleri', 'Kar-Zarar Problemleri',
+        'Karışım Problemleri', 'Hareket Problemleri', 'Rutin Olmayan Problemler',
+      ]),
+      Unit('Merkezi Eğilim ve Yayılım Ölçüleri', <String>[
+        'Merkezi Eğilim Ölçüleri', 'Merkezi Yayılım Ölçüleri',
+      ]),
+      Unit('Verilerin Grafikle Gösterilmesi', <String>[
+        'Histogram', 'Çizgi, Sütun ve Daire Grafikleri',
+      ]),
+      Unit('Sıralama ve Seçme', <String>[
+        'Saymanın Temel İlkesi', 'Faktöriyel Kavramı', 'Permütasyon',
+        'Tekrarlı Permütasyon', 'Kombinasyon Kavramı ve Özellikleri',
+        'Kombinasyon Problemleri', 'Kombinasyon ve Geometri',
+        'Pascal Üçgeni ve Binom Açılımı',
+      ]),
+      Unit('Basit Olayların Olasılıkları', <String>[
+        'Olasılıkta Temel Kavramlar', 'Olasılık Kavramı İle İlgili Uygulamalar',
+      ]),
+      Unit('Fonksiyon Kavramı ve Gösterimi', <String>[
+        'Fonksiyon Kavramı ve Gösterimi', 'Fonksiyon Soruları',
+        'İçine, Örten, Birebir ve Eşit Fonksiyonlar', 'Birim ve Sabit Fonksiyon',
+        'Doğrusal ve Parçalı Fonksiyonlar', 'Tek-Çift Fonksiyonlar',
+        'Fonksiyonlarda Dört İşlem', 'Fonksiyon Grafikleri',
+      ]),
+      Unit('İki Fonksiyonun Bileşkesi ve Bir Fonksiyonun Tersi', <String>[
+        'İki Fonksiyonun Bileşkesi', 'Bir Fonksiyonun Tersi',
+        'Fonksiyon Grafikleri ile İlgili Uygulamalar',
+      ]),
+      Unit('Polinom Kavramı ve Polinomlarda İşlemler', <String>[
+        'Polinom Kavramı', 'Polinomlarda Toplama, Çıkarma ve Çarpma İşlemleri',
+        'Polinomlarda Bölme İşlemi',
+        'Polinomlarda Bölme İşlemi Yapmadan Kalan Bulma',
+      ]),
+      Unit('Polinomların Çarpanlara Ayrılması', <String>[
+        'Ortak Çarpan Parantezine Alma',
+        'Tam Kare veya İki Kare Farkı Özdeşliklerinde Faydalanarak Çarpanlara Ayırma',
+        'Tam Küp, İki Küp Toplamı veya Farkı Özdeşliklerinden Faydalanarak Çarpanlara Ayırma',
+        'Üç Terimli İfadelerin Çarpanlarına Ayrılması',
+        'Rasyonel İfadelerin Sadeleştirilmesi',
+      ]),
+      Unit('İkinci Dereceden Bir Bilinmeyenli Denklemler', <String>[
         'İkinci Dereceden Bir Bilinmeyenli Denklemler',
+        'İkinci Dereceden Bir Bilinmeyenli Denklemlerin Çözüm Kümesi',
+        'Diskriminant Kavramı ve Diskriminantın Kullanılması',
+        'İkinci Dereceden Denklemlerde Kök-Katsayı İlişkisi', 'Karmaşık Sayılar',
       ]),
     ],
     'Geometri': <Unit>[
-      Unit('Üçgenler', <String>[
-        'Üçgenlerde Temel Kavramlar', 'Üçgenlerde Eşlik ve Benzerlik',
-        'Üçgenin Yardımcı Elemanları', 'Dik Üçgen ve Trigonometri',
-        'Üçgenin Alanı',
+      Unit('Üçgenlerde Temel Kavramlar', <String>[
+        'Açı Kavramı ve Çeşitleri',
+        'Paralel İki Doğrunun Bir Kesenle Yaptığı Açılar', 'Üçgende Açılar',
+        'İkizkenar ve Eşkenar Üçgende Açı Özellikleri',
+        'Üçgende Açı-Kenar Bağıntıları', 'Üçgen Eşitsizliği',
       ]),
-      Unit('Dörtgenler ve Çokgenler', <String>[
-        'Çokgenler', 'Dörtgenler ve Özellikleri', 'Özel Dörtgenler',
+      Unit('Üçgenlerde Eşlik ve Benzerlik', <String>[
+        'Üçgenlerde Eşlik', 'Üçgenlerde Benzerlik',
+        'Üçgende Temel Orantı Teoremi',
+        'Üçgenlerin Benzerliği İle İlgili Uygulamalar',
       ]),
-      Unit('Katı Cisimler', <String>['Katı Cisimler']),
+      Unit('Üçgenin Yardımcı Elemanları', <String>[
+        'Üçgende Açıortay ve Özellikleri', 'Üçgende Açıortay Teoremleri',
+        'Üçgende Kenarortay', 'Üçgende Yükseklik', 'Üçgende Kenar Orta Dikme',
+      ]),
+      Unit('Dik Üçgen ve Trigonometri', <String>[
+        'Dik Üçgende Pisagor Teoremi', 'Dik Üçgende Öklid Teoremi',
+        'Trigonometrik Oranlar',
+        '30, 45 ve 60 Derecelerin Trigonometrik Oranları', 'Birim Çember',
+      ]),
+      Unit('Üçgenin Alanı', <String>[
+        'Üçgenin Alanı', 'Üçgenin Alanıyla İlgili Uygulamalar',
+      ]),
+      Unit('Çokgenler', <String>['Çokgenler']),
+      Unit('Dörtgenler ve Özellikleri', <String>['Dörtgenler ve Özellikleri']),
+      Unit('Özel Dörtgenler', <String>[
+        'Yamukta Açı ve Uzunluk', 'İkizkenar ve Dik Yamuk', 'Yamuğun Alanı',
+        'Paralelkenarda Açı ve Uzunluk', 'Eşkenar Dörtgen',
+        'Paralelkenarın Alanı', 'Dikdörtgende Açı ve Uzunluk', 'Kare',
+        'Dikdörtgenin Alanı', 'Deltoid',
+      ]),
+      Unit('Katı Cisimler', <String>[
+        'Dik Prizmalar', 'Küp', 'Dik Piramitler', 'Düzgün Dört Yüzlü',
+      ]),
     ],
     'Fizik': <Unit>[
       Unit('Fizik Bilimine Giriş', <String>[
