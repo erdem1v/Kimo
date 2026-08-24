@@ -306,14 +306,19 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
       
       ],
       "Coğrafya": [
-        "Ekosistem ve Madde Döngüsü", "Nüfus Politikaları", "Göç ve Şehirleşme",
-        "Türkiye'de Nüfus ve Yerleşme", "Türkiye'de Tarım", "Türkiye'de Sanayi",
-        "Türkiye'de Ticaret-Ulaşım-Turizm", "Bölgesel Kalkınma Projeleri",
-        "Doğal Sistemler (Biyoçeşitlilik)", "Beşerî Sistemler",
-        "Küresel Ortam: Bölgeler ve Ülkeler", "Çevre ve Toplum",
-        "Doğal Afetler ve Toplum",
-        "Doğal Kaynaklar", "Türkiye Ekonomisinin Sektörel Dağılımı",
-        "Türkiye'de Madenler ve Enerji Kaynakları",
+        "Biyoçeşitlilik ve Biyomlar", "Ekosistemler ve Madde Döngüleri", "Nüfus Politikaları ve Türkiye Nüfusunun Geleceği",
+        "Yerleşme Özellikleri ve Şehirler", "Üretim, Dağıtım ve Tüketim", "Doğal Kaynaklar ve Ekonomi",
+        "Türkiye\x27nin Ekonomi Politikaları ve Tarımı Etkileyen Faktörler", "Türkiye\x27de Tarım Ürünleri", "Türkiye\x27de Ormancılık ve Hayvancılık",
+        "Türkiye\x27de Madencilik ve Enerji Kaynakları", "Türkiye\x27de Sanayi", "İlk Kültür Merkezleri ve Kültür Bölgeleri",
+        "Türk Kültürü ve Anadolu\x27nun Kültürel Özellikleri", "Küresel Ticaret", "Turizm",
+        "Ülkelerin Sanayileşme Süreci ve Tarım-Ekonomi İlişkisi", "Uluslararası Örgütler", "Çevre Sorunları ve Türleri",
+        "Doğal Kaynaklar, Madenler ve Enerji Kaynakları Kullanımının Çevresel Etkileri", "Arazi Kullanımı, Küresel Çevre Sorunları ve Geri Dönüşüm", "Ekstrem Doğa Olayları",
+        "Doğa Olaylarının Geleceği", "Geçmişten Geleceğe Şehir ve Ekonomi", "Geleceğin Dünyası",
+        "Türkiye\x27nin İşlevsel Bölgeleri", "Türkiye\x27nin Bölgesel Kalkınma Projeleri", "Hizmet Sektörü ve Ulaşım",
+        "Dünyada ve Türkiye\x27de Ticaret", "Türkiye Turizmi", "Ülkelerin Konumunun Etkileri ve Türkiye\x27nin Jeopolitik Konumu",
+        "Ülkelerin Gelişmişliği", "Enerji Nakil Hatları", "Çatışma Bölgeleri",
+        "Doğal Çevrenin Sınırlılığı, Çevresel Örgüt ve Anlaşmalar",
+
       ],
       "Felsefe Grubu": [
         "İlk Çağ Felsefesi", "Ortaçağ Felsefesi", "Yeni Çağ Felsefesi",

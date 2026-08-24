@@ -847,25 +847,58 @@ class YksCurriculum {
 
     ],
     'Coğrafya': <Unit>[
-      Unit('Doğal Sistemler', <String>[
-        'Ekosistem ve Madde Döngüsü', 'Doğal Sistemler (Biyoçeşitlilik)',
+      Unit('Ekosistemlerin İşleyişi ve Özellikleri', <String>[
+        'Biyoçeşitlilik ve Biyomlar', 'Ekosistemler ve Madde Döngüleri',
       ]),
-      Unit('Beşerî Sistemler', <String>[
-        'Nüfus Politikaları', 'Göç ve Şehirleşme',
-        "Türkiye'de Nüfus ve Yerleşme", 'Beşerî Sistemler',
-        'Doğal Kaynaklar',
+      Unit('Nüfus Politikaları ve Yerleşmeler', <String>[
+        'Nüfus Politikaları ve Türkiye Nüfusunun Geleceği',
+        'Yerleşme Özellikleri ve Şehirler',
       ]),
-      Unit('Türkiye Ekonomisi', <String>[
-        "Türkiye'de Tarım", "Türkiye'de Sanayi",
-        "Türkiye'de Ticaret-Ulaşım-Turizm", 'Bölgesel Kalkınma Projeleri',
-        'Türkiye Ekonomisinin Sektörel Dağılımı',
-        "Türkiye'de Madenler ve Enerji Kaynakları",
+      Unit('Ekonomik Faaliyetler ve Doğal Kaynaklar', <String>[
+        'Üretim, Dağıtım ve Tüketim', 'Doğal Kaynaklar ve Ekonomi',
       ]),
-      Unit('Küresel Ortam', <String>['Küresel Ortam: Bölgeler ve Ülkeler']),
-      Unit('Çevre ve Toplum', <String>[
-        'Çevre ve Toplum', 'Doğal Afetler ve Toplum',
+      Unit("Türkiye'de Ekonomi", <String>[
+        'Türkiye\x27nin Ekonomi Politikaları ve Tarımı Etkileyen Faktörler',
+        'Türkiye\x27de Tarım Ürünleri', 'Türkiye\x27de Ormancılık ve Hayvancılık',
+        'Türkiye\x27de Madencilik ve Enerji Kaynakları', 'Türkiye\x27de Sanayi',
+      ]),
+      Unit('Kültür Bölgeleri', <String>[
+        'İlk Kültür Merkezleri ve Kültür Bölgeleri',
+        'Türk Kültürü ve Anadolu\x27nun Kültürel Özellikleri',
+      ]),
+      Unit('Küreselleşen Dünya', <String>[
+        'Küresel Ticaret', 'Turizm',
+        'Ülkelerin Sanayileşme Süreci ve Tarım-Ekonomi İlişkisi',
+        'Uluslararası Örgütler',
+      ]),
+      Unit('Çevre Sorunları', <String>[
+        'Çevre Sorunları ve Türleri',
+        'Doğal Kaynaklar, Madenler ve Enerji Kaynakları Kullanımının Çevresel Etkileri',
+        'Arazi Kullanımı, Küresel Çevre Sorunları ve Geri Dönüşüm',
+      ]),
+      Unit('Ekstrem Doğa Olayları ve Doğa Olaylarının Geleceği', <String>[
+        'Ekstrem Doğa Olayları', 'Doğa Olaylarının Geleceği',
+      ]),
+      Unit('Ekonomi, Şehirleşme ve Göç', <String>[
+        'Geçmişten Geleceğe Şehir ve Ekonomi', 'Geleceğin Dünyası',
+      ]),
+      Unit("Türkiye'nin İşlevsel Bölgeleri ve Kalkınma Projeleri", <String>[
+        'Türkiye\x27nin İşlevsel Bölgeleri',
+        'Türkiye\x27nin Bölgesel Kalkınma Projeleri',
+      ]),
+      Unit('Ulaşım, Ticaret, Turizm', <String>[
+        'Hizmet Sektörü ve Ulaşım', 'Dünyada ve Türkiye\x27de Ticaret',
+        'Türkiye Turizmi',
+      ]),
+      Unit('Jeopolitik Konum ve Ülkeler Arası Etkileşim', <String>[
+        'Ülkelerin Konumunun Etkileri ve Türkiye\x27nin Jeopolitik Konumu',
+        'Ülkelerin Gelişmişliği', 'Enerji Nakil Hatları', 'Çatışma Bölgeleri',
+      ]),
+      Unit('Doğal Çevrenin Sınırlılığı, Çevresel Örgüt ve Anlaşmalar', <String>[
+        'Doğal Çevrenin Sınırlılığı, Çevresel Örgüt ve Anlaşmalar',
       ]),
     ],
+
     'Felsefe Grubu': <Unit>[
       Unit('Felsefe Tarihi', <String>[
         'İlk Çağ Felsefesi', 'Ortaçağ Felsefesi', 'Yeni Çağ Felsefesi',
