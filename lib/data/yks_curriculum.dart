@@ -32,15 +32,37 @@ class YksCurriculum {
   // ======================================================= ESKİ MÜFREDAT TYT
   static const Map<String, List<Unit>> _eskiTyt = <String, List<Unit>>{
     'Türkçe': <Unit>[
-      Unit('Anlam Bilgisi', <String>[
-        'Sözcükte Anlam', 'Cümlede Anlam', 'Paragrafta Anlam',
+      Unit('Sözcükte Anlam', <String>[
+        'Sözcükte Anlam 1', 'Sözcükte Anlam 2', 'Sözcükte Anlam 3',
+        'Sözcükte Anlam 4',
       ]),
-      Unit('Dil Bilgisi', <String>[
-        'Ses Bilgisi', 'Biçim Bilgisi', 'Sözcük Türleri', 'Fiiller',
-        'Cümlenin Ögeleri', 'Cümle Türleri',
+      Unit('Cümlede Anlam', <String>[
+        'Cümlede Anlam 1', 'Cümlede Anlam 2', 'Cümlede Anlam 3',
       ]),
-      Unit('Yazım ve Anlatım', <String>[
-        'Yazım Kuralları', 'Noktalama İşaretleri', 'Anlatım Bozuklukları',
+      Unit('Paragrafta Anlam', <String>[
+        'Paragrafta Anlam 1', 'Paragrafta Anlam 2', 'Paragrafta Anlam 3',
+        'Paragrafın Yapısı',
+      ]),
+      Unit('Ses Bilgisi', <String>['Ses Bilgisi-1', 'Ses Bilgisi-2']),
+      Unit('Biçim Bilgisi', <String>['Biçim Bilgisi 1', 'Biçim Bilgisi 2']),
+      Unit('Sözcük Türleri', <String>[
+        'İsim', 'Sıfat', 'Zamir', 'İsim ve Sıfat Tamlamaları', 'Zarf',
+        'Edat, Bağlaç ve Ünlem',
+      ]),
+      Unit('Fiiller', <String>[
+        'Fiilde Kip', 'Ek-Fiil', 'Fiilde Yapı', 'Fiilimsiler', 'Fiilde Çatı',
+      ]),
+      Unit('Cümlenin Ögeleri', <String>['Cümlenin Ögeleri']),
+      Unit('Cümle Türleri', <String>['Cümle Türleri']),
+      Unit('Yazım Kuralları', <String>[
+        'Yazım Kuralları-1', 'Yazım Kuralları-2', 'Yazım Kuralları-3',
+      ]),
+      Unit('Noktalama İşaretleri', <String>[
+        'Noktalama İşaretleri-1', 'Noktalama İşaretleri-2',
+        'Noktalama İşaretleri-3',
+      ]),
+      Unit('Anlatım Bozuklukları', <String>[
+        'Anlama Dayalı Bozukluklar', 'Yapıya Dayalı Bozukluklar',
       ]),
     ],
     'Matematik': <Unit>[
@@ -329,68 +351,233 @@ class YksCurriculum {
       ]),
     ],
     'Tarih': <Unit>[
-      Unit('Tarih Bilimi', <String>['Tarih ve Zaman']),
-      Unit('İlk Çağlardan Türk-İslam Dünyasına', <String>[
-        'İlk ve Orta Çağlarda Türk Dünyası', 'İslam Medeniyetinin Doğuşu',
-        "Türk İslam Tarihindeki Siyasi Gelişmeler, Türklerin İslamiyet'i Kabulü",
-        'Yerleşme ve Devletleşme Sürecinde Selçuklu Türkiyesi',
+      Unit('Tarih ve Zaman', <String>[
+        'İnsanlığın Hafızası Tarih', 'Zamanın Taksimi',
       ]),
-      Unit('Osmanlı Tarihi', <String>[
-        'Beylikten Devlete Osmanlı Siyaseti (1302-1453)',
+      Unit('İlk ve Orta Çağlarda Türk Dünyası', <String>[
+        "Avrasya'da İlk Türk İzleri, Coğrafya ile Oluşan Yaşam Tarzı", 'Boylardan Devlete-I',
+        'Boylardan Devlete-II', 'Kavimler Göçü',
+      ]),
+      Unit('İslam Medeniyetinin Doğuşu', <String>[
+        "İslamiyet'in Doğduğu Dönemde Dünya, İslamiyet Yayılıyor", 'Emeviler',
+        'Abbasi Devleti ve Türkler-Bilim Medeniyeti',
+      ]),
+      Unit("Türk İslam Tarihindeki Siyasi Gelişmeler, Türklerin İslamiyet'i Kabulü", <String>[
+        "Türklerin İslamiyet'i Kabulü", "İslamiyet'in Türk Devlet ve Toplum Yapısına Etkisi",
+        'Büyük Selçuklu Devleti',
+      ]),
+      Unit('Yerleşme ve Devletleşme Sürecinde Selçuklu Türkiyesi', <String>[
+        "Türklerin Anadolu'ya Yerleşme Süreci", "Anadolu'nun İlk Türk Siyasi Teşekkülleri",
+        'Hilal ve Haç Mücadelesi', 'Moğol İstilası ve Anadolu',
+      ]),
+      Unit('Beylikten Devlete Osmanlı Siyaseti (1302-1453)', <String>[
+        "Osmanlı Beyliği'nin Kuruluşu ve İlk Fetihleri", "Osmanlı Devleti'nin Rumeli'deki İskân ve İstimâlet Politikası",
+        "Anadolu'da Türk Siyasi Birliğini Sağlama Çabaları",
+      ]),
+      Unit('Devletleşme Sürecinde Savaşçılar ve Askerler', <String>[
         'Devletleşme Sürecinde Savaşçılar ve Askerler',
-        'Beylikten Devlete Osmanlı Medeniyeti',
-        'Dünya Gücü Osmanlı (1453-1595)', 'Sultan ve Osmanlı Merkez Teşkilatı',
-        'Klasik Çağda Osmanlı Toplum Düzeni',
-        'Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti (1595-1774)',
-        'Değişim Çağında Avrupa ve Osmanlı',
-        'Uluslararası İlişkilerde Denge Stratejisi (1774-1914)',
       ]),
-      Unit('Yakın Çağ ve Cumhuriyet', <String>[
-        'Devrimler Çağında Değişen Devlet-Toplum İlişkileri',
-        'XIX. ve XX. Yüzyılda Değişen Sosyo-Ekonomik Hayat',
-        'XX. Yüzyıl Başlarında Osmanlı Devleti ve Dünya', 'Millî Mücadele',
-        'Atatürkçülük ve Türk İnkılabı',
+      Unit('Beylikten Devlete Osmanlı Medeniyeti', <String>[
+        'Beylikten Devlete Osmanlı Medeniyeti',
+      ]),
+      Unit('Dünya Gücü Osmanlı (1453-1595)', <String>[
+        "İstanbul'un Fethi ve Fethin Sonuçları", 'Türk İslam Dünyasında Birliği Sağlama Çabaları',
+        'Dünyanın Muhteşem Gücü Osmanlı', 'Stratejik Siyaset ve Dünya Gücü Olan Osmanlı Devleti',
+      ]),
+      Unit('Sultan ve Osmanlı Merkez Teşkilatı', <String>[
+        'Saray ve Şehir Kültürü, Gelenekler Işığında Devlet İdaresi',
+      ]),
+      Unit('Klasik Çağda Osmanlı Toplum Düzeni', <String>[
+        "Osmanlı Devleti'nde Millet Sistemi, Fethettiği Yerlerdeki Kültürel Değişim", 'Osmanlı Toprak Sistemi, Lonca Teşkilatı, Vakıflar',
+      ]),
+      Unit('Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti (1595-1774)', <String>[
+        'Uzun Savaşlardan Diplomasiye', 'Okyanusların Önem Kazanması ve Sömürgecilik Faaliyetleri',
+        'Fetihlerden Savunmaya',
+      ]),
+      Unit('Değişim Çağında Avrupa ve Osmanlı', <String>[
+        "Avrupa'da Değişim Çağı", "Osmanlı Devleti'nde Değişim",
+        "Osmanlı Devleti'nde İsyanlar ve Düzeni Koruma Çabaları",
+      ]),
+      Unit('Devrimler Çağında Değişen Devlet-Toplum İlişkileri', <String>[
+        'İhtilaller Çağı, Sömürgeciliğin Küresel Etkileri', "Osmanlı Devleti'nde Modern Orduya Geçiş",
+        'XIX. Yüzyılda Sosyal Hayattaki Değişimler',
+      ]),
+      Unit('Uluslararası İlişkilerde Denge Stratejisi (1774-1914)', <String>[
+        "Osmanlı Devleti'ne Yönelik Tehditler-I", "Osmanlı Devleti'nde Demokratikleşme Hareketleri",
+        "Osmanlı Devleti'nde Darbeler", 'Osmanlı Devletine Yönelik Tehditler-II',
+      ]),
+      Unit('XIX. ve XX. Yüzyılda Değişen Sosyo-Ekonomik Hayat', <String>[
+        "Osmanlı Devleti'nde Sanayileşme Çabaları", 'XIX ve XX. Yüzyılda Osmanlı Nüfusu, Metropoller, Salgınlar ve Kamuoyu',
+      ]),
+      Unit('XX. Yüzyıl Başlarında Osmanlı Devleti ve Dünya', <String>[
+        "Mustafa Kemal'in Lider Olarak Yetişmesinde Etkili Koşullar", '20. Yüzyıl Başlarında Osmanlı Devleti',
+        'I. Dünya Savaşı Sürecinde Osmanlı Devleti', "I. Dünya Savaşı'nın Sonuçları",
+      ]),
+      Unit('Millî Mücadele', <String>[
+        "Millî Mücadele'ye Hazırlık Dönemi-I", 'Büyük Millet Meclisinin Açılması-Sevr Antlaşması',
+        'Doğu, Güney ve Batı Cepheleri', "Millî Mücadele'nin Sona Ermesi ve Lozan Barış Antlaşması",
+        "Millî Mücadele'ye Hazırlık Dönemi-II",
+      ]),
+      Unit('Atatürkçülük ve Türk İnkılabı', <String>[
+        'Atatürk İlkeleri, Siyasi ve Hukuk Alanındaki Gelişmeler', "Atatürk Dönemi'nde Yapılan İnkılaplar",
       ]),
     ],
     'Coğrafya': <Unit>[
-      Unit('Doğal Sistemler', <String>[
-        'Coğrafya Bilimi, İnsan ve Doğa', "Dünya'nın Şekli ve Hareketleri",
-        'Yer ve Zaman, Koordinat Sistemi', 'Harita Bilimi', 'İklim Bilimi',
-        "Dünya'nın Yapısı ve Oluşum Süreci",
-        'Su Kaynakları, Topraklar, Bitkiler',
+      Unit('Coğrafya Bilimi, İnsan ve Doğa', <String>[
+        'Doğa ve İnsan Etkileşimi', 'Coğrafyanın Konusu ve Bölümleri',
       ]),
-      Unit('Beşerî Sistemler', <String>[
-        'Yerleşmeler', 'Nüfus, Göç, Ekonomik Faaliyetler', 'Ulaşım',
+      Unit("Dünya'nın Şekli ve Hareketleri", <String>[
+        "Dünya'nın Şekli ve Günlük Hareketi",
+        "Dünya'nın Yıllık Hareketi ve Eksen Eğikliği",
       ]),
-      Unit('Küresel Ortam', <String>['Bölgeler ve Ülkeler']),
-      Unit('Çevre ve Toplum', <String>['İnsan ve Çevre', 'Afetler']),
+      Unit('Yer ve Zaman, Koordinat Sistemi', <String>[
+        'Koordinat Sistemi', 'Yerel Saat ve Ulusal Saat', "Türkiye'nin Konumu",
+      ]),
+      Unit('Harita Bilimi', <String>[
+        'Harita Unsurları ve Harita Çeşitleri', 'Haritalarda Hesaplamalar',
+        'Yeryüzü Şekillerinin Haritalara Aktarılması',
+      ]),
+      Unit('İklim Bilimi', <String>[
+        'Atmosfer, Hava Durumu ve İklim', 'Sıcaklık', 'Basınç ve Rüzgârlar',
+        'Nem ve Yağış', 'İklim Tipleri', 'Türkiye İklimi',
+      ]),
+      Unit("Dünya'nın Yapısı ve Oluşum Süreci", <String>[
+        "Dünya'nın Tektonik Oluşumu ve Jeolojik Zamanlar",
+        'İç Kuvvetler ve Kayaçlar',
+        'Dış Kuvvetler (Çözülme, Kütle Hareketleri, Rüzgârlar, Buzullar)',
+        'Dış Kuvvetler (Akarsular)',
+        'Dış Kuvvetler (Karstik Şekiller, Dalgalar, Akıntılar)',
+        "Türkiye'de Ana Yer Şekilleri, İç ve Dış Kuvvetler",
+      ]),
+      Unit('Su Kaynakları, Topraklar, Bitkiler', <String>[
+        'Dünyada Su Kaynakları', "Türkiye'de Su Kaynakları",
+        "Dünyada ve Türkiye'de Topraklar", "Dünyada ve Türkiye'de Bitkiler",
+      ]),
+      Unit('Yerleşmeler', <String>["Yerleşme ve Türkiye'de Yerleşmeler"]),
+      Unit('Nüfus, Göç, Ekonomik Faaliyetler', <String>[
+        'Nüfusun Özellikleri ve Gelişimi',
+        'Nüfusun Dağılışı ve Nüfus Piramitleri', 'Türkiye Nüfusu', 'Göçler',
+        'Ekonomik Faaliyetler',
+      ]),
+      Unit('Ulaşım', <String>['Uluslararası Ulaşım Hatları']),
+      Unit('Bölgeler ve Ülkeler', <String>[
+        'Bölge Sınıflandırılması ve Türleri',
+      ]),
+      Unit('İnsan ve Çevre', <String>['Doğal Çevrenin Kullanımı']),
+      Unit('Afetler', <String>[
+        'Afetlerin Genel Özellikleri ve Sınıflandırılması',
+        'Deprem, Tsunami ve Volkanik Faaliyetler, Kütle Hareketleri, Erozyon',
+        'Şiddetli Rüzgârlar, Sel ve Taşkın, Çığ, Orman Yangınları, Salgın Hastalıklar',
+      ]),
     ],
     'Felsefe': <Unit>[
-      Unit('Felsefeye Giriş', <String>[
-        'Felsefeyi Tanıma', 'Felsefe ile Düşünme', 'Felsefi Okuma ve Yazma',
+      Unit('Felsefeyi Tanıma', <String>[
+        'Felsefenin Anlamı', 'Felsefi Düşüncenin Ortaya Çıkışı ve Özellikleri - Felsefe Sorusu Nedir?',
+        'Felsefenin İnsan ve Toplum Hayatı Üzerindeki Rolü',
       ]),
-      Unit('Felsefenin Temel Konuları', <String>[
-        'Varlık Felsefesi', 'Bilgi Felsefesi', 'Bilim Felsefesi',
-        'Ahlak Felsefesi', 'Din Felsefesi', 'Siyaset Felsefesi',
-        'Sanat Felsefesi',
+      Unit('Felsefe ile Düşünme', <String>[
+        'Düşünme ve Akıl Yürütmeye İlişkin Kavramlar', 'Düşünme ve Dil İlişkisi - Felsefi Bir Görüşü veya Argümanı Sorgulama',
       ]),
-      Unit('Felsefe Tarihi', <String>[
-        'MÖ 6. Yüzyıl-MS 2. Yüzyıl Felsefesi',
-        'MS 2. Yüzyıl-MS 15. Yüzyıl Felsefesi',
-        '15. Yüzyıl-17. Yüzyıl Felsefesi', '18. Yüzyıl-19. Yüzyıl Felsefesi',
-        '20. Yüzyıl Felsefesi',
+      Unit('Felsefi Okuma ve Yazma', <String>[
+        'Felsefi Okuma ve Yazma',
+      ]),
+      Unit('Varlık Felsefesi', <String>[
+        'Varlık Felsefesinin Konusu ve Problemleri', 'Varlık Felsefesi Alanındaki Çağdaş Yaklaşımlar',
+        'Evrende Amaçlılık ve Düzenlilik-Varlık Türlerinin Sınıflandırılması-Bir konunun Varlık Felsefesi Açısından Değerlendirilmesi',
+      ]),
+      Unit('Bilgi Felsefesi', <String>[
+        'Bilgi Felsefesinin Konusu ve Bilginin İmkânı Problemi', 'Bilginin Kaynağı İle İlgili Görüşler',
+        'Bilginin Sınırları-Doğru Bilginin Ölçütü-Doğruluk ve Gerçeklik-Bilginin Değeri ve Güvenirliği',
+      ]),
+      Unit('Bilim Felsefesi', <String>[
+        'Bilim Felsefesinin Konusu ve Problemleri', 'Bilimin Değeri-Bilim Felsefe İlişkisi-Bilim ve Hayat İlişkisi',
+      ]),
+      Unit('Ahlak Felsefesi', <String>[
+        'Ahlak Felsefesinin Konusu ve Problemleri-İyi ve Kötünün Ölçütü', 'Özgürlük ve Sorumluluk',
+        'Evrensel Bir Ahlak Yasasını Kabul Eden Görüşler', 'Evrensel Bir Ahlak Yasasını Reddeden Görüşler ve Filozoflar',
+        'İyilik ve Mutluluk İlişkisi-Özgürlük, Sorumluluk ve Kural İlişkisi',
+      ]),
+      Unit('Din Felsefesi', <String>[
+        "Din Felsefesinin Konusu ve Soruları Tanrı'nın Varlığı İle İlgili Görüşler", 'Din Felsefesinin Soruları-Teoloji ve Din Felsefesi-Felsefe, Bilim ve Din Açısından Ben Kimim?',
+      ]),
+      Unit('Siyaset Felsefesi', <String>[
+        'Siyaset Felsefesinin Konusu ve Problemleri-Hak, Adalet, Özgürlük-İktidarın Kaynağı', 'İdeal Devlet Düzenine Yönelik Görüşler-Ütopya',
+        'Egemenlik Sorunu-Toplumsal Sorunlara Felsefi Bakış',
+      ]),
+      Unit('Sanat Felsefesi', <String>[
+        'Sanat Felsefesinin Konusu ve Problemleri-Güzellik-Sanat Nedir?', 'Sanat Kuramları-Sanat Eserinin Özellikleri-Sanat ve Duyarlılık-Şehir, İnsan ve Sanat',
+      ]),
+      Unit('MÖ 6. Yüzyıl-MS 2. Yüzyıl Felsefesi', <String>[
+        "İlk Medeniyetlerin Felsefenin Doğuşuna Etkisi-Anadolu'da Yaşamış Filozoflar", 'İlk Neden (Arkhe) ve Değişim Problemi',
+        "Sofistler ile Sokrates'in Bilgi ve Değer Anlayışları", "Platon'un Varlık, Bilgi ve Değer Anlayışı",
+        "Aristoteles'in Varlık, Bilgi ve Değer Anlayışı", 'Görüş Analizi: Konfüçyüs, Sokrates, Platon ve Aristoteles',
+      ]),
+      Unit('MS 2. Yüzyıl-MS 15. Yüzyıl Felsefesi', <String>[
+        'MS 2. Yüzyıl-MS 15. Yüzyıl Felsefesinin Ortaya Çıkışı-Hristiyan Felsefesinin Özellikleri ve Problemleri', 'İslam Felsefesinin Özellikleri ve Problemleri',
+        'İnanç-Akıl İlişkisi - Çeviri Faaliyetleri', 'Görüş Analizi (Augustinus, Fârâbî, İbn Sina, Gâzâlî ve İbn Rüşd)-Tasavvuf Düşüncesi',
+      ]),
+      Unit('15. Yüzyıl-17. Yüzyıl Felsefesi', <String>[
+        '15. Yüzyıl-17. Yüzyıl Felsefesinin Ortaya Çıkışı', '15. Yüzyıl-17. Yüzyıl Felsefesinde Öne Çıkan Görüşler',
+        'Bilimsel Çalışmaların 15. Yüzyıl-17. Yüzyıl Felsefesine Etkisi', 'Görüş Analizi: R. Descartes, B. Spinoza ve T. Hobbes',
+      ]),
+      Unit('18. Yüzyıl-19. Yüzyıl Felsefesi', <String>[
+        '18. Yüzyıl-19. Yüzyıl Felsefesinin Ortaya Çıkışı-Genel Özellikleri - Dil ve Edebiyatla İlişkisi', '18. Yüzyıl-19. Yüzyıl Felsefesinin Öne Çıkan Problemleri-1',
+        '18. Yüzyıl-19. Yüzyıl Felsefesinin Öne Çıkan Problemleri-2', 'Görüş Analizi: J. Locke, I. Kant ve F. Hegel',
+      ]),
+      Unit('20. Yüzyıl Felsefesi', <String>[
+        '20. Yüzyıl Felsefesinin Ortaya Çıkışı', '20. Yüzyıl Felsefesi: Fenomenoloji, Hermeneutik, Varoluşçuluk',
+        '20. Yüzyıl Felsefesi: Diyalektik Materyalizm, Mantıksal Pozitivizm, Yeni Ontoloji', "Türkiye'de Felsefi Düşünceye Katkıda Bulunan Felsefeciler-Çağımızın Felsefecileri-Yaşadıkları Yerler",
+        'Görüş Analizi: F. Nietzsche, H. Bergson, J. P. Sartre ve T. Kuhn', "N. Topçu, T. Mengüşoğlu ve K. Popper'ın Görüşlerinin Tartışılması",
       ]),
     ],
     'Din Kültürü': <Unit>[
-      Unit('İnanç', <String>[
-        'Bilgi ve İnanç', 'Din ve İslam', 'Allah İnsan İlişkisi',
-        'İslam Düşüncesinde İtikadi, Siyasi ve Fıkhi Yorumlar',
+      Unit('Bilgi ve İnanç', <String>[
+        "İslam'da Bilgi Kaynakları", 'İslam İnancında İmanın Mahiyeti',
+        "Kur'an'dan Mesajlar: İsrâ Suresi 36. Ayet ve Mülk Suresi 23. Ayet",
       ]),
-      Unit('İbadet ve Ahlak', <String>[
-        'İslam ve İbadet', 'Ahlaki Tutum Davranışlar', 'Din ve Hayat',
+      Unit('Din ve İslam', <String>[
+        'Dinin Tanımı ve Kaynağı', 'İnsanın Doğası ve Din',
+        'İman ve İslam İlişkisi', 'İslam İnanç Esaslarının Özellikleri',
+        "Kur'an'dan Mesajlar: Nisâ Suresi 136. Ayet",
       ]),
-      Unit('Değerler ve Kültür', <String>[
-        'Gençlik ve Değerler', 'Gönül Coğrafyamız', 'Hz. Muhammed ve Gençlik',
+      Unit('Allah İnsan İlişkisi', <String>[
+        'Allah İnancı ve İnsan', "Allah'ın Varlığı ve Birliği",
+        "Allah'ın İsim ve Sıfatları", "Kur'an-ı Kerim'de İnsan ve Özellikleri",
+        'İnsanın Allah İle İrtibatı', "Kur'an'dan Mesajlar: Rûm Suresi 18-27. Ayetler",
+      ]),
+      Unit('İslam Düşüncesinde İtikadi, Siyasi ve Fıkhi Yorumlar', <String>[
+        'Dini Yorum Farklılıklarının Sebepleri', 'Dini Yorumlarla İlgili Bazı Kavramlar',
+        'İslam Düşüncesinde İtikadi ve Siyasi Yorumlar', 'İslam Düşüncesinde Fıkhi Yorumlar',
+        "Kur'an'dan Mesajlar: Nisâ Suresi 59. Ayet",
+      ]),
+      Unit('İslam ve İbadet', <String>[
+        "İslam'da İbadet ve Kapsamı", "İslam'da İbadetin Amacı ve Önemi",
+        "İslam'da İbadet Yükümlülüğü", "İslam'da İbadetlerin Temel İlkeleri",
+        "İslam'da İbadet Ahlak İlişkisi", "Kur'an'dan Mesajlar: Bakara Suresi 177. Ayet",
+      ]),
+      Unit('Ahlaki Tutum Davranışlar', <String>[
+        'İslam Ahlakının Konusu ve Gayesi - İslam Ahlakının Kaynakları', 'Ahlak ve Terbiye İlişkisi',
+        'İslam Ahlakında Yerilen Bazı Davranışlar', 'Tutum ve Davranışlarda Ölçülü Olmak',
+        "Kur'an'dan Mesajlar: Hucurât Suresi 11-12. Ayetler",
+      ]),
+      Unit('Din ve Hayat', <String>[
+        'Din ve Aile', 'Din, Kültür ve Sanat',
+        'Din ve Çevre', 'Din ve Sosyal Değişim',
+        'Din ve Ekonomi', 'Din ve Sosyal Adalet',
+        "Kur'an'dan Mesajlar: Âl-i İmrân Suresi 103-105. Ayetler",
+      ]),
+      Unit('Gençlik ve Değerler', <String>[
+        'Değerler ve Değerlerin Kaynağı', 'Gençlerin Kişilik Gelişiminde Değerlerin Yeri ve Önemi',
+        'Temel Değerler', "Kur'an'dan Mesajlar: İsrâ Suresi 23-29. Ayetler",
+      ]),
+      Unit('Gönül Coğrafyamız', <String>[
+        'İslam Medeniyeti ve Özellikleri', 'İslam Medeniyetinin Farklı Coğrafyalardaki İzleri',
+        "Kur'an'dan Mesajlar: Hucurât Suresi 13. Ayet",
+      ]),
+      Unit('Hz. Muhammed ve Gençlik', <String>[
+        "Kur'an-ı Kerim'de Gençler", 'Bir Genç Olarak Hz. Muhammed',
+        'Hz. Muhammed ve Gençler', 'Bazı Genç Sahabiler',
+        "Kur'an'dan Mesajlar: Âl-i İmrân Suresi 159. Ayet",
       ]),
     ],
   };
