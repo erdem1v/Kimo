@@ -171,87 +171,161 @@ class YksCurriculum {
       ]),
     ],
     'Fizik': <Unit>[
-      Unit('Fizik Bilimine Giriş', <String>[
-        'Fiziğin Doğası', 'Fiziğin Uygulama Alanları',
-        'Fiziksel Nicelikler ve Birimler', 'Bilim Araştırma Merkezleri',
-      ]),
+      Unit('Fizik Bilimine Giriş', <String>['Fizik Bilimine Giriş']),
       Unit('Madde ve Özellikleri', <String>[
-        'Özkütle', 'Dayanıklılık', 'Adezyon ve Kohezyon',
+        'Kütle ve Hacim', 'Özkütle', 'Dayanıklılık',
+        'Adezyon, Kohezyon, Yüzey Gerilimi ve Kılcallık',
       ]),
       Unit('Hareket ve Kuvvet', <String>[
-        'Hareket', 'Kuvvet', "Newton'un Hareket Yasaları", 'Sürtünme Kuvveti',
+        'Hareket Kavramları', 'İvme Kavramı', 'Kuvvet Kavramı',
+        "Newton'ın Hareket Yasaları", 'Sürtünme Kuvveti',
       ]),
       Unit('Enerji', <String>[
-        'İş, Enerji ve Güç', 'Kinetik ve Potansiyel Enerji',
-        'Enerjinin Korunumu ve Dönüşümü', 'Verim', 'Enerji Kaynakları',
+        'İş, Enerji ve Güç Kavramı', 'Enerji Çeşitleri ve Mekanik Enerji',
+        'Enerji Korunumu', 'Verim ve Enerji Kaynakları',
       ]),
       Unit('Isı ve Sıcaklık', <String>[
-        'Isı, Sıcaklık ve İç Enerji', 'Hâl Değişimi', 'Isıl Denge',
-        'Enerji İletim Yolları ve Yalıtım', 'Genleşme ve Büzülme',
+        'Isı ve Sıcaklık Kavramları, Termometreler', 'Isı Alışverişi',
+        'Hal Değişimi', 'Isıl Denge', 'Enerji İletim Yolları', 'Genleşme',
       ]),
-      Unit('Elektrostatik', <String>['Elektrostatik']),
+      Unit('Elektrostatik', <String>[
+        'Elektrik Yüklerinin Özellikleri ve Elektrikle Yüklenme Çeşitleri',
+        'İletken ve Yalıtkanlarda Yük Dağılımı',
+        'Elektriksel Kuvvet ve Elektrik Alan',
+      ]),
       Unit('Elektrik ve Manyetizma', <String>[
-        'Elektrik Akımı ve Direnç', 'Elektrik Devreleri',
+        'Elektrik Akımı ve Direnç', 'Ohm Yasası ve Dirençlerin Bağlanması',
+        'Üreteçler', 'Elektrik Enerjisi, Elektriksel Güç ve Lamba Parlaklıkları',
         'Mıknatıslar ve Manyetik Alan', 'Akım ve Manyetik Alan',
       ]),
       Unit('Basınç ve Kaldırma Kuvveti', <String>[
-        'Basınç', 'Kaldırma Kuvveti',
+        'Basınç Kavramı, Katılarda Basınç ve Basınç Kuvveti',
+        'Durgun Sıvılarda Basınç ve Basınç Kuvveti, Pascal Prensibi',
+        'Gaz Basıncı, Atmosfer Basıncı ve Basınç Ölçen Aletler',
+        'Akışkan Basıncı (Bernoulli İlkesi)', 'Kaldırma Kuvveti',
       ]),
       Unit('Dalgalar', <String>[
-        'Dalga Hareketi', 'Yay Dalgaları', 'Su Dalgaları', 'Ses Dalgaları',
-        'Deprem Dalgaları',
+        'Dalgalarda Temel Kavramlar ve Özellikleri',
+        'Yay Dalgalarının Hızı ve Yansıması',
+        'Yay Dalgalarının Farklı Ortamlara Geçişi ve Yay Dalgalarının Girişimi',
+        'Su Dalgalarının Özellikleri ve Yansıması',
+        'Su Dalgalarının Hızı ve Kırılması', 'Ses Dalgaları', 'Deprem Dalgaları',
       ]),
       Unit('Optik', <String>[
-        'Işığın Doğası', 'Gölge', 'Yansıma', 'Düzlem Ayna', 'Küresel Aynalar',
-        'Kırılma', 'Mercekler', 'Prizmalar', 'Renk',
+        'Işık, Işık Şiddeti, Işık Akısı ve Aydınlanma Şiddeti', 'Gölge',
+        'Işığın Yansıması ve Düzlem Aynalar',
+        'Küresel Aynaların Özellikleri ve Küresel Aynalarda Özel Işınlar',
+        'Küresel Aynalarda Görüntü Oluşumu', 'Işığın Kırılması',
+        'Tam Yansıma, Sınır Açısı ve Görünür Uzaklık',
+        'Merceklerin Özellikleri ve Merceklerde Özel Işınlar',
+        'Merceklerde Görüntü Oluşumu', 'Işık Prizmaları', 'Renk',
       ]),
     ],
     'Kimya': <Unit>[
       Unit('Kimya Bilimi', <String>[
-        'Kimya Biliminin Gelişimi', 'Kimyanın Çalışma Alanları',
-        'Kimyada Kullanılan Maddeler', 'Kimya Laboratuvarında Güvenlik',
+        'Simyadan Kimyaya',
+        'Kimya Disiplinleri ve Kimyacıların Çalışma Alanları',
+        'Kimyanın Sembolik Dili',
+        'Kimya Uygulamalarında İş Sağlığı ve Güvenliği',
       ]),
       Unit('Atom ve Periyodik Sistem', <String>[
-        'Atom Modelleri', 'Atomun Yapısı', 'Periyodik Sistem',
+        'Atom Modelleri', 'Atomun Yapısı',
+        'Elementlerin Periyodik Sistemdeki Yerleşim Esasları',
+        'Elementlerin Sınıflandırılması',
+        'Periyodik Özelliklerin Değişme Eğilimleri',
       ]),
       Unit('Kimyasal Türler Arası Etkileşimler', <String>[
-        'Kimyasal Türler', 'Kimyasal Türler Arası Etkileşimler',
-        'Güçlü Etkileşimler (İyonik-Kovalent-Metalik Bağ)',
-        'Zayıf Etkileşimler', 'Fiziksel ve Kimyasal Değişimler',
+        'Kimyasal Tür ve Kimyasal Türler Arası Etkileşimlerin Sınıflandırılması',
+        'Güçlü Etkileşimler', 'Zayıf Etkileşimler',
+        'Fiziksel ve Kimyasal Değişimler',
       ]),
       Unit('Maddenin Hâlleri', <String>[
-        'Maddenin Hâlleri', 'Katılar', 'Sıvılar', 'Gazlar', 'Plazma',
+        'Maddenin Fiziksel Hâlleri', 'Katılar ve Sıvılar', 'Gazlar ve Plazma',
       ]),
-      Unit('Kimyanın Temel Kanunları ve Hesaplamalar', <String>[
-        'Kimyanın Temel Kanunları', 'Mol Kavramı', 'Kimyasal Tepkimeler',
-        'Kimyasal Hesaplamalar',
+      Unit('Kimyanın Temel Kanunları ve Kimyasal Hesaplamalar', <String>[
+        'Kimyanın Temel Kanunları', 'Mol Kavramı',
+        'Kimyasal Tepkimeler ve Denklemler', 'Kimyasal Tepkimelerde Hesaplamalar',
       ]),
       Unit('Karışımlar', <String>[
-        'Karışımların Sınıflandırılması', 'Karışımların Ayrılması',
+        'Homojen-Heterojen Karışımlar (I)', 'Homojen-Heterojen Karışımlar (II)',
+        'Ayırma ve Saflaştırma Teknikleri',
       ]),
       Unit('Asitler, Bazlar ve Tuzlar', <String>[
-        'Asitler ve Bazlar', 'Asit-Baz Tepkimeleri',
-        'Asit ve Bazların Kullanımı', 'Tuzlar',
+        'Asitlerin ve Bazların Özellikleri', 'Asitlerin ve Bazların Tepkimeleri',
+        'Asitler ve Bazlar - Tuzlar',
       ]),
       Unit('Kimya Her Yerde', <String>[
-        'Temizlik Maddeleri', 'Yaygın Kimyasallar',
+        'Yaygın Günlük Hayat Kimyasalları', 'Kozmetikler-İlaçlar-Gıdalar',
       ]),
+      Unit('Doğa ve Kimya', <String>['Su ve Hayat', 'Çevre Kimyası']),
     ],
     'Biyoloji': <Unit>[
-      Unit('Yaşam Bilimi Biyoloji', <String>[
-        'Canlıların Ortak Özellikleri', 'Canlıların Temel Bileşenleri',
+      Unit('Canlıların Ortak Özellikleri', <String>[
+        'Canlıların Ortak Özellikleri',
       ]),
-      Unit('Hücre', <String>['Hücre']),
-      Unit('Canlılar Dünyası', <String>[
-        'Canlıların Çeşitliliği ve Sınıflandırma', 'Canlı Âlemleri',
+      Unit('Canlıların Yapısında Bulunan İnorganik Bileşikler', <String>[
+        'İnorganik Bileşiklerin Genel Özellikleri ve Canlılar İçin Önemi',
       ]),
-      Unit('Hücre Bölünmeleri', <String>[
-        'Mitoz ve Eşeysiz Üreme', 'Mayoz ve Eşeyli Üreme',
+      Unit('Canlıların Yapısında Bulunan Organik Bileşikler', <String>[
+        'Organik Bileşiklerin Genel Özellikleri, Karbonhidratlar', 'Lipitler',
+        'Proteinler', 'Enzimler', 'Vitaminler ve Hormonlar', 'Nükleik Asitler',
+        'ATP (Adenozin trifosfat)', 'Sağlıklı Beslenme',
       ]),
-      Unit('Kalıtım', <String>['Kalıtım']),
+      Unit('Hücresel Yapılar ve Görevleri', <String>[
+        'Hücre Teorisi, Prokaryot ve Ökaryot Hücre Yapısı',
+        'Hücre Zarı, Hücre Duvarı, Sitoplazma, Çekirdek',
+        'Ribozom, Endoplazmik Retikulum, Golgi Aygıtı, Lizozom, Koful',
+        'Peroksizom, Sentrozom, Hücre İskeleti', 'Mitokondri ve Plastitler',
+      ]),
+      Unit('Hücre Zarından Madde Geçişleri', <String>[
+        'Hücre Zarından Madde Geçişleri, Basit Difüzyon, Kolaylaştırılmış Difüzyon',
+        'Osmoz', 'Aktif Taşıma', 'Endositoz, Ekzositoz',
+        'Bilimsel Yöntem ve Basamakları',
+      ]),
+      Unit('Canlıların Sınıflandırılması', <String>[
+        'Canlıların Sınıflandırılmasının Amacı ve Önemi, Sınıflandırmada Kullanılan Kategoriler',
+      ]),
+      Unit('Canlı Âlemleri', <String>[
+        'Bakteriler Âlemi, Arkeler Âlemi', 'Protista Âlemi', 'Bitkiler Âlemi',
+        'Mantarlar Âlemi', 'Hayvanlar Âlemi-Omurgasız Hayvanlar',
+        'Hayvanlar Âlemi-Omurgalı Hayvanlar', 'Virüsler',
+      ]),
+      Unit('Hücre Döngüsü ve Mitoz', <String>[
+        'Hücre Bölünmesinin Gerekliliği, Hücre Döngüsü ve İnterfaz',
+        'Mitozun Genel Özellikleri ve Evreleri', 'Hücre Döngüsünün Kontrolü',
+      ]),
+      Unit('Eşeysiz Üreme', <String>[
+        'Eşeysiz Üremenin Genel Özellikleri ve Çeşitleri',
+      ]),
+      Unit('Mayoz', <String>['Mayozun Genel Özellikleri ve Evreleri']),
+      Unit('Eşeyli Üreme', <String>[
+        'Eşeyli Üremenin Genel Özellikleri ve Örnekleri',
+      ]),
+      Unit('Kalıtım', <String>[
+        'Kalıtımla İlgili Kavramlar, Olasılık İlkeleri ve Gamet Çeşitlerinin Bulunması',
+        'Mendel İlkeleri ve Çaprazlamalar',
+        'Eş Baskınlık, Çok Alellilik, Kan Gruplarının Kalıtımı',
+        'Eşeye Bağlı Kalıtım, Akraba Evliliği', 'Soyağacı Analizi ve Örnekleri',
+      ]),
+      Unit('Genetik Varyasyonlar', <String>[
+        'Genetik Varyasyonların Kaynakları ve Biyolojik Çeşitlilik',
+      ]),
       Unit('Ekosistem Ekolojisi', <String>[
-        'Ekosistem Ekolojisi', 'Güncel Çevre Sorunları',
-        'Doğal Kaynakların Sürdürülebilirliği',
+        'Ekolojik Kavramlar, Ekosistemin Canlı ve Cansız Bileşenleri',
+        'Canlılardaki Beslenme Şekilleri', 'Ekosistemde Madde ve Enerji Akışı',
+        'Madde Döngüleri',
+      ]),
+      Unit('Güncel Çevre Sorunları', <String>[
+        'Güncel Çevre Sorunlarının Sebepleri, Hava Kirliliği, Asit Yağmurları, Küresel İklim Değişikliği',
+        'Su Kirliliği, Toprak Kirliliği, Radyoaktif Kirlilik, Ses Kirliliği',
+        'Erozyon, Doğal Hayat Alanlarının Tahribi ve Orman Yangınları, Biyolojik Çeşitliliğin Azalması',
+        'Çevre Sorunlarının Ortaya Çıkmasında Bireylerin Rolü ve Çözüm Önerileri',
+      ]),
+      Unit('Doğal Kaynakların Sürdürülebilirliği', <String>[
+        'Doğal Kaynakların Sürdürülebilirliğinin Önemi',
+      ]),
+      Unit('Biyolojik Çeşitliliğin Korunması', <String>[
+        'Biyolojik Çeşitliliğin Yaşam İçin Önemi ve Korunması',
       ]),
     ],
     'Tarih': <Unit>[
