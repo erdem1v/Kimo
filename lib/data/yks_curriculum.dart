@@ -916,18 +916,64 @@ class YksCurriculum {
       ]),
     ],
     'Din Kültürü': <Unit>[
-      Unit('İnanç ve İbadet', <String>[
-        'Dünya ve Ahiret', 'İnançla İlgili Meseleler',
+      Unit('Dünya ve Ahiret', <String>[
+        'Varoluşun ve Hayatın Anlamı',
+        'Ahiret Âlemi',
+        'Ahirete Uğurlama',
+        "Kur'an'dan Mesajlar: Bakara Suresi 153-157. Ayetler",
       ]),
-      Unit("Kur'an ve Hz. Muhammed", <String>[
-        "Kur'an'a Göre Hz. Muhammed", "Kur'an'da Kavramlar",
+      Unit("Kur'an'a Göre Hz. Muhammed", <String>[
+        "Hz. Muhammed'in Şahsiyeti",
+        "Hz. Muhammed'in Peygamberlik Yönü",
+        "Hz. Muhammed'e Bağlılık ve İtaat",
+        "Kur'an'dan Mesajlar: Ahzâb Suresi 45-46. Ayetler",
       ]),
-      Unit('Dinler ve Kültür', <String>[
-        'Yahudilik ve Hristiyanlık', 'Hint ve Çin Dinleri', "Anadolu'da İslam",
+      Unit("Kur'an'da Bazı Kavramlar", <String>[
+        "Kur'an'da Bazı Kavramlar",
+        "Kur'an-ı Kerim'de Geçen Kavramları Bilmenin İslam'ı Doğru Anlamadaki Önemi",
+        "Kur'an'dan Mesajlar: Kehf Suresi 107-110. Ayetler",
       ]),
-      Unit('İslam Düşüncesi', <String>[
-        'İslam ve Bilim', 'Tasavvufi Yorumlar', 'Güncel Dinî Meseleler',
+      Unit('İnançla İlgili Meseleler', <String>[
+        'İnançla İlgili Felsefi Yaklaşımlar',
+        'Yeni Dinî Hareketler',
+        "Kur'an'dan Mesajlar: En'âm Suresi 59. Ayet ve Lokman Suresi 27. Ayet",
       ]),
+      Unit('Yahudilik ve Hristiyanlık', <String>[
+        'Yahudilik',
+        'Hristiyanlık',
+      ]),
+      Unit('İslam ve Bilim', <String>[
+        'Din-Bilim İlişkisi',
+        'İslam Medeniyetinde Bilim ve Düşüncenin Gelişimi',
+        'İslam Medeniyetinde Öne Çıkan Eğitim Kurumları',
+        'Müslümanların Bilim Alanında Yaptığı Öncü ve Özgün Çalışmalar',
+        "Kur'an'dan Mesajlar: Fâtır Suresi 27-28. Ayetler",
+      ]),
+      Unit("Anadolu'da İslam", <String>[
+        'Türklerin Müslüman Olmaları',
+        'Milletimizin İslam Anlayışının Oluşmasında Etkili Olan Bazı Şahsiyetler',
+        "Kur'an'dan Mesajlar: Nisâ Suresi 69. Ayet",
+      ]),
+      Unit('İslam Düşüncesinde Tasavvufi Yorumlar', <String>[
+        'Tasavvufi Düşüncenin Oluşumu',
+        'Tasavvufi Düşüncenin Ahlaki Boyutu',
+        'Kültürümüzde Etkin Olan Tasavvufi Yorumlar',
+        "Kur'an'dan Mesajlar: Hucurât Suresi 10. Ayet",
+      ]),
+      Unit('Güncel Dinî Meseleler', <String>[
+        'Dinî Meselelerin Çözümünde Temel İlke ve Yöntemler',
+        'İktisadi Hayatla İlgili Meseleler',
+        'Gıda Maddeleri ve Bağımlılıkla İlgili Meseleler',
+        'Sağlık ve Tıpla İlgili Meseleler',
+        "Kur'an'dan Mesajlar: En'âm suresi 151-152. Ayetler",
+      ]),
+      Unit('Hint ve Çin Dinleri', <String>[
+        'Hinduizm',
+        'Budizm',
+        'Konfüçyanizm',
+        'Taoizm',
+      ]),
+
     ],
   };
 
