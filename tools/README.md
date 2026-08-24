@@ -126,9 +126,14 @@ doğru şıkkı AI'ya sordurmuyoruz, güvenilmez.
    şekil etiketlerini ve tekrarları eler.
 4. Sütun sınırı, ortadaki dikey MEB künyesinin solunda kesilir
 5. `pdftoppm` 200 dpi PNG üretir, kutular kesilir, alttaki boşluk kırpılır
-6. Numaralar `1..N` olarak eksiksiz çıkmazsa **o test atlanır** ve rapora
+6. Kesim gri tonlamaya çevrilip 150 dpi'ye indirilir, sonra 4 renkli
+   paletli PNG'ye kodlanır — testler siyah-beyaz metin ve çizim olduğu
+   için bu JPEG'den ~6 kat küçük çıkıyor (soru başına ~11 KB). Gri tonu
+   bol bir görsel (haritalar, taramalı şekiller) paletle bozulacaksa
+   otomatik olarak JPEG'e düşülür; oran yaklaşık %3.
+7. Numaralar `1..N` olarak eksiksiz çıkmazsa **o test atlanır** ve rapora
    yazılır. Yarısını sessizce yüklemek, havuza bozuk soru sokmaktan beterdir.
-7. JPEG Storage'a, satır `mistakes` tablosuna yazılır (`source='meb'`)
+8. Dosya Storage'a, satır `mistakes` tablosuna yazılır (`source='meb'`)
 
 Yüklemeden sonra uygulamadaki **Ayarlar → Tüm sorular** ekranından gözden
 geçirebilirsin.

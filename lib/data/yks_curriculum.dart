@@ -201,8 +201,8 @@ class YksCurriculum {
         'Fonksiyonlarda Uygulamalar (Ters-Bileşke)',
         'Fonksiyonların Dönüşümleri',
       ]),
-      Unit('Polinomlar ve Denklemler', <String>[
-        'Polinomlar', 'İkinci Dereceden Denklemler', 'Parabol', 'Eşitsizlikler',
+      Unit('Denklemler ve Eşitsizlikler', <String>[
+        'İkinci Dereceden Denklemler', 'Parabol', 'Eşitsizlikler',
       ]),
       Unit('Trigonometri', <String>[
         'Trigonometri: Yönlü Açılar',
@@ -218,7 +218,7 @@ class YksCurriculum {
       ]),
       Unit('İntegral', <String>['İntegral', 'İntegral ile Alan Hesabı']),
       Unit('Sayma ve Olasılık', <String>[
-        'Permütasyon-Kombinasyon', 'Binom ve Olasılık',
+        'Binom ve Olasılık',
       ]),
     ],
     'Geometri': <Unit>[
@@ -274,9 +274,8 @@ class YksCurriculum {
       Unit('Enerji Kaynakları', <String>['Enerji Kaynakları']),
     ],
     'Biyoloji': <Unit>[
-      Unit('Hücre Bölünmeleri ve Kalıtım', <String>[
-        'Hücre Bölünmeleri (Mitoz-Mayoz)', 'Kalıtım Kalıpları',
-        'Soyağacı ve Akraba Evliliği', 'Modern Genetik Uygulamaları',
+      Unit('Modern Genetik', <String>[
+        'Modern Genetik Uygulamaları',
       ]),
       Unit('Genden Proteine', <String>[
         'Nükleik Asitler', 'DNA Replikasyonu', 'Protein Sentezi',

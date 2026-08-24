@@ -36,8 +36,16 @@ const Set<String> _subjects = <String>{
   'Din Kültürü',
 };
 
+// Sayfa 200 dpi taranır (kesim koordinatları o çözünürlükte isabetli), sonra
+// çıktı 150 dpi'ye indirilir. Testler siyah-beyaz çizim ve metin olduğu için
+// 4 renkli paletli PNG, JPEG'den ~5 kat küçük çıkıyor ve daha temiz görünür.
+// Gri tonu bol bir görsel (fotoğraf) gelirse palet onu bozar; hata eşiği
+// aşılınca JPEG'e düşülür.
 const int _dpi = 200;
-const int _jpegQuality = 80;
+const double _outScale = 0.75;
+const int _paletteColors = 4;
+const double _maxPaletteError = 12;
+const int _jpegQuality = 75;
 
 Future<void> main(List<String> args) async {
   final List<String> positional = args
@@ -148,16 +156,18 @@ Future<void> main(List<String> args) async {
 
       for (final QuestionBox box in boxes) {
         final img.Image crop = _crop(rendered[box.page - 1], box);
-        final List<int> jpg = img.encodeJpg(crop, quality: _jpegQuality);
-        final String name = '$setName/${_slug(concept)}-$no-${box.number}.jpg';
+        final ({List<int> bytes, String ext}) enc = _encode(crop);
+        final String name =
+            '$setName/${_slug(concept)}-$no-${box.number}.${enc.ext}';
 
         if (dryRun) {
           File('${out.path}/$name')
             ..parent.createSync(recursive: true)
-            ..writeAsBytesSync(jpg);
+            ..writeAsBytesSync(enc.bytes);
         } else {
           await admin!.publishQuestion(
-            jpeg: jpg,
+            bytes: enc.bytes,
+            contentType: enc.ext == 'png' ? 'image/png' : 'image/jpeg',
             fileName: name,
             exam: t['exam'] as String,
             subject: subject,
@@ -291,6 +301,40 @@ bool _rowIsBlank(img.Image im, int y) {
     }
   }
   return true;
+}
+
+/// Kesimi kodlar. Metin/çizim ise paletli PNG, gri tonu bol ise JPEG.
+({List<int> bytes, String ext}) _encode(img.Image crop) {
+  final img.Image gray = img.grayscale(crop);
+  final img.Image small = img.copyResize(
+    gray,
+    width: (gray.width * _outScale).round(),
+    interpolation: img.Interpolation.average,
+  );
+  final img.Image quant = img.quantize(
+    small.clone(),
+    numberOfColors: _paletteColors,
+  );
+  if (_meanError(small, quant) <= _maxPaletteError) {
+    return (bytes: img.encodePng(quant, level: 9), ext: 'png');
+  }
+  return (bytes: img.encodeJpg(small, quality: _jpegQuality), ext: 'jpg');
+}
+
+/// İki görüntü arasındaki ortalama parlaklık farkı (0-255).
+double _meanError(img.Image a, img.Image b) {
+  int sum = 0;
+  int n = 0;
+  // Her pikseli gezmek gereksiz; 3'er atlamak yeterince temsili.
+  for (int y = 0; y < a.height; y += 3) {
+    for (int x = 0; x < a.width; x += 3) {
+      sum += (a.getPixel(x, y).luminance - b.getPixel(x, y).luminance)
+          .abs()
+          .round();
+      n++;
+    }
+  }
+  return n == 0 ? 0 : sum / n;
 }
 
 String _slug(String s) {

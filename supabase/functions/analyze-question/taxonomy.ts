@@ -96,7 +96,7 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
     AYT: {
       "Matematik": [
         "Fonksiyonlarda Uygulamalar (Ters-Bileşke)",
-        "Fonksiyonların Dönüşümleri", "Polinomlar",
+        "Fonksiyonların Dönüşümleri",
         "İkinci Dereceden Denklemler", "Parabol", "Eşitsizlikler",
         "Trigonometri: Yönlü Açılar",
         "Kosinüs ve Sinüs Teoremi",
@@ -105,7 +105,7 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
         "Trigonometri: Toplam-Fark ve İki Kat Açı", "Trigonometrik Denklemler",
         "Logaritma", "Diziler", "Limit ve Süreklilik", "Türev",
         "Türev Uygulamaları (Optimizasyon)", "İntegral",
-        "İntegral ile Alan Hesabı", "Permütasyon-Kombinasyon",
+        "İntegral ile Alan Hesabı",
         "Binom ve Olasılık",
       ],
       "Geometri": [
@@ -137,8 +137,7 @@ export const TAXONOMY: Record<Curriculum, ByExam> = {
         "Karboksilik Asitler ve Esterler", "Enerji Kaynakları",
       ],
       "Biyoloji": [
-        "Hücre Bölünmeleri (Mitoz-Mayoz)", "Kalıtım Kalıpları",
-        "Soyağacı ve Akraba Evliliği", "Modern Genetik Uygulamaları",
+        "Modern Genetik Uygulamaları",
         "Ekosistem Ekolojisi", "Madde Döngüleri", "Popülasyon Ekolojisi",
         "Komünite Ekolojisi", "Bitkisel Hormonlar",
         "Fotosentez", "Kemosentez", "Hücresel Solunum", "Bitkisel Dokular",

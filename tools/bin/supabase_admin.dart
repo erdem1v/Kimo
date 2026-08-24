@@ -59,8 +59,9 @@ class SupabaseAdmin {
   /// Aynı dosya yolu zaten varsa atlanır — betiği ikinci kez çalıştırmak
   /// havuzu kopyalarla doldurmaz.
   Future<void> publishQuestion({
-    required List<int> jpeg,
+    required List<int> bytes,
     required String fileName,
+    required String contentType,
     required String exam,
     required String subject,
     required String concept,
@@ -72,7 +73,7 @@ class SupabaseAdmin {
     final String path = '$ownerId/$source/$fileName';
     if (await _questionExists(path)) return;
 
-    await _upload(path, jpeg);
+    await _upload(path, bytes, contentType);
     await _insert(<String, dynamic>{
       'user_id': ownerId,
       'subject': subject,
@@ -105,12 +106,12 @@ class SupabaseAdmin {
     return (jsonDecode(r.body) as List<dynamic>).isNotEmpty;
   }
 
-  Future<void> _upload(String path, List<int> bytes) async {
+  Future<void> _upload(String path, List<int> bytes, String contentType) async {
     final http.Response r = await http.post(
       Uri.parse('$_baseUrl/storage/v1/object/$_bucket/$path'),
       headers: <String, String>{
         ..._headers,
-        'Content-Type': 'image/jpeg',
+        'Content-Type': contentType,
         'x-upsert': 'true',
       },
       body: bytes,
