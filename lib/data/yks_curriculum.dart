@@ -722,29 +722,35 @@ class YksCurriculum {
       Unit('Canlılar ve Çevre', <String>['Canlılar ve Çevre']),
     ],
     'Edebiyat': <Unit>[
-      Unit('Edebî Türler', <String>[
-        'Edebiyat Bilgisi ve Metin Türleri', 'Hikâye', 'Şiir Bilgisi',
-        'Roman', 'Tiyatro',
+      Unit('Giriş ve Genel Konular', <String>[
+        'Edebiyata Giriş', 'Şiir Bilgisi', 'Edebî Sanatlar', 'Edebî Akımlar',
       ]),
-      Unit('İslamiyet Öncesi ve Geçiş Dönemi', <String>[
-        'İslamiyet Öncesi Türk Edebiyatı', 'Geçiş Dönemi Eserleri',
+      Unit('Şiir', <String>[
+        'İslamiyet Öncesi Türk Şiiri', 'Geçiş Dönemi Türk Şiiri', 'Halk Şiiri',
+        'Divan Şiiri', 'Tanzimat Dönemi Türk Şiiri',
+        'Servetifünun Dönemi Türk Şiiri', 'Fecriati Dönemi Türk Şiiri',
+        'Millî Edebiyat Dönemi Türk Şiiri', 'Cumhuriyet Dönemi Türk Şiiri',
       ]),
-      Unit('Halk Edebiyatı', <String>[
-        'Halk Edebiyatı (Âşık-Anonim)', 'Dini-Tasavvufi Halk Edebiyatı',
+      Unit('Hikâye', <String>[
+        'Hikâye Türleri ve Hikâyenin Yapı Unsurları',
+        "Tanzimat Dönemi'ne Kadar Halk Hikâyesi ve Mesneviler",
+        'Tanzimat ve Servetifünun Dönemi Türk Hikâyesi',
+        'Millî Edebiyat Dönemi Türk Hikâyesi',
+        'Cumhuriyet Dönemi Türk Hikâyesi',
       ]),
-      Unit('Divan Edebiyatı', <String>['Divan Edebiyatı']),
-      Unit('Batı Etkisinde Gelişen Edebiyat', <String>[
-        'Tanzimat Edebiyatı', 'Servet-i Fünun Edebiyatı', 'Fecr-i Ati',
-        'Millî Edebiyat',
+      Unit('Roman', <String>[
+        'Roman Türü ve Yapı Unsurları', 'Tanzimat Dönemi Türk Romanı',
+        'Servetifünun Dönemi Türk Romanı', 'Millî Edebiyat Dönemi Türk Romanı',
+        'Cumhuriyet Dönemi Türk Romanı', 'Dünya Edebiyatında Roman',
       ]),
-      Unit('Cumhuriyet Dönemi', <String>[
-        'Cumhuriyet Dönemi Şiiri (Garip)',
-        'Cumhuriyet Dönemi Şiiri (İkinci Yeni)',
-        'Cumhuriyet Dönemi Roman-Hikâye', 'Cumhuriyet Dönemi Tiyatro',
+      Unit('Tiyatro', <String>[
+        'Tiyatro Türü ve Yapı Unsurları', 'Geleneksel Türk Tiyatrosu',
+        'Tanzimat, Servetifünun ve Millî Edebiyat Dönemi Türk Tiyatrosu',
+        'Cumhuriyet Dönemi Türk Tiyatrosu',
       ]),
-      Unit('Edebiyat Bilgileri', <String>[
-        'Öğretici Metinler', 'Edebî Akımlar', 'Edebî Sanatlar',
-        'Şiir Bilgisi (Nazım Biçimleri-Ölçü)',
+      Unit('Diğer Türler', <String>[
+        'Masal/Fabl', 'Destan/Efsane', 'Öğretici Metinler',
+        'Divan Edebiyatı Nesir Türleri',
       ]),
     ],
     'Tarih': <Unit>[
