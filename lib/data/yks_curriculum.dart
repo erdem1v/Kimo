@@ -46,39 +46,45 @@ class YksCurriculum {
       ]),
     ],
     'Matematik': <Unit>[
-      Unit('Sayılar ve İşlemler', <String>[
-        'Temel Kavramlar', 'Sayı Basamakları', 'Bölme-Bölünebilme', 'OBEB-OKEK',
-        'Rasyonel Sayılar',
+      Unit('Mantık', <String>['Önermeler ve Bileşik Önermeler']),
+      Unit('Kümeler', <String>[
+        'Kümelerde Temel Kavramlar', 'Kümelerde İşlemler',
       ]),
-      Unit('Cebirsel İfadeler', <String>[
-        'Basit Eşitsizlikler', 'Mutlak Değer', 'Üslü Sayılar', 'Köklü Sayılar',
-        'Çarpanlara Ayırma', 'Oran-Orantı',
+      Unit('Sayılar ve Denklemler', <String>[
+        'Sayı Kümeleri', 'Bölünebilme Kuralları',
+        'Birinci Dereceden Denklemler ve Eşitsizlikler',
+        'Üslü İfadeler ve Denklemler',
+        'Denklemler ve Eşitsizlikler ile İlgili Uygulamalar',
       ]),
-      Unit('Problemler', <String>[
-        'Sayı Problemleri', 'Kesir Problemleri', 'Yaş Problemleri',
-        'İşçi-Havuz Problemleri', 'Hareket Problemleri', 'Yüzde Problemleri',
-        'Kâr-Zarar Problemleri', 'Karışım Problemleri', 'Grafik Problemleri',
+      Unit('Veri', <String>[
+        'Merkezi Eğilim ve Yayılım Ölçüleri',
+        'Verilerin Grafikle Gösterilmesi',
       ]),
-      Unit('Kümeler ve Mantık', <String>['Kümeler', 'Mantık']),
-      Unit('Fonksiyonlar ve Polinomlar', <String>[
-        'Fonksiyonlar', 'Polinomlar', 'İkinci Dereceden Denklemler',
+      Unit('Sayma ve Olasılık', <String>[
+        'Sıralama ve Seçme', 'Basit Olayların Olasılıkları',
       ]),
-      Unit('Veri ve Olasılık', <String>[
-        'Permütasyon-Kombinasyon', 'İstatistik', 'Olasılık',
+      Unit('Fonksiyonlar', <String>[
+        'Fonksiyon Kavramı ve Gösterimi',
+        'İki Fonksiyonun Bileşkesi ve Bir Fonksiyonun Tersi',
+      ]),
+      Unit('Polinomlar', <String>[
+        'Polinom Kavramı ve Polinomlarda İşlemler',
+        'Polinomların Çarpanlara Ayrılması',
+      ]),
+      Unit('İkinci Dereceden Denklemler', <String>[
+        'İkinci Dereceden Bir Bilinmeyenli Denklemler',
       ]),
     ],
     'Geometri': <Unit>[
-      Unit('Açılar ve Üçgenler', <String>[
-        'Doğruda Açılar', 'Üçgende Açılar', 'Üçgende Açı-Kenar Bağıntıları',
-        'Dik Üçgen', 'İkizkenar ve Eşkenar Üçgen', 'Açıortay', 'Kenarortay',
-        'Üçgende Alan', 'Üçgende Benzerlik',
+      Unit('Üçgenler', <String>[
+        'Üçgenlerde Temel Kavramlar', 'Üçgenlerde Eşlik ve Benzerlik',
+        'Üçgenin Yardımcı Elemanları', 'Dik Üçgen ve Trigonometri',
+        'Üçgenin Alanı',
       ]),
-      Unit('Çokgenler ve Dörtgenler', <String>[
-        'Çokgenler', 'Paralelkenar', 'Dikdörtgen ve Kare', 'Eşkenar Dörtgen',
-        'Yamuk',
+      Unit('Dörtgenler ve Çokgenler', <String>[
+        'Çokgenler', 'Dörtgenler ve Özellikleri', 'Özel Dörtgenler',
       ]),
-      Unit('Çember ve Daire', <String>['Çember ve Daire']),
-      Unit('Analitik Geometri', <String>['Analitik Geometri (Nokta-Doğru)']),
+      Unit('Katı Cisimler', <String>['Katı Cisimler']),
     ],
     'Fizik': <Unit>[
       Unit('Fizik Bilimine Giriş', <String>['Fizik Bilimine Giriş']),
@@ -197,39 +203,46 @@ class YksCurriculum {
   // ======================================================= ESKİ MÜFREDAT AYT
   static const Map<String, List<Unit>> _eskiAyt = <String, List<Unit>>{
     'Matematik': <Unit>[
-      Unit('Fonksiyonlar', <String>[
-        'Fonksiyonlarda Uygulamalar (Ters-Bileşke)',
+      Unit('Trigonometri', <String>[
+        'Yönlü Açılar', 'Trigonometrik Fonksiyonlar',
+        'Toplam-Fark ve İki Kat Açı Formülleri', 'Trigonometrik Denklemler',
+      ]),
+      Unit('Fonksiyonlarda Uygulamalar', <String>[
+        'Fonksiyonların Grafik ve Problemleri',
+        'İkinci Dereceden Fonksiyonlar ve Grafikleri',
         'Fonksiyonların Dönüşümleri',
       ]),
-      Unit('Denklemler ve Eşitsizlikler', <String>[
-        'İkinci Dereceden Denklemler', 'Parabol', 'Eşitsizlikler',
+      Unit('Denklem ve Eşitsizlik Sistemleri', <String>[
+        'İkinci Dereceden İki Bilinmeyenli Denklem Sistemleri',
+        'İkinci Dereceden Eşitsizlikler',
       ]),
-      Unit('Trigonometri', <String>[
-        'Trigonometri: Yönlü Açılar',
-        'Kosinüs ve Sinüs Teoremi',
-        'Sinüs ve Kosinüs Fonksiyonlarının Grafikleri',
-        'Ters Trigonometrik Fonksiyonlar',
-        'Trigonometri: Toplam-Fark ve İki Kat Açı', 'Trigonometrik Denklemler',
+      Unit('Üstel ve Logaritmik Fonksiyonlar', <String>[
+        'Üstel Fonksiyon', 'Logaritma Fonksiyonu',
+        'Üstel ve Logaritmik Denklem ve Eşitsizlikler',
       ]),
-      Unit('Logaritma', <String>['Logaritma']),
       Unit('Diziler', <String>['Diziler']),
-      Unit('Limit ve Türev', <String>[
-        'Limit ve Süreklilik', 'Türev', 'Türev Uygulamaları (Optimizasyon)',
+      Unit('Türev', <String>[
+        'Limit ve Süreklilik', 'Türev', 'Türev Uygulamaları',
       ]),
-      Unit('İntegral', <String>['İntegral', 'İntegral ile Alan Hesabı']),
-      Unit('Sayma ve Olasılık', <String>[
-        'Binom ve Olasılık',
+      Unit('İntegral', <String>[
+        'Belirsiz İntegral', 'Belirli İntegral ve Alan Hesabı',
+      ]),
+      Unit('Olasılık', <String>[
+        'Koşullu Olasılık', 'Deneysel ve Teorik Olasılık',
       ]),
     ],
     'Geometri': <Unit>[
       Unit('Analitik Geometri', <String>[
-        'Analitik Geometri (Doğru)', 'Analitik Düzlemde Temel Dönüşümler',
-        'Çemberin Analitik İncelenmesi',
+        'Doğrunun Analitik İncelenmesi', 'Çemberin Analitik İncelenmesi',
       ]),
-      Unit('Katı Cisimler', <String>[
-        'Katı Cisimler (Prizma-Silindir)', 'Katı Cisimler (Piramit-Koni-Küre)',
+      Unit('Dönüşümler', <String>['Analitik Düzlemde Temel Dönüşümler']),
+      Unit('Çember ve Daire', <String>[
+        'Çemberde Temel Kavramlar', 'Çemberde Açılar', 'Çemberde Teğet',
+        'Dairenin Çevresi ve Alanı',
       ]),
-      Unit('Vektörler', <String>['Vektörler']),
+      Unit('Uzay Geometri', <String>[
+        'Katı Cisimler (Küre, Silindir, Koni)',
+      ]),
     ],
     'Fizik': <Unit>[
       Unit('Kuvvet ve Hareket', <String>[
