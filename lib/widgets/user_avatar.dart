@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../theme/tokens.dart';
+
 import '../data/social_repository.dart';
 import '../models/mascot.dart';
-import '../theme/app_colors.dart';
 
 /// Kullanıcının profil fotoğrafı. Fotoğraf yoksa (ya da yüklenemezse) maskot
 /// simgesine düşer — listelerde hiçbir zaman boş daire kalmaz.
@@ -32,6 +33,11 @@ class UserAvatar extends StatefulWidget {
 class _UserAvatarState extends State<UserAvatar> {
   String? _url;
 
+  /// İmza süresi dolduysa bir kez yeniden imzalarız. Sonsuz döngüye girmemek
+  /// için tek seferlik: kalıcı bir hatada (dosya silinmiş, yetki yok) maskota
+  /// düşülür.
+  bool _retried = false;
+
   @override
   void initState() {
     super.initState();
@@ -43,6 +49,7 @@ class _UserAvatarState extends State<UserAvatar> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.avatarPath != widget.avatarPath) {
       _url = null;
+      _retried = false;
       _load();
     }
   }
@@ -54,9 +61,24 @@ class _UserAvatarState extends State<UserAvatar> {
     if (mounted && url != null) setState(() => _url = url);
   }
 
+  /// Görsel yüklenemedi: büyük olasılıkla imza öldü. Önbelleği temizleyip bir
+  /// kez yeniden dene. setState build sırasında çağrılamayacağı için kare
+  /// sonrasına erteleniyor.
+  void _onImageError() {
+    if (_retried) return;
+    _retried = true;
+    socialRepository.invalidateAvatarUrl(widget.avatarPath);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => _url = null);
+      _load();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final Color tint = widget.color ?? widget.mascot?.color ?? AppColors.purple;
+    final Color tint =
+        widget.color ?? widget.mascot?.color ?? context.c.action;
     final String? url = _url;
     return Container(
       width: widget.size,
@@ -78,10 +100,14 @@ class _UserAvatarState extends State<UserAvatar> {
               height: widget.size,
               fit: BoxFit.cover,
               // Yükleme/hata durumunda simgeye düş: kırık ikon gösterme.
-              errorBuilder: (BuildContext c, Object e, StackTrace? s) => Text(
-                widget.mascot?.emoji ?? '🐻',
-                style: TextStyle(fontSize: widget.size * 0.5),
-              ),
+              // Ayrıca ölmüş imzayı bir kez yenilemeyi dene.
+              errorBuilder: (BuildContext c, Object e, StackTrace? s) {
+                _onImageError();
+                return Text(
+                  widget.mascot?.emoji ?? '🐻',
+                  style: TextStyle(fontSize: widget.size * 0.5),
+                );
+              },
             ),
     );
   }

@@ -175,7 +175,16 @@ refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
 enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
-enable_anonymous_sign_ins = false
+#
+# TASK 02: acildi. Kayit akisin SONUNA alindi ve ilk fotograf hesapsiz cekiliyor;
+# o fotografin yuklenecegi bir `auth.uid()` gerekiyor. Kayitta
+# `updateUser(email, password)` ayni uid'yi kalici hesaba cevirir, yani
+# tasinacak hicbir sey yoktur.
+#
+# BEDELI ACIKCA: anonim kullanicilar Supabase MAU'suna sayilir. Denemede
+# vazgecen her kullanici bir MAU'dur. Uretimde Dashboard'da CAPTCHA da
+# acilmalidir; asagidaki `anonymous_users` orani tek basina yeterli degil.
+enable_anonymous_sign_ins = true
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
@@ -381,6 +390,40 @@ policy = "per_worker"
 inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
+
+
+# --------------------------------------------------------------- edge functions
+# JWT durusu KOD OLARAK burada beyan edilir. Daha once hicbir yerde yazmiyordu:
+# send-push `--no-verify-jwt` ile elle yayimlanmisti ve bu bilgi yalnizca bir kod
+# yorumunda duruyordu. Sonuc: yerel `supabase start` uretimden sapiyordu ve
+# bayragi unutan bir redeploy push'u sessizce kirabiliyordu.
+#
+# send-push artik veritabanindan service_role JWT'si ile cagriliyor (bkz. 0028
+# gocu ve public.send_push), dolayisiyla dogrulama ACIK olmali.
+[functions.send-push]
+verify_jwt = true
+
+# analyze-question son kullanici oturumuyla cagriliyor (functions.invoke JWT'yi
+# kendisi ekliyor); dogrulama zaten varsayilan olarak acikti, artik beyan edildi.
+[functions.analyze-question]
+verify_jwt = true
+
+# Hesap silme. `uid` GOVDEDEN DEGIL JWT'den okunuyor; dogrulama acik olmak
+# ZORUNDA, yoksa servis rolüyle calisan bu fonksiyon herkesin herkesi silmesine
+# izin veren bir primitife donerdi. Depodaki tek servis rolu yuzeyi.
+[functions.delete-account]
+verify_jwt = true
+
+# Anonim hesap temizligi. Zamanlanmis is servis rolu jetonuyla cagiriyor.
+[functions.cleanup-anonymous]
+verify_jwt = true
+
+# Veli onayi. KIMLIKSIZ ve bu ZORUNLU: velinin hesabi yok, olmasi da
+# beklenmiyor. Guvenlik token'in kendisinde: 32 bayt rastgele, veritabaninda
+# yalnizca SHA-256 hash'i, tek kullanimlik, 7 gun gecerli. Fonksiyon token'i
+# yalnizca tasiyor; dogrulama `confirm_guardian_consent` icinde.
+[functions.guardian-confirm]
+verify_jwt = false
 
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"

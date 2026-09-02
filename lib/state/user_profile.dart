@@ -41,8 +41,9 @@ class UserProfile extends ChangeNotifier {
   /// Karşılama akışında bir kez sorulur, profilden değiştirilebilir.
   bool get shareConsent => _shareConsent;
 
-  /// Maskot hatırlatmaları açık mı? (Saatler sabittir, bkz.
-  /// NotificationService.reviewHour / streakHour.)
+  /// Maskot hatırlatmaları açık mı? Bu anahtar yalnızca "hatırlat / hatırlatma"
+  /// kararını taşır; hangi saatte ve hangi sessiz aralıkla hatırlatılacağı
+  /// cihaz tercihidir ve `AppSettings` içinde durur.
   bool get notifyEnabled => _notifyEnabled;
 
   /// Karşılama akışı tamamlandı mı? (takma ad + sınav yılı + maskot)
@@ -66,7 +67,10 @@ class UserProfile extends ChangeNotifier {
     _examYear = y is int ? y : (y is num ? y.toInt() : null);
     _nickname = (n is String && n.trim().isNotEmpty) ? n.trim() : null;
     _mascot = Mascot.fromDb(meta?['mascot'] as String?);
-    _shareConsent = meta?['share_consent'] == true;
+    // Paylaşım onayı artık metadata'dan OKUNMUYOR — kaynağı `user_consents`
+    // defteri (bkz. loadConsents). Buradaki değer yalnızca defter yüklenene
+    // kadarki başlangıç durumu ve varsayılanı "onay yok".
+    _shareConsent = false;
     _notifyEnabled = meta?['notify_enabled'] == true;
     final Object? a = meta?['avatar_path'];
     _avatarPath = (a is String && a.isNotEmpty) ? a : null;
@@ -88,10 +92,43 @@ class UserProfile extends ChangeNotifier {
     await _save(<String, dynamic>{'notify_enabled': value});
   }
 
+  /// Paylaşım onayını değiştirir.
+  ///
+  /// Onay artık auth metadata'sına DEĞİL, yalnızca ekleme yapılabilen
+  /// `user_consents` defterine yazılıyor. Sebep: auth metadata tamamen
+  /// kullanıcı-yazılabilir ve zaman damgası taşımıyor, yani onay geriye dönük
+  /// değiştirilebiliyor ve ne zaman verildiği hiçbir yerde durmuyordu.
+  /// Defterde UPDATE/DELETE hiçbir uygulama rolüne verilmiyor (bkz. 0037 göçü).
+  ///
+  /// Yerel alan yalnızca arayüz için tutuluyor; kaydın kaynağı defter.
   Future<void> setShareConsent(bool value) async {
     _shareConsent = value;
     notifyListeners();
-    await _save(<String, dynamic>{'share_consent': value});
+    if (!SupabaseConfig.isConfigured) return;
+    await Supabase.instance.client.rpc<void>(
+      'record_consent',
+      params: <String, dynamic>{'p_kind': 'share', 'p_granted': value},
+    );
+  }
+
+  /// Onay defterindeki güncel değerleri yükler (oturum açılışında).
+  ///
+  /// Auth metadata'sındaki eski `share_consent` artık okunmuyor: yazılabilir
+  /// olduğu için güvenilir bir kaynak değil.
+  Future<void> loadConsents() async {
+    if (!SupabaseConfig.isConfigured) return;
+    try {
+      final List<Map<String, dynamic>> rows = await Supabase.instance.client
+          .from('my_consents')
+          .select('kind, granted');
+      for (final Map<String, dynamic> r in rows) {
+        if (r['kind'] == 'share') _shareConsent = r['granted'] == true;
+      }
+      notifyListeners();
+    } catch (e) {
+      // Çevrimdışı olabilir; yerel değer korunur.
+      debugPrint('onay defteri okunamadı: $e');
+    }
   }
 
   /// Sınav yılını kaydeder ve müfredatı buna göre belirler.

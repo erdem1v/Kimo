@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../theme/tokens.dart';
+
 import '../data/mistake_repository.dart';
-import '../theme/app_colors.dart';
 
 /// Supabase Storage'daki bir fotoğrafı TEMBEL yükler: imzalı URL'i yalnızca bu
 /// widget ekranda oluştuğunda üretir. Böylece uzun listelerde/pratikte tüm
@@ -19,6 +20,11 @@ class MistakePhoto extends StatefulWidget {
 class _MistakePhotoState extends State<MistakePhoto> {
   late Future<String?> _future;
 
+  /// İmza süresi dolduysa bir kez yeniden imzalarız. Tek seferlik: dosya
+  /// gerçekten okunamıyorsa (kaldırılmış içerik, silinmiş nesne) yer tutucuda
+  /// kalırız, sonsuz istek döngüsüne girmeyiz.
+  bool _retried = false;
+
   @override
   void initState() {
     super.initState();
@@ -29,8 +35,20 @@ class _MistakePhotoState extends State<MistakePhoto> {
   void didUpdateWidget(MistakePhoto oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.path != widget.path) {
+      _retried = false;
       _future = mistakeRepository.signedUrl(widget.path);
     }
+  }
+
+  /// Görsel yüklenemedi: muhtemelen imza öldü (ekran uzun süre açık kaldı).
+  /// setState build sırasında çağrılamaz, kare sonrasına erteliyoruz.
+  void _onImageError() {
+    if (_retried) return;
+    _retried = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => _future = mistakeRepository.signedUrl(widget.path));
+    });
   }
 
   @override
@@ -46,7 +64,10 @@ class _MistakePhotoState extends State<MistakePhoto> {
         return Image.network(
           url,
           fit: widget.fit,
-          errorBuilder: (_, _, _) => _placeholder(),
+          errorBuilder: (_, _, _) {
+            _onImageError();
+            return _placeholder();
+          },
         );
       },
     );
@@ -54,7 +75,7 @@ class _MistakePhotoState extends State<MistakePhoto> {
 
   Widget _placeholder({bool loading = false}) {
     return Container(
-      color: AppColors.blueBg,
+      color: context.c.sunken,
       alignment: Alignment.center,
       child: loading
           ? const SizedBox(
@@ -63,7 +84,7 @@ class _MistakePhotoState extends State<MistakePhoto> {
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           : const Icon(Icons.image_not_supported_outlined,
-              color: AppColors.blueDark),
+              color: context.c.inkMuted),
     );
   }
 }

@@ -1,25 +1,38 @@
-import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../data/mock_data.dart';
+import '../../data/daily_state_repository.dart';
 import '../../data/social_repository.dart';
-import '../../models/models.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../models/social.dart';
 import '../../services/sound_service.dart';
 import '../../services/supabase_config.dart';
+import '../../state/app_settings.dart';
 import '../../state/game_progress.dart';
 import '../../state/refresh_bus.dart';
 import '../../state/user_profile.dart';
-import '../../theme/app_colors.dart';
-import '../../widgets/game_widgets.dart';
+import '../../theme/tokens.dart';
+import '../../theme/typography.dart';
+import '../../widgets/kit/kimo_button.dart';
+import '../../widgets/kit/kimo_chips.dart';
+import '../../widgets/kit/kimo_icons.dart';
+import '../../widgets/kit/kimo_progress.dart';
+import '../../widgets/kit/kimo_surfaces.dart';
 import '../../widgets/user_avatar.dart';
-import '../social/public_profile_screen.dart';
 import 'settings_screen.dart';
 
-/// Kendi profilim: fotoğraf, takma ad, toplam XP, seri, arkadaş sayısı ve lig.
-/// Tercihler ve yönetim girişleri [SettingsScreen] içinde — bu ekran kimliğe
-/// ayrılmıştır, ayar listesine değil.
+/// Profil sekmesi.
+///
+/// Kimliğe ayrılmış: fotoğraf, takma ad, seviye şeridi, üç sayı ve lig.
+/// Ayarlar **tek girişten** (sağ üst) açılıyor; tasarımın istediği bu.
+/// Tema anahtarı ayrıca burada da var — en sık değiştirilen tercih ve onun
+/// için ayrı bir ekrana girmek gereksiz.
+///
+/// **Sahte rozet ızgarası kaldırıldı.** Eski profilde altı rozet vardı
+/// (üçü "kazanılmış", üçü "kilitli") ve hepsi `MockData` sabitiydi — hiçbiri
+/// gerçek bir başarıya bağlı değildi. Gerçek bir rozet sistemi ayrı bir iş.
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -28,33 +41,41 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  int _friendCount = 0;
-  bool _uploadingAvatar = false;
   final ImagePicker _picker = ImagePicker();
+
+  int _friendCount = 0;
+  bool _uploading = false;
+  DailyState? _state;
 
   @override
   void initState() {
     super.initState();
     if (SupabaseConfig.isConfigured) {
-      _loadFriendCount();
-      refreshBus.addListener(_loadFriendCount);
+      _load();
+      refreshBus.addListener(_load);
     }
   }
 
   @override
   void dispose() {
-    refreshBus.removeListener(_loadFriendCount);
+    refreshBus.removeListener(_load);
     super.dispose();
   }
 
-  /// Arkadaş sayısı kendi açık profilimden okunur (görünüm sayıyor).
-  Future<void> _loadFriendCount() async {
+  Future<void> _load() async {
     final PublicProfile? me = await socialRepository.myProfile();
-    if (mounted && me != null) setState(() => _friendCount = me.friendCount);
+    final DailyState? s = await dailyStateRepository.read();
+    if (!mounted) return;
+    setState(() {
+      if (me != null) _friendCount = me.friendCount;
+      _state = s;
+    });
   }
 
-  /// Profil fotoğrafı seç → yükle → profile yaz.
+  // -------------------------------------------------------------- fotoğraf
+
   Future<void> _pickAvatar(ImageSource source) async {
+    final L10n l = L10n.of(context);
     try {
       final XFile? file = await _picker.pickImage(
         source: source,
@@ -65,143 +86,160 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (file == null) return;
       final Uint8List bytes = await file.readAsBytes();
       if (!mounted) return;
-      setState(() => _uploadingAvatar = true);
-      final String? path = await socialRepository.uploadAvatar(bytes);
-      if (path != null) await userProfile.setAvatarPath(path);
+      setState(() => _uploading = true);
+      final String path = await socialRepository.uploadAvatar(bytes);
+      await userProfile.setAvatarPath(path);
       if (!mounted) return;
-      setState(() => _uploadingAvatar = false);
-      if (path == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fotoğraf yüklenemedi. Tekrar dene.')),
-        );
-      }
-    } catch (_) {
-      if (mounted) setState(() => _uploadingAvatar = false);
+      setState(() => _uploading = false);
+    } on AvatarException catch (e) {
+      // Sebebi kullanıcıya söylüyoruz: bu akış eskiden sessizce başarısız
+      // oluyordu ve "yükledim ama görünmüyor" durumu teşhis edilemiyordu.
+      if (!mounted) return;
+      setState(() => _uploading = false);
+      _snack(e.message);
+    } catch (e) {
+      debugPrint('avatar yüklenemedi: $e');
+      if (!mounted) return;
+      setState(() => _uploading = false);
+      _snack(l.profileAvatarFailed);
     }
   }
 
   Future<void> _removeAvatar() async {
-    await socialRepository.removeAvatar();
-    await userProfile.setAvatarPath(null);
-    if (mounted) setState(() {});
+    try {
+      await socialRepository.removeAvatar();
+      await userProfile.setAvatarPath(null);
+      if (mounted) setState(() {});
+    } on AvatarException catch (e) {
+      // Dosya gerçekten silinemediyse kullanıcı bunu bilmeli — "kaldırdım"
+      // deyip dosyayı depoda bırakmak, düzeltmeye çalıştığımız davranışın ta
+      // kendisi.
+      if (mounted) _snack(e.message);
+    }
   }
 
-  /// Fotoğraf kaynağı seçimi (kamera / galeri / kaldır).
+  void _snack(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
   void _avatarSheet() {
     sound.tap();
+    final KimoTypography t = context.t;
+    final L10n l = L10n.of(context);
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: context.c.card,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
       ),
-      builder: (BuildContext ctx) => SafeArea(
+      builder: (BuildContext ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          Gap.screen,
+          Gap.screen,
+          Gap.screen,
+          Gap.screen + MediaQuery.of(ctx).padding.bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            const SizedBox(height: 12),
-            const Text(
-              'Profil fotoğrafı',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            ListTile(
-              leading: const Icon(
-                Icons.photo_camera_rounded,
-                color: AppColors.purple,
-              ),
-              title: const Text('Fotoğraf çek'),
-              onTap: () {
+            Text(l.profileAvatarChange, style: t.section),
+            const SizedBox(height: Gap.lg),
+            KimoButton(
+              label: l.profileAvatarCamera,
+              icon: const KimoIcon(KimoIcons.camera, size: 20),
+              onPressed: () {
                 Navigator.of(ctx).pop();
                 _pickAvatar(ImageSource.camera);
               },
             ),
-            ListTile(
-              leading: const Icon(
-                Icons.photo_library_rounded,
-                color: AppColors.blue,
-              ),
-              title: const Text('Galeriden seç'),
-              onTap: () {
+            const SizedBox(height: Gap.sm),
+            KimoButton(
+              label: l.profileAvatarGallery,
+              kind: KimoButtonKind.secondary,
+              onPressed: () {
                 Navigator.of(ctx).pop();
                 _pickAvatar(ImageSource.gallery);
               },
             ),
-            if (userProfile.avatarPath != null)
-              ListTile(
-                leading: const Icon(
-                  Icons.delete_outline_rounded,
-                  color: AppColors.red,
-                ),
-                title: const Text('Fotoğrafı kaldır'),
-                subtitle: const Text(
-                  'Koçunun simgesi görünür',
-                  style: TextStyle(fontSize: 12),
-                ),
-                onTap: () {
+            if (userProfile.avatarPath != null) ...<Widget>[
+              const SizedBox(height: Gap.sm),
+              KimoButton(
+                label: l.profileAvatarRemove,
+                kind: KimoButtonKind.tertiary,
+                onPressed: () {
                   Navigator.of(ctx).pop();
                   _removeAvatar();
                 },
               ),
-            const SizedBox(height: 8),
+            ],
           ],
         ),
       ),
     );
   }
 
+  // -------------------------------------------------------------------- yapı
+
   @override
   Widget build(BuildContext context) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    final L10n l = L10n.of(context);
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text('Profil'),
-        actions: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.settings_rounded),
-            tooltip: 'Ayarlar',
-            onPressed: () {
-              sound.tap();
-              Navigator.of(context).push<void>(
-                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
-              );
-            },
-          ),
-        ],
-      ),
-      body: ListenableBuilder(
-        listenable: Listenable.merge(<Listenable>[gameProgress, userProfile]),
-        builder: (BuildContext context, _) {
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+      backgroundColor: c.page,
+      body: SafeArea(
+        bottom: false,
+        child: ListenableBuilder(
+          listenable: Listenable.merge(
+              <Listenable>[gameProgress, userProfile, appSettings]),
+          builder: (BuildContext context, _) => ListView(
+            padding: const EdgeInsets.fromLTRB(
+                Gap.screen, 0, Gap.screen, Gap.section),
             children: <Widget>[
-              _header(),
-              const SizedBox(height: 22),
-              ProfileStatsRow(
-                xp: gameProgress.xp,
-                streak: gameProgress.currentStreak,
-                friends: _friendCount,
+              Row(
+                children: <Widget>[
+                  Expanded(child: Text(l.profileTitle, style: t.title)),
+                  IconButton(
+                    onPressed: () {
+                      sound.tap();
+                      Navigator.of(context).push<void>(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const SettingsScreen(),
+                        ),
+                      );
+                    },
+                    icon: KimoIcon(KimoIcons.settings, color: c.ink),
+                    tooltip: l.profileSettings,
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              LeagueBanner(league: gameProgress.league, xp: gameProgress.xp),
-              const SizedBox(height: 24),
-              const SectionTitle('Rozetler'),
-              const SizedBox(height: 12),
-              _badges(),
+              const SizedBox(height: Gap.md),
+              _header(context, l),
+              const SizedBox(height: Gap.xl),
+              _levelCard(context, l),
+              const SizedBox(height: Gap.md),
+              _stats(context, l),
+              const SizedBox(height: Gap.md),
+              _leagueCard(context),
+              const SizedBox(height: Gap.md),
+              _themeCard(context, l),
             ],
-          );
-        },
+          ),
+        ),
       ),
     );
   }
 
-  Widget _header() {
+  Widget _header(BuildContext context, L10n l) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
     return Column(
       children: <Widget>[
-        // Fotoğrafa dokununca değiştirme sayfası açılır.
         GestureDetector(
-          onTap: _uploadingAvatar ? null : _avatarSheet,
+          onTap: _uploading ? null : _avatarSheet,
           child: Stack(
             alignment: Alignment.bottomRight,
             children: <Widget>[
@@ -213,82 +251,148 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: AppColors.purple,
+                  color: c.action,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2.5),
+                  border: Border.all(color: c.page, width: 2.5),
                 ),
-                child: _uploadingAvatar
-                    ? const SizedBox(
+                child: _uploading
+                    ? SizedBox(
                         width: 14,
                         height: 14,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: c.onAction,
                         ),
                       )
-                    : const Icon(
-                        Icons.photo_camera_rounded,
-                        size: 14,
-                        color: Colors.white,
-                      ),
+                    : KimoIcon(KimoIcons.camera, size: 14, color: c.onAction),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: Gap.md),
         Text(
-          userProfile.nickname ?? 'Öğrenci',
+          userProfile.nickname ?? l.defaultNickname,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+          style: t.heading,
         ),
       ],
     );
   }
 
-  Widget _badges() {
-    return GridView.count(
-      crossAxisCount: 3,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 0.85,
+  /// Seviye şeridi. Seviye ayrı bir sayaç değil, toplam XP'nin okunuşu:
+  /// `xp ~/ 1000 + 1`.
+  Widget _levelCard(BuildContext context, L10n l) {
+    final KimoTypography t = context.t;
+    final DailyState? s = _state;
+    // Sunucu okunamadıysa yerel (iyimser) XP kullanılıyor; ikisi de aynı
+    // formülü uyguluyor, dolayısıyla gösterilen seviye tutarlı.
+    final int xp = s?.xp ?? gameProgress.xp;
+    final int level = xp ~/ DailyState.xpPerLevel + 1;
+    final int inLevel = xp % DailyState.xpPerLevel;
+    return KimoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            l.profileLevelProgress(level, inLevel, DailyState.xpPerLevel),
+            style: t.bodyStrong,
+          ),
+          const SizedBox(height: Gap.sm),
+          KimoProgressBar(value: inLevel / DailyState.xpPerLevel),
+        ],
+      ),
+    );
+  }
+
+  Widget _stats(BuildContext context, L10n l) {
+    final DailyState? s = _state;
+    return Row(
       children: <Widget>[
-        for (final AchievementBadge b in MockData.badges) _badge(b),
+        Expanded(
+          child: _stat(context, '${s?.xp ?? gameProgress.xp}', l.profileXp),
+        ),
+        const SizedBox(width: Gap.sm),
+        Expanded(
+          child: _stat(
+            context,
+            '${s?.streak ?? gameProgress.currentStreak}',
+            l.profileStreak,
+          ),
+        ),
+        const SizedBox(width: Gap.sm),
+        Expanded(child: _stat(context, '$_friendCount', l.profileFriends)),
       ],
     );
   }
 
-  Widget _badge(AchievementBadge b) {
-    return Opacity(
-      opacity: b.earned ? 1 : 0.4,
+  Widget _stat(BuildContext context, String value, String label) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return KimoCard(
+      padding: const EdgeInsets.symmetric(vertical: Gap.lg),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(value, style: t.numberLarge),
+          const SizedBox(height: Gap.xxs),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: t.caption.copyWith(color: c.inkMuted),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _leagueCard(BuildContext context) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    final League league = _state?.league ?? gameProgress.league;
+    return KimoCard(
+      child: Row(
         children: <Widget>[
           Container(
-            width: 60,
-            height: 60,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: b.earned
-                  ? AppColors.gold.withValues(alpha: 0.2)
-                  : AppColors.line,
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              b.earned ? b.emoji : '🔒',
-              style: const TextStyle(fontSize: 26),
-            ),
+            width: 12,
+            height: 12,
+            decoration:
+                BoxDecoration(color: league.color, shape: BoxShape.circle),
           ),
-          const SizedBox(height: 6),
-          Text(
-            b.title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppColors.ink,
-            ),
+          const SizedBox(width: Gap.md),
+          Expanded(child: Text(league.label, style: t.bodyStrong)),
+          if (_state != null)
+            StatusBadge(
+              label: '${_state!.gems}',
+              tone: BadgeTone.mastered,
+            )
+          else
+            KimoIcon(KimoIcons.gem, size: 18, color: c.inkMuted),
+        ],
+      ),
+    );
+  }
+
+  /// Tema anahtarı burada da var (tasarım kararı): en sık değiştirilen
+  /// tercih, ayarlara girmeden ulaşılabilsin.
+  Widget _themeCard(BuildContext context, L10n l) {
+    final KimoTypography t = context.t;
+    const List<ThemeMode> modes = <ThemeMode>[
+      ThemeMode.system,
+      ThemeMode.light,
+      ThemeMode.dark,
+    ];
+    return KimoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(l.settingsTheme, style: t.bodyStrong),
+          const SizedBox(height: Gap.md),
+          SegmentedTabs(
+            labels: <String>[l.themeSystem, l.themeLight, l.themeDark],
+            selectedIndex: modes.indexOf(appSettings.themeMode),
+            onChanged: (int i) {
+              sound.tap();
+              appSettings.setThemeMode(modes[i]);
+            },
           ),
         ],
       ),

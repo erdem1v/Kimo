@@ -1,16 +1,34 @@
 import 'package:flutter/material.dart';
 
-import '../../data/mascot_lines.dart';
+import '../../data/auth_repository.dart';
+import '../../data/daily_state_repository.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../models/mascot.dart';
 import '../../services/notification_service.dart';
 import '../../services/sound_service.dart';
+import '../../services/supabase_config.dart';
 import '../../state/user_profile.dart';
-import '../../theme/app_colors.dart';
-import '../../widgets/game_button.dart';
+import '../../theme/tokens.dart';
+import '../../theme/typography.dart';
+import '../../widgets/kimo/kimo.dart';
+import '../../widgets/kimo/kimo_pose.dart';
+import '../../widgets/kit/kimo_button.dart';
+import '../../widgets/kit/kimo_chips.dart';
+import '../../widgets/kit/kimo_icons.dart';
+import '../../widgets/kit/kimo_progress.dart';
+import '../capture/capture_screen.dart';
+import 'age_gate_step.dart';
 
-/// Kayıt sonrası karşılama akışı: takma ad (eksikse) → sınav yılı → maskot
-/// seçimi → kısa tanıtım. Tamamlanınca [onDone] çağrılır (AuthGate uygulamaya
-/// geçer).
+/// Karşılama akışı — **on bir adımdan beşe**.
+///
+/// Adımlar: yaş kapısı · takma ad + sınav yılı · maskot · bildirim · kayıt.
+/// Kaldırılanlar: üç "nasıl çalışır" anlatım sayfası (ürünün kendisi zaten
+/// anlatıyor: çekim ekranı ne yapacağını, cevap paneli tekrarın ne zaman
+/// geleceğini söylüyor) ve "merhaba" sayfası (karşılama ekranına taşındı).
+///
+/// **Kayıt SONDA.** Anonim oturumla gelen kullanıcı ilk yanlışını çoktan
+/// çekmiş oluyor; son adımda `updateUser` ile aynı `uid` kalıcı hesaba
+/// dönüşüyor, yani taşınacak veri yok.
 class OnboardingFlow extends StatefulWidget {
   const OnboardingFlow({super.key, required this.onDone});
 
@@ -20,31 +38,29 @@ class OnboardingFlow extends StatefulWidget {
   State<OnboardingFlow> createState() => _OnboardingFlowState();
 }
 
-enum _Step {
-  hello,
-  nickname,
-  examYear,
-  mascot,
-  notifications,
-  howPhoto,
-  howReview,
-  howGamify,
-  shareConsent,
-}
+enum _Step { firstCapture, age, profile, mascot, notifications, signUp }
 
 class _OnboardingFlowState extends State<OnboardingFlow> {
-  final PageController _pager = PageController();
   final TextEditingController _nickname = TextEditingController();
+  final TextEditingController _email = TextEditingController();
+  final TextEditingController _password = TextEditingController();
+  final KimoController _kimo = KimoController();
 
   late final List<_Step> _steps;
   int _index = 0;
+
   int? _year;
   Mascot? _mascot;
-  bool _consent = false;
-  bool? _notify; // null = henüz seçilmedi
+  bool? _notify;
   bool _saving = false;
+  GuardianStatus? _guardian;
 
-  static const List<int> _years = <int>[2026, 2027, 2028, 2029, 2030];
+  static const List<int> _examYears = <int>[2026, 2027, 2028, 2029, 2030];
+
+  bool get _remote => SupabaseConfig.isConfigured;
+
+  /// Kayıt öncesi geçici kimlikle mi geldik.
+  bool get _anonymous => _remote && authRepository.isAnonymous;
 
   @override
   void initState() {
@@ -52,93 +68,110 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     _nickname.text = userProfile.nickname ?? '';
     _year = userProfile.examYear;
     _mascot = userProfile.mascot;
+
     _steps = <_Step>[
-      // Kimo önce kendini tanıtır; sorular ondan sonra ve onun ağzından gelir.
-      _Step.hello,
-      // Takma ad kayıtta alınır; yoksa (eski hesap) burada sorulur.
-      if (userProfile.nickname == null) _Step.nickname,
-      _Step.examYear,
+      // Yalnızca "İlk yanlışını çek" yolundan gelenler için: hesabı olan biri
+      // zaten arşivine sahip.
+      if (_anonymous) _Step.firstCapture,
+      if (_remote) _Step.age,
+      _Step.profile,
       _Step.mascot,
-      // İzin, maskot seçildikten hemen sonra: kullanıcı karakterine yeni
-      // yatırım yapmışken "seni ben hatırlatayım mı?" en doğal an.
       _Step.notifications,
-      _Step.howPhoto,
-      _Step.howReview,
-      _Step.howGamify,
-      _Step.shareConsent,
+      // Zaten kalıcı hesabı olan (giriş yapmış) kullanıcıya kayıt sorulmaz.
+      if (_anonymous) _Step.signUp,
     ];
-    _consent = userProfile.shareConsent;
+
     _nickname.addListener(() => setState(() {}));
+    _password.addListener(() => setState(() {}));
+    _email.addListener(() => setState(() {}));
+    if (_remote) _loadGuardian();
   }
 
   @override
   void dispose() {
-    _pager.dispose();
     _nickname.dispose();
+    _email.dispose();
+    _password.dispose();
+    _kimo.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadGuardian() async {
+    final GuardianStatus? s = await dailyStateRepository.guardianStatus();
+    if (mounted) setState(() => _guardian = s);
   }
 
   _Step get _current => _steps[_index];
 
-  /// Kimo'nun rengi: karakter seçilince onun tonuna bürünür.
-  Color get _kimoColor =>
-      (_mascot ?? userProfile.mascot)?.color ?? AppColors.purple;
+  // ------------------------------------------------------------- geçerlilik
 
-  /// Kimo her zaman ayıdır; karakter seçimi yüzünü değil rengini ve sesini
-  /// değiştirir (karakter simgeleri yalnızca seçim listesinde görünür).
-  static const String _kimoFace = '🐻';
+  /// Adım tamamlanabilir mi.
+  ///
+  /// **Yaş kapısı ilerlemeyi ENGELLEMİYOR.** Doğum yılı yazıldıysa geçilir;
+  /// veli onayı beklemek bir engel değil — onay yalnızca arkadaş eklemeyi
+  /// kapatıyor ve o kısıt SUNUCUDA (`can_add_friends`). Kullanıcıyı burada
+  /// bekletmek, veliye ulaşamayan bir öğrenciyi uygulamadan tamamen dışarıda
+  /// bırakırdı.
+  bool get _canContinue => switch (_current) {
+        _Step.firstCapture => true,
+        // Durum OKUNAMADIYSA (ağ hatası, ilk yükleme sürüyor) ilerlemeye
+        // izin veriliyor. Bu bir boşluk değil: `is_minor_now` bilinmeyen
+        // doğum yılını REŞİT OLMAYAN sayıyor, yani atlayan kullanıcıda
+        // arkadaş ekleme sunucuda kapalı kalıyor. Kilitlenmek ise gerçekten
+        // zarar verirdi — kullanıcı uygulamaya hiç giremezdi.
+        _Step.age => _guardian == null || _guardian!.birthYearSet,
+        _Step.profile => _nickname.text.trim().length >= 2 && _year != null,
+        _Step.mascot => _mascot != null,
+        _Step.notifications => _notify != null,
+        _Step.signUp => _emailOk && _passwordOk,
+      };
 
-  String get _buttonLabel {
-    if (_saving) return 'Kaydediliyor...';
-    if (_index == _steps.length - 1) return 'HADİ BAŞLAYALIM';
-    return switch (_current) {
-      _Step.hello => 'MERHABA KİMO',
-      _Step.mascot => 'BU KAFA İYİ',
-      _Step.shareConsent => 'DEVAM',
-      _ => 'DEVAM',
-    };
+  bool get _emailOk {
+    final String v = _email.text.trim();
+    final int at = v.indexOf('@');
+    final int dot = v.lastIndexOf('.');
+    return at > 0 && dot > at + 1 && dot < v.length - 1 && !v.contains(' ');
   }
 
-  bool get _canContinue => switch (_current) {
-    _Step.nickname => _nickname.text.trim().length >= 2,
-    _Step.examYear => _year != null,
-    _Step.mascot => _mascot != null,
-    _Step.notifications => _notify != null,
-    _ => true,
-  };
+  // Supabase'in varsayılan alt sınırı 6; 8 bizim kararımız ve `config.toml`
+  // ile aynı olmak zorunda değil (daha katı olması sorun değil).
+  bool get _passwordOk => _password.text.length >= 8;
+
+  // ------------------------------------------------------------------ akış
 
   Future<void> _next() async {
-    if (_saving) return;
+    if (_saving || !_canContinue) return;
+    final L10n l = L10n.of(context);
     sound.tap();
-    // Adımın verisini kaydet.
     setState(() => _saving = true);
     try {
       switch (_current) {
-        case _Step.nickname:
+        case _Step.firstCapture:
+          break;
+        case _Step.age:
+          break;
+        case _Step.profile:
           await userProfile.setNickname(_nickname.text.trim());
-        case _Step.examYear:
           await userProfile.setExamYear(_year!);
         case _Step.mascot:
           await userProfile.setMascot(_mascot!);
         case _Step.notifications:
-          // Sistem izni ancak "evet" dendiyse istenir.
           bool granted = false;
           if (_notify == true) {
             granted = await notifications.requestPermission();
+            if (!granted && mounted) _snack(l.notifyDenied);
           }
           await userProfile.setNotifyEnabled(granted);
-        case _Step.shareConsent:
-          await userProfile.setShareConsent(_consent);
-        default:
-          break;
+        case _Step.signUp:
+          await _register();
       }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Kaydedilemedi. Tekrar dene.')),
-        );
-        setState(() => _saving = false);
-      }
+    } catch (e) {
+      debugPrint('adım kaydedilemedi: $e');
+      if (!mounted) return;
+      setState(() => _saving = false);
+      _snack(_current == _Step.signUp
+          ? _signUpMessage(l, e)
+          : l.onboardSaveFailed);
       return;
     }
     if (!mounted) return;
@@ -146,756 +179,327 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
     if (_index >= _steps.length - 1) {
       sound.levelUp();
+      _kimo.trigger(KimoReaction.levelUp);
       widget.onDone();
       return;
     }
     setState(() => _index++);
-    _pager.animateToPage(
-      _index,
-      duration: const Duration(milliseconds: 260),
-      curve: Curves.easeOut,
+  }
+
+  /// Anonim oturumu kalıcıya çevirir. **Yeni hesap AÇMIYOR**: `uid` aynı
+  /// kalıyor, dolayısıyla çekilen fotoğraf, kaydedilen soru ve onay kaydı
+  /// olduğu yerde duruyor.
+  Future<void> _register() async {
+    await authRepository.convertToPermanent(
+      email: _email.text.trim(),
+      password: _password.text,
     );
+  }
+
+  String _signUpMessage(L10n l, Object e) {
+    final String s = e.toString().toLowerCase();
+    if (s.contains('already') || s.contains('registered') ||
+        s.contains('exists')) {
+      return l.signUpEmailTaken;
+    }
+    return l.signUpFailed;
   }
 
   void _back() {
     if (_index == 0) return;
     sound.tap();
     setState(() => _index--);
-    _pager.animateToPage(
-      _index,
-      duration: const Duration(milliseconds: 240),
-      curve: Curves.easeOut,
-    );
   }
+
+  void _snack(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _capture() async {
+    sound.tap();
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const CaptureScreen()),
+    );
+    if (mounted) setState(() {});
+  }
+
+  // -------------------------------------------------------------------- yapı
 
   @override
   Widget build(BuildContext context) {
+    final KimoColors c = context.c;
+    final L10n l = L10n.of(context);
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: c.page,
       body: SafeArea(
         child: Column(
           children: <Widget>[
-            _progressBar(),
-            Expanded(
-              child: PageView(
-                controller: _pager,
-                physics: const NeverScrollableScrollPhysics(),
-                children: <Widget>[for (final _Step s in _steps) _page(s)],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-              child: GameButton(
-                label: _buttonLabel,
-                enabled: _canContinue && !_saving,
-                onPressed: _next,
-              ),
-            ),
+            _progress(context, l),
+            Expanded(child: _page(context, l)),
+            _footer(context, l),
           ],
         ),
       ),
     );
   }
 
-  Widget _progressBar() {
+  Widget _progress(BuildContext context, L10n l) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 20, 12),
+      padding: const EdgeInsets.fromLTRB(Gap.xs, Gap.xs, Gap.screen, Gap.md),
       child: Row(
         children: <Widget>[
           IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            color: _index == 0 ? Colors.transparent : AppColors.inkLight,
             onPressed: _index == 0 ? null : _back,
+            icon: KimoIcon(
+              KimoIcons.back,
+              color: _index == 0 ? c.border : c.ink,
+            ),
+            tooltip: l.onboardBack,
           ),
           Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: (_index + 1) / _steps.length,
-                minHeight: 8,
-                backgroundColor: AppColors.line,
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.green,
-                ),
-              ),
-            ),
+            child: KimoProgressBar(value: (_index + 1) / _steps.length),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: Gap.md),
           Text(
-            '${_index + 1}/${_steps.length}',
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              color: AppColors.inkLight,
-            ),
+            l.onboardStep(_index + 1, _steps.length),
+            style: t.numberSmall.copyWith(color: c.inkMuted),
           ),
         ],
       ),
     );
   }
 
-  /// Kimo'nun sorusu: sayfanın başrolü. Ortada, büyük ve renkli — kullanıcı
-  /// bir form doldurduğunu değil, bir ayıyla konuştuğunu hissetsin.
-  Widget _kimoSays(String text) {
-    final Color c = _kimoColor;
-    return Column(
+  Widget _page(BuildContext context, L10n l) {
+    return switch (_current) {
+      _Step.firstCapture => _firstCapturePage(context, l),
+      _Step.age => AgeGateStep(status: _guardian, onChanged: _loadGuardian),
+      _Step.profile => _profilePage(context, l),
+      _Step.mascot => _mascotPage(context, l),
+      _Step.notifications => _notifyPage(context, l),
+      _Step.signUp => _signUpPage(context, l),
+    };
+  }
+
+  Widget _firstCapturePage(BuildContext context, L10n l) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: Gap.screen),
       children: <Widget>[
-        Container(
-          width: 96,
-          height: 96,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: c.withValues(alpha: 0.16),
-            shape: BoxShape.circle,
-            border: Border.all(color: c.withValues(alpha: 0.35), width: 2),
-          ),
-          child: Text(_kimoFace, style: const TextStyle(fontSize: 50)),
-        ),
-        const SizedBox(height: 14),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          decoration: BoxDecoration(
-            color: c.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: c.withValues(alpha: 0.30), width: 1.5),
-          ),
-          child: Text(
-            text,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 19,
-              height: 1.4,
-              fontWeight: FontWeight.w800,
-              color: AppColors.ink,
-            ),
+        Center(
+          child: Kimo(
+            size: 130,
+            controller: _kimo,
+            onTap: () => _kimo.trigger(KimoReaction.tap),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: Gap.lg),
+        Text(l.captureEmptyTitle, textAlign: TextAlign.center, style: t.title),
+        const SizedBox(height: Gap.sm),
+        Text(
+          l.captureEmptyBody,
+          textAlign: TextAlign.center,
+          style: t.body.copyWith(color: c.inkSecondary),
+        ),
+        const SizedBox(height: Gap.xl),
+        KimoButton(
+          label: l.welcomePrimary,
+          icon: const KimoIcon(KimoIcons.camera, size: 20),
+          onPressed: _capture,
+        ),
       ],
     );
   }
 
-  /// Tanışma: Kimo kendini tanıtır, akışın geri kalanının sesi burada kurulur.
-  Widget _helloPage() {
-    return _pad(
-      SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            const SizedBox(height: 12),
-            TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: 0.6, end: 1),
-              duration: const Duration(milliseconds: 520),
-              curve: Curves.elasticOut,
-              builder: (BuildContext context, double v, Widget? child) =>
-                  Transform.scale(scale: v, child: child),
-              child: Container(
-                width: 128,
-                height: 128,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.purple.withValues(alpha: 0.14),
-                  shape: BoxShape.circle,
-                ),
-                child: const Text('🐻', style: TextStyle(fontSize: 62)),
-              ),
+  Widget _profilePage(BuildContext context, L10n l) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: Gap.screen),
+      children: <Widget>[
+        Text(l.profileStepTitle, style: t.title),
+        const SizedBox(height: Gap.lg),
+        TextField(
+          controller: _nickname,
+          maxLength: 24,
+          style: t.body,
+          decoration: InputDecoration(
+            hintText: l.profileNicknameHint,
+            counterText: '',
+            filled: true,
+            fillColor: c.sunken,
+            border: OutlineInputBorder(
+              borderRadius: Radii.all(Radii.tile),
+              borderSide: BorderSide.none,
             ),
-            const SizedBox(height: 22),
-            const Text(
-              'Tanıştığımıza sevindim!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: AppColors.ink,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-              decoration: BoxDecoration(
-                color: AppColors.purple.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(
-                  color: AppColors.purple.withValues(alpha: 0.30),
-                  width: 1.5,
-                ),
-              ),
-              child: const Text(
-                'Seni tanımak için üç beş şey soracağım.\n'
-                'Uzun sürmez, söz veriyorum — ayı sözü.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 19,
-                  height: 1.4,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.ink,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _page(_Step step) => switch (step) {
-    _Step.hello => _helloPage(),
-    _Step.nickname => _nicknamePage(),
-    _Step.examYear => _examYearPage(),
-    _Step.mascot => _mascotPage(),
-    _Step.howPhoto => _infoPage(
-      kimo: 'Sen çek, gerisi bende.',
-      body:
-          'Yanlış yaptığın soruyu fotoğrafla. Şıkları ben okurum, '
-          'dersini ve konusunu ben bulurum. Sana kalan tek iş: doğru '
-          'şıkkı işaretlemek.',
-    ),
-    _Step.howReview => _infoPage(
-      kimo: 'Tam unutacakken\nkarşına çıkarırım.',
-      body:
-          'Her soru 1 → 3 → 7 → 30 gün sonra geri gelir. İyi bildiğin '
-          'seyrekleşir, takıldığın peşini bırakmaz. Ezber değil, '
-          'kalıcı öğrenme.',
-    ),
-    _Step.howGamify => _infoPage(
-      kimo: 'Bir de yarış var.\nBen yarışmayı severim.',
-      body:
-          'Her gün küçük bir hedefin olur. Çözdükçe XP kazanır, '
-          'serini büyütür, arkadaşlarınla aynı ligde yarışırsın. '
-          'Bir gün bile atlarsan… serini ben kırmam, sen kırarsın.',
-    ),
-    _Step.shareConsent => _consentPage(),
-    _Step.notifications => _notifyPage(),
-  };
-
-  /// Bildirim izni — maskotun ağzından. Sistem penceresi ancak kullanıcı
-  /// "Evet, hatırlat" dedikten sonra açılır (soğuk sorulursa reddedilir ve
-  /// Android'de izni tekrar sorma hakkı harcanır).
-  Widget _notifyPage() {
-    final Mascot m = _mascot ?? userProfile.mascot ?? Mascot.evHanimi;
-    return _pad(
-      SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const SizedBox(height: 8),
-            _kimoSays(
-              'Bu kafayla konuşuyorum artık.\n'
-              'Zamanı gelince seni dürteyim mi?',
-            ),
-            _subtitle(
-              'Tekrar zamanın geldiğinde ve serin tehlikedeyken haber '
-              'veririm. Günde en fazla iki kez — gece uyurum.',
-            ),
-            const SizedBox(height: 16),
-            // Karakterin sesinden örnek bildirim.
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: m.color.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: m.color.withValues(alpha: 0.30)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(m.emoji, style: const TextStyle(fontSize: 22)),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          MascotLines.title(NotifyKind.streakRisk),
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 13,
-                            color: m.color,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          MascotLines.pick(NotifyKind.streakRisk, m, n: 7),
-                          style: const TextStyle(
-                            fontSize: 13,
-                            height: 1.3,
-                            color: AppColors.ink,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            _notifyChoice(
-              selected: _notify == true,
-              color: m.color,
-              icon: Icons.notifications_active_rounded,
-              title: 'Evet, hatırlat',
-              body: 'Tekrar ve seri hatırlatmalarını gönder.',
-              onTap: () => setState(() => _notify = true),
-            ),
-            const SizedBox(height: 8),
-            _notifyChoice(
-              selected: _notify == false,
-              color: AppColors.inkLight,
-              icon: Icons.notifications_off_outlined,
-              title: 'Şimdilik istemiyorum',
-              body: 'Profilden istediğin zaman açabilirsin.',
-              onTap: () => setState(() => _notify = false),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _notifyChoice({
-    required bool selected,
-    required Color color,
-    required IconData icon,
-    required String title,
-    required String body,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: () {
-        sound.tap();
-        onTap();
-      },
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: selected ? color.withValues(alpha: 0.10) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected ? color : AppColors.line,
-            width: selected ? 2.5 : 1.5,
           ),
         ),
-        child: Row(
+        const SizedBox(height: Gap.xl),
+        Text(l.profileExamYearTitle, style: t.section),
+        const SizedBox(height: Gap.md),
+        Wrap(
+          spacing: Gap.sm,
+          runSpacing: Gap.sm,
           children: <Widget>[
-            Icon(icon, color: selected ? color : AppColors.inkLight, size: 22),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14.5,
-                      color: selected ? color : AppColors.ink,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    body,
-                    style: const TextStyle(
-                      color: AppColors.inkLight,
-                      fontSize: 12.5,
-                    ),
-                  ),
-                ],
+            for (final int y in _examYears)
+              KimoChip(
+                label: '$y',
+                selected: _year == y,
+                onTap: () {
+                  sound.tap();
+                  setState(() => _year = y);
+                },
               ),
-            ),
-            if (selected)
-              Icon(Icons.check_circle_rounded, color: color, size: 22),
           ],
         ),
-      ),
+      ],
     );
   }
 
-  /// Soru havuzu paylaşım onayı — bir kez alınır, profilden değiştirilebilir.
-  Widget _consentPage() {
-    return _pad(
-      SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _mascotPage(BuildContext context, L10n l) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: Gap.screen),
+      children: <Widget>[
+        Center(child: Kimo(size: 120, controller: _kimo)),
+        const SizedBox(height: Gap.lg),
+        Text(l.mascotStepTitle, textAlign: TextAlign.center, style: t.title),
+        const SizedBox(height: Gap.sm),
+        Text(
+          l.mascotStepBody,
+          textAlign: TextAlign.center,
+          style: t.caption.copyWith(color: c.inkSecondary),
+        ),
+        const SizedBox(height: Gap.xl),
+        Wrap(
+          spacing: Gap.sm,
+          runSpacing: Gap.sm,
+          alignment: WrapAlignment.center,
           children: <Widget>[
-            const SizedBox(height: 8),
-            _kimoSays('Son bir şey,\nsonra kapıyı açıyorum.'),
-            _subtitle(
-              'Yüklediğin sorular, diğer öğrencilerin çözebilmesi için ortak '
-              'havuza eklenir. Sen de onların sorularını çözersin — havuz '
-              'herkesin katkısıyla büyür.',
-            ),
-            const SizedBox(height: 16),
-            _consentBullet(
-              'Paylaşılan',
-              'Sorunun fotoğrafı, şıkları ve takma adın.',
-            ),
-            _consentBullet(
-              'Paylaşılmayan',
-              'Notların, hata türün, tekrar durumun ve e-postan.',
-            ),
-            const SizedBox(height: 18),
-            GestureDetector(
-              onTap: () {
-                sound.tap();
-                setState(() => _consent = !_consent);
-              },
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: _consent
-                      ? AppColors.green.withValues(alpha: 0.10)
-                      : const Color(0xFFF7F7F7),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: _consent ? AppColors.green : AppColors.line,
-                    width: _consent ? 2 : 1.5,
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Icon(
-                      _consent
-                          ? Icons.check_box_rounded
-                          : Icons.check_box_outline_blank_rounded,
-                      color: _consent ? AppColors.green : AppColors.inkLight,
-                    ),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Text(
-                        'Yüklediğim soruların diğer öğrencilerle '
-                        'paylaşılacağını okudum, anladım ve kabul ediyorum.',
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          height: 1.35,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.ink,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+            for (final Mascot m in Mascot.values)
+              KimoChip(
+                label: m.label,
+                selected: _mascot == m,
+                onTap: () {
+                  sound.tap();
+                  _kimo.trigger(KimoReaction.tap);
+                  setState(() => _mascot = m);
+                },
               ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Kabul etmezsen sorularının hiçbiri paylaşılmaz; uygulamayı '
-              'yine de kullanabilirsin. Bu tercihi profilinden '
-              'değiştirebilirsin.',
-              style: TextStyle(
-                color: AppColors.inkLight,
-                fontSize: 12,
-                height: 1.3,
-              ),
-            ),
-            const SizedBox(height: 8),
           ],
         ),
-      ),
+      ],
     );
   }
 
-  Widget _consentBullet(String title, String body) {
+  Widget _notifyPage(BuildContext context, L10n l) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: Gap.screen),
+      children: <Widget>[
+        Text(l.notifyStepTitle, style: t.title),
+        const SizedBox(height: Gap.sm),
+        Text(l.notifyStepBody, style: t.body.copyWith(color: c.inkSecondary)),
+        const SizedBox(height: Gap.xl),
+        KimoButton(
+          label: l.notifyYes,
+          onPressed: () {
+            sound.tap();
+            setState(() => _notify = true);
+          },
+          kind: _notify == true
+              ? KimoButtonKind.primary
+              : KimoButtonKind.secondary,
+        ),
+        const SizedBox(height: Gap.sm),
+        KimoButton(
+          label: l.notifyNo,
+          kind: _notify == false
+              ? KimoButtonKind.secondary
+              : KimoButtonKind.tertiary,
+          onPressed: () {
+            sound.tap();
+            setState(() => _notify = false);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _signUpPage(BuildContext context, L10n l) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: Gap.screen),
+      children: <Widget>[
+        Text(l.signUpTitle, style: t.title),
+        const SizedBox(height: Gap.sm),
+        Text(
+          _anonymous ? l.signUpBodyAnonymous : l.signUpBody,
+          style: t.body.copyWith(color: c.inkSecondary),
+        ),
+        const SizedBox(height: Gap.xl),
+        TextField(
+          controller: _email,
+          keyboardType: TextInputType.emailAddress,
+          autocorrect: false,
+          style: t.body,
+          decoration: InputDecoration(
+            labelText: l.signUpEmail,
+            errorText: (_email.text.isEmpty || _emailOk)
+                ? null
+                : l.signUpEmailInvalid,
+            filled: true,
+            fillColor: c.sunken,
+            border: OutlineInputBorder(
+              borderRadius: Radii.all(Radii.tile),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        const SizedBox(height: Gap.md),
+        TextField(
+          controller: _password,
+          obscureText: true,
+          style: t.body,
+          decoration: InputDecoration(
+            labelText: l.signUpPassword,
+            errorText: (_password.text.isEmpty || _passwordOk)
+                ? null
+                : l.signUpPasswordShort,
+            filled: true,
+            fillColor: c.sunken,
+            border: OutlineInputBorder(
+              borderRadius: Radii.all(Radii.tile),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _footer(BuildContext context, L10n l) {
+    final bool last = _index == _steps.length - 1;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Container(
-            width: 6,
-            height: 6,
-            margin: const EdgeInsets.only(top: 6, right: 8),
-            decoration: const BoxDecoration(
-              color: AppColors.purple,
-              shape: BoxShape.circle,
-            ),
-          ),
-          Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: <TextSpan>[
-                  TextSpan(
-                    text: '$title: ',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.ink,
-                    ),
-                  ),
-                  TextSpan(
-                    text: body,
-                    style: const TextStyle(color: AppColors.inkLight),
-                  ),
-                ],
-              ),
-              style: const TextStyle(fontSize: 13, height: 1.3),
-            ),
-          ),
-        ],
+      padding: const EdgeInsets.fromLTRB(
+          Gap.screen, Gap.md, Gap.screen, Gap.screen),
+      child: KimoButton(
+        label: _label(l, last),
+        onPressed: (_saving || !_canContinue) ? null : _next,
       ),
     );
   }
 
-  // --- Adımlar ---
-
-  Widget _nicknamePage() {
-    // Klavye açılınca yer daralır; sayfa kaydırılabilir olmalı.
-    return _pad(
-      SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            _kimoSays('Sana ne diyeyim?\n"Hey sen" demek biraz kaba kaçar.'),
-            _subtitle(
-              'Liderlik tablosunda arkadaşların bunu görecek. '
-              'İyi seç, ünlü olabilirsin.',
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _nickname,
-              textCapitalization: TextCapitalization.words,
-              maxLength: 20,
-              decoration: InputDecoration(
-                hintText: 'Takma adın',
-                counterText: '',
-                filled: true,
-                fillColor: const Color(0xFFF4F4F4),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
+  String _label(L10n l, bool last) {
+    if (_saving) return l.actionSave;
+    if (_current == _Step.signUp) return l.signUpAction;
+    if (last) return l.signUpDone;
+    return l.actionContinue;
   }
-
-  Widget _examYearPage() {
-    final String? curr = _year == null
-        ? null
-        : UserProfile.curriculumForYear(_year!);
-    return _pad(
-      SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            _kimoSays(
-              'YKS\'ye hangi yıl gireceksin?\n'
-              'Yanlış bilirsem yanlış müfredattan\nkonu sorarım, rezil oluruz.',
-            ),
-            _subtitle('Konularını doğru müfredata göre eşleştireceğim.'),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: <Widget>[
-                for (final int y in _years)
-                  ChoiceChip(
-                    label: Text('$y'),
-                    selected: _year == y,
-                    onSelected: (_) => setState(() => _year = y),
-                    labelStyle: TextStyle(
-                      color: _year == y ? Colors.white : AppColors.ink,
-                      fontWeight: FontWeight.w800,
-                    ),
-                    selectedColor: AppColors.green,
-                    backgroundColor: const Color(0xFFF4F4F4),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 8,
-                    ),
-                    shape: const StadiumBorder(),
-                    side: BorderSide.none,
-                    showCheckmark: false,
-                  ),
-              ],
-            ),
-            if (curr != null) ...<Widget>[
-              const SizedBox(height: 18),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.blueBg,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: <Widget>[
-                    const Icon(
-                      Icons.info_outline,
-                      size: 16,
-                      color: AppColors.blueDark,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        curr == UserProfile.maarif
-                            ? 'Yeni müfredat (Maarif Modeli) konuları kullanılacak.'
-                            : 'Mevcut müfredat (2018) konuları kullanılacak.',
-                        style: const TextStyle(
-                          color: AppColors.blueDark,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _mascotPage() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          _kimoSays('En eğlenceli soru:\nben hangi kafada olayım?'),
-          _subtitle(
-            'Bildirimleri ve motivasyon sözlerini bu ağızdan yazacağım. '
-            'Sıkılırsan profilden değiştirirsin.',
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 8),
-              children: <Widget>[
-                for (final Mascot m in Mascot.values) _mascotTile(m),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _mascotTile(Mascot m) {
-    final bool selected = _mascot == m;
-    return GestureDetector(
-      onTap: () {
-        sound.tap();
-        setState(() => _mascot = m);
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: selected ? m.color.withValues(alpha: 0.12) : Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: selected ? m.color : AppColors.line,
-            width: selected ? 2.5 : 1.5,
-          ),
-        ),
-        child: Row(
-          children: <Widget>[
-            // Maskot görseli sonra eklenecek; şimdilik emoji yer tutucu.
-            Container(
-              width: 52,
-              height: 52,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: m.color.withValues(alpha: selected ? 0.25 : 0.12),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Text(m.emoji, style: const TextStyle(fontSize: 26)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    m.label,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14.5,
-                      color: selected ? m.color : AppColors.ink,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    m.tagline,
-                    style: const TextStyle(
-                      color: AppColors.inkLight,
-                      fontSize: 12.5,
-                    ),
-                  ),
-                  if (selected) ...<Widget>[
-                    const SizedBox(height: 6),
-                    Text(
-                      '“${m.sample}”',
-                      style: TextStyle(
-                        color: m.color,
-                        fontSize: 12.5,
-                        height: 1.25,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            if (selected)
-              Icon(Icons.check_circle_rounded, color: m.color, size: 24),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _infoPage({required String kimo, required String body}) {
-    return _pad(
-      Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: <Widget>[
-          _kimoSays(kimo),
-          Text(
-            body,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.inkLight,
-              fontSize: 15.5,
-              height: 1.45,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _pad(Widget child) =>
-      Padding(padding: const EdgeInsets.fromLTRB(24, 8, 24, 0), child: child);
-
-  /// Kimo'nun sorusunun altındaki küçük açıklama; başrol onun kartında.
-  Widget _subtitle(String text) => Padding(
-    padding: const EdgeInsets.only(top: 2),
-    child: Text(
-      text,
-      textAlign: TextAlign.center,
-      style: const TextStyle(
-        color: AppColors.inkLight,
-        fontSize: 13.5,
-        height: 1.35,
-      ),
-    ),
-  );
 }

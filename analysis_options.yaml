@@ -26,3 +26,11 @@ linter:
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
+
+analyzer:
+  exclude:
+    # Soru havuzu ve konu haritası bu sürümde arayüzden çıkarıldı ama silinmedi:
+    # ileride elden geçirilip geri gelecekler (bkz. lib/_archive/README.md).
+    # Hiçbir yerden çağrılmadıkları için derlemeye girmiyorlar; analizden de
+    # çıkarıldılar ki eski API'lere göre yazılmış kod CI'yı kırmasın.
+    - lib/_archive/**

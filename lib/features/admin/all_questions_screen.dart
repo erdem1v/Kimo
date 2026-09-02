@@ -10,7 +10,7 @@ import '../../widgets/mistake_style.dart';
 import '../mistakes/topic_picker_sheet.dart';
 
 /// Moderatör ekranı: tüm kullanıcıların soruları. Yanlış sınıflandırılmışları
-/// tek tek düzeltmek, havuzdan çıkarmak veya silmek için.
+/// tek tek düzeltmek, yayından kaldırmak veya silmek için.
 class AllQuestionsScreen extends StatefulWidget {
   const AllQuestionsScreen({super.key});
 
@@ -18,7 +18,9 @@ class AllQuestionsScreen extends StatefulWidget {
   State<AllQuestionsScreen> createState() => _AllQuestionsScreenState();
 }
 
-enum _Filter { all, pool, private, hidden, invalid }
+// Havuz kaldırıldığı için `pool`/`private` süzgeçleri de kaldırıldı: hiçbir
+// soru artık paylaşıma açılmıyor, o iki liste her zaman boş/tamdı.
+enum _Filter { all, hidden, invalid }
 
 class _AllQuestionsScreenState extends State<AllQuestionsScreen> {
   List<AdminQuestion> _items = <AdminQuestion>[];
@@ -66,9 +68,6 @@ class _AllQuestionsScreenState extends State<AllQuestionsScreen> {
 
   List<AdminQuestion> get _filtered => switch (_filter) {
         _Filter.all => _items,
-        _Filter.pool => _items.where((AdminQuestion q) => q.inPool).toList(),
-        _Filter.private =>
-          _items.where((AdminQuestion q) => !q.isPublic).toList(),
         _Filter.hidden => _items
             .where((AdminQuestion q) => q.moderation != 'ok')
             .toList(),
@@ -153,8 +152,6 @@ class _AllQuestionsScreenState extends State<AllQuestionsScreen> {
         children: <Widget>[
           chip(_Filter.all, 'Tümü (${_items.length})'),
           chip(_Filter.invalid, 'Hatalı', badge: invalid),
-          chip(_Filter.pool, 'Havuzda'),
-          chip(_Filter.private, 'Özel'),
           chip(_Filter.hidden, 'Gizli/Kaldırıldı'),
         ],
       ),
@@ -295,9 +292,7 @@ class _AllQuestionsScreenState extends State<AllQuestionsScreen> {
     final (String label, Color color) = switch (q.moderation) {
       'removed' => ('kaldırıldı', AppColors.red),
       'hidden' => ('gizli', AppColors.orange),
-      _ => q.isPublic
-          ? ('havuzda', AppColors.green)
-          : ('özel', AppColors.inkLight),
+      _ => ('yayında', AppColors.green),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
@@ -403,14 +398,28 @@ class _QuestionEditorState extends State<_QuestionEditor> {
       final bool ok = await _confirmDelete();
       if (!ok) return;
     }
+    final String? photoPath = widget.question.photoPath;
     try {
-      await moderationRepository.questionAction(widget.question.id, action);
+      if (action == 'delete') {
+        // Satır silinince photo_path'i kaybederiz; dosyayı ÖNCE sil, yoksa
+        // nesne depoda yetim kalır (bugünkü davranış tam olarak buydu).
+        if (photoPath != null && photoPath.isNotEmpty) {
+          await moderationRepository.purgePhoto(widget.question.id, photoPath);
+        }
+        await moderationRepository.questionAction(widget.question.id, action);
+      } else {
+        await moderationRepository.questionAction(widget.question.id, action);
+        // 'hide' → moderation='removed': dosya da gitmeli (Değişmez 3).
+        if (action == 'hide') {
+          await moderationRepository.purgePhoto(widget.question.id, photoPath);
+        }
+      }
       if (mounted) Navigator.of(context).pop(true);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$label başarısız.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$label başarısız.')));
     }
   }
 
@@ -634,7 +643,7 @@ class _QuestionEditorState extends State<_QuestionEditor> {
             OutlinedButton.icon(
               onPressed: () => _action('restore', 'Geri alma'),
               icon: const Icon(Icons.undo_rounded, color: AppColors.green),
-              label: const Text('Havuza geri al',
+              label: const Text('Yayına geri al',
                   style: TextStyle(
                       color: AppColors.green, fontWeight: FontWeight.w700)),
               style: OutlinedButton.styleFrom(
@@ -646,10 +655,10 @@ class _QuestionEditorState extends State<_QuestionEditor> {
             )
           else
             OutlinedButton.icon(
-              onPressed: () => _action('hide', 'Havuzdan çıkarma'),
+              onPressed: () => _action('hide', 'Yayından kaldırma'),
               icon: const Icon(Icons.visibility_off_outlined,
                   color: AppColors.orange),
-              label: const Text('Havuzdan çıkar',
+              label: const Text('Yayından kaldır',
                   style: TextStyle(
                       color: AppColors.orange, fontWeight: FontWeight.w700)),
               style: OutlinedButton.styleFrom(

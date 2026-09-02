@@ -4,10 +4,15 @@ import '../models/models.dart';
 import '../theme/app_colors.dart';
 
 /// Hata türüne göre renk (etiket/çip renklendirmesi için).
-Color mistakeColor(MistakeType type) => switch (type) {
-      MistakeType.kavramEksikligi => AppColors.purple,
-      MistakeType.islemHatasi => AppColors.orange,
+///
+/// Tür isteğe bağlı: belirtilmemişse nötr renk.
+Color mistakeColor(MistakeType? type) => switch (type) {
+      MistakeType.bilgiEksigi => AppColors.purple,
       MistakeType.dikkatsizlik => AppColors.blue,
+      MistakeType.sureYetmedi => AppColors.orange,
+      MistakeType.yanlisOkudum => AppColors.teal,
+      MistakeType.islemHatasi => AppColors.orange,
+      null => AppColors.inkLight,
     };
 
 /// Derse göre renk — "Bugün" ve "Hatalarım" ekranlarında ortak kullanılır.
@@ -27,14 +32,6 @@ const Map<String, Color> _subjectColors = <String, Color>{
 };
 
 Color subjectColor(String subject) => _subjectColors[subject] ?? AppColors.blue;
-
-const Map<String, String> _subjectEmojis = <String, String>{
-  'Türkçe': '📕', 'Matematik': '➗', 'Geometri': '📐', 'Fizik': '🧲',
-  'Kimya': '⚗️', 'Biyoloji': '🧬', 'Edebiyat': '📖', 'Tarih': '🏛️',
-  'Coğrafya': '🌍', 'Felsefe': '🤔', 'Felsefe Grubu': '🤔', 'Din Kültürü': '🕌',
-};
-
-String subjectEmoji(String subject) => _subjectEmojis[subject] ?? '📚';
 
 /// Kısa Türkçe tarih (ör. "30 Tem").
 String formatShortDate(DateTime d) {

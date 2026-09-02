@@ -1,69 +1,63 @@
-/// Prototip için sade, kod-üretimi gerektirmeyen veri modelleri.
+/// Kod üretimi gerektirmeyen sade veri modelleri.
 ///
-/// Not: Backend kuralları, soru tipleri (Tip A/B/C) ve kalıcı katman bilinçli
-/// olarak yok — bunlar ileride ayrıca kurgulanacak. Burada sadece arayüzü
-/// beslemek için düz Dart sınıfları var.
+/// Sunucu tarafı ve kalıcı katman Supabase'te; buradaki sınıflar yalnızca satır
+/// haritalarını arayüzün okuyabileceği biçime çeviriyor.
 library;
 
 import 'dart:typed_data';
 
 /// Bir hatanın türü.
 enum MistakeType {
-  kavramEksikligi,
-  islemHatasi,
-  dikkatsizlik;
+  /// Tasarımın dört sebebi.
+  bilgiEksigi,
+  dikkatsizlik,
+  sureYetmedi,
+  yanlisOkudum,
+
+  /// ESKİ KAYITLAR İÇİN. Arayüzde seçenek olarak GÖSTERİLMİYOR ama eski
+  /// satırlar bu değeri taşıyor ve onları başka bir sebebe eşlemek veriyi
+  /// bozardı.
+  islemHatasi;
+
+  /// Kullanıcıya sunulan sebepler, tasarımdaki sırayla.
+  static const List<MistakeType> choices = <MistakeType>[
+    MistakeType.dikkatsizlik,
+    MistakeType.bilgiEksigi,
+    MistakeType.sureYetmedi,
+    MistakeType.yanlisOkudum,
+  ];
 
   String get label => switch (this) {
-        MistakeType.kavramEksikligi => 'Kavram eksikliği',
-        MistakeType.islemHatasi => 'İşlem hatası',
-        MistakeType.dikkatsizlik => 'Dikkatsizlik',
-      };
-
-  String get emoji => switch (this) {
-        MistakeType.kavramEksikligi => '💡',
-        MistakeType.islemHatasi => '✖️',
-        MistakeType.dikkatsizlik => '👀',
-      };
+    MistakeType.bilgiEksigi => 'Bilgi eksiği',
+    MistakeType.dikkatsizlik => 'Dikkatsizlik',
+    MistakeType.sureYetmedi => 'Süre yetmedi',
+    MistakeType.yanlisOkudum => 'Yanlış okudum',
+    MistakeType.islemHatasi => 'İşlem hatası',
+  };
 
   /// Veritabanındaki enum değeri.
+  ///
+  /// `bilgiEksigi` eski `kavram_eksikligi` değerine yazılıyor: aynı şeyin iki
+  /// adı olmasın diye yeni bir enum değeri EKLENMEDİ, yalnızca etiketi
+  /// tasarımın diline çevrildi.
   String get dbValue => switch (this) {
-        MistakeType.kavramEksikligi => 'kavram_eksikligi',
-        MistakeType.islemHatasi => 'islem_hatasi',
-        MistakeType.dikkatsizlik => 'dikkatsizlik',
-      };
+    MistakeType.bilgiEksigi => 'kavram_eksikligi',
+    MistakeType.dikkatsizlik => 'dikkatsizlik',
+    MistakeType.sureYetmedi => 'sure_yetmedi',
+    MistakeType.yanlisOkudum => 'yanlis_okudum',
+    MistakeType.islemHatasi => 'islem_hatasi',
+  };
 
-  static MistakeType fromDb(String value) => switch (value) {
-        'kavram_eksikligi' => MistakeType.kavramEksikligi,
-        'islem_hatasi' => MistakeType.islemHatasi,
-        _ => MistakeType.dikkatsizlik,
-      };
-}
-
-/// Çoktan seçmeli pratik sorusu.
-class PracticeQuestion {
-  const PracticeQuestion({
-    required this.subject,
-    required this.concept,
-    required this.text,
-    required this.options,
-    required this.correctIndex,
-    required this.explanation,
-  });
-
-  final String subject;
-  final String concept;
-  final String text;
-  final List<String> options;
-  final int correctIndex;
-  final String explanation;
-}
-
-/// Sohbet mesajı (koç veya kullanıcı).
-class ChatMessage {
-  const ChatMessage(this.text, {this.isUser = false});
-
-  final String text;
-  final bool isUser;
+  /// Bilinmeyen değer `null` döner: sütun artık isteğe bağlı ve "belirtilmedi"
+  /// gerçek bir durum. Uydurma bir tür yazmıyoruz.
+  static MistakeType? fromDb(String? value) => switch (value) {
+    'kavram_eksikligi' => MistakeType.bilgiEksigi,
+    'dikkatsizlik' => MistakeType.dikkatsizlik,
+    'sure_yetmedi' => MistakeType.sureYetmedi,
+    'yanlis_okudum' => MistakeType.yanlisOkudum,
+    'islem_hatasi' => MistakeType.islemHatasi,
+    _ => null,
+  };
 }
 
 /// Bir sorunun çoktan seçmeli şıkkı (AI ile fotoğraftan çıkarılır).
@@ -96,7 +90,25 @@ class QuestionAnalysis {
     this.subject,
     this.concept,
     this.conceptValid = false,
+    this.outOfCredit = false,
+    this.creditResetsAt,
+    this.creditRemaining,
   });
+
+  /// Günlük yapay zekâ hakkı bittiği için analiz HİÇ YAPILMADI.
+  ///
+  /// Bu bir HATA DEĞİL: fotoğraf duruyor, kullanıcı şıkları ve konuyu elle
+  /// girip kaydediyor. Kaydetme yolu asla kapanmıyor.
+  const QuestionAnalysis.outOfCredit({this.creditResetsAt})
+      : ok = false,
+        options = const <QuestionOption>[],
+        reason = null,
+        exam = null,
+        subject = null,
+        concept = null,
+        conceptValid = false,
+        outOfCredit = true,
+        creditRemaining = 0;
 
   final bool ok;
   final List<QuestionOption> options;
@@ -113,6 +125,16 @@ class QuestionAnalysis {
 
   /// Konu, taksonomideki bir adla birebir eşleşti mi?
   final bool conceptValid;
+
+  /// Hak bitti mi (analiz yapılmadı).
+  final bool outOfCredit;
+
+  /// Hakların tazeleneceği an. Arayüzde geri sayım GÖSTERİLMEZ; yalnızca
+  /// "yarın yenilenecek" bilgisi için.
+  final DateTime? creditResetsAt;
+
+  /// Bu çağrıdan sonra kalan hak (sunucu söyledi).
+  final int? creditRemaining;
 }
 
 /// Hata bankası kaydı.
@@ -120,7 +142,7 @@ class MistakeEntry {
   const MistakeEntry({
     required this.subject,
     required this.concept,
-    required this.type,
+    this.type,
     required this.note,
     required this.date,
     this.hasPhoto = false,
@@ -133,6 +155,7 @@ class MistakeEntry {
     this.lapses = 0,
     this.mastered = false,
     this.isLeech = false,
+    this.nextReviewDate,
     this.exam,
     this.extraConcepts = const <String>[],
   });
@@ -146,9 +169,19 @@ class MistakeEntry {
   final bool mastered;
   final bool isLeech;
 
+  /// Bir sonraki tekrarın planlandığı gün. `null` = plan bilinmiyor (yerel
+  /// kayıt).
+  ///
+  /// "Hatalarım" ekranındaki **Bugün** sayısı bunu kullanıyor. `step == 0`'dan
+  /// tahmin etmek daha ucuzdu ama sayıyı etiketinden farklı bir şey yapardı:
+  /// bugün eklenmiş bir soru da `step == 0` taşıyor ve tekrarı yarın.
+  final DateTime? nextReviewDate;
+
   final String subject;
   final String concept;
-  final MistakeType type;
+  /// Hatanın sebebi — İSTEĞE BAĞLI (tasarım kararı). `null` = belirtilmedi.
+  /// Varsayılan bir tür yazmak, ölçülmemiş veriyi ölçülmüş gibi gösterirdi.
+  final MistakeType? type;
   final String note;
   final DateTime date;
   final bool hasPhoto;
@@ -178,32 +211,3 @@ class MistakeEntry {
   bool get hasOptions => options != null && options!.isNotEmpty;
 }
 
-/// Profil vitrinindeki rozet.
-class AchievementBadge {
-  const AchievementBadge({
-    required this.emoji,
-    required this.title,
-    required this.earned,
-  });
-
-  final String emoji;
-  final String title;
-  final bool earned;
-}
-
-/// Ana ekrandaki konu/ünite kartı.
-class TopicCard {
-  const TopicCard({
-    required this.emoji,
-    required this.title,
-    required this.subtitle,
-    required this.progress,
-  });
-
-  final String emoji;
-  final String title;
-  final String subtitle;
-
-  /// 0–1 arası tamamlanma.
-  final double progress;
-}

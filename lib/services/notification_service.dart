@@ -5,6 +5,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../data/mascot_lines.dart';
 import '../models/mascot.dart';
+import '../state/app_settings.dart';
 import 'notification_router.dart';
 
 /// Yerel (cihaz üstü) bildirimler. Sunucu gerektirmez: uygulama her açıldığında
@@ -130,12 +131,13 @@ class NotificationService {
 
   /// Günün planını kurar. Uygulama açılışında ve veriler yüklendikçe çağrılır.
   ///
-  /// Kurallar: sessiz saat 22:00–08:00 · geçmiş saate planlama yapılmaz ·
-  /// bugün zaten çözülmüşse hatırlatma gönderilmez.
-  /// Bildirim saatleri sabittir: tekrar için okul sonrası, seri için akşam.
-  /// Kullanıcıya "kaçta hatırlatayım?" diye sormuyoruz; bu bizim kararımız.
-  static const int reviewHour = 17;
-  static const int streakHour = 20;
+  /// Çekirdek kurallar korunuyor: sessiz aralığa planlama yapılmaz · geçmiş
+  /// saate planlama yapılmaz · bugün zaten çözülmüşse hatırlatma gönderilmez ·
+  /// metin maskota göre seçilir.
+  ///
+  /// Değişen tek şey **kimin karar verdiği**: saatler ve sessiz aralık artık
+  /// koda gömülü değil, `AppSettings` üzerinden kullanıcının. Varsayılanlar
+  /// eski sabit değerlerle aynı (17:00 / 20:00 ve 22:00–08:00).
 
   Future<void> planDay({
     required bool enabled,
@@ -153,7 +155,7 @@ class NotificationService {
     if (dueCount > 0 && !activeToday) {
       await _at(
         id: _idReviews,
-        hour: reviewHour,
+        hour: appSettings.reviewHour,
         kind: NotifyKind.reviewsDue,
         mascot: mascot,
         n: dueCount,
@@ -164,7 +166,7 @@ class NotificationService {
     if (streak > 0 && !activeToday) {
       await _at(
         id: _idStreak,
-        hour: streakHour,
+        hour: appSettings.streakHour,
         kind: NotifyKind.streakRisk,
         mascot: mascot,
         n: streak,
@@ -176,7 +178,7 @@ class NotificationService {
     if (streak > 0) {
       await _at(
         id: _idStreakTomorrow,
-        hour: streakHour,
+        hour: appSettings.streakHour,
         dayOffset: 1,
         kind: NotifyKind.streakRisk,
         mascot: mascot,
@@ -228,8 +230,10 @@ class NotificationService {
     int? sira,
     String? lig,
   }) async {
-    // Sessiz saat: 22:00–08:00 arasına planlama yapılmaz.
-    if (hour >= 22 || hour < 8) return;
+    // Sessiz aralık kullanıcının; eşik burada TUTULMUYOR, tek kaynak
+    // `AppSettings.isQuietHour`. İki yerde tutulsaydı ayarlar ekranı bir şey,
+    // planlayıcı başka bir şey uygular hâle gelirdi.
+    if (appSettings.isQuietHour(hour)) return;
 
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
     final tz.TZDateTime when = tz.TZDateTime(

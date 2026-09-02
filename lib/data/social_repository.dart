@@ -23,51 +23,29 @@ class SocialRepository {
   String? get currentUserId => _uid;
 
   /// Kendi profil satırını oluşturur/günceller. Oturum açıldığında çağrılır.
+  ///
+  /// Doğrudan `upsert` yerine RPC: takma ad sunucuda doğrulanıyor (uzunluk,
+  /// kontrol karakteri, sistem hesabı kimliğinin taklidi) ve `profiles` üzerinde
+  /// istemcinin INSERT/UPDATE yetkisine hiç ihtiyaç kalmıyor.
   Future<void> ensureProfile({
     required String nickname,
     Mascot? mascot,
-    int? xp,
-    int? streak,
   }) async {
-    final String? uid = _uid;
-    if (uid == null) return;
-    await _client.from('profiles').upsert(<String, dynamic>{
-      'id': uid,
-      'nickname': nickname,
-      if (mascot != null) 'mascot': mascot.dbValue,
-      'xp': ?xp,
-      'streak': ?streak,
-      'updated_at': DateTime.now().toIso8601String(),
-    });
+    if (_uid == null) return;
+    await _client.rpc<void>(
+      'upsert_my_profile',
+      params: <String, dynamic>{
+        'p_nickname': nickname,
+        'p_mascot': mascot?.dbValue,
+      },
+    );
   }
 
-  /// XP/seri/haftalık XP değerlerini kaydeder (lig tablosu bunları okur).
-  Future<void> syncStats({
-    required int xp,
-    required int streak,
-    int? weeklyXp,
-    DateTime? weekStartDate,
-    DateTime? lastActiveDate,
-  }) async {
-    final String? uid = _uid;
-    if (uid == null) return;
-    try {
-      await _client
-          .from('profiles')
-          .update(<String, dynamic>{
-            'xp': xp,
-            'streak': streak,
-            'weekly_xp': ?weeklyXp,
-            if (weekStartDate != null) 'week_start': _dateStr(weekStartDate),
-            if (lastActiveDate != null)
-              'last_activity_date': _dateStr(lastActiveDate),
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', uid);
-    } catch (_) {
-      // Ağ hatası akışı bloklamasın.
-    }
-  }
+  // NOT: `syncStats` KALDIRILDI. XP / seri / haftalık XP artık istemciden
+  // yazılmıyor — tek bir PATCH isteği lig ve skor tablosunu sahteleyebiliyordu.
+  // Değerler `submit_pool_answer` / `submit_sent_answer` / `submit_review` /
+  // `claim_daily_goal` RPC'lerinin yanıtından geliyor ve
+  // `GameProgress.applyServerTotals` ile uygulanıyor.
 
   /// Kendi oyunlaştırma verilerim (seri için son aktif gün dahil). Yalnızca
   /// kendi satırım okunur; profiles'ın RLS'i buna izin verir.
@@ -115,11 +93,6 @@ class SocialRepository {
     }
   }
 
-  static String _dateStr(DateTime d) =>
-      '${d.year.toString().padLeft(4, '0')}-'
-      '${d.month.toString().padLeft(2, '0')}-'
-      '${d.day.toString().padLeft(2, '0')}';
-
   /// Kendi profilim (yoksa null).
   Future<PublicProfile?> myProfile() async {
     final String? uid = _uid;
@@ -132,20 +105,20 @@ class SocialRepository {
     return row == null ? null : PublicProfile.fromRow(row);
   }
 
-  /// Takma adla arama (büyük/küçük harf duyarsız, kendim hariç).
-  Future<List<PublicProfile>> search(String query) async {
-    final String q = query.trim();
-    final String? uid = _uid;
-    if (q.length < 2 || uid == null) return <PublicProfile>[];
-    final List<Map<String, dynamic>> rows = await _client
-        .from(_publicView)
-        .select()
-        .ilike('nickname', '%$q%')
-        .neq('id', uid)
-        .order('xp', ascending: false)
-        .limit(20);
-    return rows.map(PublicProfile.fromRow).toList();
-  }
+  // TAKMA AD ARAMASI KALDIRILDI (Task 02, Dalga 5).
+  //
+  // `search()` burada `profiles_public` üzerinde `ilike '%q%'` yapıyordu ve
+  // `xp`'ye göre sıralı ilk 20'yi döndürüyordu. İki sonucu vardı: (1) yaygın
+  // bir harf dizisiyle ("ar", "el") bütün kullanıcı tabanı sayfa sayfa
+  // dökülebiliyordu, (2) `xp` sıralaması en aktif kullanıcıları listenin
+  // başına koyuyordu — yani hedef seçmeyi kolaylaştırıyordu.
+  //
+  // Task 01 bunu "dizin dökülebilirliği, sosyal/UX pass'ine ertelendi" diye
+  // açık bırakmıştı. Yerini arkadaş kodu aldı: 31 harflik alfabeden 6 karakter
+  // (≈887 milyon) ve `add_friend_by_code` saatte 20 denemeyle sınırlı.
+  //
+  // Görünüm DURUYOR: kimliğe göre tekil/çoklu okuma (arkadaş listesi, lig
+  // tahtası) hâlâ gerekiyor. Giden yalnızca serbest metin araması.
 
   /// Beni ilgilendiren tüm arkadaşlık kayıtları (istek + kabul).
   Future<List<Friendship>> relations() async {
@@ -187,30 +160,50 @@ class SocialRepository {
 
   static const String _avatarBucket = 'avatars';
 
+  /// İmzalı URL ömrü. Önbellek bu değerle BİRLİKTE yaşıyor (aşağıya bakın);
+  /// ikisini birbirinden bağımsız değiştirmeyin.
+  static const int _signedUrlTtlSeconds = 600;
+
   /// İmzalı URL'ler kısa ömürlü; aynı yolu tekrar tekrar imzalamayalım.
-  final Map<String, String> _avatarUrls = <String, String>{};
+  ///
+  /// ÖNEMLİ: önbellek artık SON KULLANMA ZAMANI tutuyor. Eskiden URL'i süresiz
+  /// saklıyordu, imza ise 1 saatte ölüyordu — yani bir saati aşan oturumlarda
+  /// avatarlar sessizce kırılıyor, kullanıcı maskot simgesine düşüyordu.
+  final Map<String, _SignedUrl> _avatarUrls = <String, _SignedUrl>{};
 
   /// Profil fotoğrafı için gösterilebilir URL (yoksa null).
   Future<String?> avatarUrl(String? path) async {
     if (path == null || path.isEmpty) return null;
-    final String? cached = _avatarUrls[path];
-    if (cached != null) return cached;
+    final _SignedUrl? cached = _avatarUrls[path];
+    if (cached != null && !cached.isStale) return cached.url;
     try {
       final String url = await _client.storage
           .from(_avatarBucket)
-          .createSignedUrl(path, 3600);
-      _avatarUrls[path] = url;
+          .createSignedUrl(path, _signedUrlTtlSeconds);
+      _avatarUrls[path] = _SignedUrl(
+        url,
+        DateTime.now().add(const Duration(seconds: _signedUrlTtlSeconds)),
+      );
       return url;
     } catch (_) {
+      _avatarUrls.remove(path);
       return null;
     }
   }
 
-  /// Yeni profil fotoğrafı yükler ve yolunu profile yazar; yolu döndürür.
-  /// Dosya adına zaman damgası konur ki eski imzalı URL önbellekte kalmasın.
-  Future<String?> uploadAvatar(Uint8List bytes) async {
+  /// Görsel yüklenemediğinde çağrılır: bir sonraki istek yeniden imzalasın.
+  void invalidateAvatarUrl(String? path) {
+    if (path != null) _avatarUrls.remove(path);
+  }
+
+  /// Yeni profil fotoğrafı yükler, yolunu profile yazar ve ESKİ DOSYALARI SİLER.
+  ///
+  /// Hata artık yutulmuyor: [AvatarException] fırlatır, çağıran kullanıcıya
+  /// gösterir. Eskiden null dönüyordu; "yüklendi ama görünmüyor" durumunun
+  /// sebebi hiçbir yerde görünmüyordu.
+  Future<String> uploadAvatar(Uint8List bytes) async {
     final String? uid = _uid;
-    if (uid == null) return null;
+    if (uid == null) throw const AvatarException('Oturum bulunamadı.');
     final String path = '$uid/${DateTime.now().millisecondsSinceEpoch}.jpg';
     try {
       await _client.storage
@@ -223,29 +216,76 @@ class SocialRepository {
               upsert: true,
             ),
           );
+    } catch (e) {
+      throw AvatarException('Fotoğraf yüklenemedi: ${_reason(e)}');
+    }
+    try {
       await _client
           .from('profiles')
           .update(<String, dynamic>{'avatar_path': path})
           .eq('id', uid);
-      return path;
-    } catch (_) {
-      return null;
+    } on PostgrestException catch (e) {
+      throw AvatarException('Fotoğraf kaydedilemedi: ${e.message}');
     }
+    // Yeni avatar yazıldı; eskileri süpür. Bu adım başarısız olursa kullanıcının
+    // işlemi yine de başarılı — yalnızca depoda artık dosya kalır.
+    await _sweepAvatarFolder(uid, keep: path, strict: false);
+    return path;
   }
 
-  /// Profil fotoğrafını kaldırır (maskot simgesine döner).
+  /// Profil fotoğrafını kaldırır: sütunu boşaltır VE dosyayı gerçekten siler.
+  ///
+  /// Eskiden yalnızca `avatar_path` null'lanıyordu, dosya depoda sonsuza dek
+  /// kalıyordu. Kullanıcının sildiği veri gerçekten silinmeliydi
+  /// (KVKK Md. 7 / GDPR Md. 17).
   Future<void> removeAvatar() async {
     final String? uid = _uid;
-    if (uid == null) return;
+    if (uid == null) throw const AvatarException('Oturum bulunamadı.');
     try {
       await _client
           .from('profiles')
           .update(<String, dynamic>{'avatar_path': null})
           .eq('id', uid);
-    } catch (_) {
-      // Dosyayı silmiyoruz: eski imzalı URL'ler zaten kısa sürede ölür.
+    } on PostgrestException catch (e) {
+      throw AvatarException('Fotoğraf kaldırılamadı: ${e.message}');
+    }
+    // Burada silme BAŞARISIZ OLURSA kullanıcıya söylüyoruz: "sildim" deyip
+    // dosyayı bırakmak tam olarak düzeltmeye çalıştığımız davranış.
+    await _sweepAvatarFolder(uid, keep: null, strict: true);
+  }
+
+  /// Kullanıcının avatar klasöründe [keep] dışındaki her şeyi siler.
+  ///
+  /// Klasörü tarayarak çalışıyor, "önceki yolu hatırla" mantığıyla değil: her
+  /// avatar değişimi yeni bir zaman damgalı nesne yarattığı için geçmişte
+  /// birikmiş artıklar da böylece temizleniyor.
+  Future<void> _sweepAvatarFolder(
+    String uid, {
+    required String? keep,
+    required bool strict,
+  }) async {
+    try {
+      final List<FileObject> files =
+          await _client.storage.from(_avatarBucket).list(path: uid);
+      final List<String> stale = <String>[
+        for (final FileObject f in files)
+          if ('$uid/${f.name}' != keep) '$uid/${f.name}',
+      ];
+      if (stale.isEmpty) return;
+      await _client.storage.from(_avatarBucket).remove(stale);
+      for (final String p in stale) {
+        _avatarUrls.remove(p);
+      }
+    } catch (e) {
+      if (strict) {
+        throw AvatarException('Fotoğraf dosyası silinemedi: ${_reason(e)}');
+      }
+      debugPrint('avatar artıkları temizlenemedi: $e');
     }
   }
+
+  static String _reason(Object e) =>
+      e is PostgrestException ? e.message : e.toString();
 
   Future<void> sendRequest(String userId) async {
     final String? uid = _uid;
@@ -286,3 +326,34 @@ class SocialRepository {
 }
 
 final SocialRepository socialRepository = SocialRepository.instance;
+
+/// İmzalı URL ölmeden önce yenilemek için bırakılan pay.
+const Duration _kSignedUrlMargin = Duration(seconds: 60);
+
+/// Önbelleklenmiş imzalı URL + son kullanma zamanı.
+///
+/// Son kullanma zamanını tutmak şart: imzalı adresler kısa ömürlü, önbellek ise
+/// eskiden süresizdi. İkisi ayrı yaşadığı sürece uzun oturumlarda görseller
+/// sessizce kırılıyor.
+class _SignedUrl {
+  const _SignedUrl(this.url, this.expiresAt);
+
+  final String url;
+  final DateTime expiresAt;
+
+  bool get isStale =>
+      DateTime.now().isAfter(expiresAt.subtract(_kSignedUrlMargin));
+}
+
+/// Profil fotoğrafı işlemlerinde kullanıcıya gösterilebilir hata.
+///
+/// Bu akış eskiden hatayı yutup null dönüyordu; "yükledim ama görünmüyor"
+/// durumunun sebebi ne kullanıcıya ne de günlüğe ulaşıyordu.
+class AvatarException implements Exception {
+  const AvatarException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}

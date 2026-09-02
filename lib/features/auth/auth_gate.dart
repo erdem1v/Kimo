@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/auth_repository.dart';
+import '../../data/submission_queue.dart';
 import '../../state/user_profile.dart';
 import '../home/home_shell.dart';
 import '../onboarding/onboarding_flow.dart';
@@ -37,7 +38,7 @@ class _AuthGateState extends State<AuthGate> {
     _hasSession = session != null;
     if (_hasSession) {
       userProfile.loadFromAuth();
-      _needsOnboarding = !userProfile.onboardingComplete;
+      _needsOnboarding = _mustOnboard();
     }
     _sub = authRepository.authStateChanges.listen((AuthState _) {
       if (mounted) _applySession(authRepository.currentSession);
@@ -50,12 +51,26 @@ class _AuthGateState extends State<AuthGate> {
     super.dispose();
   }
 
+  /// Karşılama akışı gösterilmeli mi.
+  ///
+  /// ANONİM OTURUM HER ZAMAN AKIŞA GİRER. Tercihleri doldurup kaydı atlayan
+  /// bir kullanıcı `onboardingComplete` ölçüsünü geçerdi ama hesabı olmazdı:
+  /// cihazı değişince ya da oturum düşünce her şeyi kaybederdi. Kayıt akışın
+  /// son adımı ve atlanabilir değil.
+  bool _mustOnboard() =>
+      !userProfile.onboardingComplete || authRepository.isAnonymous;
+
   void _applySession(Session? session) {
     final bool hasSession = session != null;
     if (hasSession) {
       userProfile.loadFromAuth();
     } else {
       userProfile.clear();
+      // Bekleyen cevaplar diskte kalmasın: aynı cihazda başka bir hesap
+      // açılırsa onlar YANLIŞ kullanıcıya yazılırdı. (Kuyruk ayrıca her kaydın
+      // sahibini de tutuyor ve boşaltırken yabancı kayıtları atıyor — bu iki
+      // katmanın ilki.)
+      submissionQueue.clear();
     }
 
     bool needs = _needsOnboarding;
@@ -64,7 +79,7 @@ class _AuthGateState extends State<AuthGate> {
     } else if (!_hasSession) {
       // Yalnızca oturum YENİ açıldığında karar ver. Akış sürerken gelen
       // updateUser olayları (tercih kayıtları) akışı yarıda kapatmasın.
-      needs = !userProfile.onboardingComplete;
+      needs = _mustOnboard();
     }
 
     if (hasSession == _hasSession && needs == _needsOnboarding) return;

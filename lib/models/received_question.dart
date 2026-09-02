@@ -10,7 +10,7 @@ class ReceivedQuestion {
     required this.concept,
     required this.photoPath,
     required this.options,
-    required this.correctIndex,
+    this.correctIndex,
     this.senderMascot,
     this.exam,
     this.note,
@@ -27,7 +27,12 @@ class ReceivedQuestion {
   final String? note;
   final String photoPath;
   final List<QuestionOption> options;
-  final int correctIndex;
+  /// Doğru şıkkın indeksi.
+  ///
+  /// ÇÖZÜLMEDEN ÖNCE null: cevabı istemciye önceden vermek, doğruluğu sunucuya
+  /// taşımayı anlamsız kılardı (bkz. 0035 göçü). Çözdükten sonra görünüm bunu
+  /// döndürüyor, böylece kullanıcı geri dönüp cevabına bakabiliyor.
+  final int? correctIndex;
 
   /// Çözüldü mü ve sonucu.
   final bool solved;
@@ -51,7 +56,8 @@ class ReceivedQuestion {
       note: row['note'] as String?,
       photoPath: (row['photo_path'] as String?) ?? '',
       options: options,
-      correctIndex: (row['correct_index'] as int?) ?? 0,
+      // Yalnızca ÇÖZÜLMÜŞ gönderilerde dolu gelir (bkz. 0035 göçü).
+      correctIndex: (row['correct_index'] as num?)?.toInt(),
       solved: row['solved_at'] != null,
       correct: row['correct'] as bool?,
     );

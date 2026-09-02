@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../../data/yks_curriculum.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../services/sound_service.dart';
-import '../../theme/app_colors.dart';
+import '../../theme/tokens.dart';
+import '../../theme/typography.dart';
+import '../../widgets/kit/kimo_icons.dart';
+import '../../widgets/kit/kimo_surfaces.dart';
 import '../../widgets/mistake_style.dart';
 
 /// Konu seçici. Konular yalnızca müfredat listesinden seçilebilir; serbest
-/// metin girilemez. Aksi hâlde aynı konu farklı adlarla yazılır, harita ve
-/// havuz eşleşmez.
+/// metin girilemez. Aksi hâlde aynı konu farklı adlarla yazılır ve
+/// istatistikler (ders dağılımı, ilerleme) eşleşmez.
 Future<String?> showTopicPicker(
   BuildContext context, {
   required String curriculum,
@@ -18,9 +22,9 @@ Future<String?> showTopicPicker(
   return showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.white,
+    backgroundColor: context.c.card,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
     ),
     builder: (BuildContext ctx) => _TopicPicker(
       curriculum: curriculum,
@@ -73,8 +77,10 @@ class _TopicPickerState extends State<_TopicPicker> {
     if (q.isEmpty) return _units;
     final List<Unit> out = <Unit>[];
     for (final Unit u in _units) {
+      // Parametre adı `t` DEĞİL: bu depoda `t` tipografi erişimcisi
+      // (`context.t`) için ayrılmış ve gölgelemek okuyanı yanıltıyor.
       final List<String> hits = u.topics
-          .where((String t) => t.toLowerCase().contains(q))
+          .where((String topic) => topic.toLowerCase().contains(q))
           .toList();
       if (hits.isNotEmpty) out.add(Unit(u.name, hits));
     }
@@ -83,12 +89,15 @@ class _TopicPickerState extends State<_TopicPicker> {
 
   @override
   Widget build(BuildContext context) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    final L10n l = L10n.of(context);
     final Color color = subjectColor(widget.subject);
     final List<Unit> units = _filtered;
     return SafeArea(
       child: Padding(
-        padding: EdgeInsets.fromLTRB(
-            20, 14, 20, 12 + MediaQuery.of(context).viewInsets.bottom),
+        padding: EdgeInsets.fromLTRB(Gap.screen, Gap.lg, Gap.screen,
+            Gap.md + MediaQuery.of(context).viewInsets.bottom),
         child: SizedBox(
           height: MediaQuery.of(context).size.height * 0.7,
           child: Column(
@@ -99,61 +108,59 @@ class _TopicPickerState extends State<_TopicPicker> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                      color: AppColors.line,
-                      borderRadius: BorderRadius.circular(2)),
+                      color: c.border, borderRadius: Radii.all(2)),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: Gap.lg),
               Row(
                 children: <Widget>[
-                  Text(subjectEmoji(widget.subject),
-                      style: const TextStyle(fontSize: 20)),
-                  const SizedBox(width: 8),
-                  Text('${widget.subject} · ${widget.exam}',
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w800)),
+                  Container(
+                    width: 8,
+                    height: 22,
+                    decoration: BoxDecoration(
+                        color: color, borderRadius: Radii.all(4)),
+                  ),
+                  const SizedBox(width: Gap.sm),
+                  Expanded(
+                    child: Text(
+                      widget.subject + ' · ' + widget.exam,
+                      style: t.section,
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 2),
-              const Text('Konuyu listeden seç',
-                  style: TextStyle(color: AppColors.inkLight, fontSize: 13)),
-              const SizedBox(height: 12),
+              const SizedBox(height: Gap.xxs),
+              Text(l.topicPickerTitle,
+                  style: t.caption.copyWith(color: c.inkMuted)),
+              const SizedBox(height: Gap.md),
               TextField(
                 controller: _search,
+                style: t.body,
                 decoration: InputDecoration(
-                  hintText: 'Konu ara…',
-                  prefixIcon: const Icon(Icons.search_rounded,
-                      color: AppColors.inkLight),
+                  hintText: l.topicPickerSearch,
+                  prefixIcon:
+                      KimoIcon(KimoIcons.bars, size: 18, color: c.inkMuted),
                   filled: true,
-                  fillColor: const Color(0xFFF4F4F4),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  fillColor: c.sunken,
+                  contentPadding: const EdgeInsets.symmetric(vertical: Gap.md),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: Radii.all(Radii.tile),
                     borderSide: BorderSide.none,
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: Gap.md),
               Expanded(
                 child: units.isEmpty
-                    ? const Center(
-                        child: Text('Konu bulunamadı.',
-                            style: TextStyle(color: AppColors.inkLight)),
-                      )
+                    ? Center(child: EmptyState(message: l.topicPickerNoMatch))
                     : ListView(
                         children: <Widget>[
                           for (final Unit u in units) ...<Widget>[
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(2, 12, 2, 6),
-                              child: Text(
-                                u.name.toUpperCase(),
-                                style: TextStyle(
-                                  color: color,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.4,
-                                ),
-                              ),
+                              padding: const EdgeInsets.fromLTRB(
+                                  2, Gap.md, 2, Gap.sm),
+                              child: Text(u.name.toUpperCase(),
+                                  style: t.overline.copyWith(color: color)),
                             ),
                             for (final String t in u.topics) _tile(t, color),
                           ],
@@ -168,37 +175,33 @@ class _TopicPickerState extends State<_TopicPicker> {
   }
 
   Widget _tile(String topic, Color color) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
     final bool isSelected = widget.selected == topic;
-    return GestureDetector(
-      onTap: () {
-        sound.tap();
-        Navigator.of(context).pop(topic);
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.12) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? color : AppColors.line,
-            width: isSelected ? 2 : 1.2,
-          ),
-        ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Gap.xs),
+      child: KimoCard(
+        padding: const EdgeInsets.symmetric(
+            horizontal: Gap.md, vertical: Gap.md),
+        radius: Radii.chip,
+        elevated: false,
+        color: isSelected ? c.actionTint : c.sunken,
+        onTap: () {
+          sound.tap();
+          Navigator.of(context).pop(topic);
+        },
         child: Row(
           children: <Widget>[
             Expanded(
               child: Text(
                 topic,
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  color: isSelected ? color : AppColors.ink,
-                ),
+                style: isSelected
+                    ? t.label.copyWith(color: c.actionText)
+                    : t.label,
               ),
             ),
             if (isSelected)
-              Icon(Icons.check_circle_rounded, color: color, size: 20),
+              KimoIcon(KimoIcons.check, size: 18, color: c.actionText),
           ],
         ),
       ),

@@ -1,0 +1,116 @@
+# CI — bu depodaki İLK otomatik kalite kapısı.
+#
+# Neden var: 203 pgTAP iddiası yazıldı ama geliştirme makinesinde çalıştırılamadı
+# (Docker/Supabase CLI/Flutter kurulu değil). CI koşucularında Docker var, yani
+# testler burada gerçekten çalışıyor. "Yazıldı ama çalıştırılmadı" durumundan
+# çıkmanın en ucuz yolu bu.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # ------------------------------------------------------------------ veritabanı
+  db:
+    name: pgTAP (şema + yetkiler)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # DİKKAT: `-x storage-api` ile hızlandırmayın. storage.objects şeması ve
+      # trigger'ları o konteynerin kendi göçlerinden geliyor; hariç tutulursa
+      # depolama testleri (030/040/050) anlamsız bir şemaya karşı çalışır.
+      - name: Supabase yığınını başlat
+        run: supabase start
+
+      # Göçler + seed.sql (pgTAP eklentisi ve tests.* yardımcıları).
+      #
+      # `skipped` KONTROLÜ KRİTİK: Supabase CLI, adı `<14 haneli zaman
+      # damgası>_ad.sql` biçimine uymayan göçleri sessizce atlar ve YİNE DE 0
+      # çıkış kodu döndürür. O durumda testler boş bir veritabanına karşı
+      # çalışır ve yeşil yanar — yani hiçbir şey kanıtlamaz.
+      - name: Veritabanını kur (ve atlanan göç olmadığını doğrula)
+        run: |
+          set -o pipefail
+          supabase db reset 2>&1 | tee reset.log
+          if grep -qi 'skipped' reset.log; then
+            echo "::error::Bazı göçler ATLANDI — dosya adları zaman damgası biçiminde olmalı."
+            grep -i 'skipped' reset.log
+            exit 1
+          fi
+
+      - name: pgTAP süiti
+        run: supabase test db
+
+      # Yeşil bir süit tek başına yeterli değil: hem düzeltilmiş hem
+      # düzeltilmemiş şemada yeşil yanan bir test yalnızca "hata vermiyor"u
+      # kanıtlar. Bu adım her korumayı tek tek bozup ilgili testin KIRMIZIYA
+      # döndüğünü doğruluyor — yani testlerin gerçekten ayırt ettiğini.
+      - name: Mutasyon kontrolü (testler ayırt ediyor mu?)
+        run: bash tools/mutation_check.sh
+
+  # ------------------------------------------------------------ statik kontrol
+  # Flutter işinden ÖNCE ve ondan bağımsız koşar: saniyeler sürüyor ve
+  # derleyicinin yakalayacağı hataların çoğunu (var olmayan token/ikon/enum
+  # değeri, kullanılmayan/kırık import, dengesiz göç dosyası) SDK indirmeden
+  # yakalıyor. Geliştirme makinesinde Flutter yok; bu betikler oradaki tek
+  # geri bildirim yolu, CI'da da koşmaları gerekiyor ki bayatlamasınlar.
+  static:
+    name: statik kontroller
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Denetleyicinin kendisi sessizce hiçbir şey bulmama hatasına düşmüştü;
+      # selftest bunu her koşuda kanıtlıyor.
+      - name: Sembol denetleyicisinin kendi sınaması
+        run: python tools/check_symbols.py --selftest
+
+      - name: Tasarım token'ı / kit sembolleri
+        run: python tools/check_symbols.py
+
+      # Import denetleyicisinin regex'i de bir kez sessizce bozulmuştu
+      # (kaçış karakteri yerine 0x08). Selftest bunu her koşuda kanıtlıyor.
+      - name: Import denetleyicisinin kendi sınaması
+        run: python tools/check_imports.py --selftest
+
+      - name: Import'lar
+        run: python tools/check_imports.py
+
+      - name: SQL göçleri ve pgTAP plan sayıları
+        run: python tools/check_sql.py
+
+  # ---------------------------------------------------------------------- Dart
+  flutter:
+    name: analyze + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      # pubspec.lock depoya işleniyor ve pubspec.yaml ile eşzamanlı kalmalı.
+      # `pub get` kilidi her çalıştığında yeniden yazar; bir sapma varsa (sürüm
+      # çözümü değişmiş ya da bir bağımlılığın `dependency:` türü kaymışsa)
+      # burada görülür ve iş kırmızıya döner.
+      - name: pubspec.lock değişmedi mi
+        run: git diff --exit-code pubspec.lock
+
+      - run: flutter analyze
+
+      - run: flutter test

@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/topic_progress.dart';
 import '../services/supabase_config.dart';
+import 'submission_queue.dart';
 
 /// Konu bazlı ilerleme: çözülen her sorunun konusunu kaydeder ve haritayı
 /// besleyen özeti okur.
@@ -11,39 +13,88 @@ class ProgressRepository {
 
   SupabaseClient get _client => Supabase.instance.client;
 
-  /// Çözülen bir soruyu kaydeder. Kaynak: 'review' (tekrar), 'pool' (havuz),
-  /// 'sent' (arkadaştan gelen).
-  /// [extraConcepts] verilirse ölçüm o konulara da yazılır: birden çok konuya
-  /// değen bir soru çözüldüğünde haritada hepsi ilerler.
-  Future<void> recordAttempt({
-    required String subject,
-    required String concept,
+  /// Kendi hatanın tekrarını kaydeder ve XP'yi sunucuya yazdırır.
+  ///
+  /// Eskiden istemci `study_attempts`'e doğrudan satır yazıyordu: ders, konu ve
+  /// `correct` tamamen istemci beyanıydı, yani uydurma bir konu haritası
+  /// üretmek serbestti. Artık ölçüm satırlarını sunucu, sorunun KENDİ
+  /// konusundan yazıyor.
+  ///
+  /// DÜRÜST SINIR: burada `correct` kaçınılmaz olarak ÖZNEL — kullanıcı kendi
+  /// fotoğrafına bakıp kendini notlandırıyor ve sunucu bunu doğrulayamaz.
+  /// Kazanç şu: XP artık türetilmiş bir değer ve günlük tavana tabi; sahtelemek
+  /// tek bir `update profiles set xp = 999999` yerine binlerce çağrı gerektiriyor.
+  ///
+  /// Ağ yoksa gönderim KUYRUĞA alınır ve bağlantı gelince uygulanır — yoksa
+  /// cevap kaybolur ve bir sonraki açılışta `hydrate()` XP'yi geri alarak
+  /// kullanıcıya ilerlemesi silinmiş gibi gösterirdi.
+  ///
+  /// Dönen değer: sunucudaki güncel toplamlar (kuyruğa alındıysa null).
+  Future<Map<String, dynamic>?> submitReview({
+    required String mistakeId,
     required bool correct,
-    String? exam,
-    String? mistakeId,
-    List<String> extraConcepts = const <String>[],
-    String source = 'review',
+    /// Sorunun şıkları varsa işaretlenen şıkkın indeksi.
+    ///
+    /// Verilirse doğruluğu SUNUCU hesaplar ve [correct] yok sayılır. Seri
+    /// çarpanı kullanıcı beyanının değerini beş katına çıkardığı için,
+    /// doğrulanabilir yerde doğrulamak şart oldu (bkz. 0041 göçü).
+    int? choice,
   }) async {
-    if (!SupabaseConfig.isConfigured) return;
-    if (subject.isEmpty || concept.isEmpty) return;
-    final List<String> concepts = <String>{concept, ...extraConcepts}
-        .where((String c) => c.trim().isNotEmpty)
-        .toList();
+    if (!SupabaseConfig.isConfigured) return null;
+    // Birikmiş cevaplar varsa önce onlar gitsin (bkz. drainIfPending).
+    await submissionQueue.drainIfPending();
+    final String token = newSubmissionToken();
     try {
-      await _client.from('study_attempts').insert(<Map<String, dynamic>>[
-        for (final String c in concepts)
-          <String, dynamic>{
-            'subject': subject,
-            'concept': c,
-            'exam': exam,
-            'correct': correct,
-            'source': source,
-            // Sorunun konusu sonradan düzeltilirse ölçüm de düzelsin diye bağ.
-            'mistake_id': mistakeId,
-          },
-      ]);
-    } catch (_) {
-      // İlerleme kaydı akışı bloklamamalı.
+      final dynamic res = await _client.rpc<dynamic>(
+        'submit_review',
+        params: <String, dynamic>{
+          'p_mistake': mistakeId,
+          'p_correct': correct,
+          'p_choice': choice,
+          'p_token': token,
+        },
+      );
+      if (res is List && res.isNotEmpty) {
+        return (res.first as Map).cast<String, dynamic>();
+      }
+      return null;
+    } on PostgrestException catch (e) {
+      // Sunucu yanıt verdi ve reddetti (ör. kullanıcı bu hatayı silmiş).
+      // Kuyruğa almak sonsuz bir yeniden deneme üretirdi.
+      debugPrint('tekrar reddedildi, kuyruğa ALINMADI: ${e.code} ${e.message}');
+      return null;
+    } catch (e) {
+      debugPrint('tekrar gönderilemedi, kuyruğa alındı: $e');
+      await submissionQueue.enqueue(<String, dynamic>{
+        'kind': 'review',
+        'mistake_id': mistakeId,
+        'correct': correct,
+        'choice': choice,
+        'token': token,
+      });
+      return null;
+    }
+  }
+
+  /// Günlük hedef bonusunu sunucudan ister (günde bir kez, sunucu garantiler).
+  Future<Map<String, dynamic>?> claimDailyGoal() async {
+    if (!SupabaseConfig.isConfigured) return null;
+    await submissionQueue.drainIfPending();
+    try {
+      final dynamic res =
+          await _client.rpc<dynamic>('claim_daily_goal', params: <String, dynamic>{});
+      if (res is List && res.isNotEmpty) {
+        return (res.first as Map).cast<String, dynamic>();
+      }
+      return null;
+    } on PostgrestException catch (e) {
+      // "bugün hiç çalışılmamış" gibi kalıcı retler kuyruğa girmemeli.
+      debugPrint('günlük hedef reddedildi, kuyruğa ALINMADI: ${e.code} ${e.message}');
+      return null;
+    } catch (e) {
+      debugPrint('günlük hedef bonusu alınamadı, kuyruğa alındı: $e');
+      await submissionQueue.enqueue(<String, dynamic>{'kind': 'goal'});
+      return null;
     }
   }
 

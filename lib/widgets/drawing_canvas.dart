@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
+import '../theme/tokens.dart';
+import '../theme/typography.dart';
+
 
 class _Stroke {
   _Stroke({required this.isEraser, required this.width});
@@ -59,16 +61,17 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
 
   @override
   Widget build(BuildContext context) {
+    final KimoColors c = context.c;
     return Column(
       children: <Widget>[
-        _toolbar(),
-        const SizedBox(height: 8),
+        _toolbar(context),
+        const SizedBox(height: Gap.sm),
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.line, width: 1.5),
+              color: c.card,
+              borderRadius: Radii.all(Radii.tile),
+              border: Border.all(color: c.border, width: 1.5),
             ),
             clipBehavior: Clip.antiAlias,
             child: InteractiveViewer(
@@ -111,21 +114,22 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
     );
   }
 
-  Widget _toolbar() {
+  Widget _toolbar(BuildContext context) {
+    final KimoColors c = context.c;
     return Row(
       children: <Widget>[
-        _modeButton(Icons.pan_tool_rounded, 'Dokunma', !_drawMode, () {
+        _modeButton(context, Icons.pan_tool_rounded, 'Dokunma', !_drawMode, () {
           setState(() => _drawMode = false);
         }),
         const SizedBox(width: 6),
-        _modeButton(Icons.edit, 'Kalem', _drawMode && !_eraser, () {
+        _modeButton(context, Icons.edit, 'Kalem', _drawMode && !_eraser, () {
           setState(() {
             _drawMode = true;
             _eraser = false;
           });
         }),
         const SizedBox(width: 6),
-        _modeButton(Icons.auto_fix_normal, 'Silgi', _drawMode && _eraser, () {
+        _modeButton(context, Icons.auto_fix_normal, 'Silgi', _drawMode && _eraser, () {
           setState(() {
             _drawMode = true;
             _eraser = true;
@@ -135,21 +139,21 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
         IconButton(
           onPressed: _strokes.isEmpty ? null : _undo,
           icon: const Icon(Icons.undo_rounded),
-          color: AppColors.inkLight,
+          color: c.inkMuted,
           tooltip: 'Geri al',
           visualDensity: VisualDensity.compact,
         ),
         IconButton(
           onPressed: _strokes.isEmpty ? null : _clear,
           icon: const Icon(Icons.delete_outline_rounded),
-          color: AppColors.inkLight,
+          color: c.inkMuted,
           tooltip: 'Temizle',
           visualDensity: VisualDensity.compact,
         ),
         IconButton(
           onPressed: _resetZoom,
           icon: const Icon(Icons.center_focus_strong_rounded),
-          color: AppColors.inkLight,
+          color: c.inkMuted,
           tooltip: 'Yakınlaştırmayı sıfırla',
           visualDensity: VisualDensity.compact,
         ),
@@ -157,35 +161,32 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
     );
   }
 
-  Widget _modeButton(
+  Widget _modeButton(BuildContext context,
       IconData icon, String label, bool active, VoidCallback onTap) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: active
-              ? AppColors.green.withValues(alpha: 0.14)
-              : const Color(0xFFF4F4F4),
-          borderRadius: BorderRadius.circular(20),
+          color: active ? c.mintTint : c.sunken,
+          borderRadius: Radii.all(Radii.pill),
           border: Border.all(
-            color: active ? AppColors.green : Colors.transparent,
+            color: active ? c.mint : Colors.transparent,
             width: 1.5,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Icon(icon,
-                size: 17,
-                color: active ? AppColors.greenDark : AppColors.inkLight),
+            Icon(icon, size: 17,
+                color: active ? c.mintText : c.inkMuted),
             const SizedBox(width: 5),
             Text(
               label,
-              style: TextStyle(
-                color: active ? AppColors.greenDark : AppColors.inkLight,
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
+              style: t.captionStrong.copyWith(
+                color: active ? c.mintText : c.inkMuted,
               ),
             ),
           ],

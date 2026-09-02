@@ -1,38 +1,53 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
 import 'mascot.dart';
 
-/// Toplam XP'ye göre lig. Kohort/haftalık sıfırlama yok; eşik tabanlı.
+/// Haftalık lig kademesi.
+///
+/// Altı kademe: bronz < gümüş < altın < platin < zümrüt < elmas.
+/// Kademe atlamak XP EŞİĞİYLE OLMAZ: her hafta 30 kişilik bir kohortta
+/// yarışılır, ilk 5 yükselir, son 5 düşer. Kararı sunucu verir
+/// (`settle_past_leagues`); istemci yalnızca gösterir.
+///
+/// GEÇİŞ NOTU: eski yapı beş kademeydi (… altın · elmas · efsane) ve `elmas`
+/// 4. sıradaydı. Yeni yapıda `elmas` TEPE kademe. Veritabanı göçü sırayı
+/// koruyarak eşledi: eski `elmas` → `platin`, eski `efsane` → `zumrut`.
+/// Yani `elmas` adı aynı kaldı ama ANLAMI değişti — eski bir istemci yeni
+/// sunucuyla konuşursa bu tek fark üzerinden yanlış rozet gösterir.
 enum League {
   bronz,
   gumus,
   altin,
-  elmas,
-  efsane;
+  platin,
+  zumrut,
+  elmas;
 
   String get label => switch (this) {
     League.bronz => 'Bronz Ligi',
     League.gumus => 'Gümüş Ligi',
     League.altin => 'Altın Ligi',
+    League.platin => 'Platin Ligi',
+    League.zumrut => 'Zümrüt Ligi',
     League.elmas => 'Elmas Ligi',
-    League.efsane => 'Efsane Ligi',
   };
 
-  String get emoji => switch (this) {
-    League.bronz => '🥉',
-    League.gumus => '🥈',
-    League.altin => '🥇',
-    League.elmas => '💎',
-    League.efsane => '👑',
+  /// Kısa ad — rozet ve satır içi kullanım için ("Altın", "Zümrüt").
+  String get shortLabel => switch (this) {
+    League.bronz => 'Bronz',
+    League.gumus => 'Gümüş',
+    League.altin => 'Altın',
+    League.platin => 'Platin',
+    League.zumrut => 'Zümrüt',
+    League.elmas => 'Elmas',
   };
 
   Color get color => switch (this) {
     League.bronz => const Color(0xFFB07242),
     League.gumus => const Color(0xFF9AA5B1),
-    League.altin => AppColors.gold,
-    League.elmas => AppColors.cyan,
-    League.efsane => AppColors.purple,
+    League.altin => const Color(0xFFF2A93B),
+    League.platin => const Color(0xFF7FA3B8),
+    League.zumrut => const Color(0xFF1B9B6B),
+    League.elmas => const Color(0xFF5AC8E8),
   };
 
   /// Sıralamada kaçıncıya kadar üst lige çıkılır.
@@ -41,25 +56,30 @@ enum League {
   /// Sondan kaç kişi bir alt lige düşer.
   static const int demotionCount = 5;
 
-  /// Bir grubun en fazla kaç kişi olabileceği.
-  static const int cohortSize = 12;
+  /// Bir kohortun en fazla kaç kişi olabileceği.
+  ///
+  /// Sunucudaki `league_cohort_size()` ile AYNI olmak zorunda; ikisi ayrışırsa
+  /// arayüz "30 kişilik kohort" derken gerçekte başka bir sayı olur.
+  static const int cohortSize = 30;
 
-  /// Bir alt lig (en alttaysa null).
+  /// Bir alt kademe (en alttaysa null).
   League? get previous => switch (this) {
     League.bronz => null,
     League.gumus => League.bronz,
     League.altin => League.gumus,
-    League.elmas => League.altin,
-    League.efsane => League.elmas,
+    League.platin => League.altin,
+    League.zumrut => League.platin,
+    League.elmas => League.zumrut,
   };
 
-  /// Bir sonraki lig (en üstteyse null).
+  /// Bir üst kademe (en üstteyse null).
   League? get next => switch (this) {
     League.bronz => League.gumus,
     League.gumus => League.altin,
-    League.altin => League.elmas,
-    League.elmas => League.efsane,
-    League.efsane => null,
+    League.altin => League.platin,
+    League.platin => League.zumrut,
+    League.zumrut => League.elmas,
+    League.elmas => null,
   };
 
   /// Veritabanındaki değer (profiles.league).
@@ -67,15 +87,19 @@ enum League {
     League.bronz => 'bronz',
     League.gumus => 'gumus',
     League.altin => 'altin',
+    League.platin => 'platin',
+    League.zumrut => 'zumrut',
     League.elmas => 'elmas',
-    League.efsane => 'efsane',
   };
 
+  /// Bilinmeyen değer bronza düşer: sunucu yeni bir kademe eklerse istemci
+  /// çökmek yerine en alt kademeyi gösterir.
   static League fromDb(String? value) => switch (value) {
     'gumus' => League.gumus,
     'altin' => League.altin,
+    'platin' => League.platin,
+    'zumrut' => League.zumrut,
     'elmas' => League.elmas,
-    'efsane' => League.efsane,
     _ => League.bronz,
   };
 }

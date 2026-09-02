@@ -41,6 +41,19 @@ class MistakeRepository {
     return rows.length;
   }
 
+  /// Arşivde toplam kaç kayıt var.
+  ///
+  /// "Bugün" ekranı sıfır-veri hâlini (3c) bununla ayırt ediyor: bugün tekrarı
+  /// olmaması ile arşivin hiç açılmamış olması farklı iki durum ve farklı iki
+  /// ekran. `head: true` ile satırlar indirilmiyor, yalnızca sayı geliyor.
+  Future<int> totalCount() async {
+    final PostgrestResponse<dynamic> res = await _client
+        .from('mistakes')
+        .select('id')
+        .count(CountOption.exact);
+    return res.count;
+  }
+
   /// Bugün (ve öncesi) tekrarı gelen, öğrenilmemiş hatalar — pratik için.
   Future<List<MistakeEntry>> dueReviews() async {
     final String today = _dateStr(DateTime.now());
@@ -84,7 +97,7 @@ class MistakeRepository {
       id: row['id'] as String?,
       subject: row['subject'] as String,
       concept: row['concept'] as String,
-      type: MistakeType.fromDb(row['mistake_type'] as String),
+      type: MistakeType.fromDb(row['mistake_type'] as String?),
       note: (row['note'] as String?) ?? '',
       date: DateTime.parse(row['created_at'] as String),
       hasPhoto: path != null,
@@ -95,6 +108,9 @@ class MistakeRepository {
       lapses: (row['lapses'] as int?) ?? 0,
       mastered: row['mastered'] == true,
       isLeech: row['is_leech'] == true,
+      nextReviewDate: row['next_review_date'] == null
+          ? null
+          : DateTime.parse(row['next_review_date'] as String),
       exam: row['exam'] as String?,
       extraConcepts: (row['extra_concepts'] as List<dynamic>?)
               ?.map((dynamic e) => e as String)
@@ -107,17 +123,30 @@ class MistakeRepository {
   /// anında, tembel). Foto silinmişse null döner.
   Future<String?> signedUrl(String path) async {
     try {
-      return await _client.storage.from(_bucket).createSignedUrl(path, 3600);
+      return await _client.storage
+          .from(_bucket)
+          .createSignedUrl(path, signedUrlTtlSeconds);
     } catch (_) {
       return null;
     }
   }
 
+  /// İmzalı fotoğraf adresinin ömrü.
+  ///
+  /// 1 saatten 10 dakikaya indirildi. Moderasyonla kaldırılan bir içeriğin
+  /// dosyası artık siliniyor (bkz. 0031 göçü), ama silme anına kadar dağıtılmış
+  /// imzalı adresler ömürleri boyunca çalışmaya devam eder — bu değer o pencere.
+  ///
+  /// Düşürmenin ön koşulu vardı ve o karşılandı: [MistakePhoto] artık ölmüş bir
+  /// imzayı fark edip bir kez yeniden imzalıyor. Bu olmadan TTL'i düşürmek
+  /// havuzda kaydırırken görsellerin ölmesine yol açardı.
+  static const int signedUrlTtlSeconds = 600;
+
   /// Yeni hata ekler; fotoğraf varsa önce Storage'a yükler.
   Future<void> add({
     required String subject,
     required String concept,
-    required MistakeType type,
+    MistakeType? type,
     required String note,
     Uint8List? imageBytes,
     List<QuestionOption>? options,
@@ -143,7 +172,8 @@ class MistakeRepository {
     await _client.from('mistakes').insert(<String, dynamic>{
       'subject': subject,
       'concept': concept,
-      'mistake_type': type.dbValue,
+      // İsteğe bağlı: kullanıcı sebep seçmediyse null gider.
+      'mistake_type': type?.dbValue,
       'note': note.isEmpty ? null : note,
       'photo_path': path,
       'options': (options == null || options.isEmpty)
@@ -157,29 +187,32 @@ class MistakeRepository {
     // step/next_review_date DB varsayılanlarıyla gelir (adım 0, ertesi gün).
   }
 
-  /// Bir tekrar sonucunu ([correct]) uygular ve planı (adım/tarih/leech/
-  /// mastered) günceller.
-  Future<void> submitReview(MistakeEntry entry, bool correct) async {
-    final String? id = entry.id;
-    if (id == null) return;
+  /// Bir tekrar sonucunu ([correct]) uygular: planı (adım/tarih/leech/mastered)
+  /// ilerletir ve YENİ PLANI DÖNDÜRÜR.
+  ///
+  /// Dönen [ReviewOutcome] arayüzde "yarın yeniden soracağım" metnini
+  /// besliyor; bu yüzden yazma başarısız olsa bile hesaplanan plan dönüyor.
+  /// Yazma hatası ARTIK YUTULMUYOR — çağıran yakalayıp kullanıcıya gösteriyor.
+  /// Eskiden `catch (_)` vardı: plan yazılamadığında soru sessizce bugünün
+  /// kuyruğunda kalıyor ve kullanıcı sebebini hiç öğrenmiyordu.
+  Future<ReviewOutcome> submitReview(MistakeEntry entry, bool correct) async {
     final ReviewOutcome o = _scheduler.review(
       step: entry.step,
       lapses: entry.lapses,
       correct: correct,
       reviewedOn: DateTime.now(),
     );
-    try {
-      await _client.from('mistakes').update(<String, dynamic>{
-        'step': o.step,
-        'lapses': o.lapses,
-        'is_leech': o.isLeech,
-        'mastered': o.mastered,
-        'next_review_date': _dateStr(o.nextReviewDate),
-        'last_reviewed_at': DateTime.now().toIso8601String(),
-      }).eq('id', id);
-    } catch (_) {
-      // Ağ hatası vb.; pratiği bloklamayalım.
-    }
+    final String? id = entry.id;
+    if (id == null) return o;
+    await _client.from('mistakes').update(<String, dynamic>{
+      'step': o.step,
+      'lapses': o.lapses,
+      'is_leech': o.isLeech,
+      'mastered': o.mastered,
+      'next_review_date': _dateStr(o.nextReviewDate),
+      'last_reviewed_at': DateTime.now().toIso8601String(),
+    }).eq('id', id);
+    return o;
   }
 
   /// Fotoğrafı AI Gateway (Edge Function) ile değerlendirir: okunabilir bir
@@ -197,6 +230,15 @@ class MistakeRepository {
     if (data is! Map) {
       return const QuestionAnalysis(
           ok: false, options: <QuestionOption>[], reason: 'Analiz edilemedi.');
+    }
+
+    // Günlük hak bitti: sunucu OpenAI'ya HİÇ GİTMEDİ ve 200 ile bunu söyledi.
+    // Hata değil, ürün durumu — çağıran elle giriş formunu açıyor.
+    if (data['allowed'] == false) {
+      final Object? resets = data['resets_at'];
+      return QuestionAnalysis.outOfCredit(
+        creditResetsAt: resets is String ? DateTime.tryParse(resets) : null,
+      );
     }
 
     final bool readable = data['is_readable'] == true;
@@ -222,6 +264,7 @@ class MistakeRepository {
         subject: ders.isEmpty ? null : ders,
         concept: konu.isEmpty ? null : konu,
         conceptValid: data['konu_valid'] == true,
+        creditRemaining: (data['remaining'] as num?)?.toInt(),
       );
     }
 

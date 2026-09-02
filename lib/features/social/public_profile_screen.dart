@@ -1,12 +1,22 @@
 import 'package:flutter/material.dart';
 
+import '../../data/friend_repository.dart';
 import '../../data/social_repository.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../models/social.dart';
-import '../../theme/app_colors.dart';
+import '../../theme/tokens.dart';
+import '../../theme/typography.dart';
+import '../../widgets/kit/kimo_button.dart';
+import '../../widgets/kit/kimo_chips.dart';
+import '../../widgets/kit/kimo_icons.dart';
+import '../../widgets/kit/kimo_surfaces.dart';
 import '../../widgets/user_avatar.dart';
 
 /// Başka bir kullanıcının profili: ligden ya da arkadaş listesinden açılır.
-/// Yalnızca `profiles_public` görünümündeki güvenli alanlar gösterilir.
+///
+/// Yalnızca `profiles_public` görünümündeki alanlar gösteriliyor. O görünüm
+/// e-posta, doğum yılı, veli e-postası ve arkadaş kodu TAŞIMIYOR — burada
+/// gösterilmemesinin sebebi bir arayüz kararı değil, verinin gelmemesi.
 class PublicProfileScreen extends StatefulWidget {
   const PublicProfileScreen({super.key, required this.userId, this.initial});
 
@@ -21,7 +31,9 @@ class PublicProfileScreen extends StatefulWidget {
 
 class _PublicProfileScreenState extends State<PublicProfileScreen> {
   PublicProfile? _profile;
+  int _mutual = 0;
   bool _loading = true;
+  bool _failed = false;
 
   @override
   void initState() {
@@ -31,31 +43,68 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   }
 
   Future<void> _load() async {
-    final PublicProfile? p = await socialRepository.profileById(widget.userId);
-    if (!mounted) return;
-    setState(() {
-      if (p != null) _profile = p;
-      _loading = false;
-    });
+    setState(() => _failed = false);
+    try {
+      final PublicProfile? p =
+          await socialRepository.profileById(widget.userId);
+      final int mutual = await friendRepository.mutualFriends(widget.userId);
+      if (!mounted) return;
+      setState(() {
+        if (p != null) _profile = p;
+        _mutual = mutual;
+        _loading = false;
+        _failed = p == null && widget.initial == null;
+      });
+    } catch (e) {
+      debugPrint('profil yüklenemedi: $e');
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _failed = _profile == null;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    final L10n l = L10n.of(context);
     final PublicProfile? p = _profile;
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text('Profil')),
+      backgroundColor: c.page,
+      appBar: AppBar(
+        backgroundColor: c.page,
+        surfaceTintColor: Colors.transparent,
+        title: Text(l.publicProfileTitle, style: t.section),
+        leading: IconButton(
+          onPressed: () => Navigator.of(context).maybePop(),
+          icon: KimoIcon(KimoIcons.back, color: c.ink),
+          tooltip: l.actionBack,
+        ),
+      ),
       body: p == null
           ? Center(
               child: _loading
                   ? const CircularProgressIndicator()
-                  : const Text(
-                      'Profil bulunamadı.',
-                      style: TextStyle(color: AppColors.inkLight),
+                  : Padding(
+                      padding: const EdgeInsets.all(Gap.screen),
+                      child: EmptyState(
+                        message: l.publicProfileLoadFailed,
+                        action: _failed
+                            ? KimoButton(
+                                label: l.actionRetry,
+                                expand: false,
+                                onPressed: _load,
+                              )
+                            : null,
+                      ),
                     ),
             )
           : ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              padding: const EdgeInsets.fromLTRB(
+                  Gap.screen, Gap.md, Gap.screen, Gap.section),
               children: <Widget>[
                 Center(
                   child: UserAvatar(
@@ -64,35 +113,25 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     mascot: p.mascot,
                   ),
                 ),
-                const SizedBox(height: 14),
-                Text(
-                  p.nickname,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.ink,
-                  ),
-                ),
-                if (p.mascot != null) ...<Widget>[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Koçu: ${p.mascot!.label}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.inkLight,
-                      fontSize: 13,
+                const SizedBox(height: Gap.md),
+                Text(p.nickname, textAlign: TextAlign.center, style: t.heading),
+                if (_mutual > 0) ...<Widget>[
+                  const SizedBox(height: Gap.sm),
+                  Center(
+                    child: StatusBadge(
+                      label: l.friendsMutual(_mutual),
+                      tone: BadgeTone.neutral,
                     ),
                   ),
                 ],
-                const SizedBox(height: 20),
+                const SizedBox(height: Gap.xl),
                 ProfileStatsRow(
                   xp: p.xp,
                   streak: p.streak,
                   friends: p.friendCount,
                 ),
-                const SizedBox(height: 16),
-                LeagueBanner(league: p.league, xp: p.xp),
+                const SizedBox(height: Gap.md),
+                LeagueBanner(league: p.league),
               ],
             ),
     );
@@ -115,41 +154,31 @@ class ProfileStatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final L10n l = L10n.of(context);
     return Row(
       children: <Widget>[
-        Expanded(child: _card('⚡', '$xp', 'Toplam XP', AppColors.gold)),
-        const SizedBox(width: 12),
-        Expanded(child: _card('🔥', '$streak', 'Gün seri', AppColors.orange)),
-        const SizedBox(width: 12),
-        Expanded(child: _card('🤝', '$friends', 'Arkadaş', AppColors.teal)),
+        Expanded(child: _cell(context, '$xp', l.profileXp)),
+        const SizedBox(width: Gap.sm),
+        Expanded(child: _cell(context, '$streak', l.profileStreak)),
+        const SizedBox(width: Gap.sm),
+        Expanded(child: _cell(context, '$friends', l.profileFriends)),
       ],
     );
   }
 
-  Widget _card(String emoji, String value, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(16),
-      ),
+  Widget _cell(BuildContext context, String value, String label) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return KimoCard(
+      padding: const EdgeInsets.symmetric(vertical: Gap.lg),
       child: Column(
         children: <Widget>[
-          Text(emoji, style: const TextStyle(fontSize: 22)),
-          const SizedBox(height: 6),
-          FittedBox(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: color,
-              ),
-            ),
-          ),
+          Text(value, style: t.numberLarge),
+          const SizedBox(height: Gap.xxs),
           Text(
             label,
-            style: const TextStyle(fontSize: 12, color: AppColors.inkLight),
+            textAlign: TextAlign.center,
+            style: t.caption.copyWith(color: c.inkMuted),
           ),
         ],
       ),
@@ -157,52 +186,30 @@ class ProfileStatsRow extends StatelessWidget {
   }
 }
 
-/// Lig şeridi (profil ekranlarında ortak).
+/// Lig şeridi.
+///
+/// XP ARTIK GÖSTERİLMİYOR: ligi belirleyen şey toplam XP değil, haftalık
+/// sıralama. Yan yana koymak "XP biriktirince lig atlanır" izlenimi veriyordu
+/// ve bu yanlış.
 class LeagueBanner extends StatelessWidget {
-  const LeagueBanner({super.key, required this.league, required this.xp});
+  const LeagueBanner({super.key, required this.league});
 
   final League league;
-  final int xp;
 
   @override
   Widget build(BuildContext context) {
-    final League? next = league.next;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: <Color>[league.color, league.color.withValues(alpha: 0.72)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
+    final KimoTypography t = context.t;
+    return KimoCard(
       child: Row(
         children: <Widget>[
-          Text(league.emoji, style: const TextStyle(fontSize: 40)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  league.label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  next == null
-                      ? 'En üst lig 👑'
-                      : 'Grubunda ilk ${League.promotionCount} → ${next.label}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-              ],
-            ),
+          Container(
+            width: 12,
+            height: 12,
+            decoration:
+                BoxDecoration(color: league.color, shape: BoxShape.circle),
           ),
+          const SizedBox(width: Gap.md),
+          Expanded(child: Text(league.label, style: t.bodyStrong)),
         ],
       ),
     );

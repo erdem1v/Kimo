@@ -87,6 +87,54 @@ flutter test
   (`test/features/spaced_repetition/...`).
 - "Bugünün Tekrarları" ekranı için widget testi (`test/widget_test.dart`).
 
+## Veritabanı ve güvenlik testleri
+
+Şema `supabase/migrations/` altında, zaman damgalı dosyalar hâlinde ve sırayla
+uygulanır. Temel şema `20240101000000_init.sql` (eskiden `supabase/schema.sql`
+idi ve `migrations/` dışında olduğu için `supabase db reset` tarafından hiç
+uygulanmıyordu).
+
+### Yerel yığın + pgTAP
+
+```bash
+npm install supabase --save-dev        # Docker Desktop (WSL2) gerekir
+npx supabase start                     # -x storage-api KULLANMAYIN:
+                                       # storage.objects şeması o konteynerden gelir
+npx supabase db reset                  # göçler + seed.sql (pgTAP + tests.* yardımcıları)
+npx supabase test db                   # supabase/tests/ altındaki pgTAP süiti
+```
+
+`db reset` çıktısında **`skipped` satırı olmamalı.** Supabase CLI, adı
+`<14 haneli zaman damgası>_ad.sql` biçimine uymayan göçleri atlar ve yine de
+0 çıkış kodu döndürür — yani boş bir veritabanına karşı yeşil test alabilirsiniz.
+
+### ⚠️ Üretime uygulama
+
+Göçler tarihsel olarak **elle SQL Editor'a yapıştırılarak** uygulandı, yani
+`supabase_migrations.schema_migrations` tablosu üretimde muhtemelen boş.
+**`supabase db push` üretime karşı ÇALIŞTIRILMAMALI** — her şeyi baştan
+uygulamaya kalkar. `db reset` yalnızca yerel/test veritabanı içindir.
+
+### Edge function'lar
+
+JWT doğrulaması artık `supabase/config.toml` içinde beyan ediliyor
+(`[functions.send-push] verify_jwt = true`), yani dağıtım bayrak gerektirmez:
+
+```bash
+supabase functions deploy send-push
+supabase functions deploy analyze-question
+```
+
+`send-push` çalışmadan önce `app_config` doldurulmalı:
+
+```sql
+insert into public.app_config (key, value) values
+  ('push_url',         '<edge function adresi>'),
+  ('push_service_key', '<SUPABASE_SERVICE_ROLE_KEY>')
+on conflict (key) do update set value = excluded.value;
+delete from public.app_config where key = 'push_secret';   -- artık kullanılmıyor
+```
+
 ## Aralıklı tekrar (SM-2)
 
 `SpacedRepetitionScheduler` **saf Dart** bir sınıftır (UI/DB bağımsız,

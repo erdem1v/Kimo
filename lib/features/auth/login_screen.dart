@@ -2,16 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/auth_repository.dart';
-import '../../theme/app_colors.dart';
-import '../../widgets/game_button.dart';
+import '../../l10n/generated/app_localizations.dart';
+import '../../services/sound_service.dart';
+import '../../theme/tokens.dart';
+import '../../theme/typography.dart';
+import '../../widgets/kimo/kimo.dart';
+import '../../widgets/kit/kimo_button.dart';
+import '../../widgets/kit/kimo_icons.dart';
 
-/// Giriş / kayıt ekranı. Yalnızca hesabın teknik gereği (e-posta, şifre)
-/// burada sorulur; takma ad dahil bütün kişisel sorular karşılama akışında
-/// Kimo'nun ağzından gelir. Başarılı oturumda AuthGate otomatik geçiş yapar.
+/// Var olan hesaba giriş.
+///
+/// **Kayıt buradan KALKTI.** Yeni kullanıcı artık anonim oturumla başlıyor ve
+/// hesabını karşılama akışının son adımında açıyor (`convertToPermanent`).
+/// İki ayrı kayıt yolu tutmak, ikisinin zamanla ayrışması demekti — ve
+/// buradaki yol yaş kapısından geçmiyordu.
+///
+/// Buradaki "veli onayı" onay kutusu da kaldırıldı. Task 01 onun tamamen
+/// kullanıcı-yazılabilir ve zaman damgasız olduğunu ölçmüştü; yerini yaş
+/// kapısı, `user_consents` defteri ve `can_add_friends` kısıtı aldı.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.startWithSignUp = false});
 
-  /// Karşılama ekranından "başlayalım" ile gelindiğinde kayıt formu açılır.
+  /// Geriye dönük uyumluluk için duruyor; artık davranışı değiştirmiyor.
   final bool startWithSignUp;
 
   @override
@@ -21,9 +33,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
-
-  late bool _isSignUp = widget.startWithSignUp;
-  bool _guardianConsent = false;
   bool _loading = false;
 
   @override
@@ -33,39 +42,18 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _snack(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
   Future<void> _submit() async {
+    final L10n l = L10n.of(context);
     final String email = _email.text.trim();
     final String password = _password.text;
     if (email.isEmpty || password.isEmpty) {
-      _snack('E-posta ve şifre gerekli.');
+      _snack(l.signInFailed);
       return;
     }
-    if (_isSignUp && !_guardianConsent) {
-      _snack('Devam etmek için veli onayını işaretle.');
-      return;
-    }
-
+    sound.tap();
     setState(() => _loading = true);
     try {
-      if (_isSignUp) {
-        // Takma ad burada sorulmaz; Kimo karşılama akışında sorar.
-        await authRepository.signUp(
-          email: email,
-          password: password,
-          guardianConsent: _guardianConsent,
-        );
-        if (authRepository.currentSession == null && mounted) {
-          _snack('Kayıt alındı. E-posta onayı açıksa gelen kutunu kontrol et.');
-        }
-      } else {
-        await authRepository.signIn(email: email, password: password);
-      }
+      await authRepository.signIn(email: email, password: password);
       // Oturum açıldıysa bu ekran (ve karşılama) yığından kalkmalı; arkadaki
       // AuthGate zaten uygulamaya/karşılama akışına geçmiş olur.
       if (authRepository.currentSession != null && mounted) {
@@ -73,158 +61,96 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
     } on AuthException catch (e) {
-      if (mounted) _snack(e.message);
-    } catch (_) {
-      if (mounted) _snack('Bir hata oluştu. Tekrar dene.');
+      debugPrint('giriş reddedildi: ${e.message}');
+      if (mounted) _snack(l.signInFailed);
+    } catch (e) {
+      debugPrint('giriş başarısız: $e');
+      if (mounted) _snack(l.errorGeneric);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                const SizedBox(height: 8),
-                Center(
-                  child: Container(
-                    width: 128,
-                    height: 128,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.purple.withValues(alpha: 0.14),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.purple.withValues(alpha: 0.30),
-                        width: 2,
-                      ),
-                    ),
-                    child: const Text('🐻', style: TextStyle(fontSize: 68)),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                // Kimo bu ekranda da konuşur; asıl sorular hemen ardından.
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.purple.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: AppColors.purple.withValues(alpha: 0.30),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Text(
-                    _isSignUp
-                        ? 'Önce kapıyı açalım:\nbir e-posta ve şifre yeter.'
-                        : 'Tekrar hoş geldin!\nSeni bekliyordum.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 19,
-                      height: 1.4,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.ink,
-                    ),
-                  ),
-                ),
-                if (_isSignUp) ...<Widget>[
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Adını, sınav yılını ve gerisini birazdan ben soracağım.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.inkLight,
-                      fontSize: 13.5,
-                      height: 1.35,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 22),
-                _field(_email, 'E-posta', TextInputType.emailAddress),
-                const SizedBox(height: 12),
-                _field(
-                  _password,
-                  'Şifre',
-                  TextInputType.visiblePassword,
-                  obscure: true,
-                ),
-                if (_isSignUp) ...<Widget>[
-                  const SizedBox(height: 8),
-                  CheckboxListTile(
-                    value: _guardianConsent,
-                    onChanged: (bool? v) =>
-                        setState(() => _guardianConsent = v ?? false),
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                    activeColor: AppColors.green,
-                    title: const Text(
-                      '18 yaşından küçüğüm ve velimin izni var.',
-                      style: TextStyle(fontSize: 13, color: AppColors.ink),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 16),
-                GameButton(
-                  label: _loading
-                      ? 'Lütfen bekle...'
-                      : (_isSignUp ? 'KAYIT OL' : 'GİRİŞ YAP'),
-                  enabled: !_loading,
-                  onPressed: _submit,
-                ),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: _loading
-                      ? null
-                      : () => setState(() => _isSignUp = !_isSignUp),
-                  child: Text(
-                    _isSignUp
-                        ? 'Zaten hesabın var mı? Giriş yap'
-                        : 'Hesabın yok mu? Kayıt ol',
-                    style: const TextStyle(
-                      color: AppColors.blueDark,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  void _snack(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Widget _field(
-    TextEditingController controller,
-    String hint,
-    TextInputType type, {
-    bool obscure = false,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: type,
-      obscureText: obscure,
-      decoration: InputDecoration(
-        hintText: hint,
-        filled: true,
-        fillColor: const Color(0xFFF4F4F4),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
+  @override
+  Widget build(BuildContext context) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    final L10n l = L10n.of(context);
+
+    return Scaffold(
+      backgroundColor: c.page,
+      appBar: AppBar(
+        backgroundColor: c.page,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          onPressed: () => Navigator.of(context).maybePop(),
+          icon: KimoIcon(KimoIcons.back, color: c.ink),
+          tooltip: l.actionBack,
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
+      ),
+      body: SafeArea(
+        child: Column(
+          children: <Widget>[
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: Gap.screen),
+                children: <Widget>[
+                  const Center(child: Kimo(size: 110)),
+                  const SizedBox(height: Gap.lg),
+                  Text(
+                    l.signInTitle,
+                    textAlign: TextAlign.center,
+                    style: t.title,
+                  ),
+                  const SizedBox(height: Gap.xl),
+                  TextField(
+                    controller: _email,
+                    keyboardType: TextInputType.emailAddress,
+                    autocorrect: false,
+                    style: t.body,
+                    decoration: InputDecoration(
+                      labelText: l.signUpEmail,
+                      filled: true,
+                      fillColor: c.sunken,
+                      border: OutlineInputBorder(
+                        borderRadius: Radii.all(Radii.tile),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: Gap.md),
+                  TextField(
+                    controller: _password,
+                    obscureText: true,
+                    style: t.body,
+                    onSubmitted: (_) => _submit(),
+                    decoration: InputDecoration(
+                      labelText: l.signUpPassword,
+                      filled: true,
+                      fillColor: c.sunken,
+                      border: OutlineInputBorder(
+                        borderRadius: Radii.all(Radii.tile),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  Gap.screen, Gap.md, Gap.screen, Gap.screen),
+              child: KimoButton(
+                label: l.signInAction,
+                onPressed: _loading ? null : _submit,
+              ),
+            ),
+          ],
         ),
       ),
     );

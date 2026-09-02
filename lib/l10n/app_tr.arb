@@ -1,0 +1,660 @@
+{
+  "@@locale": "tr",
+  "appTitle": "AI YKS Coach",
+  "@appTitle": {
+    "description": "Uygulama adı — görev yöneticisinde ve pencere başlığında görünür."
+  },
+  "navToday": "Bugün",
+  "@navToday": {
+    "description": "Alt sekme: bugünün tekrarları"
+  },
+  "navMistakes": "Hatalarım",
+  "@navMistakes": {
+    "description": "Alt sekme: hata arşivi"
+  },
+  "navLeague": "Lig",
+  "@navLeague": {
+    "description": "Alt sekme: haftalık lig"
+  },
+  "navProfile": "Profil",
+  "@navProfile": {
+    "description": "Alt sekme: profil"
+  },
+  "navCapture": "Yanlışını çek",
+  "@navCapture": {
+    "description": "Alt çubuğun ortasındaki kamera düğmesinin erişilebilirlik etiketi"
+  },
+  "actionContinue": "Devam et",
+  "actionCancel": "Vazgeç",
+  "actionSave": "Kaydet",
+  "actionBack": "Geri",
+  "actionClose": "Kapat",
+  "actionRetry": "Tekrar dene",
+  "actionCopy": "Kopyala",
+  "actionCopied": "Kopyalandı",
+  "themeSystem": "Sistem",
+  "@themeSystem": {
+    "description": "Tema seçimi: cihazı takip et"
+  },
+  "themeLight": "Açık",
+  "themeDark": "Koyu",
+  "errorGeneric": "Bir şeyler ters gitti. Tekrar dener misin?",
+  "@errorGeneric": {
+    "description": "Beklenmeyen hata. Sessiz yutma yerine kullanıcıya gösterilir."
+  },
+  "captureTitle": "Yanlışını çek",
+  "@captureTitle": {
+    "description": "3e — çekim ekranının başlığı"
+  },
+  "captureFromCamera": "Kamera ile çek",
+  "captureFromGallery": "Galeriden seç",
+  "captureRetake": "Yeniden çek",
+  "capturePhotoFailed": "Fotoğraf alınamadı.",
+  "captureScanning": "Soruyu okuyorum",
+  "@captureScanning": {
+    "description": "AI analizi sürerken gösterilen başlık"
+  },
+  "captureScanningDetail": "Şıklarını ve konusunu çıkarıyorum",
+  "captureOfflineNote": "İnternet giderse fotoğraf kuyruğa girmez — şıkları ve konuyu elle girip yine de kaydedebilirsin.",
+  "@captureOfflineNote": {
+    "description": "Çevrimdışıyken AI çalışmaz ama kaydetme yolu açık kalır."
+  },
+  "captureEmptyTitle": "Çözemediğin soruyu çek",
+  "captureEmptyBody": "Şıklarını ve konusunu ben çıkarayım; sen yalnızca doğru şıkkı işaretle.",
+  "captureManualEntry": "Fotoğrafsız devam et",
+  "@captureManualEntry": {
+    "description": "AI hakkı yokken/çevrimdışıyken elle giriş yolu"
+  },
+  "creditLeft": "{count, plural, =0{Bugünlük okutma hakkın bitti} =1{1 okutma hakkın kaldı} other{{count} okutma hakkın kaldı}}",
+  "@creditLeft": {
+    "description": "Kalan günlük yapay zekâ hakkı",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creditExhaustedTitle": "Bugünlük okutma hakkın bitti",
+  "creditExhaustedBody": "Fotoğrafın duruyor. Şıkları ve konuyu elle gir, soru yine arşivine düşsün. Hakların yarın yenilenecek.",
+  "@creditExhaustedBody": {
+    "description": "Hak bitti — kaydetme yolu asla kapanmaz. Geri sayım GÖSTERİLMEZ."
+  },
+  "confirmTitle": "Onayla ve kaydet",
+  "confirmIntro": "Şunları çıkardım — yanlış olan varsa dokun, düzelt.",
+  "confirmIntroManual": "Sınavı, dersi ve konuyu seç; sonra doğru şıkkı işaretle.",
+  "confirmFullscreen": "Tam ekran",
+  "confirmExam": "Sınav",
+  "confirmSubject": "Ders",
+  "confirmTopic": "Konu",
+  "confirmTopicPick": "Konu seç",
+  "confirmCorrectOption": "Doğru şık",
+  "confirmWhyWrong": "Neden yanlış yaptın?",
+  "confirmOptional": "(isteğe bağlı)",
+  "confirmSave": "Arşive kaydet",
+  "confirmSaveFailed": "Kaydedilemedi. Tekrar dene.",
+  "confirmNextReview": "Bu soru yarın karşına çıkacak",
+  "@confirmNextReview": {
+    "description": "Tekrar merdiveninin İLK adımı koddaki `steps.first` = 1 gün. Tasarımdaki '3 gün' değeri koddaki değerle çelişiyordu; kod kazandı."
+  },
+  "confirmNeedTopic": "Önce ders ve konu seç",
+  "confirmNeedCorrect": "Doğru şıkkı işaretle",
+  "practiceNext": "Sonraki soru",
+  "practiceTimesSeen": "{count, plural, =1{İlk kez karşında} other{{count}. kez karşında}}",
+  "@practiceTimesSeen": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceCorrectTitle": "Yakaladın!",
+  "practiceWrongTitle": "Şimdilik gitti",
+  "@practiceWrongTitle": {
+    "description": "Ceza dili YOK: 'kaybettin' demiyoruz."
+  },
+  "practiceMasteredBody": "Bunu artık hâkim sayıyorum — kuyruktan çıktı.",
+  "@practiceMasteredBody": {
+    "description": "`mastered` yalnızca 30 günlük adımda doğru cevaplanınca oluyor ve soru kuyruktan çıkıyor."
+  },
+  "practiceNextInDays": "{count, plural, =1{Yarın yeniden soracağım} other{{count} gün sonra yeniden soracağım}}",
+  "@practiceNextInDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceXpGain": "+{xp} XP",
+  "@practiceXpGain": {
+    "placeholders": {
+      "xp": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceCombo": "×{multiplier} seri",
+  "@practiceCombo": {
+    "description": "Çarpan SUNUCUDAN gelir; gösterilen sayı gerçekten uygulanan sayıdır.",
+    "placeholders": {
+      "multiplier": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceEmptyTitle": "Bugün tekrar yok",
+  "practiceEmptyBody": "Yeni bir yanlış çek ya da yarın gel.",
+  "sessionDoneOverline": "Gün tamamlandı",
+  "sessionSolvedCount": "{count, plural, other{{count} soru avladın}}",
+  "@sessionSolvedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionFirstTry": "ilk denemede",
+  "sessionLongestCombo": "en uzun seri",
+  "sessionXp": "XP",
+  "sessionLevel": "Seviye {level}",
+  "@sessionLevel": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionOpenChest": "Sandığı aç",
+  "sessionChestReady": "Günlük sandığın hazır — dokun ve aç",
+  "sessionChestGems": "+{count} elmas",
+  "@sessionChestGems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionExtraRound": "Ekstra tur · {count} soru",
+  "@sessionExtraRound": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionEnough": "Bugünlük bu kadar",
+  "sessionStreakGrew": "Serin {count} güne çıktı",
+  "@sessionStreakGrew": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceLoadFailed": "Sorular yüklenemedi.",
+  "practiceScheduleFailed": "Tekrar planı kaydedilemedi. Bu soru yarın yine karşına çıkabilir.",
+  "@practiceScheduleFailed": {
+    "description": "Sessiz yutma yok: plan yazılamadıysa kullanıcı bilir."
+  },
+  "practiceSelfCorrect": "Doğru çözdüm",
+  "practiceSelfWrong": "Bilemedim",
+  "practiceNote": "Notun",
+  "mistakeLeechBadge": "İNATÇI",
+  "@mistakeLeechBadge": {
+    "description": "En az dört kez yanlış bilinen soru. Eşik ReviewScheduler.leechThreshold = 4."
+  },
+  "practiceFullscreen": "Tam ekran",
+  "practiceProgress": "{done}/{target}",
+  "@practiceProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceExtra": "Ekstra {count}",
+  "@practiceExtra": {
+    "description": "Günlük hedef dolduktan sonra çözülmeye devam edilen sorular.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceFinish": "Bitir",
+  "practiceEmptySubjectBody": "{subject} dersinde bugünlük tekrar kalmadı.",
+  "@practiceEmptySubjectBody": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "practiceQueuedCount": "{count, plural, =1{1 cevabın gönderilmeyi bekliyor} other{{count} cevabın gönderilmeyi bekliyor}}",
+  "@practiceQueuedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionGoalReached": "Günlük hedefini tamamladın",
+  "sessionContinue": "Devam et",
+  "todayEmptyTitle": "Arşivin henüz boş",
+  "@todayEmptyTitle": {
+    "description": "3c — hiç kayıt yokken. Havuz kartı YOK: tek yol kendi yanlışını çekmek."
+  },
+  "todayEmptyBody": "Çözemediğin bir soruyu çek; şıklarını ve konusunu ben çıkarayım, sonra doğru zamanda karşına getireyim.",
+  "todayEmptyAction": "İlk yanlışını çek",
+  "todayGoalTitle": "Bugünün tekrarları",
+  "todayGoalDone": "Bugünü tamamladın",
+  "todayNothingDue": "Bugün tekrar yok",
+  "todayNothingDueBody": "Yeni bir yanlış çekebilir ya da yarın gelebilirsin.",
+  "todayStart": "Başla",
+  "todaySubjects": "Ders seç",
+  "todayMockNotice": "Demo modundasın: tüm hatalar birlikte çözülür.",
+  "todayStreakAtRisk": "{count, plural, =1{1 günlük serin bugün sona erebilir} other{{count} günlük serin bugün sona erebilir}}",
+  "@todayStreakAtRisk": {
+    "description": "Yalnızca gerçekten risk varken gösteriliyor (bugün hiç çözülmediyse).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "todayIncoming": "{count, plural, =1{Arkadaşından 1 soru geldi} other{Arkadaşından {count} soru geldi}}",
+  "@todayIncoming": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hudStreakLabel": "{count, plural, =0{Seri yok} =1{1 günlük seri} other{{count} günlük seri}}",
+  "@hudStreakLabel": {
+    "description": "Ekran okuyucu için tam cümle; görselde yalnızca sayı var.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hudGemsLabel": "{count, plural, =0{Elmasın yok} other{{count} elmas}}",
+  "@hudGemsLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creditExplain": "Fotoğraf okutma hakkın günde {quota}. Soru kaydetmek her zaman serbest; hak yalnızca yapay zekânın soruyu okuması için harcanıyor.",
+  "@creditExplain": {
+    "description": "Can nedir. Geri sayım GÖSTERİLMİYOR; yalnızca kalan sayı ve kural.",
+    "placeholders": {
+      "quota": {
+        "type": "int"
+      }
+    }
+  },
+  "mistakesTitle": "Hatalarım",
+  "mistakesTotal": "{count, plural, =0{Henüz kayıt yok} =1{1 soru} other{{count} soru}}",
+  "@mistakesTotal": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mistakesMastered": "Hâkim",
+  "mistakesLearning": "Öğreniyorum",
+  "mistakesDueToday": "Bugün",
+  "mistakesLeechTitle": "İnatçılar",
+  "mistakesLeechBody": "Seni en az dört kez yenen sorular. Bunlarda konuyu baştan çalışmak, tekrarı sürdürmekten daha hızlı.",
+  "@mistakesLeechBody": {
+    "description": "Eşik ReviewScheduler.leechThreshold = 4. Tasarımda 'en az üç kez' yazıyordu; koddaki değer kazandı."
+  },
+  "mistakesWeekTitle": "Son 7 gün",
+  "mistakesWeekEmpty": "Bu hafta hiç soru eklemedin.",
+  "mistakesEmptyTitle": "Arşivin boş",
+  "mistakesEmptyBody": "Çözemediğin ilk soruyu çek; buraya düşsün.",
+  "mistakesFilterAll": "Tümü",
+  "mistakesNoMatch": "Bu filtreye uyan soru yok.",
+  "mistakesLoadFailed": "Hatalar yüklenemedi.",
+  "mistakesLapses": "{count, plural, other{{count} kez yanıldın}}",
+  "@mistakesLapses": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mistakesSend": "Arkadaşına gönder",
+  "leagueTab": "Lig",
+  "friendsTab": "Arkadaşlar",
+  "leagueDaysLeft": "{count, plural, =0{Bugün kapanıyor} =1{1 gün kaldı} other{{count} gün kaldı}}",
+  "@leagueDaysLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "leagueCohortNote": "{size} kişilik grubunda ilk {up} yükselir, son {down} düşer.",
+  "@leagueCohortNote": {
+    "description": "Sayılar League.cohortSize / promotionCount / demotionCount'tan; sunucudaki league_cohort_size() ile aynı olmak zorunda.",
+    "placeholders": {
+      "size": {
+        "type": "int"
+      },
+      "up": {
+        "type": "int"
+      },
+      "down": {
+        "type": "int"
+      }
+    }
+  },
+  "leaguePromotionZone": "Yükselme",
+  "leagueDemotionZone": "Düşme",
+  "leagueYou": "Sen",
+  "leagueEmpty": "Bu hafta henüz bir gruba atanmadın. Bir soru çöz, pazartesi grubuna girersin.",
+  "leagueLoadFailed": "Lig yüklenemedi.",
+  "leagueRankOf": "{rank}. / {total}",
+  "@leagueRankOf": {
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "leagueWeeklyXp": "{xp} XP",
+  "@leagueWeeklyXp": {
+    "placeholders": {
+      "xp": {
+        "type": "int"
+      }
+    }
+  },
+  "friendsMyCode": "Arkadaş kodun",
+  "friendsCodeHint": "Kodunu paylaş; arkadaşın bu kodla seni ekleyebilir.",
+  "friendsCodeRotate": "Kodu yenile",
+  "friendsCodeRotated": "Kodun yenilendi. Eski kod artık çalışmıyor.",
+  "friendsCodeRotateFailed": "Kod yenilenemedi.",
+  "friendsCodeRotateOncePerDay": "Kodunu bugün zaten yeniledin.",
+  "friendsAddTitle": "Arkadaş ekle",
+  "friendsAddHint": "Arkadaşının kodu",
+  "friendsAddAction": "Ekle",
+  "friendsAddFailed": "Eklenemedi. Tekrar dene.",
+  "friendsRequests": "Gelen istekler",
+  "friendsList": "Arkadaşların",
+  "friendsEmpty": "Henüz arkadaşın yok. Kodunu paylaş ya da arkadaşının kodunu gir.",
+  "friendsAccept": "Kabul et",
+  "friendsRemove": "Çıkar",
+  "friendsBlock": "Engelle",
+  "friendsBlocked": "Engellendi. Sana soru gönderemez ve istek atamaz.",
+  "friendsMutual": "{count, plural, =0{} =1{1 ortak arkadaş} other{{count} ortak arkadaş}}",
+  "@friendsMutual": {
+    "description": "Sunucu yalnızca SAYI döndürüyor; ortak arkadaşların kimliği sızdırılmıyor.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "friendsActionFailed": "İşlem tamamlanamadı. Tekrar dene.",
+  "friendsLoadFailed": "Arkadaşlar yüklenemedi.",
+  "friendsConfirmRemoveTitle": "Arkadaşlıktan çıkar",
+  "friendsConfirmRemoveBody": "{name} artık sana soru gönderemez. İstersen sonra yeniden ekleyebilirsin.",
+  "@friendsConfirmRemoveBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "friendsConfirmBlockTitle": "Engelle",
+  "friendsConfirmBlockBody": "{name} sana soru gönderemez, arkadaş isteği atamaz ve listelerde seni göremez.",
+  "@friendsConfirmBlockBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxTitle": "Gelen kutusu",
+  "inboxEmpty": "Kutun boş. Arkadaşların sana soru gönderdiğinde burada görünecek.",
+  "inboxLoadFailed": "Gelen sorular yüklenemedi.",
+  "inboxFrom": "{name} gönderdi",
+  "@inboxFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxSolve": "Çöz",
+  "inboxDelete": "Sil",
+  "inboxReport": "Bildir",
+  "inboxDeleted": "Soru kutundan kaldırıldı.",
+  "inboxReportTitle": "Neyi bildiriyorsun?",
+  "inboxReportNoteHint": "Kısaca ne olduğunu yaz (isteğe bağlı)",
+  "inboxReportBlockAlso": "Bu kişiyi de engelle",
+  "inboxReportSend": "Bildir",
+  "inboxReportSent": "Bildirimin alındı. Ekibimiz inceleyecek; incelenene kadar bu içerik senden gizlendi.",
+  "@inboxReportSent": {
+    "description": "SÜRE TAAHHÜDÜ YOK. Tasarımdaki '24 saat içinde incelenir' ifadesi tutulamayacak bir söz veriyordu."
+  },
+  "inboxReportFailed": "Bildirim gönderilemedi.",
+  "inboxSolvedAlready": "Bunu çözdün.",
+  "inboxCorrect": "Doğru!",
+  "inboxWrong": "Doğru cevap: {label}",
+  "@inboxWrong": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "welcomeTitle": "Merhaba, ben Kimo",
+  "welcomeBody": "Yanlışlarını toplarım, tam unutacakken karşına çıkarırım.",
+  "welcomePrimary": "İlk yanlışını çek",
+  "welcomeSecondary": "Hesabım var",
+  "welcomeNoAccountNote": "Hesap açmadan başlayabilirsin; kaydı sonda isteyeceğim.",
+  "welcomeStartFailed": "Başlanamadı. Bağlantını kontrol edip tekrar dene.",
+  "onboardStep": "{step}/{total}",
+  "@onboardStep": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardSaveFailed": "Kaydedilemedi. Tekrar dene.",
+  "onboardBack": "Geri",
+  "ageTitle": "Kaç yılında doğdun?",
+  "ageBody": "Yaşını yalnızca yaş sınırını uygulamak için soruyorum. Tam doğum tarihini istemiyorum.",
+  "@ageBody": {
+    "description": "Yalnızca DOĞUM YILI toplanıyor; tam tarih gereğinden fazla kişisel veri."
+  },
+  "ageWriteOnceNote": "Doğum yılı bir kez yazılır, sonradan değiştirilemez.",
+  "ageSaveFailed": "Doğum yılı kaydedilemedi.",
+  "ageMinorTitle": "Velinin e-postası",
+  "ageMinorBody": "18 yaşından küçüksün. Arkadaş ekleme, velin onay verene kadar kapalı. Kalan her şeyi şimdi kullanabilirsin.",
+  "@ageMinorBody": {
+    "description": "Onay YALNIZCA arkadaş eklemeyi kapatıyor; başka hiçbir özellik onaya bağlı değil."
+  },
+  "ageGuardianHint": "veli@ornek.com",
+  "ageGuardianSend": "Onay e-postası gönder",
+  "ageGuardianSent": "E-posta gönderildi. Velin bağlantıya tıklayınca arkadaş ekleme açılacak.",
+  "ageGuardianFailed": "E-posta gönderilemedi. Adresi kontrol edip tekrar dene.",
+  "ageGuardianInvalid": "Geçerli bir e-posta adresi yaz.",
+  "ageGuardianPending": "Onay bekleniyor",
+  "ageGuardianGranted": "Veli onayı alındı",
+  "profileStepTitle": "Seni nasıl çağırayım?",
+  "profileNicknameHint": "Takma adın",
+  "profileExamYearTitle": "Hangi yıl gireceksin?",
+  "mascotStepTitle": "Kimo'nun rengini seç",
+  "mascotStepBody": "Sesini ve rengini belirler; yüzü hep aynı kalır.",
+  "notifyStepTitle": "Hatırlatayım mı?",
+  "notifyStepBody": "Günde en fazla iki kez: tekrarların hazır olduğunda ve serin tehlikeye girdiğinde. Saatlerini Ayarlar'dan değiştirebilirsin.",
+  "notifyYes": "Evet, hatırlat",
+  "notifyNo": "Şimdilik hayır",
+  "notifyDenied": "Bildirim izni verilmedi. Ayarlar'dan sonra açabilirsin.",
+  "signUpTitle": "Son adım: hesabını aç",
+  "signUpBodyAnonymous": "Çektiğin soru ve ilerlemen bu hesaba bağlanacak — hiçbir şey kaybolmuyor.",
+  "@signUpBodyAnonymous": {
+    "description": "Anonim oturum kalıcıya çevriliyor; uid aynı kaldığı için veri gerçekten taşınmıyor."
+  },
+  "signUpBody": "E-posta ve parola yeterli.",
+  "signUpEmail": "E-posta",
+  "signUpPassword": "Parola",
+  "signUpPasswordShort": "Parola en az 8 karakter olmalı.",
+  "signUpEmailInvalid": "Geçerli bir e-posta adresi yaz.",
+  "signUpAction": "Hesabımı aç",
+  "signUpFailed": "Hesap açılamadı. Tekrar dene.",
+  "signUpEmailTaken": "Bu e-posta zaten kayıtlı. Giriş yapmayı dene.",
+  "signUpDone": "Hazırsın!",
+  "signInTitle": "Tekrar hoş geldin",
+  "signInAction": "Giriş yap",
+  "signInFailed": "Giriş yapılamadı. E-posta ve parolanı kontrol et.",
+  "guardianStatusMinor": "18 yaş altı",
+  "guardianStatusNeeded": "Arkadaş ekleme veli onayına bağlı",
+  "profileTitle": "Profil",
+  "profileSettings": "Ayarlar",
+  "profileXp": "Toplam XP",
+  "profileStreak": "Seri",
+  "profileFriends": "Arkadaş",
+  "profileLevelProgress": "Seviye {level} · {current}/{total} XP",
+  "@profileLevelProgress": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      },
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "profileAvatarChange": "Fotoğrafı değiştir",
+  "profileAvatarCamera": "Kamera ile çek",
+  "profileAvatarGallery": "Galeriden seç",
+  "profileAvatarRemove": "Fotoğrafı kaldır",
+  "profileAvatarFailed": "Fotoğraf değiştirilemedi.",
+  "settingsTitle": "Ayarlar",
+  "settingsAppearance": "Görünüm",
+  "settingsTheme": "Tema",
+  "settingsSound": "Ses efektleri",
+  "settingsNotifications": "Bildirimler",
+  "settingsReviewHour": "Tekrar hatırlatması",
+  "settingsStreakHour": "Seri hatırlatması",
+  "settingsQuietHours": "Sessiz saatler",
+  "settingsQuietRange": "{start}:00 – {end}:00",
+  "@settingsQuietRange": {
+    "placeholders": {
+      "start": {
+        "type": "int"
+      },
+      "end": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsQuietNote": "Bu aralıkta bildirim gönderilmez. Aralığa denk gelen hatırlatma bir sonraki uygun saate kayar.",
+  "settingsHourValue": "{hour}:00",
+  "@settingsHourValue": {
+    "placeholders": {
+      "hour": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsNotifyOff": "Bildirimler kapalı",
+  "settingsNotifyOffNote": "Saatleri değiştirmek için önce bildirimleri aç.",
+  "settingsNotifyEnable": "Bildirimleri aç",
+  "settingsAccount": "Hesap",
+  "settingsMascot": "Kimo'nun karakteri",
+  "settingsExamYear": "Sınav yılı",
+  "settingsBirthYear": "Doğum yılı",
+  "settingsBirthYearUnset": "Belirtilmedi",
+  "settingsGuardian": "Veli onayı",
+  "settingsAdmin": "Yönetim",
+  "settingsModeration": "Şikâyet kuyruğu",
+  "settingsAllQuestions": "Tüm sorular",
+  "settingsSignOut": "Çıkış yap",
+  "settingsDeleteAccount": "Hesabımı sil",
+  "deleteTitle": "Hesabımı sil",
+  "deleteWarning": "Bu işlem geri alınamaz. Bekleme süresi yok; hesabın ve verin gerçekten silinir.",
+  "deleteWhatGoes": "Silinecekler",
+  "deleteItemMistakes": "Arşivindeki tüm sorular ve fotoğrafları",
+  "deleteItemProgress": "XP, seri, lig geçmişin ve elmasların",
+  "deleteItemSocial": "Arkadaşlıkların ve gönderdiğin sorular",
+  "deleteItemAccount": "E-postan ve hesabın",
+  "deleteConfirmPrompt": "Onaylamak için takma adını yaz: {nickname}",
+  "@deleteConfirmPrompt": {
+    "placeholders": {
+      "nickname": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteConfirmHint": "Takma adın",
+  "deleteAction": "Hesabımı kalıcı olarak sil",
+  "deleteRunning": "Siliniyor…",
+  "deleteFailed": "Hesap silinemedi. Hiçbir şey silinmedi; tekrar dene.",
+  "@deleteFailed": {
+    "description": "Sunucu önce depolamayı boşaltıyor; kısmi başarıda hesabı SİLMİYOR ve hata dönüyor."
+  },
+  "deleteDone": "Hesabın silindi.",
+  "examYearTitle": "YKS'ye hangi yıl gireceksin?",
+  "examYearBody": "Konuları doğru müfredata göre eşleştirebilmek için gerekli.",
+  "examYearMaarif": "Yeni müfredat (Maarif Modeli)",
+  "examYearOld": "Mevcut müfredat (2018)",
+  "examYearSaveFailed": "Sınav yılı kaydedilemedi.",
+  "topicPickerTitle": "Konu seç",
+  "topicPickerSearch": "Konu ara",
+  "topicPickerNoMatch": "Eşleşen konu yok.",
+  "sendTitle": "Arkadaşına gönder",
+  "sendNoFriends": "Henüz arkadaşın yok. Arkadaş kodunu paylaşınca burada görünecekler.",
+  "sendNoteHint": "Kısa bir not (isteğe bağlı)",
+  "sendAction": "Gönder",
+  "sendSelected": "{count, plural, =0{Kimse seçilmedi} =1{1 kişi seçildi} other{{count} kişi seçildi}}",
+  "@sendSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sendFailed": "Gönderilemedi. Tekrar dene.",
+  "sendLoadFailed": "Arkadaş listesi yüklenemedi.",
+  "publicProfileTitle": "Profil",
+  "publicProfileLoadFailed": "Profil yüklenemedi.",
+  "defaultNickname": "Öğrenci",
+  "@defaultNickname": {
+    "description": "Takma ad henüz yazılmamışsa gösterilen ad."
+  },
+  "friendsAddSent": "{nickname} adlı arkadaşına istek gönderildi",
+  "@friendsAddSent": {
+    "placeholders": {
+      "nickname": {
+        "type": "String"
+      }
+    }
+  },
+  "friendsAddBlockedByGuardian": "Arkadaş ekleme, velinin onayı gelene kadar kapalı.",
+  "friendsAddNotFound": "Böyle bir kod yok.",
+  "@friendsAddNotFound": {
+    "description": "TEK MESAJ: kod yok / kendi kodun / engelli / anonim ayrımı yapılmıyor. Ayırmak kod uzayını taramayı ucuzlatırdı."
+  }
+}

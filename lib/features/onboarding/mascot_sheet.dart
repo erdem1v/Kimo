@@ -1,18 +1,28 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../../models/mascot.dart';
 import '../../services/sound_service.dart';
 import '../../state/user_profile.dart';
-import '../../theme/app_colors.dart';
+import '../../theme/tokens.dart';
+import '../../theme/typography.dart';
+import '../../widgets/kimo/kimo.dart';
+import '../../widgets/kimo/kimo_pose.dart';
+import '../../widgets/kit/kimo_icons.dart';
+import '../../widgets/kit/kimo_surfaces.dart';
 
-/// Maskot (koç karakteri) değiştirme alt sayfası — profilden açılır.
+/// Kimo'nun karakteri — ayarlardan açılır.
+///
+/// Karakter Kimo'nun YÜZÜNÜ değiştirmiyor; rengini ve bildirimlerdeki sesini
+/// belirliyor. Bu yüzden satırlarda emoji yok: her satır Kimo'nun o karakterle
+/// aldığı rengi gösteriyor.
 Future<void> showMascotSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.white,
+    backgroundColor: context.c.card,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
     ),
     builder: (BuildContext ctx) => const _MascotSheet(),
   );
@@ -28,9 +38,13 @@ class _MascotSheet extends StatefulWidget {
 class _MascotSheetState extends State<_MascotSheet> {
   @override
   Widget build(BuildContext context) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    final L10n l = L10n.of(context);
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+        padding: const EdgeInsets.fromLTRB(
+            Gap.screen, Gap.lg, Gap.screen, Gap.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,27 +54,27 @@ class _MascotSheetState extends State<_MascotSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.line,
-                  borderRadius: BorderRadius.circular(2),
+                  color: c.border,
+                  borderRadius: Radii.all(2),
                 ),
               ),
             ),
-            const SizedBox(height: 18),
-            const Text(
-              'Koçun kim olsun?',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            const SizedBox(height: Gap.lg),
+            Text(l.mascotStepTitle, style: t.section),
+            const SizedBox(height: Gap.xxs),
+            Text(
+              l.mascotStepBody,
+              style: t.caption.copyWith(color: c.inkMuted),
             ),
-            const SizedBox(height: 4),
-            const Text(
-              'Bildirimleri ve motivasyon sözlerini o yazar.',
-              style: TextStyle(color: AppColors.inkLight, fontSize: 13),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: Gap.lg),
             Flexible(
               child: ListView(
                 shrinkWrap: true,
                 children: <Widget>[
-                  for (final Mascot m in Mascot.values) _tile(m),
+                  for (final Mascot m in Mascot.values) ...<Widget>[
+                    _tile(context, m),
+                    const SizedBox(height: Gap.sm),
+                  ],
                 ],
               ),
             ),
@@ -70,65 +84,45 @@ class _MascotSheetState extends State<_MascotSheet> {
     );
   }
 
-  Widget _tile(Mascot m) {
+  Widget _tile(BuildContext context, Mascot m) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
     final bool selected = userProfile.mascot == m;
-    return GestureDetector(
+    return KimoCard(
+      padding: const EdgeInsets.all(Gap.md),
+      radius: Radii.tile,
+      elevated: selected,
+      color: selected ? c.actionTint : c.sunken,
       onTap: () async {
         sound.tap();
         await userProfile.setMascot(m);
         if (mounted) Navigator.of(context).pop();
       },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: selected ? m.color.withValues(alpha: 0.12) : Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: selected ? m.color : AppColors.line,
-            width: selected ? 2.5 : 1.5,
+      child: Row(
+        children: <Widget>[
+          Kimo(size: 40, mood: selected ? KimoMood.happy : null),
+          const SizedBox(width: Gap.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  m.label,
+                  style: selected
+                      ? t.label.copyWith(color: c.actionText)
+                      : t.label,
+                ),
+                const SizedBox(height: Gap.xxs),
+                Text(
+                  m.tagline,
+                  style: t.caption.copyWith(color: c.inkMuted),
+                ),
+              ],
+            ),
           ),
-        ),
-        child: Row(
-          children: <Widget>[
-            Container(
-              width: 48,
-              height: 48,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: m.color.withValues(alpha: selected ? 0.25 : 0.12),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Text(m.emoji, style: const TextStyle(fontSize: 24)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    m.label,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                      color: selected ? m.color : AppColors.ink,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    m.tagline,
-                    style: const TextStyle(
-                      color: AppColors.inkLight,
-                      fontSize: 12.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (selected)
-              Icon(Icons.check_circle_rounded, color: m.color, size: 22),
-          ],
-        ),
+          if (selected)
+            KimoIcon(KimoIcons.check, size: 20, color: c.actionText),
+        ],
       ),
     );
   }

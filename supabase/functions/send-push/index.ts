@@ -1,13 +1,25 @@
 // Anlık bildirim gönderici. Veritabanı tetikleyicisi çağırır, bu fonksiyon
 // kullanıcının cihaz kayıtlarını bulup FCM'e iletir.
 //
+// YETKİ MODELİ (0028 göçüyle değişti):
+// Eskiden fonksiyon `--no-verify-jwt` ile yayımlanıyordu ve tek koruma
+// `x-push-secret` başlığıydı. O model dört ayrı sorun üretiyordu: 401 gövdesi
+// sunucudaki sırrın tam uzunluğunu yayınlıyordu, karşılaştırma sabit zamanlı
+// değildi, deneme sınırı yoktu ve uç nokta kimlik doğrulamasız olarak internete
+// açıktı.
+//
+// Artık doğrulamayı Supabase ağ geçidi yapıyor: config.toml'da
+// [functions.send-push] verify_jwt = true. Geçersiz ya da eksik JWT bu koda
+// HİÇ ULAŞMADAN reddediliyor — yani sır karşılaştırması, uzunluk sızıntısı ve
+// kaba kuvvet yüzeyi tamamen ortadan kalktı. Veritabanı çağrıyı app_config'teki
+// service_role jetonuyla imzalıyor (bkz. public.send_push).
+//
 // Gizli değerler (Supabase secrets):
 //   FIREBASE_SERVICE_ACCOUNT  → Firebase servis hesabı JSON'ı (tek satır)
-//   PUSH_SECRET               → app_config.push_secret ile aynı değer
 //   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY → platform tarafından sağlanır
 //
-// Deploy: supabase functions deploy send-push --no-verify-jwt
-// (Çağrı veritabanından geldiği için JWT yok; yetki x-push-secret ile.)
+// Deploy (artık bayrak YOK):
+//   supabase functions deploy send-push
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -17,8 +29,53 @@ interface ServiceAccount {
   project_id: string;
 }
 
+/** Yalnızca veritabanı tetikleyicilerinin ürettiği senaryolar. */
+const ALLOWED_KINDS = new Set([
+  "question_received",
+  "friend_request",
+  "question_solved",
+  "friend_league_up",
+  "friend_streak",
+]);
+
+const MAX_TITLE = 120;
+const MAX_BODY = 400;
+
 // Erişim jetonu pahalı üretiliyor; örnek yaşadığı sürece saklanır.
 let cachedToken: { value: string; expiresAt: number } | null = null;
+
+/**
+ * Tek tip, ayrıntısız hata. Dışarıya HİÇBİR iç durum sızdırmaz: uzunluk yok,
+ * "sunucuda sır var mı" yok, hangi alanın eksik olduğu yok. Teşhis sunucu
+ * günlüğüne yazılır, yanıta değil.
+ */
+function deny(status: number, logDetail: string): Response {
+  console.error(`[send-push] ${status}: ${logDetail}`);
+  return new Response(JSON.stringify({ error: "gecersiz_istek" }), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+/**
+ * Ağ geçidi JWT imzasını zaten doğruladı (verify_jwt = true); burada yalnızca
+ * rol iddiasını okuyoruz. Yani bu, imza doğrulaması DEĞİL — savunma derinliği:
+ * geçerli bir SON KULLANICI jetonuyla yapılan çağrıyı da reddetmek için.
+ * İmza doğrulamasının tek kaynağı ağ geçididir; verify_jwt kapatılırsa bu
+ * kontrol tek başına yeterli olmaz.
+ */
+function isServiceRole(authHeader: string | null): boolean {
+  if (!authHeader?.startsWith("Bearer ")) return false;
+  const parts = authHeader.slice(7).trim().split(".");
+  if (parts.length !== 3) return false;
+  try {
+    const pad = "=".repeat((4 - (parts[1].length % 4)) % 4);
+    const json = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/") + pad);
+    return JSON.parse(json)?.role === "service_role";
+  } catch {
+    return false;
+  }
+}
 
 function pemToBinary(pem: string): Uint8Array {
   const body = pem
@@ -74,7 +131,7 @@ async function getAccessToken(sa: ServiceAccount): Promise<string> {
       assertion: jwt,
     }),
   });
-  if (!res.ok) throw new Error(`token alınamadı: ${await res.text()}`);
+  if (!res.ok) throw new Error(`token alınamadı: ${res.status}`);
 
   const data = await res.json();
   cachedToken = {
@@ -86,43 +143,35 @@ async function getAccessToken(sa: ServiceAccount): Promise<string> {
 
 Deno.serve(async (req: Request) => {
   try {
-    // Yetki: veritabanı tetikleyicisinin bildiği paylaşılan sır.
-    const secret = Deno.env.get("PUSH_SECRET");
-    const headerSecret = req.headers.get("x-push-secret");
-    if (!secret || headerSecret !== secret) {
-      // Sırrı sızdırmadan neyin uyuşmadığını söyle (teşhis için).
-      return new Response(
-        JSON.stringify({
-          error: "yetkisiz",
-          sunucuda_sir_var: Boolean(secret),
-          sunucudaki_uzunluk: secret?.length ?? 0,
-          gelen_baslik_var: headerSecret !== null,
-          gelen_uzunluk: headerSecret?.length ?? 0,
-        }),
-        { status: 401, headers: { "Content-Type": "application/json" } },
-      );
+    // Ağ geçidi imzayı doğruladı; burada yalnızca "bu bir service_role jetonu mu"
+    // sorusunu soruyoruz. Son kullanıcı jetonuyla yapılan çağrılar reddedilir.
+    if (!isServiceRole(req.headers.get("Authorization"))) {
+      return deny(403, "service_role olmayan cagri");
     }
 
-    // Gövdeyi savunmacı ayrıştır: boş/bozuk gelirse net söyle.
-    const raw = await req.text();
     let payload: Record<string, unknown> = {};
     try {
+      const raw = await req.text();
       payload = raw ? JSON.parse(raw) : {};
-    } catch (_e) {
-      return new Response(
-        JSON.stringify({ error: "gövde JSON değil", uzunluk: raw.length }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
+    } catch {
+      return deny(400, "govde JSON degil");
     }
-    const user_id = payload.user_id as string | undefined;
-    const title = payload.title as string | undefined;
-    const body = payload.body as string | undefined;
-    const kind = payload.kind as string | undefined;
-    if (!user_id || !body) {
-      return new Response(
-        JSON.stringify({ error: "eksik alan", govde_uzunlugu: raw.length }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
+
+    const user_id = typeof payload.user_id === "string" ? payload.user_id : "";
+    const kind = typeof payload.kind === "string" ? payload.kind : "";
+    const title = typeof payload.title === "string" ? payload.title : "";
+    const body = typeof payload.body === "string" ? payload.body : "";
+
+    // UUID biçimi + senaryo beyaz listesi + uzunluk sınırları. Çağıran güvenilir
+    // olsa da bunlar bozuk bir tetikleyicinin FCM'e çöp göndermesini engelliyor.
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user_id)) {
+      return deny(400, "user_id UUID degil");
+    }
+    if (!ALLOWED_KINDS.has(kind)) {
+      return deny(400, `bilinmeyen kind: ${kind.slice(0, 40)}`);
+    }
+    if (!body || body.length > MAX_BODY || title.length > MAX_TITLE) {
+      return deny(400, "body/title uzunlugu gecersiz");
     }
 
     const supabase = createClient(
@@ -137,37 +186,24 @@ Deno.serve(async (req: Request) => {
 
     const tokens: string[] = (rows ?? []).map((r: { token: string }) => r.token);
     if (tokens.length === 0) {
-      return new Response(JSON.stringify({ sent: 0 }), { status: 200 });
+      return new Response(JSON.stringify({ sent: 0 }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    // Servis hesabı: en sık hata kaynağı, o yüzden ayrı ayrı kontrol et.
     const saRaw = Deno.env.get("FIREBASE_SERVICE_ACCOUNT") ?? "";
-    if (saRaw.trim().length === 0) {
-      return new Response(
-        JSON.stringify({
-          error: "FIREBASE_SERVICE_ACCOUNT boş ya da tanımsız",
-        }),
-        { status: 500, headers: { "Content-Type": "application/json" } },
-      );
-    }
     let sa: ServiceAccount;
     try {
       sa = JSON.parse(saRaw);
-    } catch (_e) {
-      return new Response(
-        JSON.stringify({
-          error: "FIREBASE_SERVICE_ACCOUNT geçerli JSON değil",
-          uzunluk: saRaw.length,
-        }),
-        { status: 500, headers: { "Content-Type": "application/json" } },
-      );
+    } catch {
+      // Yapılandırma hatası: ayrıntı günlüğe, çağırana genel yanıt.
+      return deny(500, "FIREBASE_SERVICE_ACCOUNT gecerli JSON degil ya da bos");
     }
     if (!sa.client_email || !sa.private_key || !sa.project_id) {
-      return new Response(
-        JSON.stringify({ error: "servis hesabı JSON'ında alan eksik" }),
-        { status: 500, headers: { "Content-Type": "application/json" } },
-      );
+      return deny(500, "servis hesabi JSON'inda alan eksik");
     }
+
     const accessToken = await getAccessToken(sa);
     const endpoint =
       `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`;
@@ -185,8 +221,8 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify({
           message: {
             token,
-            notification: { title: title ?? "AI YKS Coach", body },
-            data: { kind: kind ?? "" },
+            notification: { title: title || "AI YKS Coach", body },
+            data: { kind },
             android: {
               priority: "HIGH",
               notification: { channel_id: "social_events" },
@@ -198,7 +234,6 @@ Deno.serve(async (req: Request) => {
         sent++;
       } else {
         const text = await res.text();
-        // Kayıtlı olmayan/geçersiz jetonları temizleyelim.
         if (text.includes("UNREGISTERED") || text.includes("INVALID_ARGUMENT")) {
           stale.push(token);
         }
@@ -206,7 +241,12 @@ Deno.serve(async (req: Request) => {
     }
 
     if (stale.length > 0) {
-      await supabase.from("device_tokens").delete().in("token", stale);
+      // user_id ile sınırlı: servis rolüyle yapılan geniş bir silme olmasın.
+      await supabase
+        .from("device_tokens")
+        .delete()
+        .eq("user_id", user_id)
+        .in("token", stale);
     }
 
     return new Response(JSON.stringify({ sent, cleaned: stale.length }), {
@@ -214,6 +254,6 @@ Deno.serve(async (req: Request) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500 });
+    return deny(500, `beklenmeyen hata: ${String(e)}`);
   }
 });

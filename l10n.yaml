@@ -1,0 +1,14 @@
+# Yerelleştirme yapılandırması.
+#
+# Tek dil var: Türkçe. İngilizce çeviri YAPILMAYACAK ve `supportedLocales`
+# içinde de yer almayacak — İngilizce cihazda kullanıcının yine Türkçe görmesi
+# bir hataydı, artık Türkçe tek desteklenen dil olarak beyan ediliyor.
+#
+# Altyapı şimdi kuruldu çünkü tüm ekranlar zaten yeniden yazılıyor; sonradan
+# yapmak her ekrana üçüncü kez dokunmak demekti.
+arb-dir: lib/l10n
+template-arb-file: app_tr.arb
+output-localization-file: app_localizations.dart
+output-dir: lib/l10n/generated
+output-class: L10n
+nullable-getter: false

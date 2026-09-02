@@ -1,23 +1,26 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 
-import '../data/social_repository.dart';
 import '../models/social.dart';
-import '../services/supabase_config.dart';
 
 /// Oyunlaştırma durumu: XP, seviye, can, seri, elmas ve günlük tekrar
 /// ilerlemesi. Ekranlar arasında paylaşılır (tekil [ChangeNotifier]).
-/// XP, seri ve haftalık XP Supabase'de kalıcıdır (bkz. SocialRepository).
+///
+/// XP / seri / haftalık XP artık SUNUCUDA hesaplanıyor: cevaplar `submit_*`
+/// RPC'lerinden geçiyor ve dönen toplamlar [applyServerTotals] ile uygulanıyor.
+/// Buradaki [addXp] ve [registerActivity] yalnızca iyimser yerel güncellemeler
+/// (arayüz anında tepki versin diye); kalıcılığın kaynağı değiller.
 class GameProgress extends ChangeNotifier {
   GameProgress._();
   static final GameProgress instance = GameProgress._();
 
   int xp = 0;
-  int hearts = 5;
-  final int maxHearts = 5;
   int streak = 0;
-  int gems = 0;
+
+  // `hearts` ve `gems` buradan KALDIRILDI. İkisi de hiçbir yolla
+  // değişmiyordu: can hep 5, elmas hep 0 görünüyordu ve arayüzde bunları
+  // göstermek çalışmayan bir mekaniği varmış gibi sunmaktı. Günlük AI hakkı
+  // (can) ve elmas ödülü sunucuda kurulduğunda `my_daily_state` üzerinden
+  // gelecekler — istemcide tutulan bir sayaç olarak değil.
 
   /// Ligi sunucu belirler: her hafta grubunda ilk 5'e girersen yükselirsin.
   /// XP eşiğiyle lig atlama YOK.
@@ -71,7 +74,6 @@ class GameProgress extends ChangeNotifier {
     }
     _lastActive = today;
     notifyListeners();
-    _scheduleSync();
   }
 
   // --- Günlük tekrar ilerlemesi (yerel, gün değişince sıfırlanır) ---
@@ -159,7 +161,6 @@ class GameProgress extends ChangeNotifier {
     xp += amount;
     weeklyXp += amount;
     notifyListeners();
-    _scheduleSync();
   }
 
   /// Sunucudaki değerlerle başlat (oturum açılışında).
@@ -179,38 +180,48 @@ class GameProgress extends ChangeNotifier {
     notifyListeners();
   }
 
-  // XP her doğru cevapta artıyor; her seferinde ağ isteği atmamak için
-  // kısa bir gecikmeyle toplu kaydederiz.
-  Timer? _syncTimer;
-
-  void _scheduleSync() {
-    if (!SupabaseConfig.isConfigured) return;
-    _syncTimer?.cancel();
-    _syncTimer = Timer(const Duration(seconds: 2), () {
-      socialRepository.syncStats(
-        xp: xp,
-        streak: streak,
-        weeklyXp: weeklyXp,
-        weekStartDate: _weekStart ?? weekStart(DateTime.now()),
-        lastActiveDate: _lastActive,
-      );
-    });
+  /// Sunucudan dönen toplamları uygular.
+  ///
+  /// XP, seri ve lig artık SUNUCUDA hesaplanıyor (bkz. `submit_*` RPC'leri).
+  /// Yukarıdaki [addXp] / [registerActivity] yalnızca **iyimser** yerel
+  /// güncellemeler: arayüz anında tepki versin diye. Sunucu yanıtı gelince
+  /// gerçek değerler buradan yazılır ve yerel tahmin düzeltilir.
+  ///
+  /// Eskiden tam tersiydi: istemci mutlak değerleri hesaplayıp
+  /// `profiles`'a yazıyordu, yani bir `PATCH` isteği lig tablosunu
+  /// sahteleyebiliyordu.
+  void applyServerTotals(Map<String, dynamic>? row) {
+    if (row == null) return;
+    final int? sXp = (row['xp'] as num?)?.toInt();
+    final int? sWeekly = (row['weekly_xp'] as num?)?.toInt();
+    final int? sStreak = (row['streak'] as num?)?.toInt();
+    final String? sLeague = row['league'] as String?;
+    if (sXp != null) xp = sXp;
+    if (sWeekly != null) {
+      _weekStart = weekStart(DateTime.now());
+      weeklyXp = sWeekly;
+    }
+    if (sStreak != null) {
+      streak = sStreak;
+      // Sunucu seriyi artırdıysa bugün aktif sayılmışız demektir.
+      if (sStreak > 0) _lastActive = _dateOnly(DateTime.now());
+    }
+    if (sLeague != null) league = League.fromDb(sLeague);
+    notifyListeners();
   }
 
-  /// Günlük hedef bonusunu günde yalnızca bir kez verir; verdiyse true döner.
+  /// Günlük hedef bonusunu yerel olarak işaretler; verdiyse true döner.
+  ///
+  /// Bonusu asıl veren sunucu (`claim_daily_goal`), ve orada günde bir kez
+  /// olduğu `daily_goal_date` ile garanti altında. Buradaki kontrol yalnızca
+  /// aynı oturumda ikinci kez istek atmamak için.
   bool claimDailyGoal(int bonus) {
     if (dailyGoalReached) return false;
     final DateTime n = DateTime.now();
     _lastGoalDate = DateTime(n.year, n.month, n.day);
     xp += bonus;
     notifyListeners();
-    _scheduleSync();
     return true;
-  }
-
-  void refillHearts() {
-    hearts = maxHearts;
-    notifyListeners();
   }
 }
 

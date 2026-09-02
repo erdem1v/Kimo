@@ -1,19 +1,35 @@
 import 'package:flutter/material.dart';
 
 import '../../data/mistake_repository.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../models/models.dart';
+import '../../services/sound_service.dart';
 import '../../services/supabase_config.dart';
 import '../../state/mistake_store.dart';
 import '../../state/refresh_bus.dart';
-import '../../theme/app_colors.dart';
-import '../../widgets/game_button.dart';
+import '../../theme/tokens.dart';
+import '../../theme/typography.dart';
+import '../../widgets/kimo/kimo.dart';
+import '../../widgets/kit/kimo_button.dart';
+import '../../widgets/kit/kimo_chips.dart';
+import '../../widgets/kit/kimo_icons.dart';
+import '../../widgets/kit/kimo_progress.dart';
+import '../../widgets/kit/kimo_surfaces.dart';
 import '../../widgets/mistake_photo.dart';
 import '../../widgets/mistake_style.dart';
-import '../pool/send_question_sheet.dart';
-import 'add_mistake_screen.dart';
+import '../capture/capture_screen.dart';
+import '../inbox/send_question_sheet.dart';
+import 'mistake_stats.dart';
 
-/// Hata bankası. Supabase yapılandırılmışsa uzak veriden, değilse mock
-/// depodan beslenir.
+/// 3j — "Hatalarım".
+///
+/// Üç kat: (1) hâkim/öğreniyorum/bugün halkası, (2) İnatçılar, (3) son 7 gün
+/// ve arşiv listesi.
+///
+/// **Hiçbiri yeni bir sunucu sayacı gerektirmiyor.** Halka `mastered`'dan,
+/// İnatçılar `is_leech`/`lapses`'ten, son 7 gün `created_at`'ten türüyor —
+/// üçü de Task 01'den beri yazılan alanlar. Task'ın kuralı buydu: "önce
+/// mevcut veriden türetilebilir mi diye sor".
 class MistakesScreen extends StatefulWidget {
   const MistakesScreen({super.key});
 
@@ -23,9 +39,13 @@ class MistakesScreen extends StatefulWidget {
 
 class _MistakesScreenState extends State<MistakesScreen> {
   final bool _remote = SupabaseConfig.isConfigured;
+
   List<MistakeEntry> _items = <MistakeEntry>[];
   bool _loading = false;
-  String? _error;
+  bool _failed = false;
+
+  /// Seçili ders filtresi; `null` = tümü.
+  String? _subject;
 
   @override
   void initState() {
@@ -33,6 +53,8 @@ class _MistakesScreenState extends State<MistakesScreen> {
     if (_remote) {
       _load();
       refreshBus.addListener(_onRefresh);
+    } else {
+      _items = mistakeStore.items;
     }
   }
 
@@ -42,8 +64,6 @@ class _MistakesScreenState extends State<MistakesScreen> {
     super.dispose();
   }
 
-  /// Sekmeye dönüldüğünde tazele: başka ekranda (ör. yönetim) yapılan
-  /// düzeltmeler burada da görünsün.
   void _onRefresh() {
     if (mounted && !_loading) _load();
   }
@@ -51,7 +71,7 @@ class _MistakesScreenState extends State<MistakesScreen> {
   Future<void> _load() async {
     setState(() {
       _loading = true;
-      _error = null;
+      _failed = false;
     });
     try {
       final List<MistakeEntry> items = await mistakeRepository.fetch();
@@ -60,269 +80,155 @@ class _MistakesScreenState extends State<MistakesScreen> {
         _items = items;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('hatalar yüklenemedi: $e');
       if (!mounted) return;
       setState(() {
-        _error = 'Hatalar yüklenemedi.';
+        _failed = true;
         _loading = false;
       });
     }
   }
 
-  Future<void> _openAdd() async {
-    final bool? added = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(builder: (_) => const AddMistakeScreen()),
+  Future<void> _capture() async {
+    sound.tap();
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(builder: (_) => const CaptureScreen()),
     );
-    if (added == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Hata bankana eklendi 🎯'),
-          backgroundColor: AppColors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      if (_remote) _load();
+    if (!mounted) return;
+    if (_remote) {
+      await _load();
+    } else {
+      setState(() => _items = mistakeStore.items);
     }
   }
+
+  List<MistakeEntry> get _filtered => _subject == null
+      ? _items
+      : _items.where((MistakeEntry e) => e.subject == _subject).toList();
 
   @override
   Widget build(BuildContext context) {
+    final KimoColors c = context.c;
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Hatalarım'),
-        actions: <Widget>[
-          if (_remote)
-            IconButton(
-              icon: const Icon(Icons.refresh_rounded),
-              tooltip: 'Yenile',
-              onPressed: _loading ? null : _load,
-            ),
-        ],
-      ),
-      body: _remote
-          ? _remoteBody()
-          : ListenableBuilder(
-              listenable: mistakeStore,
-              builder: (BuildContext context, _) => _list(mistakeStore.items),
-            ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: GameButton(
-          label: 'HATALI SORU EKLE',
-          icon: Icons.add_a_photo_rounded,
-          onPressed: _openAdd,
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      backgroundColor: c.page,
+      body: SafeArea(bottom: false, child: _body(context)),
     );
   }
 
-  Widget _remoteBody() {
+  Widget _body(BuildContext context) {
+    final L10n l = L10n.of(context);
     if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) {
+    if (_failed) {
       return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Text(_error!, style: const TextStyle(color: AppColors.inkLight)),
-            const SizedBox(height: 12),
-            TextButton(onPressed: _load, child: const Text('Tekrar dene')),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(Gap.screen),
+          child: EmptyState(
+            message: l.mistakesLoadFailed,
+            action: KimoButton(
+              label: l.actionRetry,
+              expand: false,
+              onPressed: _load,
+            ),
+          ),
         ),
       );
     }
-    return _list(_items);
-  }
+    if (_items.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(Gap.screen),
+          child: EmptyState(
+            illustration: const Kimo(size: 120),
+            message: '${l.mistakesEmptyTitle}\n${l.mistakesEmptyBody}',
+            action: KimoButton(
+              label: l.todayEmptyAction,
+              expand: false,
+              onPressed: _capture,
+            ),
+          ),
+        ),
+      );
+    }
 
-  Widget _list(List<MistakeEntry> items) {
-    final List<_Grp> groups = _groups(items);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
-      child: Column(
+    final MistakeStats stats = MistakeStats.from(_items);
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(
+            Gap.screen, Gap.sm, Gap.screen, Gap.section),
         children: <Widget>[
-          _summaryCard(items.length),
-          const SizedBox(height: 14),
-          if (items.isEmpty)
-            const Expanded(
-              child: Center(
-                child: Text(
-                  'Henüz hata eklenmemiş.\nAşağıdan ilkini ekle 👇',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.inkLight),
-                ),
-              ),
-            )
-          else
-            Expanded(child: _grid(groups, items.length)),
+          Text(l.mistakesTitle, style: context.t.title),
+          const SizedBox(height: Gap.lg),
+          _ringCard(context, l, stats),
+          if (stats.leeches.isNotEmpty) ...<Widget>[
+            const SizedBox(height: Gap.md),
+            _leechCard(context, l, stats),
+          ],
+          const SizedBox(height: Gap.md),
+          _weekCard(context, l, stats),
+          const SizedBox(height: Gap.xl),
+          _subjectFilter(context, l, stats),
+          const SizedBox(height: Gap.md),
+          for (final MistakeEntry e in _filtered) ...<Widget>[
+            _MistakeTile(entry: e),
+            const SizedBox(height: Gap.sm),
+          ],
+          if (_filtered.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: Gap.lg),
+              child: EmptyState(message: l.mistakesNoMatch),
+            ),
         ],
       ),
     );
   }
 
-  /// Kutucuklar 3 sütun halinde, kalan alana sığdırılır. Kutular okunur
-  /// boyutun altına düşecekse sığdırmayı bırakıp kaydırmaya izin verir.
-  Widget _grid(List<_Grp> groups, int total) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints c) {
-        const double spacing = 10;
-        const int cols = 3;
-        const double minCellH = 108; // kutunun okunur kaldığı en küçük yükseklik
-        final int rows = (groups.length / cols).ceil();
-
-        final double cellW = (c.maxWidth - (cols - 1) * spacing) / cols;
-        final double availH = c.maxHeight - (rows - 1) * spacing;
-        final double cellH = rows == 0 ? minCellH : availH / rows;
-        final bool fits = cellH >= minCellH;
-        final double h = fits ? cellH : minCellH;
-
-        return GridView.count(
-          crossAxisCount: cols,
-          physics: fits
-              ? const NeverScrollableScrollPhysics()
-              : const AlwaysScrollableScrollPhysics(),
-          mainAxisSpacing: spacing,
-          crossAxisSpacing: spacing,
-          childAspectRatio: cellW / h,
-          children: <Widget>[
-            for (final _Grp g in groups) _groupBox(g, total),
-          ],
-        );
-      },
-    );
-  }
-
-  /// Hataları sınav+ders bazında gruplar; TYT → AYT → Belirsiz, her sınav
-  /// içinde çoktan aza sıralanır.
-  List<_Grp> _groups(List<MistakeEntry> items) {
-    final Map<String, _Grp> map = <String, _Grp>{};
-    for (final MistakeEntry e in items) {
-      final String exam =
-          (e.exam == 'TYT' || e.exam == 'AYT') ? e.exam! : 'Belirsiz';
-      final String key = '$exam|${e.subject}';
-      (map[key] ??= _Grp(exam, e.subject)).items.add(e);
-    }
-    int rank(String x) => x == 'TYT' ? 0 : (x == 'AYT' ? 1 : 2);
-    final List<_Grp> list = map.values.toList();
-    list.sort((_Grp a, _Grp b) {
-      final int r = rank(a.exam).compareTo(rank(b.exam));
-      if (r != 0) return r;
-      final int c = b.items.length.compareTo(a.items.length);
-      if (c != 0) return c;
-      return a.subject.compareTo(b.subject);
-    });
-    return list;
-  }
-
-  /// Sınav+ders kutucuğu — dolu, canlı renk (ana ekranla aynı ton). Yazı rengi
-  /// zemine göre okunur seçilir. Dokununca o grubun hataları ayrı ekranda açılır.
-  Widget _groupBox(_Grp g, int total) {
-    final Color color = subjectColor(g.subject);
-    final Color fg =
-        color.computeLuminance() > 0.55 ? AppColors.ink : Colors.white;
-    final int count = g.items.length;
-    final int percent = total == 0 ? 0 : (count / total * 100).round();
-    final String examLabel = g.exam == 'Belirsiz' ? '?' : g.exam;
-    return GestureDetector(
-      onTap: () => Navigator.of(context).push<void>(
-        MaterialPageRoute<void>(
-          builder: (_) => _GroupDetailScreen(
-            title: '$examLabel · ${g.subject}',
-            color: color,
-            items: g.items,
-          ),
-        ),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-                color: color.withValues(alpha: 0.35),
-                blurRadius: 8,
-                offset: const Offset(0, 3)),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: fg.withValues(alpha: 0.22),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(examLabel,
-                      style: TextStyle(
-                          color: fg,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 10)),
-                ),
-                const Spacer(),
-                Text(subjectEmoji(g.subject),
-                    style: const TextStyle(fontSize: 16)),
-              ],
-            ),
-            const Spacer(),
-            Flexible(
-              child: Text(
-                g.subject,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontWeight: FontWeight.w800, fontSize: 13.5, color: fg),
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text('$count soru · %$percent',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    color: fg.withValues(alpha: 0.85),
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _summaryCard(int total) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: <Color>[AppColors.purple, AppColors.purpleDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
+  /// Hâkim / öğreniyorum / bugün halkası.
+  ///
+  /// Tasarım burada bir donut grafik gösteriyor. `SegmentRing` dilimli bir
+  /// halka çiziyor ve üç oranı ayrı ayrı gösteremiyor; onun yerine halka
+  /// **hâkim oranını** taşıyor, üç sayı yanında okunuyor. Üç renkli bir dilim
+  /// grafiği için ayrı bir boyayıcı gerekiyordu; okunurluk kazancı, üç sayıyı
+  /// zaten yan yana yazan bu düzene göre ölçülebilir değildi.
+  Widget _ringCard(BuildContext context, L10n l, MistakeStats s) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return KimoCard(
+      padding: const EdgeInsets.all(Gap.screen),
       child: Row(
         children: <Widget>[
-          const Text('📌', style: TextStyle(fontSize: 34)),
-          const SizedBox(width: 14),
+          SegmentRing(
+            // Dilim sayısı arşiv boyutu DEĞİL, sabit 20: 200 soruluk bir
+            // arşivde 200 dilim okunmaz bir yüzük olurdu. Halka oranı taşıyor,
+            // kesin sayı ortadaki yüzde ve yandaki üç satırda.
+            total: 20,
+            filled: (s.masteredPercent / 5).round(),
+            size: 92,
+            filledColor: c.mint,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text('${s.masteredPercent}%', style: t.numberMedium),
+                Text(
+                  l.mistakesMastered,
+                  style: t.overline.copyWith(color: c.inkMuted),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: Gap.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  '$total hatalı soru',
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 2),
-                const Text(
-                  'Tekrar çözerek kalıcı öğren.',
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
-                ),
+                Text(l.mistakesTotal(s.total), style: t.section),
+                const SizedBox(height: Gap.md),
+                _legend(context, c.mint, l.mistakesMastered, s.mastered),
+                const SizedBox(height: Gap.xs),
+                _legend(context, c.action, l.mistakesLearning, s.learning),
+                const SizedBox(height: Gap.xs),
+                _legend(context, c.honey, l.mistakesDueToday, s.dueToday),
               ],
             ),
           ),
@@ -330,71 +236,215 @@ class _MistakesScreenState extends State<MistakesScreen> {
       ),
     );
   }
-}
 
-/// Sınav+ders bazlı hata grubu (Hatalarım ekranındaki kutucuklar).
-class _Grp {
-  _Grp(this.exam, this.subject);
-  final String exam; // 'TYT' | 'AYT' | 'Belirsiz'
-  final String subject;
-  final List<MistakeEntry> items = <MistakeEntry>[];
-}
+  Widget _legend(BuildContext context, Color dot, String label, int value) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return Row(
+      children: <Widget>[
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: Gap.sm),
+        Expanded(
+          child: Text(label, style: t.caption.copyWith(color: c.inkSecondary)),
+        ),
+        Text('$value', style: t.numberSmall),
+      ],
+    );
+  }
 
-/// Bir grubun (ör. "TYT · Matematik") hatalarını listeleyen detay ekranı.
-class _GroupDetailScreen extends StatelessWidget {
-  const _GroupDetailScreen({
-    required this.title,
-    required this.color,
-    required this.items,
-  });
-
-  final String title;
-  final Color color;
-  final List<MistakeEntry> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(title),
-        backgroundColor: color,
-        foregroundColor: Colors.white,
+  /// İnatçılar — `is_leech` VEYA `lapses >= 4`.
+  ///
+  /// Metin "en az dört kez" diyor çünkü `ReviewScheduler.leechThreshold = 4`.
+  /// Mockup "en az üç kez" yazıyordu; koddaki eşik kazandı.
+  Widget _leechCard(BuildContext context, L10n l, MistakeStats s) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return KimoCard(
+      color: c.actionTint,
+      elevated: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              KimoIcon(KimoIcons.flag, size: 20, color: c.actionText),
+              const SizedBox(width: Gap.sm),
+              Expanded(
+                child: Text(
+                  l.mistakesLeechTitle,
+                  style: t.bodyStrong.copyWith(color: c.actionText),
+                ),
+              ),
+              StatusBadge(label: '${s.leeches.length}', tone: BadgeTone.alert),
+            ],
+          ),
+          const SizedBox(height: Gap.sm),
+          Text(l.mistakesLeechBody, style: t.caption),
+          const SizedBox(height: Gap.md),
+          for (final MistakeEntry e in s.leeches.take(3))
+            Padding(
+              padding: const EdgeInsets.only(bottom: Gap.xs),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      '${e.subject} · ${e.concept}',
+                      overflow: TextOverflow.ellipsis,
+                      style: t.caption.copyWith(color: c.ink),
+                    ),
+                  ),
+                  Text(
+                    l.mistakesLapses(e.lapses),
+                    style: t.caption.copyWith(color: c.actionText),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        itemCount: items.length,
-        itemBuilder: (BuildContext context, int i) =>
-            _MistakeCard(entry: items[i]),
+    );
+  }
+
+  /// Son 7 günün çubukları — `created_at` üzerinden.
+  Widget _weekCard(BuildContext context, L10n l, MistakeStats s) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    final int peak = s.weekPeak;
+    return KimoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          SectionHeader(title: l.mistakesWeekTitle),
+          const SizedBox(height: Gap.md),
+          if (peak == 0)
+            Text(l.mistakesWeekEmpty, style: t.caption.copyWith(color: c.inkMuted))
+          else
+            SizedBox(
+              height: 72,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  for (int i = 0; i < s.week.length; i++) ...<Widget>[
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: <Widget>[
+                          Text('${s.week[i]}', style: t.overline),
+                          const SizedBox(height: Gap.xxs),
+                          Container(
+                            height: 8 + 40 * (s.week[i] / peak),
+                            decoration: BoxDecoration(
+                              color: s.week[i] == 0 ? c.trackEmpty : c.action,
+                              borderRadius: Radii.all(4),
+                            ),
+                          ),
+                          const SizedBox(height: Gap.xs),
+                          Text(
+                            s.weekLabels[i],
+                            style: t.overline.copyWith(color: c.inkMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (i != s.week.length - 1) const SizedBox(width: Gap.xs),
+                  ],
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _subjectFilter(BuildContext context, L10n l, MistakeStats s) {
+    return SizedBox(
+      // Dokunma hedefi tabanı; çipin kendi dolgusu bundan küçük olsa da
+      // satır kısalıp taşmasın.
+      height: Sizes.iconTap,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: <Widget>[
+          KimoChip(
+            label: l.mistakesFilterAll,
+            selected: _subject == null,
+            onTap: () {
+              sound.tap();
+              setState(() => _subject = null);
+            },
+          ),
+          for (final MapEntry<String, int> e in s.bySubject.entries) ...<Widget>[
+            const SizedBox(width: Gap.sm),
+            KimoChip(
+              label: '${e.key} · ${e.value}',
+              selected: _subject == e.key,
+              onTap: () {
+                sound.tap();
+                setState(() => _subject = e.key);
+              },
+            ),
+          ],
+        ],
       ),
     );
   }
 }
 
-class _MistakeCard extends StatelessWidget {
-  const _MistakeCard({required this.entry});
+/// Arşiv satırı.
+class _MistakeTile extends StatelessWidget {
+  const _MistakeTile({required this.entry});
 
   final MistakeEntry entry;
 
+  bool get _sendable =>
+      entry.id != null &&
+      entry.photoPath != null &&
+      entry.hasOptions &&
+      entry.correctIndex != null;
+
+  /// Küçük resim. Yerel baytlar `SizedPhoto` ile `cacheWidth`'e indiriliyor;
+  /// depodaki fotoğraflar imzalı URL gerektirdiği için [MistakePhoto]'dan
+  /// geçiyor (o da kendi içinde imzayı ve yeniden denemeyi yönetiyor).
+  Widget _thumb(BuildContext context) {
+    final KimoColors c = context.c;
+    if (entry.imageBytes != null) {
+      return SizedPhoto(
+        image: MemoryImage(entry.imageBytes!),
+        logicalWidth: 56,
+        height: 56,
+      );
+    }
+    if (entry.photoPath != null) {
+      return MistakePhoto(path: entry.photoPath!, fit: BoxFit.cover);
+    }
+    return ColoredBox(
+      color: c.sunken,
+      child: Center(
+        child: KimoIcon(KimoIcons.notebook, size: 20, color: c.inkMuted),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final Color color = mistakeColor(entry.type);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.line, width: 1.5),
-      ),
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    final L10n l = L10n.of(context);
+
+    return KimoCard(
+      padding: const EdgeInsets.all(Gap.md),
+      radius: Radii.tile,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox(width: 56, height: 56, child: _thumbnail()),
+            borderRadius: Radii.all(Radii.chip),
+            child: SizedBox(width: 56, height: 56, child: _thumb(context)),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: Gap.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -404,121 +454,51 @@ class _MistakeCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         entry.concept,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                            color: AppColors.ink),
+                        overflow: TextOverflow.ellipsis,
+                        style: t.label,
                       ),
                     ),
-                    Text(
-                      formatShortDate(entry.date),
-                      style: const TextStyle(
-                          color: AppColors.inkLight, fontSize: 12),
-                    ),
-                    // Çözülebilir sorular (foto + şık) arkadaşa gönderilebilir.
-                    if (entry.id != null &&
-                        entry.photoPath != null &&
-                        entry.hasOptions &&
-                        entry.correctIndex != null)
-                      SizedBox(
-                        width: 32,
-                        height: 32,
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          iconSize: 18,
-                          icon: const Icon(Icons.send_rounded,
-                              color: AppColors.purple),
-                          tooltip: 'Arkadaşına gönder',
-                          onPressed: () => showSendQuestionSheet(
-                            context,
-                            mistakeId: entry.id!,
-                            title: '${entry.subject} · ${entry.concept}',
-                          ),
-                        ),
+                    if (entry.mastered)
+                      StatusBadge(
+                        label: l.mistakesMastered,
+                        tone: BadgeTone.mastered,
+                      )
+                    else if (entry.isLeech)
+                      StatusBadge(
+                        label: l.mistakeLeechBadge,
+                        tone: BadgeTone.alert,
                       ),
                   ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: Gap.xxs),
                 Text(
-                  entry.subject,
-                  style: const TextStyle(color: AppColors.inkLight, fontSize: 13),
+                  '${entry.subject} · ${formatShortDate(entry.date)}',
+                  style: t.caption.copyWith(color: c.inkMuted),
                 ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: <Widget>[
-                    Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '${entry.type.emoji} ${entry.type.label}',
-                        style: TextStyle(
-                            color: color,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12),
-                      ),
-                    ),
-                    if (entry.isLeech)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.red.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Icon(Icons.warning_amber_rounded,
-                                size: 14, color: AppColors.redDark),
-                            SizedBox(width: 4),
-                            Text('Zorlanıyorsun',
-                                style: TextStyle(
-                                    color: AppColors.redDark,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-                if (entry.note.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: 8),
-                  Text(
-                    entry.note,
-                    style: const TextStyle(
-                        color: AppColors.ink, fontSize: 13, height: 1.3),
+                if (entry.type != null) ...<Widget>[
+                  const SizedBox(height: Gap.sm),
+                  StatusBadge(
+                    label: entry.type!.label,
+                    tone: BadgeTone.neutral,
                   ),
                 ],
               ],
             ),
           ),
+          if (_sendable)
+            IconButton(
+              onPressed: () {
+                sound.tap();
+                showSendQuestionSheet(
+                  context,
+                  mistakeId: entry.id!,
+                  title: '${entry.subject} · ${entry.concept}',
+                );
+              },
+              icon: KimoIcon(KimoIcons.play, size: 18, color: c.inkMuted),
+              tooltip: l.mistakesSend,
+            ),
         ],
-      ),
-    );
-  }
-
-  Widget _thumbnail() {
-    if (entry.imageBytes != null) {
-      return Image.memory(entry.imageBytes!, fit: BoxFit.cover);
-    }
-    if (entry.photoPath != null) {
-      return MistakePhoto(path: entry.photoPath!, fit: BoxFit.cover);
-    }
-    return _thumbPlaceholder();
-  }
-
-  Widget _thumbPlaceholder() {
-    return Container(
-      color: AppColors.blueBg,
-      child: Icon(
-        entry.hasPhoto ? Icons.image_rounded : Icons.notes_rounded,
-        color: AppColors.blueDark,
       ),
     );
   }

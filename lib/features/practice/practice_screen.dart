@@ -1,22 +1,41 @@
-import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../data/mistake_repository.dart';
 import '../../data/progress_repository.dart';
+import '../../data/submission_queue.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../models/models.dart';
 import '../../services/sound_service.dart';
 import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
 import '../../state/mistake_store.dart';
-import '../../theme/app_colors.dart';
+import '../reviews/domain/review_scheduler.dart';
+import '../../theme/tokens.dart';
+import '../../theme/typography.dart';
 import '../../widgets/drawing_canvas.dart';
-import '../../widgets/game_button.dart';
+import '../../widgets/kimo/kimo.dart';
+import '../../widgets/kimo/kimo_pose.dart';
+import '../../widgets/kit/kimo_button.dart';
+import '../../widgets/kit/kimo_chips.dart';
+import '../../widgets/kit/kimo_icons.dart';
+import '../../widgets/kit/kimo_progress.dart';
+import '../../widgets/kit/kimo_surfaces.dart';
 import '../../widgets/mistake_photo.dart';
+import 'answer_reveal.dart';
+import 'session_end_screen.dart';
+import 'session_result.dart';
 
-/// Günlük pratik: kullanıcının eklediği hatalı soruları tek tek çözdürür.
-/// Soru büyük gösterilir; kalem/silgi doğrudan sorunun üstünde kullanılır.
-/// Öğrenci çözüp kendini "Doğru çözdüm / Bilemedim" ile değerlendirir.
+/// 3g — Pratik.
+///
+/// Soru büyük; kalem ve silgi doğrudan sorunun üstünde. Şıkkı olan sorularda
+/// harfe dokunulur ve **doğruyu sunucu belirler**; şıksız (elle girilmiş,
+/// eski) sorularda öz-değerlendirme yolu korunur.
+///
+/// Cevaptan sonra ekran DEĞİŞMİYOR: soru yerinde kalıyor, altından [AnswerReveal]
+/// paneli açılıyor. Mockup burada ayrı bir tam ekran gösteriyordu; soruyu
+/// ekrandan kaldırmak, "neden yanlış yaptım" sorusunu cevaplamayı imkânsız
+/// kılıyordu.
 class PracticeScreen extends StatefulWidget {
   const PracticeScreen({super.key, this.exam, this.subject});
 
@@ -34,51 +53,48 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
   List<MistakeEntry> _items = <MistakeEntry>[];
   bool _loading = true;
-  String? _error;
+  bool _failed = false;
   int _index = 0;
-  int _correct = 0;
-  // Bu oturuma başlarken bugün zaten yapılmış tekrar sayısı (kaldığın yerden
-  // devam için sayaç oturuma değil, günün geneline bağlanır).
-  int _doneAtStart = 0;
-  bool _completed = false;
   int? _selectedOption;
-  bool _answered = false;
-  bool _showGoal = false;
+
+  /// Cevap verildiyse sonucu; `null` ise soru hâlâ açık.
+  AnswerOutcome? _revealed;
+
+  /// Bu oturuma başlarken bugün zaten yapılmış tekrar sayısı (kaldığın yerden
+  /// devam için sayaç oturuma değil, günün geneline bağlanır).
+  int _doneAtStart = 0;
   bool _goalClaimed = false;
-  int _bonusAwarded = 0;
 
-  late final ConfettiController _confetti =
-      ConfettiController(duration: const Duration(milliseconds: 900));
+  // ----------------------------------------------------------- oturum tahtası
+  int _solved = 0;
+  int _correct = 0;
+  int _longestCombo = 0;
+  int _xpGained = 0;
+  int _gemsAwarded = 0;
+  int _comboNow = 0;
+  final int _streakAtStart = gameProgress.streak;
 
-  static const List<Color> _confettiColors = <Color>[
-    AppColors.green,
-    AppColors.gold,
-    AppColors.blue,
-    AppColors.purple,
-    AppColors.red,
-  ];
+  /// Gönderilmeyi bekleyen cevap sayısı (çevrimdışıyken birikir).
+  ///
+  /// Sessiz bir kuyruk, bu task'ın baştan beri kaçındığı kalıp: kullanıcı
+  /// cevabının bir yerde beklediğini görebilmeli.
+  int _pendingSubmissions = 0;
 
   @override
   void initState() {
     super.initState();
     _load();
-  }
-
-  @override
-  void dispose() {
-    _confetti.dispose();
-    super.dispose();
+    _refreshPending();
   }
 
   Future<void> _load() async {
     setState(() {
       _loading = true;
-      _error = null;
+      _failed = false;
     });
     try {
       List<MistakeEntry> items =
           _remote ? await mistakeRepository.dueReviews() : mistakeStore.items;
-      // Sınav/ders filtresi verildiyse yalnızca o dersin tekrarları.
       final String? subject = widget.subject;
       final String? exam = widget.exam;
       if (subject != null) {
@@ -95,23 +111,21 @@ class _PracticeScreenState extends State<PracticeScreen> {
         _items = items;
         _loading = false;
       });
-      if (_global) {
-        // Bugün zaten yapılanları koru (kaldığın yerden devam).
+      if (_remote) {
         _doneAtStart = gameProgress.dailyReviewsDone;
         // Günlük hedef TÜM derslerin toplamıdır; filtreli girişte kalan sayısını
-        // ezmeyelim (onu dashboard tüm tekrarlara göre belirler).
+        // ezmeyelim (onu ana ekran tüm tekrarlara göre belirler).
         if (subject == null) gameProgress.setDueRemaining(items.length);
-        // Bugünkü hedef zaten dolmuşsa (ör. yeniden açılış) tekrar kutlama ve
-        // bonus verme; "Ekstra" modunda devam et.
         _goalClaimed = gameProgress.dailyTarget > 0 &&
             _doneAtStart >= gameProgress.dailyTarget;
       } else {
         _doneAtStart = 0;
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('tekrarlar yüklenemedi: $e');
       if (!mounted) return;
       setState(() {
-        _error = 'Sorular yüklenemedi.';
+        _failed = true;
         _loading = false;
       });
     }
@@ -119,112 +133,357 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
   MistakeEntry get _current => _items[_index];
   bool get _isLast => _index >= _items.length - 1;
-  // Gerçek (uzak) modda günün genel hedefini kullan; mock'ta yalnızca yüklenen
-  // listeye göre say.
-  bool get _global => _remote;
-  int get _target => _global ? gameProgress.dailyTarget : _items.length;
-  // Bu oturuma başlarken tamamlanmış tekrar sayısı (kaldığın yer).
-  int get _base => _global ? _doneAtStart : 0;
+  int get _target => _remote ? gameProgress.dailyTarget : _items.length;
+  int get _base => _remote ? _doneAtStart : 0;
   bool _hasPhoto(MistakeEntry e) => e.imageBytes != null || e.photoPath != null;
 
-  void _feedback(bool correct) {
+  // ------------------------------------------------------------------ cevap
+
+  void _pickOption(int i) {
+    if (_revealed != null) return;
+    setState(() => _selectedOption = i);
+    _answer(correct: i == _current.correctIndex, choice: i);
+  }
+
+  void _selfGrade(bool correct) {
+    if (_revealed != null) return;
+    _answer(correct: correct, choice: null);
+  }
+
+  /// Cevabı işler.
+  ///
+  /// Panel HEMEN açılıyor (ödül rozetleri olmadan), sunucunun döndüğü gerçek
+  /// XP ve çarpan gelince rozetler ekleniyor. Ağı beklemek, çevrimdışında
+  /// ekranı süresiz kilitlerdi; ödülü tahmin etmek ise verilmemiş bir XP'yi
+  /// verilmiş gibi göstermek olurdu.
+  Future<void> _answer({required bool correct, required int? choice}) async {
+    final MistakeEntry entry = _current;
+
     if (correct) {
-      _correct++;
       sound.correct();
       HapticFeedback.mediumImpact();
-      _confetti.play();
-      gameProgress.addXp(GameProgress.xpPerCorrect);
     } else {
       sound.wrong();
       HapticFeedback.heavyImpact();
     }
-    gameProgress.recordReview();
-    // Tekrar planını güncelle (1→3→7→30; yanlışta 1 güne sıfırla).
-    if (_remote) {
-      mistakeRepository.submitReview(_current, correct);
-      // Konu haritası için ölçüm kaydı.
-      progressRepository.recordAttempt(
-        subject: _current.subject,
-        concept: _current.concept,
-        exam: _current.exam,
+
+    // Yerel plan hesabı her durumda yapılıyor: panelin "yarın yeniden
+    // soracağım" metni ağdan bağımsız.
+    ReviewOutcome plan = const ReviewScheduler().review(
+      step: entry.step,
+      lapses: entry.lapses,
+      correct: correct,
+      reviewedOn: DateTime.now(),
+    );
+    bool scheduleFailed = false;
+
+    setState(() {
+      _solved++;
+      if (correct) _correct++;
+      _revealed = AnswerOutcome(
         correct: correct,
-        mistakeId: _current.id,
-        extraConcepts: _current.extraConcepts,
+        nextIntervalDays: _daysUntil(plan.nextReviewDate),
+        mastered: plan.mastered,
       );
+    });
+
+    gameProgress.recordReview();
+
+    if (!_remote) {
+      // Yerel (mock) mod: tek gerçek XP kaynağı GameProgress.
+      gameProgress.addXp(GameProgress.xpPerCorrect);
+      if (correct) _xpGained += GameProgress.xpPerCorrect;
+      return;
     }
+
+    try {
+      plan = await mistakeRepository.submitReview(entry, correct);
+    } catch (e) {
+      debugPrint('tekrar planı yazılamadı: $e');
+      scheduleFailed = true;
+    }
+
+    final String? id = entry.id;
+    Map<String, dynamic>? totals;
+    if (id != null) {
+      totals = await progressRepository.submitReview(
+        mistakeId: id,
+        correct: correct,
+        choice: choice,
+      );
+      // mounted KONTROLU YOK: gameProgress küresel bir tekil, BuildContext
+      // kullanmıyor. Kullanıcı ekrandan çıkınca sunucunun döndüğü gerçek
+      // toplamları atmak, iyimser yerel değeri düzeltilmeden bırakırdı.
+      gameProgress.applyServerTotals(totals);
+    }
+
+    final int? awarded = (totals?['xp_awarded'] as num?)?.toInt();
+    final int? combo = (totals?['combo'] as num?)?.toInt();
+    final int? multiplier = (totals?['multiplier'] as num?)?.toInt();
+    // Sunucu doğruluğu kendisi hesaplamış olabilir (şıklı sorular). Panelin
+    // başlığı bu yüzden sunucunun sözüne göre düzeltiliyor.
+    final bool serverCorrect = (totals?['correct'] as bool?) ?? correct;
+
+    _xpGained += awarded ?? 0;
+    if (combo != null && combo > _longestCombo) _longestCombo = combo;
+    _comboNow = combo ?? _comboNow;
+
+    await _refreshPending();
+    if (!mounted) return;
+    setState(() {
+      if (serverCorrect != correct) {
+        _correct += serverCorrect ? 1 : -1;
+      }
+      _revealed = AnswerOutcome(
+        correct: serverCorrect,
+        nextIntervalDays: _daysUntil(plan.nextReviewDate),
+        mastered: plan.mastered,
+        xpAwarded: awarded,
+        multiplier: multiplier,
+        scheduleFailed: scheduleFailed,
+      );
+    });
   }
 
-  void _advance() {
+  int _daysUntil(DateTime date) {
+    final DateTime today = DateTime.now();
+    final int days = DateTime(date.year, date.month, date.day)
+        .difference(DateTime(today.year, today.month, today.day))
+        .inDays;
+    return days < 1 ? 1 : days;
+  }
+
+  /// Bekleyen gönderim sayısını tazeler (kuyruk diskten okunur).
+  Future<void> _refreshPending() async {
+    if (!_remote) return;
+    final int n = await submissionQueue.loadPendingCount();
+    if (!mounted || n == _pendingSubmissions) return;
+    setState(() => _pendingSubmissions = n);
+  }
+
+  // ---------------------------------------------------------------- ilerleme
+
+  Future<void> _advance() async {
     final int next = _index + 1;
     final bool allDone = next >= _items.length;
-    // Günün geneline göre hedefe ulaşıldı mı (kaldığın yer + bu oturum).
     final bool reachedGoal =
         !_goalClaimed && _target > 0 && (_base + next) >= _target;
 
     if (reachedGoal) {
+      _goalClaimed = true;
+      // Ödülü asıl veren sunucu; günde bir kez olduğunu daily_goal_date
+      // garanti ediyor. Ağ yoksa kuyruğa alınır.
       final bool awarded =
           gameProgress.claimDailyGoal(GameProgress.dailyGoalBonus);
-      sound.levelUp();
-      _confetti.play();
-      setState(() {
-        _index = next;
-        _selectedOption = null;
-        _answered = false;
-        _goalClaimed = true;
-        _showGoal = true;
-        _bonusAwarded = awarded ? GameProgress.dailyGoalBonus : 0;
-      });
+      if (awarded && _remote) {
+        final Map<String, dynamic>? totals =
+            await progressRepository.claimDailyGoal();
+        gameProgress.applyServerTotals(totals);
+        _xpGained += (totals?['xp_awarded'] as num?)?.toInt() ?? 0;
+        _gemsAwarded = (totals?['gems_awarded'] as num?)?.toInt() ?? 0;
+        await _refreshPending();
+      }
+      if (!mounted) return;
+      setState(() => _index = next);
+      await _openSessionEnd(goalReached: true);
       return;
     }
+
     if (allDone) {
-      sound.levelUp();
-      _confetti.play();
-      setState(() {
-        _index = next;
-        _completed = true;
-      });
+      setState(() => _index = next);
+      await _openSessionEnd(goalReached: false);
       return;
     }
+
     setState(() {
       _index = next;
       _selectedOption = null;
-      _answered = false;
+      _revealed = null;
     });
   }
 
-  void _selfGrade(bool correct) {
-    _feedback(correct);
-    _advance();
+  Future<void> _openSessionEnd({required bool goalReached}) async {
+    final int remaining = _items.length - _index;
+    final SessionResult result = SessionResult(
+      solved: _solved,
+      correct: _correct,
+      firstTryCorrect: _correct,
+      longestCombo: _longestCombo,
+      xpGained: _xpGained,
+      gemsAwarded: _gemsAwarded,
+      streak: gameProgress.streak,
+      streakGrew: gameProgress.streak > _streakAtStart,
+      totalXp: gameProgress.xp,
+      remaining: remaining,
+      goalReached: goalReached,
+    );
+
+    // Ekran kendi rotasını `true` ile kapatıyor. Kapanışı buradan yönetmek,
+    // pratik ekranının context'iyle yanlış rotayı kapatma riskini doğururdu.
+    final bool extra = await Navigator.of(context).push<bool>(
+          MaterialPageRoute<bool>(
+            builder: (_) => SessionEndScreen(
+              result: result,
+              canContinue: remaining > 0,
+            ),
+          ),
+        ) ??
+        false;
+    if (!mounted) return;
+    if (extra) {
+      setState(() {
+        _selectedOption = null;
+        _revealed = null;
+      });
+    } else {
+      Navigator.of(context).pop();
+    }
   }
 
-  void _pickOption(int i) {
-    if (_answered) return;
-    _feedback(i == _current.correctIndex);
-    setState(() {
-      _selectedOption = i;
-      _answered = true;
-    });
-  }
+  // -------------------------------------------------------------------- yapı
 
   @override
   Widget build(BuildContext context) {
+    final KimoColors c = context.c;
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
+      backgroundColor: c.page,
+      body: SafeArea(bottom: false, child: _body(context)),
+    );
+  }
+
+  Widget _body(BuildContext context) {
+    final L10n l = L10n.of(context);
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_failed) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(Gap.screen),
+          child: EmptyState(
+            message: l.practiceLoadFailed,
+            action: KimoButton(
+              label: l.actionRetry,
+              expand: false,
+              onPressed: _load,
+            ),
+          ),
+        ),
+      );
+    }
+    if (_items.isEmpty) {
+      final String? subject = widget.subject;
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(Gap.screen),
+          child: EmptyState(
+            illustration: const Kimo(size: 120, mood: KimoMood.calm),
+            message: subject == null
+                ? '${l.practiceEmptyTitle}
+${l.practiceEmptyBody}'
+                : l.practiceEmptySubjectBody(subject),
+            action: KimoButton(
+              label: l.actionClose,
+              expand: false,
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+          ),
+        ),
+      );
+    }
+    // _index listeyi aştıysa oturum sonu ekranı açılmış demektir; bir kare
+    // boyunca boş göster, aşım hatası vermesin.
+    if (_index >= _items.length) return const SizedBox.shrink();
+    return _practiceView(context, l);
+  }
+
+  Widget _practiceView(BuildContext context, L10n l) {
+    final MistakeEntry e = _current;
+    return Column(
+      children: <Widget>[
+        _topBar(context, l),
+        if (_pendingSubmissions > 0) _pendingBanner(context, l),
+        _questionHeader(context, l, e),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(Gap.screen, 0, Gap.screen, Gap.sm),
+            child: DrawingCanvas(
+              key: ValueKey<int>(_index),
+              background: _questionBackground(e),
+            ),
+          ),
+        ),
+        if (_revealed != null)
+          AnswerReveal(
+            outcome: _revealed!,
+            isLast: _isLast,
+            onContinue: _advance,
+          )
+        else
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              Gap.screen,
+              Gap.sm,
+              Gap.screen,
+              Gap.md + MediaQuery.of(context).padding.bottom,
+            ),
+            child: _answerSection(context, l, e),
+          ),
+      ],
+    );
+  }
+
+  Widget _topBar(BuildContext context, L10n l) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    final int done = _base + _index;
+    final double value =
+        _target == 0 ? 1 : (done / _target).clamp(0.0, 1.0).toDouble();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Gap.xs, Gap.xs, Gap.screen, Gap.sm),
+      child: Row(
         children: <Widget>[
-          SafeArea(child: _body()),
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confetti,
-              blastDirectionality: BlastDirectionality.explosive,
-              shouldLoop: false,
-              numberOfParticles: 20,
-              maxBlastForce: 20,
-              minBlastForce: 8,
-              gravity: 0.25,
-              emissionFrequency: 0.06,
-              colors: _confettiColors,
+          IconButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: KimoIcon(KimoIcons.close, color: c.ink),
+            tooltip: l.actionClose,
+          ),
+          Expanded(child: KimoProgressBar(value: value)),
+          const SizedBox(width: Gap.md),
+          Text(
+            _goalClaimed
+                ? l.practiceExtra(done - _target + 1)
+                : l.practiceProgress(done + 1, _target),
+            style: t.numberSmall,
+          ),
+          // Çarpan rozeti yalnızca sunucu gerçekten >1 döndürdüğünde.
+          if (_comboNow > 1) ...<Widget>[
+            const SizedBox(width: Gap.sm),
+            StatusBadge(
+              label: l.practiceCombo(_comboNow > 5 ? 5 : _comboNow),
+              tone: BadgeTone.pending,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// "Cevapların bekliyor" şeridi. Kuyruk sessiz kalmamalı.
+  Widget _pendingBanner(BuildContext context, L10n l) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return Container(
+      width: double.infinity,
+      color: c.honeyTint,
+      padding: const EdgeInsets.symmetric(
+          horizontal: Gap.screen, vertical: Gap.sm),
+      child: Row(
+        children: <Widget>[
+          KimoIcon(KimoIcons.lock, size: 16, color: c.honeyText),
+          const SizedBox(width: Gap.sm),
+          Expanded(
+            child: Text(
+              l.practiceQueuedCount(_pendingSubmissions),
+              style: t.caption.copyWith(color: c.honeyText),
             ),
           ),
         ],
@@ -232,101 +491,47 @@ class _PracticeScreenState extends State<PracticeScreen> {
     );
   }
 
-  Widget _body() {
-    if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) return _messageView(_error!, retry: true);
-    if (_items.isEmpty) {
-      return _messageView(
-        widget.subject != null
-            ? '${widget.subject} dersinde bugünlük tekrar kalmadı! 🎉\n'
-                'Başka bir ders seçebilir ya da yarın gelebilirsin.'
-            : 'Bugünlük tekrar kalmadı! 🎉\n'
-                'Yeni hata ekleyebilir ya da yarın tekrar gelebilirsin.',
-        emoji: '🎉',
-      );
-    }
-    if (_completed) return _completionView();
-    if (_showGoal) return _goalView();
-    return _practiceView();
-  }
-
-  Widget _practiceView() {
-    final MistakeEntry e = _current;
-    return Column(
-      children: <Widget>[
-        // Üst şerit: kapat + ilerleme
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 16, 4),
-          child: Row(
-            children: <Widget>[
-              IconButton(
-                icon: const Icon(Icons.close_rounded, color: AppColors.inkLight),
-                onPressed: () => Navigator.of(context).maybePop(),
-              ),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: _goalClaimed || _target == 0
-                        ? 1.0
-                        : ((_base + _index) / _target).clamp(0.0, 1.0),
-                    minHeight: 8,
-                    backgroundColor: AppColors.line,
-                    valueColor:
-                        const AlwaysStoppedAnimation<Color>(AppColors.green),
-                  ),
+  Widget _questionHeader(BuildContext context, L10n l, MistakeEntry e) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Gap.screen, 0, Gap.xs, Gap.sm),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  '${e.subject} · ${e.concept}',
+                  overflow: TextOverflow.ellipsis,
+                  style: t.label,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                _goalClaimed
-                    ? 'Ekstra ${_base + _index - _target + 1}'
-                    : '${_base + _index + 1}/$_target',
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ],
-          ),
-        ),
-        // Konu etiketi + (varsa) not / tam ekran
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
-          child: Row(
-            children: <Widget>[
-              Expanded(child: _conceptChip(e)),
-              if (e.note.isNotEmpty)
-                IconButton(
-                  icon: const Icon(Icons.sticky_note_2_outlined,
-                      color: AppColors.inkLight),
-                  tooltip: 'Notun',
-                  onPressed: () => _showNote(e),
+                // "Kaçıncı kez karşında" — `step` alanından türüyor, yeni bir
+                // sayaç eklenmedi.
+                Text(
+                  l.practiceTimesSeen(e.step + 1),
+                  style: t.caption.copyWith(color: c.inkMuted),
                 ),
-              if (_hasPhoto(e))
-                IconButton(
-                  icon: const Icon(Icons.fullscreen_rounded,
-                      color: AppColors.inkLight),
-                  tooltip: 'Tam ekran',
-                  onPressed: () => _showPhoto(e),
-                ),
-            ],
-          ),
-        ),
-        // Soru + çizim (büyük alan)
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-            child: DrawingCanvas(
-              key: ValueKey<int>(_index),
-              background: _questionBackground(e),
+              ],
             ),
           ),
-        ),
-        // Değerlendirme: şık varsa şıklar, yoksa öz-değerlendirme
-        Padding(
-          padding: EdgeInsets.fromLTRB(
-              16, 8, 16, 12 + MediaQuery.of(context).padding.bottom),
-          child: _bottomSection(e),
-        ),
-      ],
+          if (e.isLeech)
+            StatusBadge(label: l.mistakeLeechBadge, tone: BadgeTone.alert),
+          if (e.note.isNotEmpty)
+            IconButton(
+              onPressed: () => _showNote(context, l, e),
+              icon: KimoIcon(KimoIcons.notebook, size: 20, color: c.inkMuted),
+              tooltip: l.practiceNote,
+            ),
+          if (_hasPhoto(e))
+            IconButton(
+              onPressed: () => _showPhoto(context, e),
+              icon: KimoIcon(KimoIcons.play, size: 20, color: c.inkMuted),
+              tooltip: l.practiceFullscreen,
+            ),
+        ],
+      ),
     );
   }
 
@@ -335,7 +540,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
     if (e.imageBytes != null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(6),
+          padding: const EdgeInsets.all(Gap.sm),
           child: Image.memory(e.imageBytes!, fit: BoxFit.contain),
         ),
       );
@@ -347,27 +552,21 @@ class _PracticeScreenState extends State<PracticeScreen> {
   }
 
   Widget _noPhotoText(MistakeEntry e) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(Gap.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            const Icon(Icons.help_outline_rounded,
-                size: 48, color: AppColors.inkLight),
-            const SizedBox(height: 12),
-            Text(
-              e.concept,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.ink),
-            ),
+            Text(e.concept, textAlign: TextAlign.center, style: t.heading),
             if (e.note.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 8),
+              const SizedBox(height: Gap.sm),
               Text(
                 e.note,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.inkLight, fontSize: 14),
+                style: t.body.copyWith(color: c.inkSecondary),
               ),
             ],
           ],
@@ -376,97 +575,85 @@ class _PracticeScreenState extends State<PracticeScreen> {
     );
   }
 
-  void _showNote(MistakeEntry e) {
-    showDialog<void>(
+  void _showNote(BuildContext context, L10n l, MistakeEntry e) {
+    final KimoTypography t = context.t;
+    showModalBottomSheet<void>(
       context: context,
-      builder: (BuildContext ctx) => AlertDialog(
-        title: const Text('Notun'),
-        content: Text(e.note),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Kapat'),
-          ),
-        ],
+      backgroundColor: context.c.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
       ),
-    );
-  }
-
-  void _showPhoto(MistakeEntry e) {
-    showDialog<void>(
-      context: context,
-      builder: (BuildContext ctx) => Dialog(
-        backgroundColor: Colors.black,
-        insetPadding: const EdgeInsets.all(12),
-        child: Stack(
+      builder: (BuildContext ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          Gap.screen,
+          Gap.screen,
+          Gap.screen,
+          Gap.screen + MediaQuery.of(ctx).padding.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            InteractiveViewer(
-              minScale: 0.5,
-              maxScale: 4,
-              child: Center(
-                child: e.imageBytes != null
-                    ? Image.memory(e.imageBytes!, fit: BoxFit.contain)
-                    : MistakePhoto(path: e.photoPath!, fit: BoxFit.contain),
-              ),
-            ),
-            Positioned(
-              top: 4,
-              right: 4,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
-                onPressed: () => Navigator.of(ctx).pop(),
-              ),
-            ),
+            Text(l.practiceNote, style: t.section),
+            const SizedBox(height: Gap.sm),
+            Text(e.note, style: t.body),
           ],
         ),
       ),
     );
   }
 
-  Widget _conceptChip(MistakeEntry e) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppColors.blueBg,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          '${e.subject} · ${e.concept}',
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: AppColors.blueDark,
-            fontWeight: FontWeight.w700,
-            fontSize: 13,
+  void _showPhoto(BuildContext context, MistakeEntry e) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (BuildContext ctx) => Scaffold(
+          backgroundColor: Colors.black,
+          body: SafeArea(
+            child: Stack(
+              children: <Widget>[
+                Center(
+                  child: InteractiveViewer(
+                    minScale: 0.5,
+                    maxScale: 5,
+                    child: e.imageBytes != null
+                        ? Image.memory(e.imageBytes!, fit: BoxFit.contain)
+                        : MistakePhoto(path: e.photoPath!, fit: BoxFit.contain),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: IconButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    icon: const KimoIcon(KimoIcons.close, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _bottomSection(MistakeEntry e) {
-    if (e.hasOptions && e.correctIndex != null) return _optionsSection(e);
-    return _selfGradeButtons();
+  Widget _answerSection(BuildContext context, L10n l, MistakeEntry e) {
+    if (e.hasOptions && e.correctIndex != null) return _options(context, e);
+    return _selfGradeButtons(context, l);
   }
 
-  Widget _selfGradeButtons() {
+  Widget _selfGradeButtons(BuildContext context, L10n l) {
     return Row(
       children: <Widget>[
         Expanded(
-          child: GameButton(
-            label: 'Bilemedim',
-            color: AppColors.red,
-            icon: Icons.close_rounded,
+          child: KimoButton(
+            label: l.practiceSelfWrong,
+            kind: KimoButtonKind.tertiary,
             onPressed: () => _selfGrade(false),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: Gap.sm),
         Expanded(
-          child: GameButton(
-            label: 'Doğru çözdüm',
-            color: AppColors.green,
-            icon: Icons.check_rounded,
+          child: KimoButton(
+            label: l.practiceSelfCorrect,
             onPressed: () => _selfGrade(true),
           ),
         ),
@@ -474,171 +661,53 @@ class _PracticeScreenState extends State<PracticeScreen> {
     );
   }
 
-  Widget _optionsSection(MistakeEntry e) {
+  Widget _options(BuildContext context, MistakeEntry e) {
     final int n = e.options!.length;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    return Row(
       children: <Widget>[
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: <Widget>[
-            for (int i = 0; i < n; i++) _letterButton(e, i),
-          ],
-        ),
-        if (_answered) ...<Widget>[
-          const SizedBox(height: 10),
-          GameButton(label: _isLast ? 'BİTİR' : 'DEVAM', onPressed: _advance),
+        for (int i = 0; i < n; i++) ...<Widget>[
+          Expanded(child: _letterButton(context, e, i)),
+          if (i != n - 1) const SizedBox(width: Gap.sm),
         ],
       ],
     );
   }
 
-  Widget _letterButton(MistakeEntry e, int i) {
+  Widget _letterButton(BuildContext context, MistakeEntry e, int i) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
     final String label = e.options![i].label.isNotEmpty
         ? e.options![i].label
         : String.fromCharCode(65 + i);
-    Color bg = Colors.white;
-    Color border = AppColors.line;
-    Color fg = AppColors.ink;
-    if (_answered) {
+
+    Color bg = c.sunken;
+    Color fg = c.ink;
+    if (_revealed != null) {
       if (i == e.correctIndex) {
-        bg = AppColors.green;
-        border = AppColors.green;
-        fg = Colors.white;
+        bg = c.mint;
+        fg = c.onAction;
       } else if (i == _selectedOption) {
-        bg = AppColors.red;
-        border = AppColors.red;
-        fg = Colors.white;
+        // Seçilen yanlış şık BAL rengiyle işaretleniyor, mercanla değil:
+        // yanlış cevap bu üründe bir hata bildirimi değil.
+        bg = c.honey;
+        fg = c.onAction;
       } else {
-        fg = AppColors.inkLight;
+        fg = c.inkMuted;
       }
     }
+
     return GestureDetector(
-      onTap: _answered ? null : () => _pickOption(i),
-      child: Container(
-        width: 54,
-        height: 54,
+      behavior: HitTestBehavior.opaque,
+      onTap: _revealed != null ? null : () => _pickOption(i),
+      child: AnimatedContainer(
+        duration: Motion.press,
+        height: Sizes.buttonMin,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: bg,
-          shape: BoxShape.circle,
-          border: Border.all(color: border, width: 2.5),
+          borderRadius: Radii.all(Radii.pill),
         ),
-        child: Text(
-          label,
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: fg),
-        ),
-      ),
-    );
-  }
-
-  void _continuePastGoal() {
-    setState(() {
-      _showGoal = false;
-      _selectedOption = null;
-      _answered = false;
-    });
-  }
-
-  Widget _goalView() {
-    final int remaining = _items.length - _index;
-    return Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          const Text('🎯', style: TextStyle(fontSize: 84)),
-          const SizedBox(height: 12),
-          const Text('Günlük hedefini tamamladın!',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
-          Text('$_correct / $_index doğru',
-              style: const TextStyle(color: AppColors.inkLight, fontSize: 15)),
-          if (_bonusAwarded > 0) ...<Widget>[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.gold.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text('+$_bonusAwarded XP 🎉',
-                  style: const TextStyle(
-                      color: AppColors.goldDark,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 18)),
-            ),
-          ],
-          const SizedBox(height: 28),
-          if (remaining > 0) ...<Widget>[
-            GameButton(
-              label: 'DEVAM ET ($remaining soru daha)',
-              onPressed: _continuePastGoal,
-            ),
-            const SizedBox(height: 12),
-            GameButton(
-              label: 'Bugünlük bitir',
-              color: AppColors.blue,
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
-          ] else
-            GameButton(
-              label: 'HARİKA, BİTİR',
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _completionView() {
-    return Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          const Text('🏆', style: TextStyle(fontSize: 88)),
-          const SizedBox(height: 12),
-          const Text('Tekrar bitti!',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
-          Text(
-            '$_correct / ${_items.length} soruyu doğru çözdün.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.inkLight, fontSize: 15),
-          ),
-          const SizedBox(height: 32),
-          GameButton(
-            label: 'DEVAM',
-            onPressed: () => Navigator.of(context).maybePop(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _messageView(String message, {String emoji = '⚠️', bool retry = false}) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Text(emoji, style: const TextStyle(fontSize: 64)),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.inkLight, fontSize: 15),
-            ),
-            const SizedBox(height: 24),
-            GameButton(
-              label: retry ? 'Tekrar dene' : 'TAMAM',
-              onPressed: retry ? _load : () => Navigator.of(context).maybePop(),
-            ),
-          ],
-        ),
+        child: Text(label, style: t.numberMedium.copyWith(color: fg)),
       ),
     );
   }

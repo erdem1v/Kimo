@@ -59,3 +59,6 @@ supabase.json
 *.keystore
 key.properties
 .tmp/
+
+# gen_l10n çıktısı: `flutter pub get` her seferinde yeniden üretir.
+lib/l10n/generated/

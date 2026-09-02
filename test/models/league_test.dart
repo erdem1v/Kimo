@@ -2,38 +2,76 @@ import 'package:ai_yks_coach/models/social.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('League', () {
-    test('lig veritabanı değerinden okunur (XP eşiği yok)', () {
+  group('League — altı kademe', () {
+    test('kademe veritabanı değerinden okunur (XP eşiği yok)', () {
       expect(League.fromDb('bronz'), League.bronz);
       expect(League.fromDb('gumus'), League.gumus);
       expect(League.fromDb('altin'), League.altin);
+      expect(League.fromDb('platin'), League.platin);
+      expect(League.fromDb('zumrut'), League.zumrut);
       expect(League.fromDb('elmas'), League.elmas);
-      expect(League.fromDb('efsane'), League.efsane);
-      // Bilinmeyen/boş değer en alt lige düşer.
+      // Bilinmeyen/boş değer en alt kademeye düşer.
       expect(League.fromDb(null), League.bronz);
       expect(League.fromDb('saçma'), League.bronz);
+      // 'efsane' ARTIK YOK: eski yapıdan gelen bir değer bronza düşer.
+      // Göç onu 'zumrut'a çevirdiği için veritabanında kalmamış olmalı;
+      // kalırsa arayüz çökmek yerine en alt kademeyi gösterir.
+      expect(League.fromDb('efsane'), League.bronz);
+    });
+
+    test('tam altı kademe var ve sırası doğru', () {
+      expect(League.values, <League>[
+        League.bronz,
+        League.gumus,
+        League.altin,
+        League.platin,
+        League.zumrut,
+        League.elmas,
+      ]);
     });
 
     test('terfi zinciri doğru, en üstün sonrası yok', () {
       expect(League.bronz.next, League.gumus);
       expect(League.gumus.next, League.altin);
-      expect(League.altin.next, League.elmas);
-      expect(League.elmas.next, League.efsane);
-      expect(League.efsane.next, isNull);
-    });
-
-    test('grup, terfi ve düşme sayıları', () {
-      expect(League.cohortSize, 12);
-      expect(League.promotionCount, 5);
-      expect(League.demotionCount, 5);
+      expect(League.altin.next, League.platin);
+      expect(League.platin.next, League.zumrut);
+      expect(League.zumrut.next, League.elmas);
+      expect(League.elmas.next, isNull);
     });
 
     test('düşme zinciri doğru, en altın öncesi yok', () {
-      expect(League.efsane.previous, League.elmas);
-      expect(League.elmas.previous, League.altin);
+      expect(League.elmas.previous, League.zumrut);
+      expect(League.zumrut.previous, League.platin);
+      expect(League.platin.previous, League.altin);
       expect(League.altin.previous, League.gumus);
       expect(League.gumus.previous, League.bronz);
       expect(League.bronz.previous, isNull);
+    });
+
+    test('next ve previous birbirinin tersi', () {
+      for (final League l in League.values) {
+        expect(l.next?.previous ?? l, l, reason: '${l.name} ileri-geri');
+        expect(l.previous?.next ?? l, l, reason: '${l.name} geri-ileri');
+      }
+    });
+
+    test('kohort, terfi ve düşme sayıları', () {
+      // 30 kişilik kohort — sunucudaki league_cohort_size() ile aynı olmalı.
+      expect(League.cohortSize, 30);
+      expect(League.promotionCount, 5);
+      expect(League.demotionCount, 5);
+      // İlk 5 çıkar + son 5 düşer, kohort ikisini de barındıracak kadar
+      // büyük olmalı; aksi hâlde aynı kişi hem çıkar hem düşer.
+      expect(League.cohortSize,
+          greaterThan(League.promotionCount + League.demotionCount));
+    });
+
+    test('her kademenin veritabanı değeri ve etiketi var', () {
+      for (final League l in League.values) {
+        expect(l.dbValue, isNotEmpty);
+        expect(League.fromDb(l.dbValue), l, reason: 'gidiş-dönüş ${l.name}');
+        expect(l.label, contains(l.shortLabel));
+      }
     });
   });
 

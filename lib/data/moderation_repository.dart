@@ -38,7 +38,7 @@ class PendingReport {
     return PendingReport(
       reportId: row['report_id'] as String,
       mistakeId: row['mistake_id'] as String,
-      reason: _reasonFromDb(row['reason'] as String?),
+      reason: ReportReason.fromDb(row['reason'] as String?),
       note: row['note'] as String?,
       subject: (row['subject'] as String?) ?? '',
       concept: (row['concept'] as String?) ?? '',
@@ -58,15 +58,8 @@ class PendingReport {
     );
   }
 
-  static ReportReason _reasonFromDb(String? v) => switch (v) {
-        'unreadable' => ReportReason.unreadable,
-        'options_wrong' => ReportReason.optionsWrong,
-        'answer_wrong' => ReportReason.answerWrong,
-        'wrong_topic' => ReportReason.wrongTopic,
-        'inappropriate' => ReportReason.inappropriate,
-        'personal_info' => ReportReason.personalInfo,
-        _ => ReportReason.other,
-      };
+  // Eşleme artık modelde: iki yerde tutulması, yeni bir sebep eklendiğinde
+  // moderasyon ekranının onu 'other' göstermesine yol açıyordu.
 }
 
 /// Moderasyon: bekleyen şikayetleri getirir ve karar uygular. Tüm yetki
@@ -96,13 +89,46 @@ class ModerationRepository {
         .toList();
   }
 
-  /// [remove] true ise soru havuzdan kalıcı çıkar; false ise şikayet haksız
+  /// [remove] true ise içerik kalıcı olarak yayından çıkar; false ise şikâyet haksız
   /// sayılır ve soru geri döner.
   Future<void> decide(String reportId, {required bool remove}) async {
     await _client.rpc<void>('moderate_report', params: <String, dynamic>{
       'p_report': reportId,
       'p_action': remove ? 'remove' : 'dismiss',
     });
+  }
+
+  static const String _photoBucket = 'mistake-photos';
+
+  /// Kaldırılan içeriğin depolama nesnesini SİLER ve satırı işaretler.
+  ///
+  /// Karar `moderation='removed'` yazdığı andan itibaren yeni imzalı adres
+  /// üretilemiyor (0030 göçü). Ama halihazırda dağıtılmış adresler ömürleri
+  /// boyunca çalışmaya devam eder — Değişmez 3 onları da kapsıyor, o yüzden
+  /// dosyanın kendisi siliniyor.
+  ///
+  /// Bu adım başarısız olursa satır `admin_photo_purge_queue()` kuyruğunda
+  /// kalır; sessizce kaybolmaz.
+  Future<void> purgePhoto(String mistakeId, String? photoPath) async {
+    if (photoPath == null || photoPath.isEmpty) return;
+    await _client.storage.from(_photoBucket).remove(<String>[photoPath]);
+    await _client.rpc<void>(
+      'admin_mark_photo_purged',
+      params: <String, dynamic>{'p_id': mistakeId},
+    );
+  }
+
+  /// Nesnesi hâlâ duran kaldırılmış içerikler (yarım kalan temizlikler).
+  Future<List<({String mistakeId, String photoPath})>> pendingPurges() async {
+    final List<dynamic> rows =
+        await _client.rpc<List<dynamic>>('admin_photo_purge_queue');
+    return <({String mistakeId, String photoPath})>[
+      for (final dynamic r in rows)
+        (
+          mistakeId: (r as Map)['mistake_id'] as String,
+          photoPath: r['photo_path'] as String,
+        ),
+    ];
   }
 }
 
@@ -206,7 +232,7 @@ extension AdminQuestions on ModerationRepository {
     });
   }
 
-  /// 'hide' havuzdan çıkarır, 'restore' geri alır, 'delete' tamamen siler.
+  /// 'hide' yayından çıkarır, 'restore' geri alır, 'delete' tamamen siler.
   Future<void> questionAction(String id, String action) async {
     await _c.rpc<void>('admin_question_action',
         params: <String, dynamic>{'p_id': id, 'p_action': action});

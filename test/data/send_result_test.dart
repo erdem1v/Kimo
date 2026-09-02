@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:ai_yks_coach/data/question_pool_repository.dart';
+import 'package:ai_yks_coach/data/question_send_repository.dart';
 
 void main() {
   group('SendResult mesajı', () {

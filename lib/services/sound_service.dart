@@ -1,8 +1,14 @@
 import 'package:audioplayers/audioplayers.dart';
 
+import '../state/app_settings.dart';
+
 /// Kısa ses efektlerini çalan servis. Sesler `assets/sounds/` altında sentetik
 /// üretilmiş WAV dosyalarıdır. Web'de sesin çalması için kullanıcı etkileşimi
 /// (buton dokunuşu) gerekir; bu yüzden efektler dokunma anında tetiklenir.
+///
+/// Açık/kapalı tercihi burada tutulmuyor: `AppSettings` üzerinden gelir ve
+/// diske yazılır. Önceden yalnızca bellekteydi, yani her açılışta kendiliğinden
+/// açılıyordu — bir ayar anahtarının yapmaması gereken tam olarak buydu.
 class SoundService {
   SoundService._();
   static final SoundService instance = SoundService._();
@@ -10,8 +16,7 @@ class SoundService {
   // Tembel oluşturulur; ses kapalıyken (veya testte) hiç AudioPlayer yaratılmaz.
   AudioPlayer? _player;
 
-  /// Kullanıcı isterse sesi kapatabilir (profil ekranından).
-  bool enabled = true;
+  bool get enabled => appSettings.soundEnabled;
 
   Future<void> _play(String name) async {
     if (!enabled) return;
@@ -21,6 +26,8 @@ class SoundService {
       await player.play(AssetSource('sounds/$name.wav'));
     } catch (_) {
       // Ses çalınamazsa sessizce yut (ör. web otomatik oynatma kısıtı).
+      // Burada sessizlik bilinçli: ses efekti bir sonuç taşımıyor, çalmaması
+      // kullanıcının işini bölmez ve gösterilecek bir hata da yok.
     }
   }
 

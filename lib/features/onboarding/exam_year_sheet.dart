@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
+import '../../services/sound_service.dart';
 import '../../state/user_profile.dart';
-import '../../theme/app_colors.dart';
-import '../../widgets/game_button.dart';
+import '../../theme/tokens.dart';
+import '../../theme/typography.dart';
+import '../../widgets/kit/kimo_button.dart';
+import '../../widgets/kit/kimo_chips.dart';
+import '../../widgets/kit/kimo_icons.dart';
 
-/// Sınav yılını soran alt sayfa. Yıl → müfredat (2026-2027 eski, 2028+ maarif).
-/// İlk açılışta [dismissible]=false ile zorunlu; profilde true ile isteğe bağlı.
+/// Sınav yılı → müfredat (2026–2027 eski, 2028+ Maarif).
+///
+/// [dismissible] false ise kapatılamıyor; ilk açılışta müfredat seçilmeden
+/// devam etmek konu eşleştirmesini yanlış müfredata bağlardı.
 Future<void> showExamYearSheet(
   BuildContext context, {
   bool dismissible = true,
@@ -15,9 +22,9 @@ Future<void> showExamYearSheet(
     isDismissible: dismissible,
     enableDrag: dismissible,
     isScrollControlled: true,
-    backgroundColor: Colors.white,
+    backgroundColor: context.c.card,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
     ),
     builder: (BuildContext ctx) =>
         PopScope(canPop: dismissible, child: const _ExamYearForm()),
@@ -44,23 +51,40 @@ class _ExamYearFormState extends State<_ExamYearForm> {
 
   Future<void> _save() async {
     if (_selected == null || _saving) return;
+    final L10n l = L10n.of(context);
+    final NavigatorState nav = Navigator.of(context);
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    sound.tap();
     setState(() => _saving = true);
-    await userProfile.setExamYear(_selected!);
-    if (mounted) Navigator.of(context).pop();
+    try {
+      await userProfile.setExamYear(_selected!);
+      nav.pop();
+    } catch (e) {
+      // Sessizce kapanmıyor: yıl kaydedilemediyse müfredat da değişmemiştir
+      // ve kullanıcı bunu bilmeli.
+      debugPrint('sınav yılı kaydedilemedi: $e');
+      if (!mounted) return;
+      setState(() => _saving = false);
+      messenger.showSnackBar(SnackBar(content: Text(l.examYearSaveFailed)));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    final L10n l = L10n.of(context);
     final String? curr = _selected == null
         ? null
         : UserProfile.curriculumForYear(_selected!);
+
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          20,
-          16,
-          20,
-          16 + MediaQuery.of(context).viewInsets.bottom,
+          Gap.screen,
+          Gap.lg,
+          Gap.screen,
+          Gap.lg + MediaQuery.of(context).viewInsets.bottom,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -71,84 +95,53 @@ class _ExamYearFormState extends State<_ExamYearForm> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.line,
-                  borderRadius: BorderRadius.circular(2),
+                  color: c.border,
+                  borderRadius: Radii.all(2),
                 ),
               ),
             ),
-            const SizedBox(height: 18),
-            const Text(
-              'YKS\'ye hangi yıl gireceksin?',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Konuları doğru müfredata göre eşleştirebilmemiz için gerekli.',
-              style: TextStyle(color: AppColors.inkLight, fontSize: 13),
-            ),
-            const SizedBox(height: 18),
+            const SizedBox(height: Gap.lg),
+            Text(l.examYearTitle, style: t.section),
+            const SizedBox(height: Gap.xxs),
+            Text(l.examYearBody, style: t.caption.copyWith(color: c.inkMuted)),
+            const SizedBox(height: Gap.lg),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: Gap.sm,
+              runSpacing: Gap.sm,
               children: <Widget>[
                 for (final int y in _years)
-                  ChoiceChip(
-                    label: Text('$y'),
+                  KimoChip(
+                    label: '$y',
                     selected: _selected == y,
-                    onSelected: (_) => setState(() => _selected = y),
-                    labelStyle: TextStyle(
-                      color: _selected == y ? Colors.white : AppColors.ink,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    selectedColor: AppColors.green,
-                    backgroundColor: const Color(0xFFF4F4F4),
-                    shape: const StadiumBorder(),
-                    side: BorderSide.none,
-                    showCheckmark: false,
+                    onTap: () {
+                      sound.tap();
+                      setState(() => _selected = y);
+                    },
                   ),
               ],
             ),
             if (curr != null) ...<Widget>[
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.blueBg,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    const Icon(
-                      Icons.info_outline,
-                      size: 16,
-                      color: AppColors.blueDark,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
+              const SizedBox(height: Gap.lg),
+              Row(
+                children: <Widget>[
+                  KimoIcon(KimoIcons.notebook, size: 16, color: c.inkMuted),
+                  const SizedBox(width: Gap.sm),
+                  Expanded(
+                    child: Text(
                       curr == UserProfile.maarif
-                          ? 'Yeni müfredat (Maarif Modeli)'
-                          : 'Mevcut müfredat (2018)',
-                      style: const TextStyle(
-                        color: AppColors.blueDark,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                      ),
+                          ? l.examYearMaarif
+                          : l.examYearOld,
+                      style: t.caption.copyWith(color: c.inkSecondary),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
-            const SizedBox(height: 22),
-            GameButton(
-              label: _saving ? 'Kaydediliyor...' : 'DEVAM',
-              enabled: _selected != null && !_saving,
-              onPressed: _save,
+            const SizedBox(height: Gap.xl),
+            KimoButton(
+              label: _saving ? l.actionSave : l.actionContinue,
+              onPressed: (_selected == null || _saving) ? null : _save,
             ),
-            const SizedBox(height: 6),
           ],
         ),
       ),

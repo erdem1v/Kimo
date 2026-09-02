@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../features/pool/received_questions_screen.dart';
+import '../features/inbox/inbox_screen.dart';
 import '../features/practice/practice_screen.dart';
 
 /// Bildirime dokunulduğunda hangi ekrana gidileceğini yönetir.
@@ -19,9 +19,11 @@ class NotificationRouter {
   /// Alt navigasyonda gidilmesi istenen sekme (HomeShell dinler).
   static final ValueNotifier<int?> tabRequest = ValueNotifier<int?>(null);
 
+  // Sekme sırası: Bugün · Hatalarım · (kamera) · Lig · Profil.
+  // Kamera bir sekme değil, o yüzden dizinlerde yeri yok.
   static const int tabToday = 0;
   static const int tabMistakes = 1;
-  static const int tabSocial = 2;
+  static const int tabLeague = 2;
 
   static String? _pending;
   static bool _ready = false;
@@ -60,7 +62,7 @@ class NotificationRouter {
         case 'question_received':
           tabRequest.value = tabToday;
           nav?.push(MaterialPageRoute<void>(
-              builder: (_) => const ReceivedQuestionsScreen()));
+              builder: (_) => const InboxScreen()));
 
         // Lig ve arkadaşlıkla ilgili her şey sosyal sekmesinde.
         case 'league_last_day':
@@ -69,7 +71,7 @@ class NotificationRouter {
         case 'question_solved':
         case 'friend_league_up':
         case 'friend_streak':
-          tabRequest.value = tabSocial;
+          tabRequest.value = tabLeague;
 
         default:
           tabRequest.value = tabToday;

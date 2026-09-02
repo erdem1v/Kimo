@@ -1,5 +1,5 @@
 name: ai_yks_coach
-description: "AI YKS Coach — oyunlaştırılmış arayüz prototipi (mock veri)"
+description: "AI YKS Coach — YKS hata arşivi ve aralıklı tekrar uygulaması"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -17,6 +17,12 @@ dependencies:
   audioplayers: ^6.8.1
   image_picker: ^1.2.3
   supabase_flutter: ^2.16.0
+  # Çevrimdışı cevap kuyruğu ve cihaz tercihleri için
+  # (bkz. lib/data/submission_queue.dart, lib/state/app_settings.dart).
+  # supabase_flutter üzerinden zaten geçişli olarak geliyordu; buraya alınması
+  # sürümü değiştirmiyor ama pubspec.lock'taki `dependency` alanını
+  # `transitive` -> `"direct main"` yapıyor. O satır da güncellendi.
+  shared_preferences: ^2.5.5
   flutter_local_notifications: ^22.3.0
   timezone: ^0.11.1
   firebase_core: ^4.13.0
@@ -29,5 +35,29 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # gen_l10n: lib/l10n/app_tr.arb -> AppLocalizations (bkz. l10n.yaml).
+  generate: true
   assets:
     - assets/sounds/
+  # Yazı tipleri depoya gömüldü: çalışma anında indirme yok (düşük donanımlı
+  # Android ve çevrimdışı ilk açılış için). Google Fonts'tan latin+latin-ext
+  # altkümesi alındı; 12 Türkçe glifin hepsi her ağırlıkta doğrulandı.
+  fonts:
+    - family: Baloo2
+      fonts:
+        - asset: assets/fonts/Baloo2-500.ttf
+          weight: 500
+        - asset: assets/fonts/Baloo2-600.ttf
+          weight: 600
+        - asset: assets/fonts/Baloo2-700.ttf
+          weight: 700
+    - family: DMSans
+      fonts:
+        - asset: assets/fonts/DMSans-400.ttf
+          weight: 400
+        - asset: assets/fonts/DMSans-500.ttf
+          weight: 500
+        - asset: assets/fonts/DMSans-600.ttf
+          weight: 600
+        - asset: assets/fonts/DMSans-700.ttf
+          weight: 700

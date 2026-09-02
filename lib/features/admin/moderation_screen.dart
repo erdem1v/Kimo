@@ -19,10 +19,14 @@ class _ModerationScreenState extends State<ModerationScreen> {
   String? _error;
   final Set<String> _busy = <String>{};
 
+  /// Kaldırıldığı hâlde dosyası hâlâ duran içerik sayısı (yarım kalan temizlik).
+  int _pendingPurges = 0;
+
   @override
   void initState() {
     super.initState();
     _load();
+    _retryPurges();
   }
 
   Future<void> _load() async {
@@ -46,18 +50,53 @@ class _ModerationScreenState extends State<ModerationScreen> {
     }
   }
 
+  /// Yarım kalan dosya temizliklerini tamamlar.
+  ///
+  /// Kaldırma kararı ile dosyanın silinmesi iki ayrı adım: karar veritabanında,
+  /// silme moderatörün oturumunda oluyor. Arada bağlantı koparsa nesne depoda
+  /// kalır — yeni imzalı adres üretilemez ama dağıtılmış adresler ömürleri
+  /// boyunca çalışır. Bu yüzden ekran her açıldığında kalanlar tekrar deneniyor;
+  /// başarısız olanlar kuyrukta kalır ve aşağıda sayı olarak görünür.
+  Future<void> _retryPurges() async {
+    try {
+      final List<({String mistakeId, String photoPath})> pending =
+          await moderationRepository.pendingPurges();
+      for (final ({String mistakeId, String photoPath}) p in pending) {
+        try {
+          await moderationRepository.purgePhoto(p.mistakeId, p.photoPath);
+        } catch (_) {
+          // Tek tek başarısızlık akışı durdurmasın; sayaç aşağıda gösterilecek.
+        }
+      }
+      final List<({String mistakeId, String photoPath})> left =
+          await moderationRepository.pendingPurges();
+      if (!mounted) return;
+      setState(() => _pendingPurges = left.length);
+    } catch (_) {
+      // Moderatör değilse ya da ağ yoksa sessizce geç: bu ekranın asıl işi
+      // şikayet kuyruğu, temizlik ikincil.
+    }
+  }
+
   Future<void> _decide(PendingReport r, {required bool remove}) async {
     if (_busy.contains(r.reportId)) return;
     setState(() => _busy.add(r.reportId));
     try {
       await moderationRepository.decide(r.reportId, remove: remove);
+      if (remove) {
+        // Karar 'removed' yazdı: artık yeni imzalı adres üretilemiyor, ama
+        // dağıtılmış olanlar ömürleri boyunca çalışır. Dosyanın kendisini de
+        // sil (Değişmez 3). Başarısız olursa satır admin_photo_purge_queue()
+        // kuyruğunda kalır.
+        await moderationRepository.purgePhoto(r.mistakeId, r.photoPath);
+      }
       if (!mounted) return;
       setState(() => _items.removeWhere(
           (PendingReport x) => x.reportId == r.reportId));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(remove
-              ? 'Soru havuzdan kaldırıldı.'
+              ? 'İçerik yayından kaldırıldı.'
               : 'Şikayet reddedildi, soru geri döndü.'),
           backgroundColor: remove ? AppColors.red : AppColors.green,
           behavior: SnackBarBehavior.floating,
@@ -89,7 +128,40 @@ class _ModerationScreenState extends State<ModerationScreen> {
           ),
         ],
       ),
-      body: _body(),
+      body: Column(
+        children: <Widget>[
+          if (_pendingPurges > 0) _purgeWarning(),
+          Expanded(child: _body()),
+        ],
+      ),
+    );
+  }
+
+  /// Kaldırıldığı hâlde dosyası silinemeyen içerikler. Sessizce geçmiyoruz:
+  /// bu satırlar dururken "kaldırıldı" tam olarak doğru değil — eski imzalı
+  /// adresler ömürleri boyunca çalışmaya devam eder.
+  Widget _purgeWarning() {
+    return Container(
+      width: double.infinity,
+      color: AppColors.red.withValues(alpha: 0.10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: <Widget>[
+          const Icon(Icons.cleaning_services_outlined,
+              size: 18, color: AppColors.red),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '$_pendingPurges kaldırılmış içeriğin fotoğrafı hâlâ silinemedi.',
+              style: const TextStyle(fontSize: 13, color: AppColors.red),
+            ),
+          ),
+          TextButton(
+            onPressed: _retryPurges,
+            child: const Text('Tekrar dene'),
+          ),
+        ],
+      ),
     );
   }
 
