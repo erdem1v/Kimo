@@ -1,9 +1,30 @@
 plugins {
     id("com.android.application")
-    // Firebase bildirimleri için; android/app/google-services.json gerekir.
-    id("com.google.gms.google-services")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Firebase (anlık bildirimler) KOŞULLU uygulanıyor.
+//
+// `google-services.json` bir gizli yapılandırma dosyası: `.gitignore`'da ve
+// depoda YOK. Plugin koşulsuz uygulandığında Gradle
+// "File google-services.json is missing" diyerek derlemeyi tamamen durduruyordu
+// — yani depoyu klonlayan hiç kimse APK üretemiyordu.
+//
+// Şimdi: dosya varsa Firebase kurulur, yoksa uygulama bildirimsiz derlenir.
+// Bildirim ZAMANLAMASI yerel (`flutter_local_notifications`) ve Firebase'e
+// bağlı değil; kaybolan yalnızca sunucudan gelen push.
+//
+// CI'da gerçek dosya `GOOGLE_SERVICES_JSON` deposu sırrından yazılıyor
+// (bkz. .github/workflows/android.yml). Sır tanımlı değilse derleme yine
+// başarılı olur, üretilen APK'da push çalışmaz.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+    logger.lifecycle("google-services.json bulundu: Firebase push etkin.")
+} else {
+    logger.lifecycle(
+        "google-services.json YOK: Firebase push devre dışı derleniyor.",
+    )
 }
 
 android {

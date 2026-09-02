@@ -1,0 +1,141 @@
+# Android APK üretimi.
+#
+# NEDEN AYRI BİR İŞ: `ci.yml` doğrulama yapıyor (analyze, test, pgTAP). Bu
+# workflow bir ÇIKTI üretiyor. Ayrı tutulmasının sebebi, APK'nın her push'ta
+# değil istendiğinde derlenmesi: derleme dakikalarca sürüyor ve her commit için
+# bir APK'ya ihtiyaç yok.
+#
+# Nasıl çalıştırılır:
+#   • Elle: Actions > "android apk" > Run workflow
+#   • Etiketle: `git tag v1.0.0 && git push kimo v1.0.0`
+#     (etiketle çalıştığında APK bir GitHub Release'ine de yüklenir)
+#
+# APK NASIL İMZALANIR: `android/app/build.gradle.kts` release derlemesini
+# **debug anahtarıyla** imzalıyor (Flutter şablonunun varsayılanı). Bu APK
+# yan yüklemeyle test için uygundur; Play Store'a YÜKLENEMEZ. Gerçek bir
+# yayın anahtarı (`key.properties` + keystore) henüz üretilmedi.
+name: android apk
+
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: "Derleme türü"
+        required: true
+        default: release
+        type: choice
+        options: [release, debug]
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write   # etiketli çalıştırmada Release oluşturmak için
+
+jobs:
+  apk:
+    name: APK derle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Flutter'ın Android derlemesi JDK 17 istiyor; build.gradle.kts de
+      # sourceCompatibility/jvmTarget olarak 17 beyan ediyor.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # ---------------------------------------------------------- gizli dosyalar
+      # İkisi de depoda YOK (.gitignore) ve ikisi de İSTEĞE BAĞLI.
+      # Sır tanımlı değilse derleme yine tamamlanır; yalnızca ilgili özellik
+      # o APK'da çalışmaz. Sessiz kalmıyoruz: hangi durumun geçerli olduğu
+      # günlüğe yazılıyor.
+      - name: Firebase yapılandırması (varsa)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+            echo "::notice::google-services.json yazıldı — push bildirimleri etkin."
+          else
+            echo "::warning::GOOGLE_SERVICES_JSON sırrı yok — APK push bildirimleri OLMADAN derlenecek."
+          fi
+
+      - name: Supabase yapılandırması (varsa)
+        env:
+          SUPABASE_JSON: ${{ secrets.SUPABASE_JSON }}
+        run: |
+          if [ -n "$SUPABASE_JSON" ]; then
+            printf '%s' "$SUPABASE_JSON" > supabase.json
+            echo "::notice::supabase.json yazıldı — uygulama gerçek sunucuya bağlanacak."
+          else
+            echo "::warning::SUPABASE_JSON sırrı yok — APK DEMO MODUNDA derlenecek (yerel mock veri, oturum yok)."
+          fi
+
+      # ------------------------------------------------------------- derleme
+      - run: flutter pub get
+
+      # pubspec.lock depoya işleniyor ve pubspec.yaml ile eşzamanlı kalmalı.
+      - name: pubspec.lock değişmedi mi
+        run: git diff --exit-code pubspec.lock
+
+      - name: APK derle
+        run: |
+          BUILD_TYPE="${{ inputs.flavor || 'release' }}"
+          ARGS=""
+          if [ -f supabase.json ]; then
+            ARGS="--dart-define-from-file=supabase.json"
+          fi
+          echo "flutter build apk --$BUILD_TYPE $ARGS"
+          flutter build apk --"$BUILD_TYPE" $ARGS
+
+      # Derlenen dosyanın gerçekten var olduğunu ve boyutunu doğrula: sessizce
+      # boş bir çıktı yüklemek "APK hazır" demenin en kötü yolu olurdu.
+      - name: Çıktıyı doğrula ve adlandır
+        id: artifact
+        run: |
+          BUILD_TYPE="${{ inputs.flavor || 'release' }}"
+          SRC="build/app/outputs/flutter-apk/app-$BUILD_TYPE.apk"
+          test -f "$SRC" || { echo "::error::APK üretilmedi: $SRC yok"; exit 1; }
+          SIZE=$(stat -c%s "$SRC")
+          test "$SIZE" -gt 1000000 || { echo "::error::APK şüpheli derecede küçük ($SIZE bayt)"; exit 1; }
+          VERSION=$(grep -m1 '^version:' pubspec.yaml | sed 's/version:[[:space:]]*//' | tr '+' '-')
+          NAME="kimo-$VERSION-$BUILD_TYPE-${GITHUB_SHA::7}.apk"
+          cp "$SRC" "$NAME"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "::notice::$NAME — $((SIZE / 1024 / 1024)) MB"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: ${{ steps.artifact.outputs.name }}
+          retention-days: 30
+
+      # ------------------------------------------------------------- yayın
+      # Yalnızca etiketle çalıştırıldığında. APK DEPOYA COMMIT EDİLMİYOR:
+      # onlarca MB'lık ikili dosyalar git geçmişini kalıcı olarak şişirir ve
+      # geri alınamaz. Release varlığı doğru yer.
+      - name: Release oluştur ve APK'yı ekle
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Sır DOĞRUDAN kabuk satırına gömülmüyor: `${{ secrets.X }}` bir
+          # komutun içine yazıldığında değer, çalıştırılan komut satırında
+          # (ve hata ayıklama izlerinde) görünür hâle gelir. Ortam değişkeni
+          # olarak geçmek bu yüzeyi kapatıyor; aşağıda yalnızca "boş mu"
+          # sorusu soruluyor, değerin kendisi hiç yazdırılmıyor.
+          SUPABASE_JSON: ${{ secrets.SUPABASE_JSON }}
+        run: |
+          NOTES="Bu APK **debug anahtarıyla** imzalıdır: yan yüklemeyle test için uygundur, Play Store'a yüklenemez."
+          if [ -z "$SUPABASE_JSON" ]; then
+            NOTES="$NOTES"$'\n\n'"UYARI: SUPABASE_JSON sırrı tanımlı olmadığı için bu APK **demo modunda** derlendi — gerçek sunucuya bağlanmaz."
+          fi
+          gh release create "${GITHUB_REF_NAME}" \
+            "${{ steps.artifact.outputs.name }}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes "$NOTES"
