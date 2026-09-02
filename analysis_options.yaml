@@ -34,3 +34,11 @@ analyzer:
     # Hiçbir yerden çağrılmadıkları için derlemeye girmiyorlar; analizden de
     # çıkarıldılar ki eski API'lere göre yazılmış kod CI'yı kırmasın.
     - lib/_archive/**
+    # Tek seferlik veri betikleri: uygulama kodu degil, kendi
+    # bagimliliklari var (package:image pubspec'te yok) ve `dart run`
+    # ile elle calistiriliyorlar.
+    - tools/bin/**
+    - build/**
+    - android/**
+    - ios/**
+    - web/**

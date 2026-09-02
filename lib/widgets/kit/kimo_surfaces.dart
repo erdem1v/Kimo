@@ -73,7 +73,7 @@ class SectionHeader extends StatelessWidget {
     return Row(
       children: <Widget>[
         Expanded(child: Text(title, style: t.bodyStrong)),
-        if (trailing != null) trailing!,
+        ?trailing,
       ],
     );
   }

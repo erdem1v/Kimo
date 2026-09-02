@@ -7,7 +7,6 @@ import '../../state/user_profile.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/kimo/kimo.dart';
-import '../../widgets/kimo/kimo_pose.dart';
 import '../../widgets/kit/kimo_icons.dart';
 import '../../widgets/kit/kimo_surfaces.dart';
 
@@ -94,9 +93,13 @@ class _MascotSheetState extends State<_MascotSheet> {
       elevated: selected,
       color: selected ? c.actionTint : c.sunken,
       onTap: () async {
+        // Navigator await'TEN ONCE yakalaniyor: async bosluktan sonra
+        // `context` kullanmak, bu arada agactan kalkmis bir widget'in
+        // context'ine dokunmak demek.
+        final NavigatorState nav = Navigator.of(context);
         sound.tap();
         await userProfile.setMascot(m);
-        if (mounted) Navigator.of(context).pop();
+        if (mounted) nav.pop();
       },
       child: Row(
         children: <Widget>[

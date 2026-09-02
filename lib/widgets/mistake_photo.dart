@@ -83,7 +83,7 @@ class _MistakePhotoState extends State<MistakePhoto> {
               height: 18,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : const Icon(Icons.image_not_supported_outlined,
+          : Icon(Icons.image_not_supported_outlined,
               color: context.c.inkMuted),
     );
   }

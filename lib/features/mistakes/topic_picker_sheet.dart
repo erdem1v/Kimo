@@ -123,7 +123,7 @@ class _TopicPickerState extends State<_TopicPicker> {
                   const SizedBox(width: Gap.sm),
                   Expanded(
                     child: Text(
-                      widget.subject + ' · ' + widget.exam,
+                      '${widget.subject} · ${widget.exam}',
                       style: t.section,
                     ),
                   ),
@@ -162,7 +162,8 @@ class _TopicPickerState extends State<_TopicPicker> {
                               child: Text(u.name.toUpperCase(),
                                   style: t.overline.copyWith(color: color)),
                             ),
-                            for (final String t in u.topics) _tile(t, color),
+                            for (final String topic in u.topics)
+                              _tile(topic, color),
                           ],
                         ],
                       ),

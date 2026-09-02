@@ -6,7 +6,6 @@ import '../../services/sound_service.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/kimo/kimo.dart';
-import '../../widgets/kimo/kimo_pose.dart';
 import '../../widgets/kit/kimo_button.dart';
 import '../../widgets/kit/kimo_icons.dart';
 import '../auth/login_screen.dart';

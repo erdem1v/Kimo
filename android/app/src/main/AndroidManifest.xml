@@ -3,7 +3,7 @@
          yalnızca debug/profile manifest'ine koyduğu için elle ekliyoruz. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="ai_yks_coach"
+        android:label="AI YKS Coach"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

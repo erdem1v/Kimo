@@ -15,10 +15,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// kaldırıldı (task kararı).
 ///
 /// **Metne göre değil YAPIYA göre iddia ediyor.** Önceki sürümü "Günlük Tekrar
-/// Hedefi" metnini arıyordu ve iki sorunu vardı: (1) o metin yeniden yazılan
-/// "Bugün" ekranıyla birlikte değişti, (2) sekmeler `IndexedStack` içinde
-/// canlı tutulduğu için görünmeyen sekmenin metinleri de ağaçta duruyor —
-/// yani "sekme değişti" iddiası metinle kurulduğunda YANLIŞ geçerdi.
+/// Hedefi" metnini arıyordu; o metin "Bugün" ekranı yeniden yazılınca değişti
+/// ve test bir daha asla geçemezdi. Seçili sekmeyi artık `KimoNavBar`ın
+/// `selectedIndex`i söylüyor: yeniden yazılan bir metne bağlı değil.
+///
+/// `IndexedStack` seçili olmayan çocukları OFFSTAGE işaretliyor ve `find.*`
+/// varsayılan olarak onları atlıyor; dört ekranın da kurulduğunu doğrulamak
+/// için `skipOffstage: false` gerekiyor.
 void main() {
   setUp(() async {
     // Ses eklentisi testte yok; tercih artık diske yazıldığı için sahte depo.
@@ -30,13 +33,25 @@ void main() {
     await appSettings.load();
   });
 
+  /// Uygulamayı kurar ve birkaç kare ilerletir.
+  ///
+  /// **`pumpAndSettle` KULLANILMIYOR.** Kimo sürekli animasyonlu (nefes 3,4 sn,
+  /// göz kırpma 5 sn) ve boşta döngüsü hiç bitmiyor; `pumpAndSettle` "hiçbir
+  /// animasyon kalmayana kadar" beklediği için asla dönmez ve test zaman
+  /// aşımına uğrar. Sabit sayıda kare ilerletmek burada doğru olan.
+  Future<void> boot(WidgetTester tester) async {
+    await tester.pumpWidget(const AiYksCoachApp());
+    await tester.pump(const Duration(milliseconds: 32));
+    await tester.pump(const Duration(milliseconds: 32));
+  }
+
   /// Alt çubuktaki bir sekmeye dokunur.
   Future<void> tapTab(WidgetTester tester, String label) async {
     await tester.tap(find.descendant(
       of: find.byType(KimoNavBar),
       matching: find.text(label),
     ));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 32));
   }
 
   int selectedIndex(WidgetTester tester) =>
@@ -44,22 +59,25 @@ void main() {
 
   testWidgets('Uygulama açılır ve dört sekme de kurulur',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const AiYksCoachApp());
-    await tester.pumpAndSettle();
+    await boot(tester);
 
-    // Dördü de `IndexedStack` içinde canlı; hepsi hata vermeden kuruluyor.
+    // Dördü de `IndexedStack` içinde KURULUYOR (hata vermeden). Görünmeyen
+    // üçü offstage olduğu için `skipOffstage: false` şart.
+    expect(find.byType(TodayScreen, skipOffstage: false), findsOneWidget);
+    expect(find.byType(MistakesScreen, skipOffstage: false), findsOneWidget);
+    expect(find.byType(LeagueScreen, skipOffstage: false), findsOneWidget);
+    expect(find.byType(ProfileScreen, skipOffstage: false), findsOneWidget);
+
+    // Yalnızca seçili olan GÖRÜNÜR.
     expect(find.byType(TodayScreen), findsOneWidget);
-    expect(find.byType(MistakesScreen), findsOneWidget);
-    expect(find.byType(LeagueScreen), findsOneWidget);
-    expect(find.byType(ProfileScreen), findsOneWidget);
+    expect(find.byType(ProfileScreen), findsNothing);
 
     expect(selectedIndex(tester), 0, reason: 'açılışta Bugün seçili');
   });
 
   testWidgets('Sekmeler arası geçiş seçili indeksi değiştirir',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const AiYksCoachApp());
-    await tester.pumpAndSettle();
+    await boot(tester);
 
     await tapTab(tester, 'Hatalarım');
     expect(selectedIndex(tester), 1);
@@ -76,8 +94,7 @@ void main() {
 
   testWidgets('Alt çubuk dört sekme + ortada kamera düğmesi taşır',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const AiYksCoachApp());
-    await tester.pumpAndSettle();
+    await boot(tester);
 
     final KimoNavBar bar = tester.widget<KimoNavBar>(find.byType(KimoNavBar));
     expect(
@@ -96,8 +113,7 @@ void main() {
   });
 
   testWidgets('Varsayılan tema sistemi takip eder', (WidgetTester tester) async {
-    await tester.pumpWidget(const AiYksCoachApp());
-    await tester.pumpAndSettle();
+    await boot(tester);
 
     final MaterialApp app = tester.widget<MaterialApp>(find.byType(MaterialApp));
     expect(app.themeMode, ThemeMode.system);

@@ -11,7 +11,6 @@ import '../../state/refresh_bus.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/kimo/kimo.dart';
-import '../../widgets/kimo/kimo_pose.dart';
 import '../../widgets/kit/kimo_button.dart';
 import '../../widgets/kit/kimo_chips.dart';
 import '../../widgets/kit/kimo_icons.dart';
@@ -511,18 +510,25 @@ class _ReportSheetState extends State<_ReportSheet> {
           children: <Widget>[
             Text(l.inboxReportTitle, style: t.section),
             const SizedBox(height: Gap.md),
-            for (final ReportReason r in ReportReason.inbox)
-              RadioListTile<ReportReason>(
-                value: r,
-                groupValue: _reason,
-                onChanged: (ReportReason? v) => setState(() => _reason = v),
-                contentPadding: EdgeInsets.zero,
-                title: Text(r.label, style: t.body),
-                subtitle: Text(
-                  r.hint,
-                  style: t.caption.copyWith(color: c.inkMuted),
-                ),
+            RadioGroup<ReportReason>(
+              groupValue: _reason,
+              onChanged: (ReportReason? v) => setState(() => _reason = v),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  for (final ReportReason r in ReportReason.inbox)
+                    RadioListTile<ReportReason>(
+                      value: r,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(r.label, style: t.body),
+                      subtitle: Text(
+                        r.hint,
+                        style: t.caption.copyWith(color: c.inkMuted),
+                      ),
+                    ),
+                ],
               ),
+            ),
             const SizedBox(height: Gap.sm),
             TextField(
               controller: _note,

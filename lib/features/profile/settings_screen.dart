@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:system_settings/system_settings.dart';
+// Takma ad ZORUNLU: bu paket de `AppSettings` adinda bir sinif yayiyor ve
+// bizim `state/app_settings.dart` icindeki tercih deposuyla ayni ada sahip.
+import 'package:app_settings/app_settings.dart' as android_settings;
 
 import '../../data/auth_repository.dart';
 import '../../data/daily_state_repository.dart';
@@ -301,7 +303,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
     );
-    if (go == true) await SystemSettings.openNotificationSettings();
+    // Uygulamanin KENDI bildirim sayfasi aciliyor; cihazin genel ayarlarina
+    // birakmak kullaniciyi dogru anahtari aramaya mecbur ederdi.
+    //
+    // Paket notu: burada eskiden `system_settings` vardi ve o paket 2020'den
+    // beri guncellenmemis (AGP 3.5, jcenter). Gradle 9 `jcenter()` desteğini
+    // kaldirdigi icin ANDROID DERLEMESINI TAMAMEN KIRIYORDU.
+    if (go == true) {
+      await android_settings.AppSettings.openAppSettings(
+        type: android_settings.AppSettingsType.notification,
+      );
+    }
   }
 
   Widget _hourCard(

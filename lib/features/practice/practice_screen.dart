@@ -15,7 +15,6 @@ import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/drawing_canvas.dart';
 import '../../widgets/kimo/kimo.dart';
-import '../../widgets/kimo/kimo_pose.dart';
 import '../../widgets/kit/kimo_button.dart';
 import '../../widgets/kit/kimo_chips.dart';
 import '../../widgets/kit/kimo_icons.dart';
@@ -377,8 +376,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
           child: EmptyState(
             illustration: const Kimo(size: 120, mood: KimoMood.calm),
             message: subject == null
-                ? '${l.practiceEmptyTitle}
-${l.practiceEmptyBody}'
+                ? '${l.practiceEmptyTitle}\n${l.practiceEmptyBody}'
                 : l.practiceEmptySubjectBody(subject),
             action: KimoButton(
               label: l.actionClose,
