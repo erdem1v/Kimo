@@ -47,6 +47,14 @@ select isnt(
 );
 
 -- ============================================================== EKLEME
+-- Bob'un kodu ayrıcalıklı oturumda okunur: profiles SELECT politikası yalnız
+-- kendi satırını açar; alice olarak bob'un satırını sorgulamak BOŞ döner ve
+-- test sessizce NULL kodla çağrı yapar (ilk CI koşusunun bulgusu).
+select tests.reset_role();
+create temp table _bob_code on commit drop as
+  select friend_code as code from public.profiles
+   where id = tests.get_supabase_uid('bob');
+
 select tests.authenticate_as('alice');
 
 -- Reşit olmayan/onaysız hesapta kapı kapalı; testin bu bölümü için yaşı ver.
@@ -57,8 +65,7 @@ select lives_ok(
 
 select is(
   (select f.reason
-     from (select p.friend_code as code from public.profiles p
-            where p.id = tests.get_supabase_uid('bob')) b
+     from _bob_code b
      cross join lateral public.add_friend_by_code(b.code) f),
   'eklendi',
   'kodla arkadaş isteği gönderilebiliyor'
@@ -75,11 +82,9 @@ select is(
 -- Tireli ve küçük harfli yazım da kabul edilmeli (kullanıcı kopyalarken bozar).
 select lives_ok(
   format('select public.add_friend_by_code(%L)',
-         lower(substr((select friend_code from public.profiles
-                        where id = tests.get_supabase_uid('bob')), 1, 3)
+         lower(substr((select code from _bob_code), 1, 3)
                || '-' ||
-               substr((select friend_code from public.profiles
-                        where id = tests.get_supabase_uid('bob')), 4, 3))),
+               substr((select code from _bob_code), 4, 3))),
   'tireli ve küçük harfli kod normalize ediliyor'
 );
 
@@ -110,7 +115,7 @@ select is(
 
 select throws_ok(
   'select public.add_friend_by_code(''ABC'')',
-  '22023',
+  '22023', null,
   'eksik uzunluktaki kod reddediliyor'
 );
 
@@ -136,7 +141,7 @@ $fx$;
 
 select throws_ok(
   'select public.add_friend_by_code(''ZZZZZZ'')',
-  '54000',
+  '54000', null,
   'saatlik deneme sınırı aşılınca reddediliyor — kod uzayı taranamıyor'
 );
 

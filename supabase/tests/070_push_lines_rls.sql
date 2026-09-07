@@ -50,12 +50,12 @@ select ok(not has_table_privilege('authenticated', 'public.app_config', 'SELECT'
 select tests.authenticate_as('alice');
 select throws_ok(
   'select 1 from public.push_lines limit 1',
-  '42501',
+  '42501', null,
   'authenticated push_lines''ı okumaya kalkınca reddediliyor'
 );
 select throws_ok(
   'select 1 from public.app_config limit 1',
-  '42501',
+  '42501', null,
   'authenticated app_config''i okumaya kalkınca reddediliyor'
 );
 

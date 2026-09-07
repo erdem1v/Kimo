@@ -95,10 +95,18 @@ select is(
   'temizlik kuyruğu kaldırılmış ama nesnesi duran içeriği listeliyor'
 );
 
+-- Kimlik ayrıcalıklı oturumda alınır: mistakes SELECT politikası yalnız
+-- sahibine açık; mod olarak alice'in satırını sorgulamak BOŞ döner ve
+-- işaretleme sessiz no-op olurdu (ilk CI koşusunun bulgusu).
+select tests.reset_role();
+create temp table _alice_mistake on commit drop as
+  select id from public.mistakes
+   where user_id = tests.get_supabase_uid('alice');
+select tests.authenticate_as('mod');
+
 select lives_ok(
   format('select public.admin_mark_photo_purged(%L)',
-         (select id from public.mistakes
-           where user_id = tests.get_supabase_uid('alice'))),
+         (select id from _alice_mistake)),
   'moderatör temizlendi işareti koyabiliyor'
 );
 select is(

@@ -82,27 +82,27 @@ select lives_ok(
 
 select throws_ok(
   'update public.mistakes set moderation = ''ok''',
-  '42501',
+  '42501', null,
   'C2: sahibi kaldırılmış içeriği geri açamaz'
 );
 select throws_ok(
   'update public.mistakes set report_count = 0',
-  '42501',
+  '42501', null,
   'C2: sahibi şikayet sayacını sıfırlayamaz'
 );
 select throws_ok(
   'update public.mistakes set solved_correct = 9999',
-  '42501',
+  '42501', null,
   'sahibi havuz istatistiğini şişiremez'
 );
 select throws_ok(
   'update public.mistakes set source = ''osym'', source_year = 2025',
-  '42501',
+  '42501', null,
   'sahibi sorusuna ÖSYM künyesi takamaz'
 );
 select throws_ok(
   'update public.mistakes set photo_path = ''baskasi/gizli.jpg''',
-  '42501',
+  '42501', null,
   'photo_path sonradan başkasının yoluna çevrilemez'
 );
 

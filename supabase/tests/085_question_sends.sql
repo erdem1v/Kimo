@@ -61,19 +61,19 @@ select tests.authenticate_as('bob');
 select throws_ok(
   format('update public.question_sends set sender_id = %L',
          tests.get_supabase_uid('mallory')),
-  '42501',
+  '42501', null,
   'alıcı gönderiyi başkasından gelmiş gibi gösteremez'
 );
 select throws_ok(
   'update public.question_sends set note = ''uydurma not''',
-  '42501',
+  '42501', null,
   'alıcı gönderenin notunu değiştiremez'
 );
 
 -- Meşru akış artık RPC'den geçiyor: doğrudan UPDATE reddedilmeli.
 select throws_ok(
   'update public.question_sends set solved_at = now(), correct = true',
-  '42501',
+  '42501', null,
   'alıcı çözüldü işaretini doğrudan yazamaz (submit_sent_answer zorunlu)'
 );
 

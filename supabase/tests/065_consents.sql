@@ -62,7 +62,7 @@ select is(
 select throws_ok(
   format('update public.user_consents set granted = true where user_id = %L',
          tests.get_supabase_uid('alice')),
-  '42501',
+  '42501', null,
   'Değişmez 7: kullanıcı kendi onay kaydını değiştiremiyor'
 );
 

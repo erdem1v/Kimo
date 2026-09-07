@@ -57,14 +57,14 @@ select tests.authenticate_as('mallory');
 select throws_ok(
   format('update public.profiles set xp = 999999 where id = %L',
          tests.get_supabase_uid('mallory')),
-  '42501',
+  '42501', null,
   'C3: kullanıcı kendine XP yazamıyor'
 );
 select throws_ok(
   format('insert into public.study_attempts (user_id, subject, concept, correct, source)
           values (%L, ''Uydurma'', ''Konu'', true, ''review'')',
          tests.get_supabase_uid('mallory')),
-  '42501',
+  '42501', null,
   'P1: uydurma konu ölçümü eklenemiyor'
 );
 
@@ -152,13 +152,13 @@ select tests.authenticate_as('alice');
 select throws_ok(
   format('select public.set_question_sharing(%L, true)',
          (select id from public.mistakes where concept = 'Kuvvet')),
-  '42501',
+  '42501', null,
   'kaldırılmış içerik havuza geri açılamıyor'
 );
 
 select throws_ok(
   'select public.upsert_my_profile(''a'')',
-  '22023',
+  '22023', null,
   'çok kısa takma ad reddediliyor'
 );
 select lives_ok(
@@ -173,7 +173,7 @@ update public.profiles set is_system = true, nickname = 'ÖSYM Çıkmış Sorula
 select tests.authenticate_as('mallory');
 select throws_ok(
   'select public.upsert_my_profile(''ÖSYM Çıkmış Sorular'')',
-  '22023',
+  '22023', null,
   'sistem hesabının adı taklit edilemiyor'
 );
 

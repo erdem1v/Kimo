@@ -43,7 +43,7 @@ select lives_ok(
 select throws_ok(
   format('update public.profiles set league = ''efsane'' where id = %L',
          tests.get_supabase_uid('alice')),
-  '23514',
+  '23514', null,
   'efsane ARTIK GEÇERSİZ — eski kademe adı kabul edilmiyor'
 );
 

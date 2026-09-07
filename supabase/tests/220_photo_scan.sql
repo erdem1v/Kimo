@@ -48,7 +48,7 @@ select throws_ok(
          'values (%L, %L, (select id from public.mistakes where user_id = %L))',
          tests.get_supabase_uid('sahip'), tests.get_supabase_uid('dost'),
          tests.get_supabase_uid('sahip')),
-  '42501',
+  '42501', null,
   'pending fotoğraflı soru arkadaşa GÖNDERİLEMEZ'
 );
 
@@ -120,6 +120,13 @@ select is(
 );
 
 -- ============================================== admin kararı: temiz
+-- Kimlik ayrıcalıklı oturumda alınır (mistakes RLS'i bekci'ye sahip'in
+-- satırını göstermez; alt sorgu NULL döner ve karar no-op olurdu).
+select tests.reset_role();
+create temp table _sahip_mistake on commit drop as
+  select id from public.mistakes
+   where user_id = tests.get_supabase_uid('sahip');
+
 select tests.authenticate_as('bekci');
 select is(
   (select count(*)::int from public.admin_flagged_photos()),
@@ -128,9 +135,8 @@ select is(
 );
 
 select lives_ok(
-  format('select public.admin_review_photo_scan(
-            (select id from public.mistakes where user_id = %L), ''clear'')',
-         tests.get_supabase_uid('sahip')),
+  format('select public.admin_review_photo_scan(%L, ''clear'')',
+         (select id from _sahip_mistake)),
   'admin temiz işaretleyebiliyor'
 );
 select tests.authenticate_as('dost');
@@ -144,9 +150,8 @@ select is(
 -- =========================================== admin kararı: kaldır → purge
 select tests.authenticate_as('bekci');
 select lives_ok(
-  format('select public.admin_review_photo_scan(
-            (select id from public.mistakes where user_id = %L), ''remove'')',
-         tests.get_supabase_uid('sahip')),
+  format('select public.admin_review_photo_scan(%L, ''remove'')',
+         (select id from _sahip_mistake)),
   'admin kaldırabiliyor'
 );
 select is(

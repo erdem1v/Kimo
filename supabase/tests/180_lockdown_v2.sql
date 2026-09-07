@@ -49,7 +49,10 @@ select ok(not has_table_privilege('authenticated', 'public.rate_limits', 'INSERT
           'rate_limits yazılamaz');
 select ok(not has_table_privilege('authenticated', 'public.guardian_requests', 'SELECT'),
           'guardian_requests okunamaz');
-select ok(has_table_privilege('authenticated', 'public.user_blocks', 'INSERT'),
+-- Kilit modeli KOLON bazlı: tablo düzeyi INSERT bilinçli olarak verilmiyor
+-- (created_at istemciden yazılamasın). has_table_privilege kolon grant'larını
+-- saymaz; iddia kolonda yapılır (ilk CI koşusunun düzeltmesi).
+select ok(has_column_privilege('authenticated', 'public.user_blocks', 'blocker_id', 'INSERT'),
           'user_blocks''a yazılabiliyor (kendi engelini eklemek meşru)');
 select ok(has_table_privilege('authenticated', 'public.user_blocks', 'DELETE'),
           'engel kaldırılabiliyor');
@@ -72,36 +75,36 @@ select tests.authenticate_as('alice');
 select throws_ok(
   format('update public.profiles set combo = 99 where id = %L',
          tests.get_supabase_uid('alice')),
-  '42501',
+  '42501', null,
   'kullanıcı kendi çarpanını yazamıyor'
 );
 select throws_ok(
   format('update public.profiles set gems = 9999 where id = %L',
          tests.get_supabase_uid('alice')),
-  '42501',
+  '42501', null,
   'kullanıcı kendine elmas basamıyor'
 );
 select throws_ok(
   format('update public.profiles set friend_code = ''AAAAAA'' where id = %L',
          tests.get_supabase_uid('alice')),
-  '42501',
+  '42501', null,
   'kullanıcı kendi arkadaş kodunu seçemiyor'
 );
 select throws_ok(
   format('update public.profiles set is_anonymous = false where id = %L',
          tests.get_supabase_uid('alice')),
-  '42501',
+  '42501', null,
   'kullanıcı anonimlik bayrağını değiştiremiyor'
 );
 select throws_ok(
   'insert into public.rate_limits (user_id, bucket, window_key, n) '
   'values (auth.uid(), ''ai'', ''2026-01-01'', 0)',
-  '42501',
+  '42501', null,
   'kullanıcı kendine yapay zekâ hakkı yazamıyor'
 );
 select throws_ok(
   'select * from public.guardian_requests',
-  '42501',
+  '42501', null,
   'kullanıcı veli onayı token hash''lerini okuyamıyor'
 );
 

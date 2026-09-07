@@ -58,13 +58,13 @@ select lives_ok(
 select throws_ok(
   format('select public.set_birth_year(%s)',
          extract(year from now())::int - 30),
-  '22023',
+  '22023', null,
   'doğum yılı İKİNCİ kez yazılamıyor — kısıt yılı değiştirerek aşılamaz'
 );
 
 select throws_ok(
   format('select public.set_birth_year(%s)', extract(year from now())::int),
-  '22023',
+  '22023', null,
   'saçma yıl reddediliyor'
 );
 
@@ -81,7 +81,7 @@ select ok(
 select throws_ok(
   format('insert into public.friendships (requester_id, addressee_id) values (%L, %L)',
          tests.get_supabase_uid('cocuk'), tests.get_supabase_uid('hedef')),
-  '42501',
+  '42501', null,
   'SUNUCU reddediyor: onaysız reşit olmayan hesap arkadaş isteği gönderemiyor'
 );
 
@@ -107,8 +107,14 @@ select lives_ok(
 -- Defter geçmişi tutuyor; en son kayıt geçerli. Geri alınınca kapı yeniden
 -- kapanmalı — aksi hâlde "onayı geri çekmek" işlevsiz bir düğme olurdu.
 select tests.reset_role();
-insert into public.user_consents (user_id, kind, granted, source)
-values (tests.get_supabase_uid('cocuk'), 'guardian', false, 'settings');
+-- Test tek işlemde koşuyor ve now() işlem boyunca SABİT: geri alma kaydına
+-- açık bir "daha sonra" damgası verilmezse iki kayıt aynı recorded_at'i
+-- taşır ve `order by recorded_at desc limit 1` hangisini seçeceği belirsiz
+-- kalır (ilk CI koşusunda granted=true seçildi). Canlıda kayıtlar ayrı
+-- işlemlerde atıldığı için bu yalnızca test fikstürünün sorunu.
+insert into public.user_consents (user_id, kind, granted, source, recorded_at)
+values (tests.get_supabase_uid('cocuk'), 'guardian', false, 'settings',
+        now() + interval '1 second');
 
 select tests.authenticate_as('cocuk');
 select ok(
@@ -136,7 +142,7 @@ select ok(
 select throws_ok(
   format('update public.user_consents set granted = true where user_id = %L',
          tests.get_supabase_uid('cocuk')),
-  '42501',
+  '42501', null,
   'onay kaydı hâlâ değiştirilemez (Değişmez 7 korunuyor)'
 );
 

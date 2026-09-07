@@ -77,19 +77,19 @@ select tests.authenticate_as('alice');
 select throws_ok(
   format('update public.profiles set league = ''efsane'' where id = %L',
          tests.get_supabase_uid('alice')),
-  '42501',
+  '42501', null,
   'kullanıcı kendini en üst lige yazamaz'
 );
 select throws_ok(
   format('update public.profiles set dismissed_reports = 0 where id = %L',
          tests.get_supabase_uid('alice')),
-  '42501',
+  '42501', null,
   'kullanıcı haksız-şikayet sicilini sıfırlayamaz'
 );
 select throws_ok(
   format('update public.profiles set is_system = true where id = %L',
          tests.get_supabase_uid('alice')),
-  '42501',
+  '42501', null,
   'kullanıcı kendini sistem hesabı yapamaz'
 );
 -- Veli onayını kendi yazma denemesi artık SÜTUN OLMADIĞI için imkânsız;
@@ -97,7 +97,7 @@ select throws_ok(
 select throws_ok(
   format('update public.profiles set birth_year = 2010 where id = %L',
          tests.get_supabase_uid('alice')),
-  '42501',
+  '42501', null,
   'kullanıcı doğum yılını doğrudan yazamaz (set_birth_year RPC''si zorunlu)'
 );
 

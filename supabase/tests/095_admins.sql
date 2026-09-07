@@ -43,7 +43,7 @@ select tests.authenticate_as('alice');
 select throws_ok(
   format('insert into public.admins (user_id) values (%L)',
          tests.get_supabase_uid('alice')),
-  '42501',
+  '42501', null,
   'C1: sıradan kullanıcı kendini yönetici yapamaz'
 );
 select is(public.is_admin(), false, 'sıradan kullanıcı için is_admin() false');

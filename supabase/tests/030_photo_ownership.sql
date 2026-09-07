@@ -25,7 +25,7 @@ select throws_ok(
             (subject, concept, mistake_type, photo_path)
           values (''X'', ''Y'', ''dikkatsizlik'', %L)',
          tests.get_supabase_uid('alice')::text || '/gizli.jpg'),
-  '23514',
+  '23514', null,
   'H4: başkasının klasörünü gösteren satır EKLENEMEZ'
 );
 
@@ -139,7 +139,7 @@ select throws_ok(
   format('update public.profiles set avatar_path = %L where id = %L',
          tests.get_supabase_uid('alice')::text || '/avatar.jpg',
          tests.get_supabase_uid('mallory')),
-  '23514',
+  '23514', null,
   'avatar_path başkasının klasörünü gösteremez'
 );
 select lives_ok(

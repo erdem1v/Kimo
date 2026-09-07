@@ -69,7 +69,7 @@ select throws_ok(
          'values (%L, %L, (select id from public.mistakes where user_id = %L limit 1))',
          tests.get_supabase_uid('alice'), tests.get_supabase_uid('bob'),
          tests.get_supabase_uid('alice')),
-  '42501',
+  '42501', null,
   'ENGELLENEN kişi artık soru gönderemiyor (arkadaşlık sürse bile)'
 );
 
@@ -106,7 +106,7 @@ select tests.authenticate_as('alice');
 select throws_ok(
   format('insert into public.friendships (requester_id, addressee_id) values (%L, %L)',
          tests.get_supabase_uid('alice'), tests.get_supabase_uid('carol')),
-  '42501',
+  '42501', null,
   'engelleyen kişiye arkadaş isteği gönderilemiyor'
 );
 
@@ -132,7 +132,7 @@ select ok(
 select throws_ok(
   format('insert into public.friendships (requester_id, addressee_id) values (%L, %L)',
          tests.get_supabase_uid('anon_user'), tests.get_supabase_uid('bob')),
-  '42501',
+  '42501', null,
   'SUNUCU reddediyor: anonim hesap arkadaş isteği gönderemiyor'
 );
 

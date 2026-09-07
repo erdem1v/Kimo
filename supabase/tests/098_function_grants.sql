@@ -86,7 +86,7 @@ select tests.authenticate_as('alice');
 select throws_ok(
   format('select public.send_push(%L, ''friend_request'', ''Sahte Kişi'')',
          tests.get_supabase_uid('alice')),
-  '42501',
+  '42501', null,
   'kullanıcı doğrudan bildirim gönderemiyor'
 );
 select lives_ok(
