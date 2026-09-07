@@ -108,10 +108,15 @@ values
    tests.get_supabase_uid('alice')::text || '/q2.jpg',
    '[{"label":"A","text":"1"},{"label":"B","text":"2"}]'::jsonb, 0, true);
 
+-- Kimlik yine ayrıcalıklı fikstürde (mallory 'Mol'u RLS'ten göremez).
+create temp table _mol on commit drop as
+  select id from public.mistakes where concept = 'Mol';
+grant select on _mol to authenticated;
+
 select tests.authenticate_as('mallory');
 select is(
   (select xp_awarded from public.submit_pool_answer(
-     (select id from public.mistakes where concept = 'Mol'), 0)),
+     (select id from _mol), 0)),
   10,
   'doğru cevap 10 XP veriyor'
 );

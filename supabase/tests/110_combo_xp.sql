@@ -96,7 +96,12 @@ select is(
   (select max(r.multiplier)::int
      from fx
      cross join generate_series(1, 7) g
-     cross join lateral public.submit_review(fx.mistake_id, true, 1, null) r),
+     -- LATERAL, g'ye REFERANS VERMELİ (g - g + 1 = 1): vermezse planlayıcı
+     -- volatil çağrıyı satır başına yinelemek zorunda değildir ve yeni PG
+     -- sürümünde tek kez çalıştırıp aynı sonucu 7 satıra kopyalıyordu —
+     -- kombo hiç büyümüyor, test 1 görüyordu (ilk CI koşusunun bulgusu).
+     cross join lateral
+       public.submit_review(fx.mistake_id, true, g - g + 1, null) r),
   5,
   'çarpan 5''te duruyor (tasarımda gösterilen en yüksek değer)'
 );
