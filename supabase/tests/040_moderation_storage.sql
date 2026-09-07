@@ -102,6 +102,9 @@ select tests.reset_role();
 create temp table _alice_mistake on commit drop as
   select id from public.mistakes
    where user_id = tests.get_supabase_uid('alice');
+-- Temp tablo postgres'in; sonraki okumalar `authenticated` rolüyle
+-- (aynı oturum, SET ROLE) — tablo düzeyi SELECT izni açıkça verilmeli.
+grant select on _alice_mistake to authenticated;
 select tests.authenticate_as('mod');
 
 select lives_ok(

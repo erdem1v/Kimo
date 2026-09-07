@@ -54,6 +54,9 @@ select tests.reset_role();
 create temp table _bob_code on commit drop as
   select friend_code as code from public.profiles
    where id = tests.get_supabase_uid('bob');
+-- Temp tablo postgres'in; sonraki okumalar `authenticated` rolüyle
+-- (aynı oturum, SET ROLE) — tablo düzeyi SELECT izni açıkça verilmeli.
+grant select on _bob_code to authenticated;
 
 select tests.authenticate_as('alice');
 

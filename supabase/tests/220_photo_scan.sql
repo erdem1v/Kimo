@@ -126,6 +126,9 @@ select tests.reset_role();
 create temp table _sahip_mistake on commit drop as
   select id from public.mistakes
    where user_id = tests.get_supabase_uid('sahip');
+-- Temp tablo postgres'in; sonraki okumalar `authenticated` rolüyle
+-- (aynı oturum, SET ROLE) — tablo düzeyi SELECT izni açıkça verilmeli.
+grant select on _sahip_mistake to authenticated;
 
 select tests.authenticate_as('bekci');
 select is(

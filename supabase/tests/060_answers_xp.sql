@@ -23,6 +23,15 @@ values
    'islem_hatasi', tests.get_supabase_uid('alice')::text || '/q.jpg',
    '[{"label":"A","text":"1"},{"label":"B","text":"2"}]'::jsonb, 1, true);
 
+-- Sorunun kimliği ayrıcalıklı fikstürde alınır: mistakes SELECT politikası
+-- yalnız sahibe açık; mallory'nin alt sorgusu BOŞ dönüp RPC'yi 'soru
+-- bulunamadı'ya düşürüyordu (ilk CI koşusunun bulgusu).
+create temp table _kuvvet on commit drop as
+  select id from public.mistakes where concept = 'Kuvvet';
+-- Temp tablo postgres'in; sonraki okumalar `authenticated` rolüyle
+-- (aynı oturum, SET ROLE) — tablo düzeyi SELECT izni açıkça verilmeli.
+grant select on _kuvvet to authenticated;
+
 -- ============================================ KATALOG: doğrudan yazma kapalı
 select ok(not has_column_privilege('authenticated', 'public.profiles', 'xp', 'UPDATE'),
           'xp doğrudan yazılamaz');
@@ -72,7 +81,7 @@ select throws_ok(
 -- Yanlış cevap: XP yok ama deneme kaydediliyor.
 select is(
   (select xp_awarded from public.submit_pool_answer(
-     (select id from public.mistakes where concept = 'Kuvvet'), 0)),
+     (select id from _kuvvet), 0)),
   0,
   'yanlış cevap XP vermiyor'
 );
@@ -85,7 +94,7 @@ select is(
 -- Aynı soruyu tekrar cevaplamak ikinci kez XP vermez (question_attempts PK).
 select is(
   (select xp_awarded from public.submit_pool_answer(
-     (select id from public.mistakes where concept = 'Kuvvet'), 1)),
+     (select id from _kuvvet), 1)),
   0,
   'aynı soru ikinci kez XP vermiyor (doğru cevapla bile)'
 );

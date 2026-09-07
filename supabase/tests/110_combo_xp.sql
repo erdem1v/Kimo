@@ -39,6 +39,9 @@ create temporary table fx as
     from public.mistakes m
    where m.user_id = tests.get_supabase_uid('alice')
    limit 1;
+-- Temp tablo postgres'in; sonraki okumalar `authenticated` rolüyle
+-- (aynı oturum, SET ROLE) — tablo düzeyi SELECT izni açıkça verilmeli.
+grant select on fx to authenticated;
 
 -- ============================================================== DAVRANIŞ
 select tests.authenticate_as('alice');
