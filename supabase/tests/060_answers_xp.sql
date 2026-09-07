@@ -132,7 +132,7 @@ select is(
 );
 select is(
   (select correct_index from public.submit_pool_answer(
-     (select id from public.mistakes where concept = 'Mol'), 0)),
+     (select id from _mol), 0)),
   0,
   'doğru şık YANITTA dönüyor (soruyla birlikte değil)'
 );
