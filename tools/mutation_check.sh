@@ -30,7 +30,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
 
 DB_URL="${SUPABASE_DB_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgres}"
-MUT_DIR="supabase/tests/mutations"
+MUT_DIR="supabase/mutations"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
