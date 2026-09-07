@@ -62,3 +62,6 @@ key.properties
 
 # gen_l10n çıktısı: `flutter pub get` her seferinde yeniden üretir.
 lib/l10n/generated/
+
+# build artık symlink olabilir (iCloud çözümü); dizin deseni symlink dosyasını yakalamıyor.
+/build

@@ -118,6 +118,26 @@ Simülatör imza istemez, gerçek cihaz ister. Xcode'da
 
 Depoda `DEVELOPMENT_TEAM` tanımlı değildir — bilinçli, çünkü kişiye özeldir.
 
+## Bu makinede yaşanıp çözülen iki derleme engeli (2026-09-07)
+
+**1. iCloud Masaüstü senkronu codesign'ı kırıyor.** Proje iCloud-senkronlu
+Masaüstü'nde; FileProvider, `build/` içine kopyalanan Flutter.framework'e
+`com.apple.FinderInfo` özniteliği basıyor ve codesign
+"resource fork ... detritus not allowed" ile düşüyordu. Çözüm: `build/`
+dizini senkron DIŞI bir hedefe symlink'lendi (`build ->
+~/.kimo-build/flutter`). Symlink gitignore'daki `build/` kapsamında; repo
+taşınırsa ya da temiz klonda yeniden oluşturun:
+`mkdir -p ~/.kimo-build/flutter && ln -s ~/.kimo-build/flutter build`.
+(Kalıcı alternatif: projeyi senkron dışı bir klasöre taşımak.)
+
+**2. sentry_flutter 8.x, Xcode 26 SDK'sıyla derlenmiyor** (`SentryBinaryImageCache`
+API kayması). 9.29'a yükseltildi; Dart tarafında tek değişiklik `beforeSend`
+temizleyicisinin mutable-event API'sine geçmesi oldu.
+
+Not: Flutter 3.47 iOS eklentilerini CocoaPods değil **Swift Package Manager**
+ile derliyor — `ios/Podfile` üretilmemesi normaldir (Podfile.lock commit'i
+maddesi bu kurulumda geçersiz).
+
 ## Bilinen iOS notları
 
 **Kamera / galeri izinleri.** `image_picker` kullanılıyor

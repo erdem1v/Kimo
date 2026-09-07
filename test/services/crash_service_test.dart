@@ -14,11 +14,8 @@ void main() {
       );
       final SentryEvent? out = CrashService.scrubEvent(event, Hint());
       expect(out, isNotNull);
-      // copyWith(null) alanı sıfırlamadığı için boş nesneyle değiştiriliyor;
-      // sözleşme "kimlik taşımaz", "alan yok" değil.
-      expect(out!.user?.id, 'anonim');
-      expect(out.user?.email, isNull);
-      expect(out.request?.url, isNull);
+      expect(out!.user, isNull);
+      expect(out.request, isNull);
     });
 
     test('e-posta içeren breadcrumb atılır, temiz olan kalır', () {

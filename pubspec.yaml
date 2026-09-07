@@ -28,7 +28,7 @@ dependencies:
   firebase_core: ^4.13.0
   firebase_messaging: ^16.5.0
   app_settings: ^9.0.0
-  sentry_flutter: ^8.14.2
+  sentry_flutter: ^9.29.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

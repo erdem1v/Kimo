@@ -46,24 +46,19 @@ class CrashService {
   /// e-posta, takma ad veya kullanıcı kimliği DÜŞMEMELİ — kullanıcı kitlesi
   /// ağırlıkla reşit değil.
   static SentryEvent? scrubEvent(SentryEvent event, Hint hint) {
-    // Kullanıcı kimliği/e-postası hiç gitmesin. `copyWith(user: null)` alanı
-    // SIFIRLAMAZ (null = "dokunma"); bu yüzden alanlar boş nesnelerle
-    // DEĞİŞTİRİLİYOR — rapora giden user/request içinde hiçbir kimlik kalmaz.
-    SentryEvent scrubbed = event.copyWith(
-      user: SentryUser(id: 'anonim'),
-      request: SentryRequest(),
-      breadcrumbs: event.breadcrumbs
-          ?.where((Breadcrumb b) => !_looksSensitive(b.message ?? ''))
-          .toList(),
-    );
+    // Kullanıcı kimliği/e-postası hiç gitmesin. Sentry 9'da olay NESNESİ
+    // değiştirilebilir (copyWith kaldırıldı); alanlar doğrudan sıfırlanıyor.
+    event.user = null;
+    event.request = null;
+    event.breadcrumbs = event.breadcrumbs
+        ?.where((Breadcrumb b) => !_looksSensitive(b.message ?? ''))
+        .toList();
     // Mesaj gövdesinde e-posta geçiyorsa maskele.
-    final String? msg = scrubbed.message?.formatted;
+    final String? msg = event.message?.formatted;
     if (msg != null && _emailRe.hasMatch(msg)) {
-      scrubbed = scrubbed.copyWith(
-        message: SentryMessage(msg.replaceAll(_emailRe, '<e-posta>')),
-      );
+      event.message = SentryMessage(msg.replaceAll(_emailRe, '<e-posta>'));
     }
-    return scrubbed;
+    return event;
   }
 
   static final RegExp _emailRe =
