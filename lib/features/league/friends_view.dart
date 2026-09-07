@@ -6,7 +6,6 @@ import '../../data/social_repository.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/social.dart';
 import '../../services/sound_service.dart';
-import '../../services/supabase_config.dart';
 import '../../state/refresh_bus.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -35,8 +34,6 @@ class FriendsView extends StatefulWidget {
 }
 
 class _FriendsViewState extends State<FriendsView> {
-  bool get _remote => SupabaseConfig.isConfigured;
-
   final TextEditingController _code = TextEditingController();
 
   List<Friendship> _relations = <Friendship>[];
@@ -54,12 +51,8 @@ class _FriendsViewState extends State<FriendsView> {
   @override
   void initState() {
     super.initState();
-    if (_remote) {
-      _load();
-      refreshBus.addListener(_onRefresh);
-    } else {
-      _loading = false;
-    }
+    _load();
+    refreshBus.addListener(_onRefresh);
   }
 
   @override
@@ -78,13 +71,16 @@ class _FriendsViewState extends State<FriendsView> {
   Future<void> _load() async {
     setState(() => _failed = false);
     try {
+      // `myCode` listeden bağımsız: ilişki+profil zinciriyle PARALEL yürür
+      // (profilesByIds gerçekten relations'a bağımlı; o zincir kalıyor).
+      final Future<String?> codeFuture = friendRepository.myCode();
       final List<Friendship> rels = await socialRepository.relations();
       final String me = _meId ?? '';
       final List<String> ids =
           rels.map((Friendship f) => f.otherId(me)).toSet().toList();
       final List<PublicProfile> people =
           await socialRepository.profilesByIds(ids);
-      final String? code = await friendRepository.myCode();
+      final String? code = await codeFuture;
 
       // Ortak arkadaş sayısı YALNIZCA gelen istekler için isteniyor: kabul
       // edilmiş arkadaşlarda anlamı yok ve her satır için bir RPC çağrısı

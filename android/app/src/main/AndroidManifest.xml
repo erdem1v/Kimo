@@ -2,6 +2,21 @@
     <!-- Ağ erişimi (Supabase). Release derlemesinde de gerekli; Flutter bunu
          yalnızca debug/profile manifest'ine koyduğu için elle ekliyoruz. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- AŞAĞIDAKİ İKİ İZİN VE ALICI, eklenti manifest'lerinden (manifest
+         merge) zaten geliyor olabilir; yine de AÇIKÇA beyan ediyoruz (Task 03,
+         bulgu 7.2). Sebep: uygulamanın hangi izinlere dayandığı depodan
+         okunabilmeli — eklenti sürümü değişip beyanı bırakırsa davranış
+         sessizce bozulmasın.
+
+         POST_NOTIFICATIONS: Android 13+ bildirim izni (requestPermission
+         çağrısının karşılığı). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- RECEIVE_BOOT_COMPLETED: cihaz yeniden başlatıldığında planlanmış
+         hatırlatmalar geri kurulsun; yoksa her yeniden başlatma o günün
+         hatırlatmalarını sessizce siliyordu. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
     <application
         android:label="AI YKS Coach"
         android:name="${applicationName}"
@@ -9,6 +24,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:screenOrientation="portrait"
             android:launchMode="singleTop"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
@@ -28,6 +44,19 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Yeniden başlatma sonrasında flutter_local_notifications'ın
+             planlanmış bildirimleri geri kurması için alıcı. Eklenti kendi
+             manifest'inde de taşıyor; açık beyanın gerekçesi yukarıdaki izin
+             bloğundakiyle aynı. -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

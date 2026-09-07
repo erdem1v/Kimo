@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../services/supabase_config.dart';
+import 'crash_service.dart';
 import 'notification_router.dart';
 
 /// Anlık bildirimler (FCM). Sosyal olaylar için: arkadaşlık isteği, gelen
@@ -69,7 +69,6 @@ class PushService {
   /// Bildirim izni yoksa jeton yine alınır ama bildirim görünmez; izin
   /// NotificationService üzerinden istenir.
   Future<void> registerDevice() async {
-    if (!SupabaseConfig.isConfigured) return;
     if (!_started) {
       // init() başarısızsa bir kez daha dene (ağ geç gelmiş olabilir).
       await init();
@@ -85,7 +84,6 @@ class PushService {
   }
 
   Future<void> _saveToken(String token) async {
-    if (!SupabaseConfig.isConfigured) return;
     final String? uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return;
     try {
@@ -106,14 +104,16 @@ class PushService {
   /// Çıkışta bu cihazın kaydını siler; başkasının bildirimi buraya düşmesin.
   Future<void> unregisterDevice() async {
     final String? token = _token;
-    if (token == null || !SupabaseConfig.isConfigured) return;
+    if (token == null) return;
     try {
       await Supabase.instance.client
           .from('device_tokens')
           .delete()
           .eq('token', token);
-    } catch (_) {
-      // Çıkışı bloklamayalım.
+    } catch (e, st) {
+      // Çıkışı bloklamayalım; ama sunucuda kalan jeton bir sonraki hesabın
+      // yanlış bildirim almasına yol açabilir — iz bırak.
+      await reportError(e, st, context: 'unregisterDevice');
     }
   }
 

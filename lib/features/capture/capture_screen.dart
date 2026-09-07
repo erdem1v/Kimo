@@ -9,8 +9,9 @@ import '../../data/daily_state_repository.dart';
 import '../../data/mistake_repository.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/models.dart';
+import '../../services/crash_service.dart';
 import '../../services/sound_service.dart';
-import '../../services/supabase_config.dart';
+import '../../state/user_profile.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/kimo/kimo.dart';
@@ -70,7 +71,6 @@ class _CaptureScreenState extends State<CaptureScreen> {
   /// Kalan hakkı okur. Geri sayım YOK — tasarım kararı: yalnızca kalan sayı,
   /// tükenince "yarın yenilenecek".
   Future<void> _loadCredit() async {
-    if (!SupabaseConfig.isConfigured) return;
     final DailyState? state = await dailyStateRepository.read();
     if (!mounted || state == null) return;
     setState(() => _creditLeft = state.aiLeft);
@@ -82,6 +82,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
       final XFile? file = await _picker.pickImage(
         source: source,
         maxWidth: 1600,
+        // DİKKAT — imageQuality YÜK TAŞIYOR: bu bayrak image_picker'ı iOS'ta
+        // HEIC'i JPEG'e dönüştürmeye zorluyor. Kaldırılırsa iOS kamerası HEIC
+        // byte'ları döndürür; yükleme yolu ve analiz 'image/jpeg' varsayar ve
+        // YALNIZCA iOS'ta kırılır (Task 03 iOS denetimi).
         imageQuality: 85,
       );
       if (file == null) return;
@@ -93,11 +97,19 @@ class _CaptureScreenState extends State<CaptureScreen> {
         _cancelled = false;
       });
       unawaited(_decodeAspect(bytes));
-      if (SupabaseConfig.isConfigured) {
-        await _analyze(bytes);
-      } else {
-        _openConfirm(bytes, null);
+      // AKTARIM BİLDİRİMİ (Task 03, 4.2): fotoğraf OpenAI'ya gitmeden önce,
+      // tam gerçekleşeceği bağlamda bir kez onay istenir. Onay verilmezse
+      // analiz HİÇ çağrılmaz; fotoğraf korunur ve elle giriş yolu açılır —
+      // kaydetme yolu asla kapanmaz.
+      if (!userProfile.aiConsent) {
+        final bool accepted = await _askAiConsent();
+        if (!mounted) return;
+        if (!accepted) {
+          unawaited(_openConfirm(bytes, null));
+          return;
+        }
       }
+      await _analyze(bytes);
     } catch (e) {
       debugPrint('fotoğraf alınamadı: $e');
       if (!mounted) return;
@@ -134,7 +146,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
       result = const QuestionAnalysis(
         ok: false,
         options: <QuestionOption>[],
-        reason: null,
+        // Gerçek ağ hatası artık ayırt ediliyor: onay ekranı "bağlantı yok,
+        // elle doldurabilirsin" diyebiliyor (eskiden bulanık fotoğrafla aynı
+        // genel metni gösteriyordu).
+        failure: AnalysisFailure.network,
       );
     }
 
@@ -147,7 +162,60 @@ class _CaptureScreenState extends State<CaptureScreen> {
       if (result.outOfCredit) _creditLeft = 0;
     });
     if (_cancelled) return;
-    _openConfirm(bytes, result);
+    // Bilinçli ateşle-unut: onay ekranının kapanışını bu fonksiyon beklemiyor;
+    // dönüş değeri `_openConfirm` içinde işleniyor.
+    unawaited(_openConfirm(bytes, result));
+  }
+
+  /// Aktarım onayı sayfası. `true` = onaylandı (deftere yazılır).
+  Future<bool> _askAiConsent() async {
+    final L10n l = L10n.of(context);
+    final KimoTypography t = context.t;
+    final bool? ok = await showModalBottomSheet<bool>(
+      context: context,
+      isDismissible: false,
+      backgroundColor: context.c.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
+      ),
+      builder: (BuildContext ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          Gap.screen,
+          Gap.screen,
+          Gap.screen,
+          Gap.screen + MediaQuery.of(ctx).padding.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(l.aiConsentTitle, style: t.section),
+            const SizedBox(height: Gap.sm),
+            Text(l.aiConsentBody, style: t.body),
+            const SizedBox(height: Gap.lg),
+            KimoButton(
+              label: l.aiConsentAccept,
+              onPressed: () => Navigator.of(ctx).pop(true),
+            ),
+            const SizedBox(height: Gap.sm),
+            KimoButton(
+              label: l.aiConsentDecline,
+              kind: KimoButtonKind.tertiary,
+              onPressed: () => Navigator.of(ctx).pop(false),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok == true) {
+      // Defter yazımı ağa bağlı; başarısız olursa onay yerelde kalır ve bir
+      // sonraki açılışta loadConsents gerçeği getirir. Analizi bekletmiyoruz.
+      unawaited(userProfile.setAiConsent(true).catchError((Object e, StackTrace st) {
+        reportError(e, st, context: 'setAiConsent');
+      }));
+      return true;
+    }
+    return false;
   }
 
   void _cancelAnalysis() {
@@ -256,6 +324,14 @@ class _CaptureScreenState extends State<CaptureScreen> {
               style: t.body,
               textAlign: TextAlign.center,
             ),
+            const SizedBox(height: Gap.sm),
+            // Aktarım gerçeği görünür yerde: yalnızca tek seferlik onay
+            // sayfasına gömülü değil (Task 03, 4.2).
+            Text(
+              l.captureAiNote,
+              style: t.caption,
+              textAlign: TextAlign.center,
+            ),
             if (_creditLeft != null) ...<Widget>[
               const SizedBox(height: Gap.lg),
               StatusBadge(
@@ -308,7 +384,20 @@ class _CaptureScreenState extends State<CaptureScreen> {
               aspectRatio: _aspect ?? (3 / 4),
               child: ClipRRect(
                 borderRadius: Radii.all(Radii.card),
-                child: Image.memory(_bytes!, fit: BoxFit.contain),
+                child: Image.memory(
+                  _bytes!,
+                  fit: BoxFit.contain,
+                  // Bozuk/çözülemeyen byte'lar kareyi ÇÖKERTMESİN: eskiden
+                  // errorBuilder yoktu ve build içinde fırlayan hata yayında
+                  // gri kutuya dönüşüyordu.
+                  errorBuilder: (BuildContext ctx, Object e, StackTrace? st) =>
+                      Center(
+                    child: Text(
+                      L10n.of(ctx).photoBrokenNote,
+                      style: ctx.t.caption,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -357,7 +446,9 @@ class _CaptureScreenState extends State<CaptureScreen> {
   Widget _offlineNote(BuildContext context, L10n l) {
     final KimoColors c = context.c;
     final KimoTypography t = context.t;
-    if (SupabaseConfig.isConfigured && !_cancelled) return const SizedBox.shrink();
+    // Yalnızca kullanıcı analizi iptal ettiyse görünür (eski "mock mod" hâli
+    // kaldırıldı; uygulama artık yapılandırmasız hiç açılmıyor).
+    if (!_cancelled) return const SizedBox.shrink();
     return Row(
       children: <Widget>[
         KimoIcon(KimoIcons.lock, size: 18, color: c.inkMuted),

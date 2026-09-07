@@ -1,11 +1,15 @@
-import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:async';
 
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../features/reviews/domain/review_scheduler.dart';
 import '../models/models.dart';
+import '../services/crash_service.dart';
 import '../state/user_profile.dart';
+import 'submission_queue.dart';
 
 /// Hata bankasının Supabase uygulaması: `mistakes` tablosu + `mistake-photos`
 /// (özel) storage bucket'ı + `analyze-question` Edge Function (AI Gateway) +
@@ -28,18 +32,10 @@ class MistakeRepository {
     return _mapRows(rows);
   }
 
-  /// Bugün gözden geçirilmiş (cevaplanmış) tekrar sayısı — günlük ilerlemeyi
-  /// uygulama kapansa da geri yüklemek için DB'den türetilir.
-  Future<int> reviewedTodayCount() async {
-    final DateTime now = DateTime.now();
-    final String start =
-        DateTime(now.year, now.month, now.day).toIso8601String();
-    final List<Map<String, dynamic>> rows = await _client
-        .from('mistakes')
-        .select('id')
-        .gte('last_reviewed_at', start);
-    return rows.length;
-  }
+  // reviewedTodayCount KALDIRILDI (Task 03): hem saat dilimi hatalıydı
+  // (yerel saati offset'siz gönderiyordu; gün sınırı 03:00'a kayıyordu) hem
+  // satırları indirip uzunluğuna bakıyordu. Sayı artık `my_daily_state`
+  // görünümünün `reviewed_today_count` sütunu — Istanbul gününe göre, sunucuda.
 
   /// Arşivde toplam kaç kayıt var.
   ///
@@ -54,15 +50,21 @@ class MistakeRepository {
     return res.count;
   }
 
-  /// Bugün (ve öncesi) tekrarı gelen, öğrenilmemiş hatalar — pratik için.
+  /// Vadesi gelmiş (şimdi ve öncesi), öğrenilmemiş hatalar — pratik için.
+  ///
+  /// Vade artık ZAMAN damgası (`next_review_at`, 0049): yeni eklenen soru
+  /// aynı gün, ~3 saat sonra düşer. Eski istemcilerin kuyruğundan yalnızca
+  /// tarih yazılmış satırlar için `next_review_date` yedeği korunuyor.
   Future<List<MistakeEntry>> dueReviews() async {
+    final String nowIso = DateTime.now().toUtc().toIso8601String();
     final String today = _dateStr(DateTime.now());
     final List<Map<String, dynamic>> rows = await _client
         .from('mistakes')
         .select()
         .eq('mastered', false)
-        .lte('next_review_date', today)
-        .order('next_review_date', ascending: true);
+        .or('next_review_at.lte.$nowIso,'
+            'and(next_review_at.is.null,next_review_date.lte.$today)')
+        .order('next_review_at', ascending: true, nullsFirst: false);
     return _mapRows(rows);
   }
 
@@ -119,14 +121,44 @@ class MistakeRepository {
     );
   }
 
+  /// İmzalı URL önbelleği — SON KULLANMA ZAMANIYLA (Task 03, bulgu 10.4).
+  ///
+  /// Eskiden önbellek hiç yoktu: `MistakePhoto` ListView.builder içinde her
+  /// ekrana girişte yeniden kurulduğu için, saniyeler önce imzalanmış bir yol
+  /// kaydırma başına yeniden imzalanıyordu — ızgarada onlarca gereksiz istek.
+  /// Desen `SocialRepository._avatarUrls` ile birebir aynı; TTL 600 sn SABİT
+  /// kalır (moderasyon purge penceresi — aşağıdaki nota bakın), önbellek de o
+  /// ömürle birlikte yaşar.
+  final Map<String, ({String url, DateTime expiresAt})> _photoUrls =
+      <String, ({String url, DateTime expiresAt})>{};
+
+  /// Görsel yüklenemedi (imza öldü / içerik kaldırıldı): bir sonraki istek
+  /// taze imza üretsin. [MistakePhoto] yeniden denemeden önce çağırır.
+  void invalidateSignedUrl(String path) => _photoUrls.remove(path);
+
   /// Storage'daki bir fotoğraf için kısa ömürlü imzalı URL üretir (gösterim
-  /// anında, tembel). Foto silinmişse null döner.
+  /// anında, tembel; taze imzalar önbellekten). Foto silinmişse null döner.
   Future<String?> signedUrl(String path) async {
+    final ({String url, DateTime expiresAt})? cached = _photoUrls[path];
+    if (cached != null &&
+        DateTime.now().isBefore(
+            cached.expiresAt.subtract(const Duration(seconds: 30)))) {
+      return cached.url;
+    }
     try {
-      return await _client.storage
+      final String url = await _client.storage
           .from(_bucket)
           .createSignedUrl(path, signedUrlTtlSeconds);
-    } catch (_) {
+      _photoUrls[path] = (
+        url: url,
+        expiresAt: DateTime.now()
+            .add(const Duration(seconds: signedUrlTtlSeconds)),
+      );
+      return url;
+    } catch (e, st) {
+      // Fotoğraf kırık kutu olarak görünür; sebep artık raporda.
+      unawaited(reportError(e, st, context: 'mistake.signedUrl'));
+      _photoUrls.remove(path);
       return null;
     }
   }
@@ -184,7 +216,23 @@ class MistakeRepository {
       'is_public': isPublic,
       'extra_concepts': extraConcepts.isEmpty ? null : extraConcepts,
     });
-    // step/next_review_date DB varsayılanlarıyla gelir (adım 0, ertesi gün).
+    // İlk vadeyi (aynı gün +3 saat) ve tarih gölgesini DB tetikleyicisi atar
+    // (0049); photo_scan da tetikleyiciyle 'pending' başlar (0050).
+
+    if (path != null) {
+      // Hızlı yol: içerik taraması hemen tetiklenir ki paylaşım saniyeler
+      // içinde açılsın. BİLİNÇLİ ateşle-unut ve sessiz: başarısız olsa da
+      // sunucudaki süpürücü (pg_cron, 10 dk) aynı işi yapar; kullanıcının
+      // kayıt akışını ne bekletir ne kirletir.
+      unawaited(
+        _client.functions
+            .invoke('scan-photos', body: const <String, dynamic>{})
+            .catchError((Object e) {
+          debugPrint('hızlı tarama tetiklenemedi (süpürücü telafi eder): $e');
+          return FunctionResponse(status: 0, data: null);
+        }),
+      );
+    }
   }
 
   /// Bir tekrar sonucunu ([correct]) uygular: planı (adım/tarih/leech/mastered)
@@ -192,26 +240,54 @@ class MistakeRepository {
   ///
   /// Dönen [ReviewOutcome] arayüzde "yarın yeniden soracağım" metnini
   /// besliyor; bu yüzden yazma başarısız olsa bile hesaplanan plan dönüyor.
-  /// Yazma hatası ARTIK YUTULMUYOR — çağıran yakalayıp kullanıcıya gösteriyor.
-  /// Eskiden `catch (_)` vardı: plan yazılamadığında soru sessizce bugünün
-  /// kuyruğunda kalıyor ve kullanıcı sebebini hiç öğrenmiyordu.
+  ///
+  /// **Çevrimdışı boşluk kapandı (Task 03):** XP zaten kuyruğa giriyordu ama
+  /// takvim yazımı KAYBOLUYORDU — soru eski adımında kalıyor, senkronda
+  /// yeniden vadesi gelmiş görünüyor ve doğru cevaplar merdiveni hiç
+  /// ilerletmiyordu. Ağ hatasında yazım artık `schedule` türüyle
+  /// [SubmissionQueue]'ya giriyor. Yalnızca KUYRUK DA başarısız olursa
+  /// (oturum düşmüş) hata fırlar; çağıran bunu kullanıcıya gösteriyor.
+  /// Sunucu REDDİ (silinmiş kayıt vb.) kuyruğa alınmaz — tekrar denemek aynı
+  /// sonucu verir — ve olduğu gibi fırlatılır.
   Future<ReviewOutcome> submitReview(MistakeEntry entry, bool correct) async {
     final ReviewOutcome o = _scheduler.review(
       step: entry.step,
       lapses: entry.lapses,
       correct: correct,
       reviewedOn: DateTime.now(),
+      examDate: ReviewScheduler.examCutoffFor(userProfile.examYear),
     );
     final String? id = entry.id;
     if (id == null) return o;
-    await _client.from('mistakes').update(<String, dynamic>{
+    final Map<String, dynamic> patch = <String, dynamic>{
       'step': o.step,
       'lapses': o.lapses,
       'is_leech': o.isLeech,
       'mastered': o.mastered,
-      'next_review_date': _dateStr(o.nextReviewDate),
-      'last_reviewed_at': DateTime.now().toIso8601String(),
-    }).eq('id', id);
+      // Vade artık zaman damgası: UTC geceyarısı = Istanbul 03:00, yani gün
+      // aynı kalır. `next_review_date` gölgesini DB tetikleyicisi türetiyor
+      // (0049) — iki alanı ayrı ayrı yazıp ayrıştırmıyoruz.
+      'next_review_at': DateTime.utc(
+        o.nextReviewDate.year,
+        o.nextReviewDate.month,
+        o.nextReviewDate.day,
+      ).toIso8601String(),
+      'last_reviewed_at': DateTime.now().toUtc().toIso8601String(),
+    };
+    try {
+      // Ağ geri geldiyse önce birikmiş kayıtlar gitsin (sıra korunur).
+      await submissionQueue.drainIfPending();
+      await _client.from('mistakes').update(patch).eq('id', id);
+    } on PostgrestException {
+      rethrow;
+    } catch (_) {
+      final bool queued = await submissionQueue.enqueue(<String, dynamic>{
+        'kind': 'schedule',
+        'mistake_id': id,
+        ...patch,
+      });
+      if (!queued) rethrow;
+    }
     return o;
   }
 
@@ -229,7 +305,9 @@ class MistakeRepository {
     final dynamic data = res.data;
     if (data is! Map) {
       return const QuestionAnalysis(
-          ok: false, options: <QuestionOption>[], reason: 'Analiz edilemedi.');
+          ok: false,
+          options: <QuestionOption>[],
+          failure: AnalysisFailure.unknown);
     }
 
     // Günlük hak bitti: sunucu OpenAI'ya HİÇ GİTMEDİ ve 200 ile bunu söyledi.
@@ -268,16 +346,20 @@ class MistakeRepository {
       );
     }
 
-    String reason = (data['reason'] as String?)?.trim() ?? '';
-    if (reason.isEmpty) {
-      reason = !readable
-          ? 'Fotoğraf net okunmuyor.'
+    // Sunucu enum kod döndürüyor (serbest metin değil). Kod yoksa ya da
+    // bayraklarla çelişiyorsa bayraklardan türet — eski istemcinin sunucuya
+    // karşı çalışabilmesi için de gerekli.
+    AnalysisFailure? failure =
+        AnalysisFailure.fromCode(data['reason_code'] as String?);
+    if (failure == null || failure == AnalysisFailure.unknown) {
+      failure = !readable
+          ? AnalysisFailure.unreadable
           : !hasQuestion
-              ? 'Soru metni görünmüyor.'
-              : 'Şıklar görünmüyor.';
+              ? AnalysisFailure.noQuestion
+              : AnalysisFailure.noOptions;
     }
     return QuestionAnalysis(
-        ok: false, options: <QuestionOption>[], reason: reason);
+        ok: false, options: <QuestionOption>[], failure: failure);
   }
 
   static String _dateStr(DateTime d) =>

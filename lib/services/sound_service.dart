@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
 
 import '../state/app_settings.dart';
@@ -31,10 +33,14 @@ class SoundService {
     }
   }
 
-  Future<void> correct() => _play('correct');
-  Future<void> wrong() => _play('wrong');
-  Future<void> tap() => _play('tap');
-  Future<void> levelUp() => _play('levelup');
+  // Dönüş türü BİLİNÇLİ olarak void: ses efekti tanımı gereği ateşle-unut.
+  // Future döndürmek, her çağrı yerinde `unawaited(...)` sarmalamayı
+  // gerektiriyordu (unawaited_futures lint'i) ve beklemek hiçbir zaman
+  // istenen davranış değildi.
+  void correct() => unawaited(_play('correct'));
+  void wrong() => unawaited(_play('wrong'));
+  void tap() => unawaited(_play('tap'));
+  void levelUp() => unawaited(_play('levelup'));
 }
 
 /// Kısa erişim.

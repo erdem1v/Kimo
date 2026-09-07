@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
@@ -6,6 +8,7 @@ import 'package:timezone/timezone.dart' as tz;
 import '../data/mascot_lines.dart';
 import '../models/mascot.dart';
 import '../state/app_settings.dart';
+import 'crash_service.dart';
 import 'notification_router.dart';
 
 /// Yerel (cihaz üstü) bildirimler. Sunucu gerektirmez: uygulama her açıldığında
@@ -20,6 +23,9 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   bool _ready = false;
+
+  /// Son planDay girdileri — ayar değişikliğinde yeniden planlamak için.
+  _PlanInputs? _lastPlan;
 
   /// Her senaryonun sabit kimliği: yeniden planlarken eskisinin üstüne yazar.
   static const int _idReviews = 1;
@@ -45,6 +51,11 @@ class NotificationService {
     if (_ready) return;
     try {
       tzdata.initializeTimeZones();
+      // BİLİNÇLİ sabit: uygulama yalnızca YKS öğrencilerine, sunucu takvimi de
+      // Europe/Istanbul'a göre işliyor. Cihaz dilimini kullanmak, yurt
+      // dışındaki öğrencide hatırlatmayı sunucunun gününden ayırırdı. Bedeli
+      // belgeli: o öğrencide "20:00" hatırlatması yerel 20:00'de değil,
+      // Istanbul 20:00'sinde çalar (Task 03 raporu, çözülmeyenler listesi).
       tz.setLocalLocation(tz.getLocation('Europe/Istanbul'));
       await _plugin.initialize(
         settings: const InitializationSettings(
@@ -97,7 +108,8 @@ class NotificationService {
             false;
       }
       return false;
-    } catch (_) {
+    } catch (e, st) {
+      unawaited(reportError(e, st, context: 'notify.requestPermission'));
       return false;
     }
   }
@@ -115,9 +127,22 @@ class NotificationService {
       if (android != null) {
         return await android.areNotificationsEnabled() ?? false;
       }
-      // iOS'ta ayrı bir sorgu yok; izin isteme sonucu tek gerçek kaynak.
-      return true;
-    } catch (_) {
+      final IOSFlutterLocalNotificationsPlugin? ios = _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
+      if (ios != null) {
+        // Eskiden burada sabit `true` dönüyordu: kullanıcı iOS ayarlarından
+        // izni kapatınca uygulama içi anahtar sonsuza dek "açık" kalıyordu.
+        final NotificationsEnabledOptions? st = await ios.checkPermissions();
+        return st?.isEnabled ?? false;
+      }
+      return false;
+    } catch (e, st) {
+      // DİKKAT: false dönmek, home_shell'deki eşitleme yüzünden kullanıcının
+      // tercihini kapatabilir; geçici bir eklenti hatası bunu tetiklememeli.
+      // Bu yüzden iz bırakıyoruz (bkz. Task 03 raporu).
+      unawaited(reportError(e, st, context: 'notify.areEnabled'));
       return false;
     }
   }
@@ -126,7 +151,11 @@ class NotificationService {
     await init();
     try {
       await _plugin.cancelAll();
-    } catch (_) {}
+    } catch (e, st) {
+      // Eskiden deponun tek TAMAMEN boş catch'iydi. İptal edilemeyen bildirim
+      // kullanıcıyı "kapattım ama gelmeye devam ediyor" durumunda bırakır.
+      unawaited(reportError(e, st, context: 'notify.cancelAll'));
+    }
   }
 
   /// Günün planını kurar. Uygulama açılışında ve veriler yüklendikçe çağrılır.
@@ -148,7 +177,31 @@ class NotificationService {
   }) async {
     await init();
     if (!_ready) return;
-    await cancelAll();
+    // Ayarlardan saat değiştiğinde ya da anahtar yeniden açıldığında ekran
+    // yüklemesini beklemeden yeniden planlayabilmek için girdiler saklanır.
+    _lastPlan = _PlanInputs(
+      mascot: mascot,
+      dueCount: dueCount,
+      streak: streak,
+      activeToday: activeToday,
+    );
+    // YALNIZCA kendi kimliklerini iptal et. Eskiden cancelAll() çağrılıyordu
+    // ve iki yarış üretiyordu: (a) LeagueScreen'in az önce kurduğu lig
+    // hatırlatması (_idLeague) siliniyordu — IndexedStack'te iki ekran aynı
+    // refreshBus ping'iyle yüklenirken hangisi geç bitirdiyse o kazanıyordu;
+    // (b) o an görünen bir FCM bildirimi de kapatılıyordu.
+    for (final int id in <int>[
+      _idReviews,
+      _idStreak,
+      _idStreakTomorrow,
+      _idComeback,
+    ]) {
+      try {
+        await _plugin.cancel(id: id);
+      } catch (e, st) {
+        unawaited(reportError(e, st, context: 'notify.cancel'));
+      }
+    }
     if (!enabled) return;
 
     // 1) Bugünkü tekrarlar — yapılacak iş varsa ve bugün henüz çözülmediyse.
@@ -197,6 +250,24 @@ class NotificationService {
     );
   }
 
+  /// Son bilinen girdilerle bugünü YENİDEN planlar.
+  ///
+  /// Ayarlar ekranı çağırır: anahtar tekrar açıldığında ya da saat / sessiz
+  /// aralık değiştiğinde. Eskiden değişiklik ancak bir sonraki ekran
+  /// yüklemesinde işlerdi — kullanıcı saati değiştirir, o günkü hatırlatma
+  /// eski saatte kalırdı.
+  Future<void> replanFromCache({required bool enabled}) async {
+    final _PlanInputs? p = _lastPlan;
+    if (p == null) return;
+    await planDay(
+      enabled: enabled,
+      mascot: p.mascot,
+      dueCount: p.dueCount,
+      streak: p.streak,
+      activeToday: p.activeToday,
+    );
+  }
+
   /// Lig haftasının son günü için hatırlatma (sıralama bilindiğinde çağrılır).
   Future<void> planLeagueReminder({
     required bool enabled,
@@ -231,17 +302,21 @@ class NotificationService {
     String? lig,
   }) async {
     // Sessiz aralık kullanıcının; eşik burada TUTULMUYOR, tek kaynak
-    // `AppSettings.isQuietHour`. İki yerde tutulsaydı ayarlar ekranı bir şey,
-    // planlayıcı başka bir şey uygular hâle gelirdi.
-    if (appSettings.isQuietHour(hour)) return;
+    // `AppSettings.isQuietHour`. Aralığa denk gelen hatırlatma DÜŞMEZ, bir
+    // sonraki uygun saate KAYAR — ayarlardaki metin zaten böyle söylüyordu
+    // ama kod düşürüyordu: 22:00 tekrar saati + 22-08 sessizliği seçen
+    // kullanıcı hiçbir hatırlatma almıyordu ve bunu asla göremiyordu.
+    final ({int hour, int addDays})? slot =
+        resolveScheduledHour(hour, appSettings.isQuietHour);
+    if (slot == null) return; // 24 saatin tamamı sessiz: kullanıcı kararı
 
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
     final tz.TZDateTime when = tz.TZDateTime(
       tz.local,
       now.year,
       now.month,
-      now.day + dayOffset,
-      hour,
+      now.day + dayOffset + slot.addDays,
+      slot.hour,
     );
     if (!when.isAfter(now)) return; // geçmiş saate planlama yok
 
@@ -260,6 +335,40 @@ class NotificationService {
       debugPrint('Bildirim planlanamadı ($kind): $e');
     }
   }
+}
+
+/// Sessiz aralığa denk gelen saati bir sonraki uygun saate kaydırır.
+///
+/// Saf fonksiyon (test edilebilir): [isQuiet] her saati kontrol eder; 24
+/// saatin tamamı sessizse `null` döner (hiç planlama yapılmaz — kullanıcının
+/// açık kararı). Gece yarısını aşan kaydırma `addDays: 1` ile bildirilir.
+({int hour, int addDays})? resolveScheduledHour(
+  int hour,
+  bool Function(int) isQuiet,
+) {
+  int h = ((hour % 24) + 24) % 24;
+  int addDays = 0;
+  for (int i = 0; i < 24; i++) {
+    if (!isQuiet(h)) return (hour: h, addDays: addDays);
+    h = (h + 1) % 24;
+    if (h == 0) addDays = 1;
+  }
+  return null;
+}
+
+/// [NotificationService.planDay] girdilerinin anlık görüntüsü.
+class _PlanInputs {
+  const _PlanInputs({
+    required this.mascot,
+    required this.dueCount,
+    required this.streak,
+    required this.activeToday,
+  });
+
+  final Mascot mascot;
+  final int dueCount;
+  final int streak;
+  final bool activeToday;
 }
 
 final NotificationService notifications = NotificationService.instance;

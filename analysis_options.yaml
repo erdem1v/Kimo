@@ -1,33 +1,19 @@
-# This file configures the analyzer, which statically analyzes Dart code to
-# check for errors, warnings, and lints.
+# Statik analiz yapılandırması.
 #
-# The issues identified by the analyzer are surfaced in the UI of Dart-enabled
-# IDEs (https://dart.dev/tools#ides-and-editors). The analyzer can also be
-# invoked from the command line by running `flutter analyze`.
+# Task 03'e kadar bu dosya stok şablondu: hiçbir kural bastırılmamıştı ama
+# hiçbir ek kural da açık değildi. Aşağıdaki kurallar bilinçli olarak açıldı
+# ve çıkan uyarılar BASTIRILARAK değil DÜZELTİLEREK kapatıldı; yeni bir
+# ihlal CI'da kırmızı yanar.
 
-# The following line activates a set of recommended lints for Flutter apps,
-# packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
-linter:
-  # The lint rules applied to this project can be customized in the
-  # section below to disable rules from the `package:flutter_lints/flutter.yaml`
-  # included above or to enable additional rules. A list of all available lints
-  # and their documentation is published at https://dart.dev/lints.
-  #
-  # Instead of disabling a lint rule for the entire project in the
-  # section below, it can also be suppressed for a single line of code
-  # or a specific dart file by using the `// ignore: name_of_lint` and
-  # `// ignore_for_file: name_of_lint` syntax on the line or in the file
-  # producing the lint.
-  rules:
-    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
-    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
-
-# Additional information about this file can be found at
-# https://dart.dev/guides/language/analysis-options
-
 analyzer:
+  language:
+    # `dynamic` → belirli tip atamaları örtük yapılamaz; repository parse
+    # kodundaki sessiz tip kaymalarını derleme anına çeker.
+    strict-casts: true
+    # `List` gibi çıplak jenerikler yasak; `List<dynamic>` niyetse açık yaz.
+    strict-raw-types: true
   exclude:
     # Soru havuzu ve konu haritası bu sürümde arayüzden çıkarıldı ama silinmedi:
     # ileride elden geçirilip geri gelecekler (bkz. lib/_archive/README.md).
@@ -42,3 +28,17 @@ analyzer:
     - android/**
     - ios/**
     - web/**
+
+linter:
+  rules:
+    # Sahipsiz future'lar bu depodaki en yaygın sessiz-hata kaynağıydı
+    # (denetimde ~40 adet): ya `await` ya `unawaited(...)` — niyet görünür.
+    unawaited_futures: true
+    # Async boşluk sonrası context kullanımı (flutter_lints'te uyarı olarak
+    # var; burada açıkça beyan ediliyor ki listeden çıkarsa fark edilsin).
+    use_build_context_synchronously: true
+    # dispose edilmeyen StreamSubscription'lar (e-posta doğrulama adımındaki
+    # auth dinleyicisi gibi) sızıntı yapmasın.
+    cancel_subscriptions: true
+    # Error/Exception dışında bir şey fırlatmak stack trace'i çöpe atar.
+    only_throw_errors: true

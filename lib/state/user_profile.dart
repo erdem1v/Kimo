@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/mascot.dart';
-import '../services/supabase_config.dart';
 
 /// Kullanıcının profil tercihleri: takma ad, sınav yılı → müfredat ve maskot
 /// karakteri. Hepsi Supabase auth metadata'sında saklanır (cihazlar arası
@@ -21,6 +20,7 @@ class UserProfile extends ChangeNotifier {
   String? _nickname;
   Mascot? _mascot;
   bool _shareConsent = false;
+  bool _aiConsent = false;
   bool _notifyEnabled = false;
   String? _avatarPath;
 
@@ -41,6 +41,12 @@ class UserProfile extends ChangeNotifier {
   /// Karşılama akışında bir kez sorulur, profilden değiştirilebilir.
   bool get shareConsent => _shareConsent;
 
+  /// Fotoğrafın yapay zekâ servisine (OpenAI) gönderileceği bildirimi
+  /// onaylandı mı? İlk analizden ÖNCE, gerçekleştiği bağlamda sorulur
+  /// (Task 03, bulgu 4.2). Onaylanana kadar analiz çağrılmaz; kullanıcı
+  /// "fotoğrafsız/analizsiz devam" yoluyla kaydetmeye devam edebilir.
+  bool get aiConsent => _aiConsent;
+
   /// Maskot hatırlatmaları açık mı? Bu anahtar yalnızca "hatırlat / hatırlatma"
   /// kararını taşır; hangi saatte ve hangi sessiz aralıkla hatırlatılacağı
   /// cihaz tercihidir ve `AppSettings` içinde durur.
@@ -57,7 +63,6 @@ class UserProfile extends ChangeNotifier {
 
   /// Oturumdaki kullanıcının metadata'sından yükler.
   void loadFromAuth() {
-    if (!SupabaseConfig.isConfigured) return;
     final Map<String, dynamic>? meta =
         Supabase.instance.client.auth.currentUser?.userMetadata;
     final Object? c = meta?['curriculum'];
@@ -104,10 +109,20 @@ class UserProfile extends ChangeNotifier {
   Future<void> setShareConsent(bool value) async {
     _shareConsent = value;
     notifyListeners();
-    if (!SupabaseConfig.isConfigured) return;
     await Supabase.instance.client.rpc<void>(
       'record_consent',
       params: <String, dynamic>{'p_kind': 'share', 'p_granted': value},
+    );
+  }
+
+  /// Yapay zekâ aktarım onayını deftere yazar (bkz. [setShareConsent]
+  /// gerekçesi — aynı defter, `ai_upload` türü).
+  Future<void> setAiConsent(bool value) async {
+    _aiConsent = value;
+    notifyListeners();
+    await Supabase.instance.client.rpc<void>(
+      'record_consent',
+      params: <String, dynamic>{'p_kind': 'ai_upload', 'p_granted': value},
     );
   }
 
@@ -116,13 +131,13 @@ class UserProfile extends ChangeNotifier {
   /// Auth metadata'sındaki eski `share_consent` artık okunmuyor: yazılabilir
   /// olduğu için güvenilir bir kaynak değil.
   Future<void> loadConsents() async {
-    if (!SupabaseConfig.isConfigured) return;
     try {
       final List<Map<String, dynamic>> rows = await Supabase.instance.client
           .from('my_consents')
           .select('kind, granted');
       for (final Map<String, dynamic> r in rows) {
         if (r['kind'] == 'share') _shareConsent = r['granted'] == true;
+        if (r['kind'] == 'ai_upload') _aiConsent = r['granted'] == true;
       }
       notifyListeners();
     } catch (e) {
@@ -157,17 +172,23 @@ class UserProfile extends ChangeNotifier {
   }
 
   Future<void> _save(Map<String, dynamic> data) async {
-    if (!SupabaseConfig.isConfigured) return;
     await Supabase.instance.client.auth.updateUser(UserAttributes(data: data));
   }
 
   /// Oturum kapanınca temizle.
+  ///
+  /// `_notifyEnabled` ve onaylar da SIFIRLANIR: eskiden sıfırlanmıyorlardı ve
+  /// aynı cihazda hesap değiştiren kullanıcıya önceki hesabın tercihleri
+  /// sızıyordu (Task 03).
   void clear() {
     _curriculum = null;
     _examYear = null;
     _nickname = null;
     _mascot = null;
     _avatarPath = null;
+    _shareConsent = false;
+    _aiConsent = false;
+    _notifyEnabled = false;
     notifyListeners();
   }
 }

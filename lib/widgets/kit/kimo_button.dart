@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../services/sound_service.dart';
@@ -71,7 +69,7 @@ class _KimoButtonState extends State<KimoButton> {
     if (!_enabled) return;
     if (widget.playTapSound) {
       // Ateşle ve unut: ses bir sonuç taşımıyor, aksiyonu bekletmemeli.
-      unawaited(sound.tap());
+      sound.tap();
     }
     widget.onPressed!.call();
   }

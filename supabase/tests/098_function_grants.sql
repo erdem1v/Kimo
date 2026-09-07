@@ -16,7 +16,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(16);
+select plan(20);
 
 select tests.create_supabase_user('alice');
 
@@ -66,6 +66,20 @@ select ok(has_function_privilege('authenticated',
           'ensure_league_membership AÇIK (lig sekmesi)');
 select ok(has_function_privilege('authenticated', 'public.my_league_board()', 'EXECUTE'),
           'my_league_board AÇIK (lig sıralaması)');
+
+-- Task 03 (0050/0051) eklemeleri: tarama açık, haftalık yerleşim kapalı.
+select ok(has_function_privilege('authenticated',
+            'public.consume_scan_use()', 'EXECUTE'),
+          'consume_scan_use AÇIK (scan-photos hızlı yolu)');
+select ok(has_function_privilege('authenticated',
+            'public.admin_flagged_photos()', 'EXECUTE'),
+          'admin_flagged_photos AÇIK (yetki içeride is_admin ile)');
+select ok(has_function_privilege('authenticated',
+            'public.admin_review_photo_scan(uuid,text)', 'EXECUTE'),
+          'admin_review_photo_scan AÇIK (yetki içeride is_admin ile)');
+select ok(not has_function_privilege('authenticated',
+            'public.league_weekly_rollover()', 'EXECUTE'),
+          'league_weekly_rollover KAPALI (yalnızca pg_cron çağırır)');
 
 -- ====================================================== DAVRANIŞ
 select tests.authenticate_as('alice');

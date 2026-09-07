@@ -1,7 +1,32 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Yayın imzalama anahtarı (Task 03, bulgu 3.2).
+//
+// `key.properties` ve keystore dosyası DEPODA YOK (.gitignore) — google-
+// services.json ile aynı desen: dosya varsa gerçek anahtar kullanılır, yoksa
+// derleme debug anahtarına düşer ve bunu GÜNLÜĞE YAZAR. Sessiz kalmıyoruz:
+// debug imzalı bir "release" yan yükleme testi için çalışır ama Play Store'a
+// YÜKLENEMEZ ve debug anahtarı tüm Flutter makinelerinde ortaktır.
+//
+// key.properties biçimi (android/ dizinine konur; storeFile yolu app
+// modülüne — android/app — göre çözülür, android/kimo-release.jks için
+// "../kimo-release.jks" yazın):
+//   storeFile=../kimo-release.jks
+//   storePassword=...
+//   keyAlias=kimo
+//   keyPassword=...
+// Üretim komutu (bir kez): keytool -genkey -v -keystore kimo-release.jks \
+//   -alias kimo -keyalg RSA -keysize 2048 -validity 10000
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
 // Firebase (anlık bildirimler) KOŞULLU uygulanıyor.
@@ -51,11 +76,40 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (keystorePropertiesFile.exists()) {
+                logger.lifecycle("key.properties bulundu: YAYIN anahtarıyla imzalanıyor.")
+                signingConfigs.getByName("release")
+            } else {
+                logger.lifecycle(
+                    "key.properties YOK: release, DEBUG anahtarıyla imzalanıyor — " +
+                        "yan yükleme testi için uygundur, Play Store'a YÜKLENEMEZ.",
+                )
+                signingConfigs.getByName("debug")
+            }
+
+            // Küçültme + karartma (Task 03): Dart tarafı zaten AOT; burada
+            // kazanç Kotlin/Java eklenti yüzeyi ve APK boyutu. Kural dosyası
+            // eklentilerin bilinen R8 kırılmalarını (özellikle
+            // flutter_local_notifications'ın Gson serileştirmesi) koruyor.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

@@ -8,7 +8,6 @@ import '../../data/social_repository.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/social.dart';
 import '../../services/sound_service.dart';
-import '../../services/supabase_config.dart';
 import '../../state/app_settings.dart';
 import '../../state/game_progress.dart';
 import '../../state/refresh_bus.dart';
@@ -50,10 +49,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    if (SupabaseConfig.isConfigured) {
-      _load();
-      refreshBus.addListener(_load);
-    }
+    _load();
+    refreshBus.addListener(_load);
   }
 
   @override
@@ -62,14 +59,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
+  /// Üst üste binen yüklemelere karşı kilit: `refreshBus` her sekme
+  /// geçişinde ping'liyor ve bu ekranda kilit yoktu — hızlı sekme geçişleri
+  /// yarışan yüklemeler üretiyordu.
+  bool _loadingProfile = false;
+
   Future<void> _load() async {
-    final PublicProfile? me = await socialRepository.myProfile();
-    final DailyState? s = await dailyStateRepository.read();
-    if (!mounted) return;
-    setState(() {
-      if (me != null) _friendCount = me.friendCount;
-      _state = s;
-    });
+    if (_loadingProfile) return;
+    _loadingProfile = true;
+    try {
+      // İki sorgu bağımsız: paralel (Task 03, 10.2 deseni).
+      final List<Object?> parts = await Future.wait<Object?>(<Future<Object?>>[
+        socialRepository.myProfile(),
+        dailyStateRepository.read(),
+      ]);
+      if (!mounted) return;
+      final PublicProfile? me = parts[0] as PublicProfile?;
+      final DailyState? s = parts[1] as DailyState?;
+      setState(() {
+        if (me != null) _friendCount = me.friendCount;
+        _state = s;
+      });
+    } finally {
+      _loadingProfile = false;
+    }
   }
 
   // -------------------------------------------------------------- fotoğraf
@@ -81,6 +94,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         source: source,
         maxWidth: 512,
         maxHeight: 512,
+        // imageQuality YÜK TAŞIYOR: iOS'ta HEIC→JPEG dönüşümünü bu zorluyor
+        // (bkz. capture_screen'deki not).
         imageQuality: 85,
       );
       if (file == null) return;

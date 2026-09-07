@@ -1,14 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../data/social_repository.dart';
 import '../../data/submission_queue.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/social.dart';
+import '../../services/crash_service.dart';
 import '../../services/notification_router.dart';
 import '../../services/notification_service.dart';
 import '../../services/push_service.dart';
 import '../../services/sound_service.dart';
-import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
 import '../../state/refresh_bus.dart';
 import '../../state/user_profile.dart';
@@ -43,14 +45,16 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Cihaz kaydı ilk denemede düşmüş olabilir (ağ yok, Play Servisleri geç
     // hazır olmuş vb.); uygulama öne geldikçe sessizce tekrar dene.
-    if (state == AppLifecycleState.resumed && SupabaseConfig.isConfigured) {
-      push.registerDevice();
-      _syncNotifyPermission();
+    if (state == AppLifecycleState.resumed) {
+      // Kayıt yalnızca kullanıcı bildirimleri AÇIK tuttuysa tazelenir; kapatan
+      // kullanıcının jetonu her dönüşte sessizce geri yazılmasın (7.1).
+      if (userProfile.notifyEnabled) unawaited(push.registerDevice());
+      unawaited(_syncNotifyPermission());
       // Çevrimdışıyken verilen cevaplar burada gönderiliyor. Bu olmadan kuyruk
       // yalnızca SOĞUK AÇILIŞTA boşalıyordu: kullanıcı çevrimdışı çözüp
       // bağlantı geri geldiğinde, uygulamayı kapatıp açana kadar hiçbir cevap
       // gitmiyordu — kuyruğun varlık sebebini boşa çıkaran bir boşluktu.
-      _drainQueue();
+      unawaited(_drainQueue());
     }
   }
 
@@ -61,8 +65,10 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       // gameProgress küresel bir tekil; dispose sonrası uygulamak güvenli ve
       // sunucunun gerçeğini atmaktan iyidir.
       gameProgress.applyServerTotals(totals);
-    } catch (e) {
-      debugPrint('kuyruk boşaltılamadı: $e');
+    } catch (e, st) {
+      // Yerel oyun durumu geçerli kalır; kuyruk bir sonraki fırsatta yeniden
+      // denenir. Çevrimdışılık dışındaki nedenler raporlanır.
+      unawaited(reportError(e, st, context: 'drainQueue'));
     }
   }
 
@@ -79,12 +85,10 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     super.initState();
     // Profil tercihleri (müfredat, maskot) karşılama akışında alınır; burada
     // yalnızca oturumdaki değerleri belleğe yükleriz.
-    if (SupabaseConfig.isConfigured) {
-      userProfile.loadFromAuth();
-      _bootstrapSocial();
-      // Bu cihazı bildirim için kaydet (oturum açıkken).
-      push.registerDevice();
-    }
+    userProfile.loadFromAuth();
+    unawaited(_bootstrapSocial());
+    // Bu cihazı bildirim için kaydet (oturum açıkken ve tercih açıksa).
+    if (userProfile.notifyEnabled) unawaited(push.registerDevice());
     // Bildirimden gelen sekme isteklerini dinle ve bekleyeni uygula.
     NotificationRouter.tabRequest.addListener(_onTabRequest);
     NotificationRouter.ready();
@@ -118,9 +122,13 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
         nickname: userProfile.nickname ?? 'Öğrenci',
         mascot: userProfile.mascot,
       );
-      // Onaylar artık auth metadata yerine user_consents defterinden okunuyor.
-      await userProfile.loadConsents();
-      final Map<String, dynamic>? stats = await socialRepository.myStats();
+      // Onaylar ve istatistikler birbirinden BAĞIMSIZ: paralel çekiliyor
+      // (soğuk açılışta bir gidiş-dönüş tasarrufu — Task 03, 10.2 deseni).
+      final List<Object?> parts = await Future.wait<Object?>(<Future<Object?>>[
+        userProfile.loadConsents().then<Object?>((_) => null),
+        socialRepository.myStats(),
+      ]);
+      final Map<String, dynamic>? stats = parts[1] as Map<String, dynamic>?;
       if (stats != null && mounted) {
         final Object? last = stats['last_activity_date'];
         gameProgress.hydrate(
@@ -131,8 +139,12 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
           league: League.fromDb(stats['league'] as String?),
         );
       }
-    } catch (_) {
-      // Çevrimdışı olabilir; oyunlaştırma yerel değerlerle devam eder.
+    } catch (e, st) {
+      // Oyunlaştırma yerel değerlerle devam eder (kullanıcıya engel yok) ama
+      // hata artık İZSİZ DEĞİL: çevrimdışılık dışındaki her neden raporlanır.
+      // Eskiden buradaki boş catch, XP/seri hidrasyonunun neden hiç
+      // çalışmadığını yayında görünmez kılıyordu.
+      unawaited(reportError(e, st, context: 'bootstrapSocial'));
     }
   }
 

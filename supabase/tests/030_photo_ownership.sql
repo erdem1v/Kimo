@@ -56,6 +56,11 @@ values
    tests.get_supabase_uid('alice')::text || '/ozel.jpg',
    null, null, false);
 
+-- Fotoğraf taraması (0050): havuz görünürlüğü 'clear' ister; fikstürde
+-- ayrıcalıklı oturum yazıyor (canlıda scan-photos süpürücüsü).
+update public.mistakes set photo_scan = 'clear'
+ where user_id = tests.get_supabase_uid('alice');
+
 insert into storage.objects (bucket_id, name) values
   ('mistake-photos', tests.get_supabase_uid('alice')::text || '/acik.jpg'),
   ('mistake-photos', tests.get_supabase_uid('alice')::text || '/ozel.jpg');

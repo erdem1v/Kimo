@@ -61,6 +61,12 @@
   },
   "captureEmptyTitle": "Çözemediğin soruyu çek",
   "captureEmptyBody": "Şıklarını ve konusunu ben çıkarayım; sen yalnızca doğru şıkkı işaretle.",
+  "captureAiNote": "Fotoğraf, soruyu okumak için yapay zekâ servisine (OpenAI) gönderilir.",
+  "aiConsentTitle": "Fotoğrafın nereye gidiyor?",
+  "aiConsentBody": "Çektiğin fotoğraf — el yazın ve karede ne varsa — soruyu okumak için yurt dışındaki yapay zekâ servisine (OpenAI) gönderilir. Fotoğraf orada saklanmaz ama gönderim geri alınamaz. Ayrıntılar için Ayarlar → Veri ve Gizlilik.",
+  "aiConsentAccept": "Anladım, devam et",
+  "aiConsentDecline": "Fotoğrafsız devam et",
+  "photoBrokenNote": "Fotoğraf gösterilemiyor",
   "captureManualEntry": "Fotoğrafsız devam et",
   "@captureManualEntry": {
     "description": "AI hakkı yokken/çevrimdışıyken elle giriş yolu"
@@ -82,6 +88,11 @@
   "confirmTitle": "Onayla ve kaydet",
   "confirmIntro": "Şunları çıkardım — yanlış olan varsa dokun, düzelt.",
   "confirmIntroManual": "Sınavı, dersi ve konuyu seç; sonra doğru şıkkı işaretle.",
+  "analysisReasonUnreadable": "Fotoğraf net okunmuyor — daha yakından ve iyi ışıkta çekmeyi dene.",
+  "analysisReasonNoQuestion": "Soru metni görünmüyor — sorunun tamamı karede olsun.",
+  "analysisReasonNoOptions": "Şıklar görünmüyor — şıkları da kareye al.",
+  "analysisReasonNetwork": "Bağlantı kurulamadı — bilgileri elle doldurabilirsin.",
+  "analysisReasonUnknown": "Fotoğrafı okuyamadım — bilgileri elle doldurabilirsin.",
   "confirmFullscreen": "Tam ekran",
   "confirmExam": "Sınav",
   "confirmSubject": "Ders",
@@ -112,7 +123,7 @@
   "@practiceWrongTitle": {
     "description": "Ceza dili YOK: 'kaybettin' demiyoruz."
   },
-  "practiceMasteredBody": "Bunu artık hâkim sayıyorum — kuyruktan çıktı.",
+  "practiceMasteredBody": "Bunu artık hâkim sayıyorum — sınava kadar bir daha sormayacağım.",
   "@practiceMasteredBody": {
     "description": "`mastered` yalnızca 30 günlük adımda doğru cevaplanınca oluyor ve soru kuyruktan çıkıyor."
   },
@@ -254,7 +265,6 @@
   "todayNothingDueBody": "Yeni bir yanlış çekebilir ya da yarın gelebilirsin.",
   "todayStart": "Başla",
   "todaySubjects": "Ders seç",
-  "todayMockNotice": "Demo modundasın: tüm hatalar birlikte çözülür.",
   "todayStreakAtRisk": "{count, plural, =1{1 günlük serin bugün sona erebilir} other{{count} günlük serin bugün sona erebilir}}",
   "@todayStreakAtRisk": {
     "description": "Yalnızca gerçekten risk varken gösteriliyor (bugün hiç çözülmediyse).",
@@ -525,6 +535,32 @@
   "signInTitle": "Tekrar hoş geldin",
   "signInAction": "Giriş yap",
   "signInFailed": "Giriş yapılamadı. E-posta ve parolanı kontrol et.",
+  "signInEmailNotConfirmed": "E-postan henüz doğrulanmamış. Gelen kutunu kontrol et — doğrulama bağlantısını yeniden gönderdim.",
+  "verifyTitle": "Gelen kutunu kontrol et",
+  "verifyBody": "{email} adresine bir doğrulama bağlantısı gönderdim. Bağlantıya dokunduğunda hesabın hazır.",
+  "@verifyBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "verifyWaiting": "Doğrulama bekleniyor…",
+  "verifyDone": "E-postan doğrulandı!",
+  "verifyResend": "Yeniden gönder",
+  "verifyResendCooldown": "{seconds} sn sonra yeniden gönderebilirsin",
+  "@verifyResendCooldown": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "verifyResendSent": "Doğrulama postası yeniden gönderildi.",
+  "verifyRateLimited": "Saatte en fazla iki e-posta gönderilebiliyor; biraz sonra yeniden dene.",
+  "verifyChangeAddress": "Adresi değiştir",
+  "verifyContinueAnyway": "Şimdilik devam et",
+  "verifyContinueNote": "Doğrulanana kadar hesabın yalnızca bu cihazda açık kalır.",
   "guardianStatusMinor": "18 yaş altı",
   "guardianStatusNeeded": "Arkadaş ekleme veli onayına bağlı",
   "profileTitle": "Profil",
@@ -554,6 +590,12 @@
   "settingsTitle": "Ayarlar",
   "settingsAppearance": "Görünüm",
   "settingsTheme": "Tema",
+  "settingsPrivacy": "Veri ve gizlilik",
+  "privacyTitle": "Veri ve Gizlilik",
+  "privacyAiHeading": "Soru fotoğrafların",
+  "privacyAiBody": "Çektiğin soru fotoğrafları, soruyu okumak ve sınıflandırmak için yurt dışındaki yapay zekâ servisine (OpenAI) gönderilir. Gönderime kimliğin eklenmez; fotoğraf yalnızca senin arşivinde saklanır ve hesabını sildiğinde silinir.",
+  "privacyLegalHeading": "Yasal metinler",
+  "privacyLegalPlaceholder": "KVKK aydınlatma metni, kullanım koşulları ve gizlilik politikası hazırlanıyor; yayınlandığında burada yer alacak.",
   "settingsSound": "Ses efektleri",
   "settingsNotifications": "Bildirimler",
   "settingsReviewHour": "Tekrar hatırlatması",

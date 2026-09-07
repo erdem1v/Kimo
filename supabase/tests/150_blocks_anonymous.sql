@@ -41,6 +41,11 @@ values (
   '[{"label":"A","text":"1"},{"label":"B","text":"2"}]'::jsonb, 0
 );
 
+-- Fotoğraf taraması (0050): gönderim politikası 'clear' ister. Canlıda bunu
+-- scan-photos süpürücüsü yazar; fikstürde ayrıcalıklı oturum yazıyor.
+update public.mistakes set photo_scan = 'clear'
+ where user_id = tests.get_supabase_uid('alice');
+
 -- ====================================================== ENGELLEME: GÖNDERİM
 select tests.authenticate_as('alice');
 select lives_ok(

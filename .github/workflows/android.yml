@@ -10,10 +10,12 @@
 #   • Etiketle: `git tag v1.0.0 && git push kimo v1.0.0`
 #     (etiketle çalıştığında APK bir GitHub Release'ine de yüklenir)
 #
-# APK NASIL İMZALANIR: `android/app/build.gradle.kts` release derlemesini
-# **debug anahtarıyla** imzalıyor (Flutter şablonunun varsayılanı). Bu APK
-# yan yüklemeyle test için uygundur; Play Store'a YÜKLENEMEZ. Gerçek bir
-# yayın anahtarı (`key.properties` + keystore) henüz üretilmedi.
+# APK NASIL İMZALANIR (Task 03'te güncellendi): `ANDROID_KEYSTORE_BASE64` ve
+# `ANDROID_KEY_PROPERTIES` sırları tanımlıysa gerçek yayın anahtarıyla,
+# değilse debug anahtarıyla imzalanır (yan yükleme testi için uygundur; Play
+# Store'a YÜKLENEMEZ). Hangi durumun geçerli olduğu günlüğe yazılır.
+# Keystore üretimi ve key.properties biçimi: android/app/build.gradle.kts
+# başındaki yorum.
 name: android apk
 
 on:
@@ -66,6 +68,19 @@ jobs:
             echo "::warning::GOOGLE_SERVICES_JSON sırrı yok — APK push bildirimleri OLMADAN derlenecek."
           fi
 
+      - name: Yayın anahtarı (varsa)
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_PROPERTIES: ${{ secrets.ANDROID_KEY_PROPERTIES }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEY_PROPERTIES" ]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/kimo-release.jks
+            printf '%s' "$ANDROID_KEY_PROPERTIES" > android/key.properties
+            echo "::notice::Yayın anahtarı yazıldı — APK gerçek anahtarla imzalanacak."
+          else
+            echo "::warning::Yayın anahtarı sırları yok — APK DEBUG anahtarıyla imzalanacak (Play'e yüklenemez)."
+          fi
+
       - name: Supabase yapılandırması (varsa)
         env:
           SUPABASE_JSON: ${{ secrets.SUPABASE_JSON }}
@@ -85,13 +100,23 @@ jobs:
         run: git diff --exit-code pubspec.lock
 
       - name: APK derle
+        env:
+          # Çökme raporlama (Sentry). Sır tanımlı değilse uygulama raporsuz
+          # derlenir ve çalışmaya devam eder — supabase.json ile aynı desen.
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           BUILD_TYPE="${{ inputs.flavor || 'release' }}"
           ARGS=""
           if [ -f supabase.json ]; then
             ARGS="--dart-define-from-file=supabase.json"
           fi
-          echo "flutter build apk --$BUILD_TYPE $ARGS"
+          if [ -n "$SENTRY_DSN" ]; then
+            ARGS="$ARGS --dart-define=SENTRY_DSN=$SENTRY_DSN"
+            echo "::notice::SENTRY_DSN tanımlı — çökme raporlama etkin."
+          else
+            echo "::warning::SENTRY_DSN sırrı yok — APK çökme raporlaması OLMADAN derlenecek."
+          fi
+          echo "flutter build apk --$BUILD_TYPE (define'lar gizli)"
           flutter build apk --"$BUILD_TYPE" $ARGS
 
       # Derlenen dosyanın gerçekten var olduğunu ve boyutunu doğrula: sessizce

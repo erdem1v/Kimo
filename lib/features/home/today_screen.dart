@@ -4,14 +4,12 @@ import 'package:flutter/material.dart';
 
 import '../../data/daily_state_repository.dart';
 import '../../data/mistake_repository.dart';
-import '../../data/question_send_repository.dart';
 import '../../data/yks_subjects.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/mascot.dart';
 import '../../models/models.dart';
 import '../../services/notification_service.dart';
 import '../../services/sound_service.dart';
-import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
 import '../../state/refresh_bus.dart';
 import '../../state/user_profile.dart';
@@ -45,7 +43,6 @@ class TodayScreen extends StatefulWidget {
 }
 
 class _TodayScreenState extends State<TodayScreen> {
-  final bool _remote = SupabaseConfig.isConfigured;
   final KimoController _kimo = KimoController();
 
   List<MistakeEntry> _due = <MistakeEntry>[];
@@ -83,39 +80,35 @@ class _TodayScreenState extends State<TodayScreen> {
   }
 
   Future<void> _load() async {
-    if (!_remote) {
-      setState(() => _loading = false);
-      return;
-    }
     if (mounted) setState(() => _failed = false);
     try {
-      // Beş bağımsız sorgu PARALEL. Sırayla beklemek uygulamanın ilk ekranını
-      // beş gidiş-dönüş kadar geciktiriyordu; aralarında hiçbir bağımlılık yok.
-      // `Future.wait` hepsini bekliyor: biri patlarsa diğerleri sahipsiz
-      // kalmıyor (elle zincirlenmiş `await`lerde yakalanmamış hata olurdu).
+      // Bağımsız sorgular PARALEL. "Bugün kaç tekrar yapıldı" ve "çözülmemiş
+      // gelen soru" sayaçları artık ayrı sorgular DEĞİL: my_daily_state
+      // görünümünün sütunları (Task 03 — hem saat dilimi doğrusu sunucuya
+      // taşındı hem iki satır-indiren sayaç kapandı).
       final List<Object?> parts = await Future.wait<Object?>(<Future<Object?>>[
         mistakeRepository.dueReviews(),
-        mistakeRepository.reviewedTodayCount(),
-        questionSendRepository.unsolvedCount(),
         dailyStateRepository.read(),
         mistakeRepository.totalCount(),
       ]);
       final List<MistakeEntry> due = parts[0]! as List<MistakeEntry>;
-      final int doneToday = parts[1]! as int;
-      final int incoming = parts[2]! as int;
-      final DailyState? state = parts[3] as DailyState?;
-      final int archived = parts[4]! as int;
+      final DailyState? state = parts[1] as DailyState?;
+      final int archived = parts[2]! as int;
       if (!mounted) return;
 
-      gameProgress.syncDailyDone(doneToday);
+      final int incoming = state?.unsolvedReceivedCount ?? 0;
+      gameProgress.syncDailyDone(state?.reviewedTodayCount ?? 0);
       gameProgress.setDueRemaining(due.length);
       if (state != null) {
-        gameProgress.applyServerTotals(<String, dynamic>{
-          'xp': state.xp,
-          'weekly_xp': state.weeklyXp,
-          'streak': state.streak,
-          'league': state.league.dbValue,
-        });
+        // PASİF okuma: aktivite çıkarımı yapılmaz (bkz. syncFromDailyState).
+        gameProgress.syncFromDailyState(
+          xp: state.xp,
+          weeklyXp: state.weeklyXp,
+          streak: state.streak,
+          league: state.league,
+          lastActivityDate: state.lastActivityDate,
+          serverToday: state.serverToday,
+        );
       }
 
       unawaited(
@@ -220,7 +213,7 @@ class _TodayScreenState extends State<TodayScreen> {
         ),
       );
     }
-    if (_remote && _archiveEmpty) return _emptyArchive(context, l);
+    if (_archiveEmpty) return _emptyArchive(context, l);
     return _dashboard(context, l);
   }
 
@@ -294,22 +287,17 @@ class _TodayScreenState extends State<TodayScreen> {
             const SizedBox(height: Gap.md),
             _incomingCard(context, l),
           ],
-          if (!_remote) ...<Widget>[
-            const SizedBox(height: Gap.xl),
-            _mockNotice(context, l),
-          ] else ...<Widget>[
-            const SizedBox(height: Gap.xl),
-            SegmentedTabs(
-              labels: const <String>['TYT', 'AYT'],
-              selectedIndex: _exam == 'AYT' ? 1 : 0,
-              onChanged: (int i) {
-                sound.tap();
-                setState(() => _exam = i == 1 ? 'AYT' : 'TYT');
-              },
-            ),
-            const SizedBox(height: Gap.lg),
-            _subjects(context, l),
-          ],
+          const SizedBox(height: Gap.xl),
+          SegmentedTabs(
+            labels: const <String>['TYT', 'AYT'],
+            selectedIndex: _exam == 'AYT' ? 1 : 0,
+            onChanged: (int i) {
+              sound.tap();
+              setState(() => _exam = i == 1 ? 'AYT' : 'TYT');
+            },
+          ),
+          const SizedBox(height: Gap.lg),
+          _subjects(context, l),
         ],
       ),
     );
@@ -576,20 +564,6 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-  Widget _mockNotice(BuildContext context, L10n l) {
-    return Column(
-      children: <Widget>[
-        EmptyState(
-          message: l.todayMockNotice,
-          action: KimoButton(
-            label: l.todayStart,
-            expand: false,
-            onPressed: () => _practice(),
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 /// Sayı yerine geçen tire — çeviriye gerek yok, her dilde aynı.

@@ -25,12 +25,11 @@
 
 import { type Curriculum, isValidPair, taxonomyText } from "./taxonomy.ts";
 
-const corsHeaders: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+// CORS BİLİNÇLİ OLARAK YOK (Task 03). Bu fonksiyonu yalnızca mobil istemci
+// çağırıyor; native HTTP Origin göndermez ve preflight yapmaz. Eski `*`
+// başlığı ölü yapılandırmaydı ve ileride gevşetilmeye davetiye çıkarıyordu.
+// Bir web yönetim paneli gelirse CORS o panelin origin'ine SABİTLENEREK geri
+// eklenmeli — asla `*` ile değil.
 
 /**
  * Kabul edilen görsel türleri. Eskiden `mimeType` doğrudan data URL'ine
@@ -44,7 +43,7 @@ const MAX_BASE64 = 11_000_000;
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
   });
 }
 
@@ -101,8 +100,6 @@ async function consumeCredit(
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-
   try {
     const apiKey = Deno.env.get("OPENAI_API_KEY");
     if (!apiKey) return deny(500, "OPENAI_API_KEY tanımlı değil");
@@ -171,8 +168,9 @@ Deno.serve(async (req: Request) => {
             "konuyu seç; genel/şemsiye başlık yerine tam eşleşen alt konuyu " +
             "tercih et (ör. genel 'İnsan Fizyolojisi' yerine 'Destek ve Hareket " +
             "Sistemi'). Emin değilsen en yakın konuyu seç. Geçersizse ders/" +
-            "konu/sinav boş kalsın ve 'reason' alanına " +
-            "kısa Türkçe sebep yaz (ör. 'Sadece şıklar var, soru görünmüyor').\n\n" +
+            "konu/sinav boş kalsın ve 'reason_code' alanına nedenlerden birini " +
+            "yaz: unreadable (metin okunmuyor), no_question (soru ifadesi yok), " +
+            "no_options (şıklar yok). Geçerliyse 'ok' yaz. SERBEST METİN YAZMA.\n\n" +
             "KONU LİSTESİ (" + curriculum + " müfredat):\n" +
             taxonomyText(curriculum),
         },
@@ -201,7 +199,16 @@ Deno.serve(async (req: Request) => {
               is_readable: { type: "boolean" },
               has_question: { type: "boolean" },
               has_options: { type: "boolean" },
-              reason: { type: "string" },
+              // SERBEST METİN DEĞİL (Task 03): modelin yazdığı hiçbir metin
+              // kullanıcıya kontrolsüz gösterilmez. Hazırlanmış bir görsel,
+              // eski `reason` alanı üzerinden 15 yaşındaki bir kullanıcıya
+              // istediği Türkçe cümleyi gösterebilirdi ("Hesabın askıya
+              // alındı, şu adresten doğrula…"). Enum bu yüzeyi kapatıyor;
+              // istemci kodu kendi yerelleştirilmiş metnine çevirir.
+              reason_code: {
+                type: "string",
+                enum: ["ok", "unreadable", "no_question", "no_options"],
+              },
               sinav: { type: "string", enum: ["TYT", "AYT", ""] },
               ders: { type: "string" },
               konu: { type: "string" },
@@ -222,7 +229,7 @@ Deno.serve(async (req: Request) => {
               "is_readable",
               "has_question",
               "has_options",
-              "reason",
+              "reason_code",
               "sinav",
               "ders",
               "konu",
@@ -251,6 +258,23 @@ Deno.serve(async (req: Request) => {
     const data = await resp.json();
     const content = data.choices?.[0]?.message?.content ?? "{}";
     const parsed = JSON.parse(content);
+
+    // Kemer-askı: model bayraklarla çelişen bir kod seçtiyse kodu SUNUCU
+    // türetir; istemciye giden değer her zaman bayraklarla tutarlı bir enum.
+    // Serbest metin hiçbir koşulda iletilmez (eski `reason` alanı dahil).
+    const validCodes = new Set(["ok", "unreadable", "no_question", "no_options"]);
+    const flagsOk = parsed.is_readable && parsed.has_question &&
+      parsed.has_options;
+    if (!validCodes.has(parsed.reason_code) || flagsOk !== (parsed.reason_code === "ok")) {
+      parsed.reason_code = !parsed.is_readable
+        ? "unreadable"
+        : !parsed.has_question
+        ? "no_question"
+        : !parsed.has_options
+        ? "no_options"
+        : "ok";
+    }
+    delete parsed.reason;
 
     // Ders/konu'yu taksonomiye göre doğrula (AI listeden sapmışsa işaretle).
     parsed.konu_valid = Boolean(

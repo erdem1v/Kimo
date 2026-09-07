@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/report_reason.dart';
-import '../services/supabase_config.dart';
 
 /// Arkadaş kodu, engelleme ve gelen soru şikâyeti.
 ///
@@ -17,7 +16,6 @@ class FriendRepository {
 
   /// Kendi arkadaş kodum, `XXX-XXX` biçiminde gösterime hazır.
   Future<String?> myCode() async {
-    if (!SupabaseConfig.isConfigured) return null;
     final String? uid = _client.auth.currentUser?.id;
     if (uid == null) return null;
     try {
@@ -105,7 +103,6 @@ class FriendRepository {
 
   /// Engellediğim kullanıcıların kimlikleri.
   Future<Set<String>> blockedIds() async {
-    if (!SupabaseConfig.isConfigured) return <String>{};
     try {
       final List<Map<String, dynamic>> rows =
           await _client.from('user_blocks').select('blocked_id');

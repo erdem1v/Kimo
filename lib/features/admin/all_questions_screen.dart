@@ -355,6 +355,7 @@ class _QuestionEditorState extends State<_QuestionEditor> {
       subject: _subject,
       selected: _concept,
     );
+    if (!mounted) return;
     if (picked != null) setState(() => _concept = picked);
   }
 
@@ -366,7 +367,7 @@ class _QuestionEditorState extends State<_QuestionEditor> {
       exam: _exam!,
       subject: _subject,
     );
-    if (picked == null) return;
+    if (!mounted || picked == null) return;
     if (picked == _concept || _extras.contains(picked)) return;
     setState(() => _extras.add(picked));
   }

@@ -21,12 +21,9 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const corsHeaders: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+// CORS BİLİNÇLİ OLARAK YOK (Task 03): yalnızca mobil istemci çağırıyor,
+// tarayıcı origin'i yok. Web yönetim paneli gelirse origin'e sabitlenerek
+// geri eklenmeli — asla `*` ile değil.
 
 /** Silinecek kovalar. Sıra önemli değil; ikisi de tamamen boşalmalı. */
 const BUCKETS = ["mistake-photos", "avatars"] as const;
@@ -37,7 +34,7 @@ const PAGE = 100;
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
   });
 }
 
@@ -84,9 +81,6 @@ async function purgeFolder(
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
   if (req.method !== "POST") return deny(405, `yöntem: ${req.method}`);
 
   try {

@@ -95,18 +95,9 @@ class QuestionSendRepository {
     return items.where((ReceivedQuestion q) => !q.solved).toList();
   }
 
-  /// Çözülmemiş gelen soru sayısı (rozet için).
-  Future<int> unsolvedCount() async {
-    try {
-      final List<Map<String, dynamic>> rows = await _client
-          .from('received_questions')
-          .select('send_id')
-          .filter('solved_at', 'is', null);
-      return rows.length;
-    } catch (_) {
-      return 0;
-    }
-  }
+  // unsolvedCount KALDIRILDI (Task 03): tek bir tam sayı için satır
+  // indiriyordu. Sayı artık `my_daily_state.unsolved_received_count` —
+  // gelen kutusuyla aynı süzgeçlerle (moderasyon/engel/kaldırma) sunucuda.
 
   /// Arkadaştan gelen soruyu cevaplar.
   ///

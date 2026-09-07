@@ -45,6 +45,8 @@ class _MistakePhotoState extends State<MistakePhoto> {
   void _onImageError() {
     if (_retried) return;
     _retried = true;
+    // Önce önbellekteki ölü imza düşürülür; yoksa aynı ölü URL geri gelirdi.
+    mistakeRepository.invalidateSignedUrl(widget.path);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       setState(() => _future = mistakeRepository.signedUrl(widget.path));

@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/mascot.dart';
+import '../services/crash_service.dart';
 import '../models/social.dart';
 
 /// Sosyal katman: herkese açık profiller (arama/liderlik) ve karşılıklı
@@ -60,7 +63,9 @@ class SocialRepository {
           )
           .eq('id', uid)
           .maybeSingle();
-    } catch (_) {
+    } catch (e, st) {
+      // Çağıran null'u "veri yok" sayıp yerel değerlerle sürer; iz bırak.
+      unawaited(reportError(e, st, context: 'social.myStats'));
       return null;
     }
   }
@@ -88,7 +93,8 @@ class SocialRepository {
             )
             .toList(),
       );
-    } catch (_) {
+    } catch (e, st) {
+      unawaited(reportError(e, st, context: 'social.myLeagueBoard'));
       return null;
     }
   }
@@ -151,7 +157,8 @@ class SocialRepository {
           .eq('id', id)
           .maybeSingle();
       return row == null ? null : PublicProfile.fromRow(row);
-    } catch (_) {
+    } catch (e, st) {
+      unawaited(reportError(e, st, context: 'social.profileById'));
       return null;
     }
   }
@@ -185,7 +192,8 @@ class SocialRepository {
         DateTime.now().add(const Duration(seconds: _signedUrlTtlSeconds)),
       );
       return url;
-    } catch (_) {
+    } catch (e, st) {
+      unawaited(reportError(e, st, context: 'social.avatarSignedUrl'));
       _avatarUrls.remove(path);
       return null;
     }

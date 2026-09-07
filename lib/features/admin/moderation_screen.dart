@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../data/moderation_repository.dart';
+import '../../services/crash_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/mistake_photo.dart';
 
@@ -15,6 +18,9 @@ class ModerationScreen extends StatefulWidget {
 
 class _ModerationScreenState extends State<ModerationScreen> {
   List<PendingReport> _items = <PendingReport>[];
+
+  /// Makine taramasının şüpheli bulduğu fotoğraflar (0050).
+  List<FlaggedPhoto> _flagged = <FlaggedPhoto>[];
   bool _loading = true;
   String? _error;
   final Set<String> _busy = <String>{};
@@ -36,9 +42,18 @@ class _ModerationScreenState extends State<ModerationScreen> {
     });
     try {
       final List<PendingReport> items = await moderationRepository.pending();
+      // Şüpheli fotoğraflar ayrı bir kuyruk; okunamazsa şikâyet kuyruğunu
+      // düşürmesin.
+      List<FlaggedPhoto> flagged = _flagged;
+      try {
+        flagged = await moderationRepository.flaggedPhotos();
+      } catch (e, st) {
+        unawaited(reportError(e, st, context: 'admin.flaggedPhotos'));
+      }
       if (!mounted) return;
       setState(() {
         _items = items;
+        _flagged = flagged;
         _loading = false;
       });
     } catch (_) {
@@ -64,17 +79,19 @@ class _ModerationScreenState extends State<ModerationScreen> {
       for (final ({String mistakeId, String photoPath}) p in pending) {
         try {
           await moderationRepository.purgePhoto(p.mistakeId, p.photoPath);
-        } catch (_) {
+        } catch (e, st) {
           // Tek tek başarısızlık akışı durdurmasın; sayaç aşağıda gösterilecek.
+          unawaited(reportError(e, st, context: 'admin.purgePhoto'));
         }
       }
       final List<({String mistakeId, String photoPath})> left =
           await moderationRepository.pendingPurges();
       if (!mounted) return;
       setState(() => _pendingPurges = left.length);
-    } catch (_) {
+    } catch (e, st) {
       // Moderatör değilse ya da ağ yoksa sessizce geç: bu ekranın asıl işi
-      // şikayet kuyruğu, temizlik ikincil.
+      // şikayet kuyruğu, temizlik ikincil. İz yine de bırakılıyor.
+      unawaited(reportError(e, st, context: 'admin.pendingPurges'));
     }
   }
 
@@ -112,14 +129,46 @@ class _ModerationScreenState extends State<ModerationScreen> {
     }
   }
 
+  /// Şüpheli fotoğraf kararı. `clear` = yanlış pozitif → paylaşım açılır.
+  Future<void> _decideFlagged(FlaggedPhoto f, {required bool clear}) async {
+    if (_busy.contains(f.mistakeId)) return;
+    setState(() => _busy.add(f.mistakeId));
+    try {
+      await moderationRepository.reviewPhotoScan(f.mistakeId, clear: clear);
+      if (!clear) {
+        // Kaldırma mevcut purge değişmezine akar: dosya da silinmeli.
+        await moderationRepository.purgePhoto(f.mistakeId, f.photoPath);
+      }
+      if (!mounted) return;
+      setState(() => _flagged
+          .removeWhere((FlaggedPhoto x) => x.mistakeId == f.mistakeId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(clear
+              ? 'Temiz işaretlendi; paylaşım açıldı.'
+              : 'İçerik yayından kaldırıldı.'),
+          backgroundColor: clear ? AppColors.green : AppColors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('İşlem tamamlanamadı.')),
+      );
+    } finally {
+      if (mounted) setState(() => _busy.remove(f.mistakeId));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(_items.isEmpty
+        title: Text(_items.isEmpty && _flagged.isEmpty
             ? 'Moderasyon'
-            : 'Moderasyon (${_items.length})'),
+            : 'Moderasyon (${_items.length + _flagged.length})'),
         actions: <Widget>[
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -178,7 +227,7 @@ class _ModerationScreenState extends State<ModerationScreen> {
         ),
       );
     }
-    if (_items.isEmpty) {
+    if (_items.isEmpty && _flagged.isEmpty) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(32),
@@ -187,17 +236,96 @@ class _ModerationScreenState extends State<ModerationScreen> {
             children: <Widget>[
               Text('✅', style: TextStyle(fontSize: 52)),
               SizedBox(height: 14),
-              Text('Bekleyen şikayet yok.',
+              Text('Bekleyen şikayet ya da şüpheli fotoğraf yok.',
                   style: TextStyle(color: AppColors.inkLight, fontSize: 14)),
             ],
           ),
         ),
       );
     }
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      itemCount: _items.length,
-      itemBuilder: (BuildContext context, int i) => _card(_items[i]),
+      children: <Widget>[
+        // Makine kuyruğu şikâyetlerin ÜSTÜNDE: kimse şikâyet etmeden yakalandı
+        // ve paylaşımı sunucu zaten kapattı; karar bekleyen tarafı bu.
+        for (final FlaggedPhoto f in _flagged) _flaggedCard(f),
+        for (final PendingReport r in _items) _card(r),
+      ],
+    );
+  }
+
+  Widget _flaggedCard(FlaggedPhoto f) {
+    final bool busy = _busy.contains(f.mistakeId);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border:
+            Border.all(color: AppColors.red.withValues(alpha: 0.40), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              color: AppColors.red.withValues(alpha: 0.12),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: const Text('Makine taraması: şüpheli içerik',
+                style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    color: AppColors.red)),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text('${f.subject} · ${f.concept}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 14)),
+                const SizedBox(height: 8),
+                if (f.photoPath != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      height: 180,
+                      width: double.infinity,
+                      child: MistakePhoto(path: f.photoPath!),
+                    ),
+                  ),
+                const SizedBox(height: 10),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed:
+                            busy ? null : () => _decideFlagged(f, clear: true),
+                        child: const Text('Temiz — paylaşımı aç'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.red),
+                        onPressed:
+                            busy ? null : () => _decideFlagged(f, clear: false),
+                        child: const Text('Kaldır'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

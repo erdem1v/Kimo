@@ -11,7 +11,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(25);
+select plan(29);
 
 select tests.create_supabase_user('alice');
 
@@ -48,6 +48,15 @@ select ok(has_column_privilege('authenticated', 'public.mistakes', 'subject', 'I
           'subject insert edilebilir');
 select ok(has_column_privilege('authenticated', 'public.mistakes', 'is_public', 'INSERT'),
           'is_public insert edilebilir (paylaşım opt-in''i ekleme ekranında)');
+-- Task 03 (0049/0050/0053) kolonları:
+select ok(has_column_privilege('authenticated', 'public.mistakes', 'next_review_at', 'UPDATE'),
+          'next_review_at güncellenebilir (takvimi istemci yazar)');
+select ok(not has_column_privilege('authenticated', 'public.mistakes', 'photo_scan', 'UPDATE'),
+          'photo_scan güncellenemez — sahibi kendi fotoğrafını "temiz" işaretleyip paylaşımı açamaz');
+select ok(not has_column_privilege('authenticated', 'public.mistakes', 'photo_scan', 'INSERT'),
+          'photo_scan INSERT ile de yazılamaz (tetikleyici pending''e çevirir ama beyan da kapalı)');
+select ok(not has_column_privilege('authenticated', 'public.mistakes', 'photo_scan_at', 'UPDATE'),
+          'photo_scan_at de kapalı');
 select ok(has_column_privilege('authenticated', 'public.mistakes', 'step', 'UPDATE'),
           'step güncellenebilir (tekrar zamanlaması istemcide)');
 select ok(has_column_privilege('authenticated', 'public.mistakes', 'note', 'UPDATE'),

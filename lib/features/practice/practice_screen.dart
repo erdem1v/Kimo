@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -6,10 +8,10 @@ import '../../data/progress_repository.dart';
 import '../../data/submission_queue.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/models.dart';
+import '../../services/crash_service.dart';
 import '../../services/sound_service.dart';
-import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
-import '../../state/mistake_store.dart';
+import '../../state/user_profile.dart';
 import '../reviews/domain/review_scheduler.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -48,8 +50,6 @@ class PracticeScreen extends StatefulWidget {
 }
 
 class _PracticeScreenState extends State<PracticeScreen> {
-  final bool _remote = SupabaseConfig.isConfigured;
-
   List<MistakeEntry> _items = <MistakeEntry>[];
   bool _loading = true;
   bool _failed = false;
@@ -92,8 +92,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
       _failed = false;
     });
     try {
-      List<MistakeEntry> items =
-          _remote ? await mistakeRepository.dueReviews() : mistakeStore.items;
+      List<MistakeEntry> items = await mistakeRepository.dueReviews();
       final String? subject = widget.subject;
       final String? exam = widget.exam;
       if (subject != null) {
@@ -110,16 +109,12 @@ class _PracticeScreenState extends State<PracticeScreen> {
         _items = items;
         _loading = false;
       });
-      if (_remote) {
-        _doneAtStart = gameProgress.dailyReviewsDone;
-        // Günlük hedef TÜM derslerin toplamıdır; filtreli girişte kalan sayısını
-        // ezmeyelim (onu ana ekran tüm tekrarlara göre belirler).
-        if (subject == null) gameProgress.setDueRemaining(items.length);
-        _goalClaimed = gameProgress.dailyTarget > 0 &&
-            _doneAtStart >= gameProgress.dailyTarget;
-      } else {
-        _doneAtStart = 0;
-      }
+      _doneAtStart = gameProgress.dailyReviewsDone;
+      // Günlük hedef TÜM derslerin toplamıdır; filtreli girişte kalan sayısını
+      // ezmeyelim (onu ana ekran tüm tekrarlara göre belirler).
+      if (subject == null) gameProgress.setDueRemaining(items.length);
+      _goalClaimed = gameProgress.dailyTarget > 0 &&
+          _doneAtStart >= gameProgress.dailyTarget;
     } catch (e) {
       debugPrint('tekrarlar yüklenemedi: $e');
       if (!mounted) return;
@@ -132,8 +127,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
   MistakeEntry get _current => _items[_index];
   bool get _isLast => _index >= _items.length - 1;
-  int get _target => _remote ? gameProgress.dailyTarget : _items.length;
-  int get _base => _remote ? _doneAtStart : 0;
+  int get _target => gameProgress.dailyTarget;
+  int get _base => _doneAtStart;
   bool _hasPhoto(MistakeEntry e) => e.imageBytes != null || e.photoPath != null;
 
   // ------------------------------------------------------------------ cevap
@@ -141,12 +136,14 @@ class _PracticeScreenState extends State<PracticeScreen> {
   void _pickOption(int i) {
     if (_revealed != null) return;
     setState(() => _selectedOption = i);
-    _answer(correct: i == _current.correctIndex, choice: i);
+    // Bilinçli ateşle-unut: panel HEMEN açılmalı, ağ beklenmez. `_answer`
+    // kendi hatalarını içeride yakalayıp panele/rapora işliyor.
+    unawaited(_answer(correct: i == _current.correctIndex, choice: i));
   }
 
   void _selfGrade(bool correct) {
     if (_revealed != null) return;
-    _answer(correct: correct, choice: null);
+    unawaited(_answer(correct: correct, choice: null));
   }
 
   /// Cevabı işler.
@@ -160,10 +157,10 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
     if (correct) {
       sound.correct();
-      HapticFeedback.mediumImpact();
+      unawaited(HapticFeedback.mediumImpact());
     } else {
       sound.wrong();
-      HapticFeedback.heavyImpact();
+      unawaited(HapticFeedback.heavyImpact());
     }
 
     // Yerel plan hesabı her durumda yapılıyor: panelin "yarın yeniden
@@ -173,6 +170,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
       lapses: entry.lapses,
       correct: correct,
       reviewedOn: DateTime.now(),
+      examDate: ReviewScheduler.examCutoffFor(userProfile.examYear),
     );
     bool scheduleFailed = false;
 
@@ -188,17 +186,13 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
     gameProgress.recordReview();
 
-    if (!_remote) {
-      // Yerel (mock) mod: tek gerçek XP kaynağı GameProgress.
-      gameProgress.addXp(GameProgress.xpPerCorrect);
-      if (correct) _xpGained += GameProgress.xpPerCorrect;
-      return;
-    }
-
     try {
+      // Ağ hatasında yazım kuyruğa girer ve bu çağrı NORMAL döner; buraya
+      // yalnızca sunucu reddi ya da kuyruğun da başarısızlığı (oturum düşmüş)
+      // düşer. O durumda panel `scheduleFailed` gösterir ve hata raporlanır.
       plan = await mistakeRepository.submitReview(entry, correct);
-    } catch (e) {
-      debugPrint('tekrar planı yazılamadı: $e');
+    } catch (e, st) {
+      unawaited(reportError(e, st, context: 'submitReview.schedule'));
       scheduleFailed = true;
     }
 
@@ -254,7 +248,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
   /// Bekleyen gönderim sayısını tazeler (kuyruk diskten okunur).
   Future<void> _refreshPending() async {
-    if (!_remote) return;
     final int n = await submissionQueue.loadPendingCount();
     if (!mounted || n == _pendingSubmissions) return;
     setState(() => _pendingSubmissions = n);
@@ -274,7 +267,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
       // garanti ediyor. Ağ yoksa kuyruğa alınır.
       final bool awarded =
           gameProgress.claimDailyGoal(GameProgress.dailyGoalBonus);
-      if (awarded && _remote) {
+      if (awarded) {
         final Map<String, dynamic>? totals =
             await progressRepository.claimDailyGoal();
         gameProgress.applyServerTotals(totals);

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -21,10 +23,7 @@ import '../../widgets/kit/kimo_icons.dart';
 /// kullanıcı-yazılabilir ve zaman damgasız olduğunu ölçmüştü; yerini yaş
 /// kapısı, `user_consents` defteri ve `can_add_friends` kısıtı aldı.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, this.startWithSignUp = false});
-
-  /// Geriye dönük uyumluluk için duruyor; artık davranışı değiştirmiyor.
-  final bool startWithSignUp;
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -61,8 +60,23 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
     } on AuthException catch (e) {
-      debugPrint('giriş reddedildi: ${e.message}');
-      if (mounted) _snack(l.signInFailed);
+      debugPrint('giriş reddedildi: ${e.code} ${e.message}');
+      if (!mounted) return;
+      // "E-posta doğrulanmamış" diğer retlerden AYRILIYOR: kullanıcının
+      // yapabileceği şey farklı (gelen kutusuna bakmak / yeniden göndermek),
+      // genel "giriş başarısız" bunu asla söylemiyordu.
+      if (e.code == 'email_not_confirmed') {
+        _snack(l.signInEmailNotConfirmed);
+        unawaited(
+          authRepository.resendSignUp(email).catchError((Object err) {
+            // Oran sınırına takılmış olabilir (saatte 2 e-posta); giriş
+            // ekranında ikinci bir hata göstermek kafa karıştırırdı.
+            debugPrint('doğrulama postası yeniden gönderilemedi: $err');
+          }),
+        );
+      } else {
+        _snack(l.signInFailed);
+      }
     } catch (e) {
       debugPrint('giriş başarısız: $e');
       if (mounted) _snack(l.errorGeneric);

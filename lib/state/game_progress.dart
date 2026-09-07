@@ -40,22 +40,30 @@ class GameProgress extends ChangeNotifier {
   // bir gün atlanırsa sıfırlanır. Son aktif gün sunucuda saklanır.
   DateTime? _lastActive;
 
+  /// Sunucunun (Europe/Istanbul) "bugün"ü — `my_daily_state.today`. Günün tek
+  /// tanımı sunucuya ait (Task 03, bulgu 8.2); cihaz saati yalnızca sunucu
+  /// değeri henüz gelmemişken yedek.
+  DateTime? _serverToday;
+
   static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
   DateTime? get lastActiveDate => _lastActive;
 
+  DateTime get _today => _serverToday ?? _dateOnly(DateTime.now());
+
   /// Bugün seriyi sürdürecek aktivite yapıldı mı?
   bool get activeToday {
     final DateTime? d = _lastActive;
-    return d != null && d == _dateOnly(DateTime.now());
+    return d != null && d == _today;
   }
 
   /// Geçerli seri: son aktivite bugün ya da dünse yaşıyor, daha eskiyse
-  /// kırılmıştır (sunucudaki sayı eski kalmış olabilir).
+  /// kırılmıştır. Sunucu artık ETKİN seriyi veriyor (kapılama 0047/0048);
+  /// buradaki kontrol iki senkron arasında yerel tazelik payı.
   int get currentStreak {
     final DateTime? d = _lastActive;
     if (d == null) return 0;
-    final int gap = _dateOnly(DateTime.now()).difference(d).inDays;
+    final int gap = _today.difference(d).inDays;
     return gap <= 1 ? streak : 0;
   }
 
@@ -203,10 +211,43 @@ class GameProgress extends ChangeNotifier {
     }
     if (sStreak != null) {
       streak = sStreak;
-      // Sunucu seriyi artırdıysa bugün aktif sayılmışız demektir.
-      if (sStreak > 0) _lastActive = _dateOnly(DateTime.now());
+      // Bu metot yalnızca CEVAP RPC'lerinin yanıtlarıyla çağrılır
+      // (submit_review / submit_pool_answer / claim_daily_goal): az önce
+      // aktivite İŞLENDİ, dolayısıyla "bugün aktif" çıkarımı burada doğru.
+      // PASİF okumalar (my_daily_state) için [syncFromDailyState] var — eski
+      // sürümde ikisi de buradan geçiyordu ve bayat bir 30'luk seri, salt
+      // görünüm yenilendi diye "aktif" görünüyordu (Task 03, bulgu 8.1).
+      if (sStreak > 0) _lastActive = _today;
     }
     if (sLeague != null) league = League.fromDb(sLeague);
+    notifyListeners();
+  }
+
+  /// `my_daily_state` görünümünden gelen PASİF okumayı uygular.
+  ///
+  /// [applyServerTotals]'tan farkı: aktivite ÇIKARIMI YAPMAZ. Seri zaten
+  /// sunucuda kapılanmış (etkin) değer; son aktif gün ve "bugün" de sunucudan
+  /// gelir. Cihaz saatiyle gün üretimi burada tamamen bitiyor.
+  void syncFromDailyState({
+    required int xp,
+    required int weeklyXp,
+    required int streak,
+    League? league,
+    DateTime? lastActivityDate,
+    DateTime? serverToday,
+  }) {
+    this.xp = xp;
+    _weekStart = weekStart(DateTime.now());
+    this.weeklyXp = weeklyXp;
+    this.streak = streak;
+    if (league != null) this.league = league;
+    if (serverToday != null) _serverToday = _dateOnly(serverToday);
+    if (lastActivityDate != null) {
+      _lastActive = _dateOnly(lastActivityDate);
+    } else if (streak == 0) {
+      // Sunucu "etkin seri yok" diyorsa bayat yerel gün de temizlenir.
+      _lastActive = null;
+    }
     notifyListeners();
   }
 

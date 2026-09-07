@@ -8,8 +8,6 @@ import '../../data/yks_curriculum.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/models.dart';
 import '../../services/sound_service.dart';
-import '../../services/supabase_config.dart';
-import '../../state/mistake_store.dart';
 import '../../state/user_profile.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -94,7 +92,6 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
     super.dispose();
   }
 
-  bool get _manual => widget.analysis == null || !(widget.analysis?.ok ?? false);
   bool get _outOfCredit => widget.analysis?.outOfCredit ?? false;
 
   List<String> get _subjects =>
@@ -119,36 +116,20 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
           QuestionOption(label: label, text: ''),
       ];
 
-      if (SupabaseConfig.isConfigured) {
-        await mistakeRepository.add(
-          subject: _subject!,
-          concept: _concept!,
-          type: _type,
-          note: _note.text.trim(),
-          imageBytes: widget.imageBytes,
-          options: options,
-          correctIndex: _correctIndex,
-          exam: _exam,
-          // Soru havuzu bu sürümde yok (bkz. lib/_archive/README.md).
-          isPublic: false,
-          extraConcepts: _extras,
-        );
-      } else {
-        mistakeStore.add(
-          MistakeEntry(
-            subject: _subject!,
-            concept: _concept!,
-            type: _type,
-            note: _note.text.trim(),
-            date: DateTime.now(),
-            hasPhoto: widget.imageBytes != null,
-            imageBytes: widget.imageBytes,
-            options: options,
-            correctIndex: _correctIndex,
-          ),
-        );
-      }
-      unawaited(sound.correct());
+      await mistakeRepository.add(
+        subject: _subject!,
+        concept: _concept!,
+        type: _type,
+        note: _note.text.trim(),
+        imageBytes: widget.imageBytes,
+        options: options,
+        correctIndex: _correctIndex,
+        exam: _exam,
+        // Soru havuzu bu sürümde yok (bkz. lib/_archive/README.md).
+        isPublic: false,
+        extraConcepts: _extras,
+      );
+      sound.correct();
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       debugPrint('hata kaydedilemedi: $e');
@@ -230,7 +211,15 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
             child: SizedBox(
               height: 200,
               width: double.infinity,
-              child: Image.memory(widget.imageBytes!, fit: BoxFit.cover),
+              child: Image.memory(
+                widget.imageBytes!,
+                fit: BoxFit.cover,
+                errorBuilder: (BuildContext ctx, Object e, StackTrace? st) =>
+                    Center(
+                  child: Text(L10n.of(ctx).photoBrokenNote,
+                      style: ctx.t.caption),
+                ),
+              ),
             ),
           ),
           Padding(
@@ -323,14 +312,32 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(top: Gap.sm),
-            child: Text(
-              _manual ? l.confirmIntroManual : l.confirmIntro,
-              style: t.body,
-            ),
+            child: Text(_introText(l), style: t.body),
           ),
         ),
       ],
     );
+  }
+
+  /// Kimo'nun açılış cümlesi.
+  ///
+  /// Analiz BAŞARISIZSA nedeni artık söyleniyor (Task 03): "fotoğraf bulanık"
+  /// ile "bağlantı yok" aynı genel metne düşmüyor; kullanıcı fotoğrafı yeniden
+  /// çekmesi gerektiğini buradan öğreniyor. Metinler İSTEMCİNİN kendi
+  /// yerelleştirilmiş cümleleri — modelin serbest metni hiçbir zaman
+  /// gösterilmez (sunucu zaten yalnızca enum kod döndürüyor).
+  String _introText(L10n l) {
+    final QuestionAnalysis? a = widget.analysis;
+    if (a != null && a.ok) return l.confirmIntro;
+    return switch (a?.failure) {
+      AnalysisFailure.unreadable => l.analysisReasonUnreadable,
+      AnalysisFailure.noQuestion => l.analysisReasonNoQuestion,
+      AnalysisFailure.noOptions => l.analysisReasonNoOptions,
+      AnalysisFailure.network => l.analysisReasonNetwork,
+      AnalysisFailure.unknown => l.analysisReasonUnknown,
+      // Analiz hiç yapılmadı (elle giriş, iptal, kota) → eski genel metin.
+      null => l.confirmIntroManual,
+    };
   }
 
   Widget _classificationCard(BuildContext context, L10n l) {

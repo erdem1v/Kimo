@@ -4,8 +4,6 @@ import '../../data/mistake_repository.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/models.dart';
 import '../../services/sound_service.dart';
-import '../../services/supabase_config.dart';
-import '../../state/mistake_store.dart';
 import '../../state/refresh_bus.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -38,8 +36,6 @@ class MistakesScreen extends StatefulWidget {
 }
 
 class _MistakesScreenState extends State<MistakesScreen> {
-  final bool _remote = SupabaseConfig.isConfigured;
-
   List<MistakeEntry> _items = <MistakeEntry>[];
   bool _loading = false;
   bool _failed = false;
@@ -50,12 +46,8 @@ class _MistakesScreenState extends State<MistakesScreen> {
   @override
   void initState() {
     super.initState();
-    if (_remote) {
-      _load();
-      refreshBus.addListener(_onRefresh);
-    } else {
-      _items = mistakeStore.items;
-    }
+    _load();
+    refreshBus.addListener(_onRefresh);
   }
 
   @override
@@ -96,11 +88,7 @@ class _MistakesScreenState extends State<MistakesScreen> {
       MaterialPageRoute<bool>(builder: (_) => const CaptureScreen()),
     );
     if (!mounted) return;
-    if (_remote) {
-      await _load();
-    } else {
-      setState(() => _items = mistakeStore.items);
-    }
+    await _load();
   }
 
   List<MistakeEntry> get _filtered => _subject == null

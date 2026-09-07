@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/social.dart';
-import '../services/supabase_config.dart';
 
 /// Kullanıcının günlük durumu — HUD'un tek kaynağı.
 ///
@@ -21,6 +20,11 @@ class DailyState {
     required this.streak,
     required this.weeklyXp,
     required this.league,
+    this.lastActivityDate,
+    this.serverToday,
+    this.reviewedTodayCount = 0,
+    this.dueCount = 0,
+    this.unsolvedReceivedCount = 0,
   });
 
   /// Bugün kalan yapay zekâ okutma hakkı.
@@ -35,11 +39,36 @@ class DailyState {
 
   final int gems;
   final int xp;
+
+  /// ETKİN seri — sunucu kapıladı (Task 03): kopmuş seri artık 0 gelir.
   final int streak;
   final int weeklyXp;
   final League league;
 
+  /// Sunucudaki son aktivite günü; "bugün aktif miyim" artık cihaz saatinden
+  /// değil bundan türetiliyor.
+  final DateTime? lastActivityDate;
+
+  /// Sunucunun (Europe/Istanbul) bugünü. Günün tek tanımı bu.
+  final DateTime? serverToday;
+
+  /// Istanbul gününe göre bugün cevaplanmış tekrar sayısı (sunucu sayıyor;
+  /// eski istemci sayımı gün sınırını 03:00'a kaydırıyordu).
+  final int reviewedTodayCount;
+
+  /// Vadesi gelmiş tekrar sayısı.
+  final int dueCount;
+
+  /// Arkadaşlardan gelen, çözülmemiş soru sayısı (gelen kutusu süzgeçleriyle).
+  final int unsolvedReceivedCount;
+
   bool get hasAi => aiLeft > 0;
+
+  /// Sunucuya göre bugün aktif miyim (seri bugün işlendi mi).
+  bool get activeToday =>
+      lastActivityDate != null &&
+      serverToday != null &&
+      !lastActivityDate!.isBefore(serverToday!);
 
   /// Seviye XP'den TÜRETİLİR; sunucuda ayrı bir sütun yok.
   ///
@@ -78,6 +107,16 @@ class DailyState {
       streak: (row['streak'] as num?)?.toInt() ?? 0,
       weeklyXp: (row['weekly_xp'] as num?)?.toInt() ?? 0,
       league: League.fromDb(row['league'] as String?),
+      lastActivityDate: row['last_activity_date'] is String
+          ? DateTime.tryParse(row['last_activity_date'] as String)
+          : null,
+      serverToday: row['today'] is String
+          ? DateTime.tryParse(row['today'] as String)
+          : null,
+      reviewedTodayCount: (row['reviewed_today_count'] as num?)?.toInt() ?? 0,
+      dueCount: (row['due_count'] as num?)?.toInt() ?? 0,
+      unsolvedReceivedCount:
+          (row['unsolved_received_count'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -134,7 +173,6 @@ class DailyStateRepository {
   /// HUD verisi. Hata durumunda `null` döner — çağıran eldeki değeri korur,
   /// sıfırlanmış bir HUD göstermez.
   Future<DailyState?> read() async {
-    if (!SupabaseConfig.isConfigured) return null;
     try {
       final List<Map<String, dynamic>> rows =
           await _client.from('my_daily_state').select().limit(1);
@@ -160,7 +198,6 @@ class DailyStateRepository {
   }
 
   Future<GuardianStatus?> guardianStatus() async {
-    if (!SupabaseConfig.isConfigured) return null;
     try {
       final dynamic res = await _client.rpc<dynamic>('my_guardian_status');
       if (res is List && res.isNotEmpty) {

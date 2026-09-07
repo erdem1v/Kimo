@@ -1,8 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/topic_progress.dart';
-import '../services/supabase_config.dart';
+import '../services/crash_service.dart';
 import 'submission_queue.dart';
 
 /// Konu bazlı ilerleme: çözülen her sorunun konusunu kaydeder ve haritayı
@@ -40,7 +42,6 @@ class ProgressRepository {
     /// doğrulanabilir yerde doğrulamak şart oldu (bkz. 0041 göçü).
     int? choice,
   }) async {
-    if (!SupabaseConfig.isConfigured) return null;
     // Birikmiş cevaplar varsa önce onlar gitsin (bkz. drainIfPending).
     await submissionQueue.drainIfPending();
     final String token = newSubmissionToken();
@@ -63,22 +64,25 @@ class ProgressRepository {
       // Kuyruğa almak sonsuz bir yeniden deneme üretirdi.
       debugPrint('tekrar reddedildi, kuyruğa ALINMADI: ${e.code} ${e.message}');
       return null;
-    } catch (e) {
-      debugPrint('tekrar gönderilemedi, kuyruğa alındı: $e');
-      await submissionQueue.enqueue(<String, dynamic>{
+    } catch (e, st) {
+      debugPrint('tekrar gönderilemedi, kuyruğa alınıyor: $e');
+      final bool queued = await submissionQueue.enqueue(<String, dynamic>{
         'kind': 'review',
         'mistake_id': mistakeId,
         'correct': correct,
         'choice': choice,
         'token': token,
       });
+      // Kuyruğa DA giremediyse (oturum düşmüş) cevap kayboldu — raporla.
+      if (!queued) {
+        unawaited(reportError(e, st, context: 'progress.submitReview.lost'));
+      }
       return null;
     }
   }
 
   /// Günlük hedef bonusunu sunucudan ister (günde bir kez, sunucu garantiler).
   Future<Map<String, dynamic>?> claimDailyGoal() async {
-    if (!SupabaseConfig.isConfigured) return null;
     await submissionQueue.drainIfPending();
     try {
       final dynamic res =
@@ -91,16 +95,19 @@ class ProgressRepository {
       // "bugün hiç çalışılmamış" gibi kalıcı retler kuyruğa girmemeli.
       debugPrint('günlük hedef reddedildi, kuyruğa ALINMADI: ${e.code} ${e.message}');
       return null;
-    } catch (e) {
-      debugPrint('günlük hedef bonusu alınamadı, kuyruğa alındı: $e');
-      await submissionQueue.enqueue(<String, dynamic>{'kind': 'goal'});
+    } catch (e, st) {
+      debugPrint('günlük hedef bonusu alınamadı, kuyruğa alınıyor: $e');
+      final bool queued =
+          await submissionQueue.enqueue(<String, dynamic>{'kind': 'goal'});
+      if (!queued) {
+        unawaited(reportError(e, st, context: 'progress.claimGoal.lost'));
+      }
       return null;
     }
   }
 
   /// Konu bazlı ilerleme özetim: 'Ders|Konu' → ilerleme.
   Future<Map<String, TopicProgress>> myProgress() async {
-    if (!SupabaseConfig.isConfigured) return <String, TopicProgress>{};
     final List<Map<String, dynamic>> rows =
         await _client.from('my_topic_progress').select();
     return <String, TopicProgress>{

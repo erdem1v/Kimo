@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 // Takma ad ZORUNLU: bu paket de `AppSettings` adinda bir sinif yayiyor ve
 // bizim `state/app_settings.dart` icindeki tercih deposuyla ayni ada sahip.
@@ -8,8 +10,8 @@ import '../../data/daily_state_repository.dart';
 import '../../data/moderation_repository.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../services/notification_service.dart';
+import '../../services/push_service.dart';
 import '../../services/sound_service.dart';
-import '../../services/supabase_config.dart';
 import '../../state/app_settings.dart';
 import '../../state/user_profile.dart';
 import '../../theme/tokens.dart';
@@ -23,6 +25,7 @@ import '../admin/moderation_screen.dart';
 import '../onboarding/exam_year_sheet.dart';
 import '../onboarding/mascot_sheet.dart';
 import '../settings/delete_account_screen.dart';
+import '../settings/privacy_screen.dart';
 
 /// Tek ayarlar ekranı. Profilden sağ üstteki tek girişten açılıyor.
 ///
@@ -43,14 +46,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    if (SupabaseConfig.isConfigured) {
-      _load();
-    }
+    _load();
   }
 
   Future<void> _load() async {
-    final bool admin = await moderationRepository.isAdmin();
-    final GuardianStatus? g = await dailyStateRepository.guardianStatus();
+    // Bağımsız iki sorgu: paralel (Task 03, 10.2 deseni).
+    final List<Object?> parts = await Future.wait<Object?>(<Future<Object?>>[
+      moderationRepository.isAdmin(),
+      dailyStateRepository.guardianStatus(),
+    ]);
+    final bool admin = parts[0]! as bool;
+    final GuardianStatus? g = parts[1] as GuardianStatus?;
     if (!mounted) return;
     setState(() {
       _isAdmin = admin;
@@ -89,7 +95,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _themeCard(context, l),
             const SizedBox(height: Gap.sm),
             _soundCard(context, l),
-            if (SupabaseConfig.isConfigured) ...<Widget>[
+            ...<Widget>[
               const SizedBox(height: Gap.xl),
               SectionHeader(title: l.settingsNotifications),
               const SizedBox(height: Gap.md),
@@ -100,14 +106,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   context,
                   label: l.settingsReviewHour,
                   hour: appSettings.reviewHour,
-                  onPick: appSettings.setReviewHour,
+                  onPick: (int h) async {
+                    await appSettings.setReviewHour(h);
+                    await notifications.replanFromCache(
+                        enabled: userProfile.notifyEnabled);
+                  },
                 ),
                 const SizedBox(height: Gap.sm),
                 _hourCard(
                   context,
                   label: l.settingsStreakHour,
                   hour: appSettings.streakHour,
-                  onPick: appSettings.setStreakHour,
+                  onPick: (int h) async {
+                    await appSettings.setStreakHour(h);
+                    await notifications.replanFromCache(
+                        enabled: userProfile.notifyEnabled);
+                  },
                 ),
                 const SizedBox(height: Gap.sm),
                 _quietCard(context, l),
@@ -138,6 +152,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: Gap.sm),
               _guardianRow(context, l),
+              const SizedBox(height: Gap.sm),
+              // Veri aktarımı bildirimi ve hukuki metinlerin yuvası (Task 03).
+              _row(
+                context,
+                icon: KimoIcons.lock,
+                label: l.settingsPrivacy,
+                onTap: () => _push(const PrivacyScreen()),
+              ),
               if (_isAdmin) ...<Widget>[
                 const SizedBox(height: Gap.xl),
                 SectionHeader(title: l.settingsAdmin),
@@ -162,6 +184,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 kind: KimoButtonKind.tertiary,
                 onPressed: () async {
                   sound.tap();
+                  // SIRALAMA ÖNEMLİ: jeton silme oturum gerektirir. Eskiden
+                  // yalnızca signOut çağrılıyordu ve device_tokens satırı
+                  // kalıyordu — aynı telefonda açılan BİR SONRAKİ hesap,
+                  // önceki kullanıcının push bildirimlerini alıyordu.
+                  await push.unregisterDevice();
+                  await notifications.cancelAll();
                   await authRepository.signOut();
                 },
               ),
@@ -255,7 +283,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           bool ok = v;
           if (v) ok = await notifications.requestPermission();
           await userProfile.setNotifyEnabled(ok);
-          if (!ok) await notifications.cancelAll();
+          if (ok) {
+            // Anahtar AÇILDI: yerel plan hemen kurulsun (eskiden bir sonraki
+            // ekran yüklemesini bekliyordu) ve cihaz push için kaydolsun.
+            await notifications.replanFromCache(enabled: true);
+            unawaited(push.registerDevice());
+          } else {
+            // Anahtar KAPANDI: yalnızca yerel hatırlatmalar değil, sunucu
+            // push'u da dursun. Eskiden jeton silinmiyordu ve bildirimi
+            // kapatan kullanıcı arkadaşlık isteği push'larını almaya devam
+            // ediyordu (Task 03, bulgu 7.1).
+            await notifications.cancelAll();
+            await push.unregisterDevice();
+          }
           if (!mounted) return;
           setState(() {});
           // İzin reddedildiyse sistem penceresi bir daha açılmaz; kullanıcıyı
@@ -370,6 +410,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         await _pickHour(context, appSettings.quietStart);
                     if (h != null) {
                       await appSettings.setQuietRange(h, appSettings.quietEnd);
+                      await notifications.replanFromCache(
+                          enabled: userProfile.notifyEnabled);
                     }
                   },
                 ),
@@ -384,7 +426,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     final int? h =
                         await _pickHour(context, appSettings.quietEnd);
                     if (h != null) {
-                      await appSettings.setQuietRange(appSettings.quietStart, h);
+                      await appSettings.setQuietRange(
+                          appSettings.quietStart, h);
+                      await notifications.replanFromCache(
+                          enabled: userProfile.notifyEnabled);
                     }
                   },
                 ),

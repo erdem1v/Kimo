@@ -418,6 +418,12 @@ verify_jwt = true
 [functions.cleanup-anonymous]
 verify_jwt = true
 
+# Fotograf icerik taramasi (0050). Iki cagiran var: istemci kendi JWT'siyle
+# (kayittan hemen sonra, yalnizca kendi bekleyenleri) ve pg_cron servis rolu
+# jetonuyla (supurme). Ikisi de gecerli JWT tasir; dogrulama acik.
+[functions.scan-photos]
+verify_jwt = true
+
 # Veli onayi. KIMLIKSIZ ve bu ZORUNLU: velinin hesabi yok, olmasi da
 # beklenmiyor. Guvenlik token'in kendisinde: 32 bayt rastgele, veritabaninda
 # yalnizca SHA-256 hash'i, tek kullanimlik, 7 gun gecerli. Fonksiyon token'i

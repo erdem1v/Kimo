@@ -6,7 +6,6 @@ import '../../l10n/generated/app_localizations.dart';
 import '../../models/mascot.dart';
 import '../../services/notification_service.dart';
 import '../../services/sound_service.dart';
-import '../../services/supabase_config.dart';
 import '../../state/user_profile.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -15,6 +14,7 @@ import '../../widgets/kit/kimo_button.dart';
 import '../../widgets/kit/kimo_chips.dart';
 import '../../widgets/kit/kimo_icons.dart';
 import '../../widgets/kit/kimo_progress.dart';
+import '../auth/email_verify_step.dart';
 import '../capture/capture_screen.dart';
 import 'age_gate_step.dart';
 
@@ -37,7 +37,7 @@ class OnboardingFlow extends StatefulWidget {
   State<OnboardingFlow> createState() => _OnboardingFlowState();
 }
 
-enum _Step { firstCapture, age, profile, mascot, notifications, signUp }
+enum _Step { firstCapture, age, profile, mascot, notifications, signUp, verify }
 
 class _OnboardingFlowState extends State<OnboardingFlow> {
   final TextEditingController _nickname = TextEditingController();
@@ -49,6 +49,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   int _index = 0;
 
   int? _year;
+  bool _emailVerified = false;
   Mascot? _mascot;
   bool? _notify;
   bool _saving = false;
@@ -56,10 +57,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   static const List<int> _examYears = <int>[2026, 2027, 2028, 2029, 2030];
 
-  bool get _remote => SupabaseConfig.isConfigured;
-
   /// Kayıt öncesi geçici kimlikle mi geldik.
-  bool get _anonymous => _remote && authRepository.isAnonymous;
+  bool get _anonymous => authRepository.isAnonymous;
 
   @override
   void initState() {
@@ -72,18 +71,27 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       // Yalnızca "İlk yanlışını çek" yolundan gelenler için: hesabı olan biri
       // zaten arşivine sahip.
       if (_anonymous) _Step.firstCapture,
-      if (_remote) _Step.age,
+      _Step.age,
       _Step.profile,
       _Step.mascot,
       _Step.notifications,
       // Zaten kalıcı hesabı olan (giriş yapmış) kullanıcıya kayıt sorulmaz.
-      if (_anonymous) _Step.signUp,
+      if (_anonymous) ...<_Step>[_Step.signUp, _Step.verify],
     ];
+
+    // KALDIĞI YERDEN: kayıt daha önce yapılmış ama e-posta onayı hâlâ
+    // askıdaysa (uygulama kapatılıp açıldı), akış baştan değil doğrudan
+    // doğrulama adımından sürer. Bu olmadan yarım kalan dönüşüm her açılışta
+    // beş adımı yeniden yürütmeyi gerektirirdi.
+    if (_anonymous && authRepository.pendingEmail != null) {
+      _email.text = authRepository.pendingEmail!;
+      _index = _steps.indexOf(_Step.verify);
+    }
 
     _nickname.addListener(() => setState(() {}));
     _password.addListener(() => setState(() {}));
     _email.addListener(() => setState(() {}));
-    if (_remote) _loadGuardian();
+    _loadGuardian();
   }
 
   @override
@@ -123,6 +131,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         _Step.mascot => _mascot != null,
         _Step.notifications => _notify != null,
         _Step.signUp => _emailOk && _passwordOk,
+        // Doğrulama gelene kadar ana düğme kilitli; sayfanın kendi "şimdilik
+        // devam et" çıkışı var (EmailVerifyStep).
+        _Step.verify => _emailVerified,
       };
 
   bool get _emailOk {
@@ -163,6 +174,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           await userProfile.setNotifyEnabled(granted);
         case _Step.signUp:
           await _register();
+        case _Step.verify:
+          break;
       }
     } catch (e) {
       debugPrint('adım kaydedilemedi: $e');
@@ -279,6 +292,26 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       _Step.mascot => _mascotPage(context, l),
       _Step.notifications => _notifyPage(context, l),
       _Step.signUp => _signUpPage(context, l),
+      _Step.verify => EmailVerifyStep(
+          email: authRepository.pendingEmail ?? _email.text.trim(),
+          onStatus: (bool ok) {
+            if (mounted) setState(() => _emailVerified = ok);
+          },
+          onChangeAddress: () {
+            // Adres yanlış girildi: kayıt adımına dön; yeni updateUser çağrısı
+            // askıdaki değişikliği yenisiyle değiştirir.
+            sound.tap();
+            setState(() => _index = _steps.indexOf(_Step.signUp));
+          },
+          onContinueAnyway: () {
+            // Doğrulama beklemeden devam: e-posta ulaşamıyorsa kullanıcıyı
+            // uygulamanın dışında tutmak veri kaybından beter. Sonraki soğuk
+            // açılışta bu adım kaldığı yerden geri gelir (yukarıdaki
+            // pendingEmail kontrolü).
+            sound.tap();
+            widget.onDone();
+          },
+        ),
     };
   }
 
@@ -501,4 +534,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     if (last) return l.signUpDone;
     return l.actionContinue;
   }
+
+  // NOT: doğrulama adımında geri düğmesi kayıt adımına döner (varsayılan
+  // _back davranışı) — "adresi değiştir" ile aynı yol; ayrıca engellemiyoruz.
 }

@@ -8,7 +8,6 @@ import '../../models/mascot.dart';
 import '../../models/social.dart';
 import '../../services/notification_service.dart';
 import '../../services/sound_service.dart';
-import '../../services/supabase_config.dart';
 import '../../state/game_progress.dart';
 import '../../state/refresh_bus.dart';
 import '../../state/user_profile.dart';
@@ -76,8 +75,6 @@ class LeagueBoardView extends StatefulWidget {
 }
 
 class _LeagueBoardViewState extends State<LeagueBoardView> {
-  bool get _remote => SupabaseConfig.isConfigured;
-
   LeagueBoard? _board;
   bool _loading = true;
   bool _failed = false;
@@ -85,12 +82,8 @@ class _LeagueBoardViewState extends State<LeagueBoardView> {
   @override
   void initState() {
     super.initState();
-    if (_remote) {
-      _load();
-      refreshBus.addListener(_onRefresh);
-    } else {
-      _loading = false;
-    }
+    _load();
+    refreshBus.addListener(_onRefresh);
   }
 
   @override

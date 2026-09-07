@@ -46,16 +46,32 @@ class AuthRepository {
     );
   }
 
-  /// Hesap açar. Takma ad burada alınmaz: karşılama akışında Kimo sorar ve
-  /// oradan metadata'ya yazılır.
-  ///
-  /// Anonim bir oturum varsa bu YOL KULLANILMAZ — [convertToPermanent] çağrılır.
-  Future<void> signUp({
-    required String email,
-    required String password,
-  }) {
-    return _client.auth.signUp(email: email, password: password);
+  // signUp() SİLİNDİ (Task 03): sıfır çağrısı vardı — kayıt tek yoldan,
+  // karşılama akışının sonundaki convertToPermanent ile yapılıyor. Ölü ikinci
+  // bir kayıt yolu, e-posta doğrulama akışını da ikiye bölerdi.
+
+  /// Onay bekleyen e-posta değişikliği (anonim → kalıcı dönüşümün askıdaki
+  /// adresi). Sunucuda e-posta onayı KAPALIYSA hiç askıda kalmaz, null döner.
+  String? get pendingEmail => currentUser?.newEmail;
+
+  /// Oturumun e-postası onaylanmış mı?
+  bool get emailConfirmed => currentUser?.emailConfirmedAt != null;
+
+  /// Sunucudaki güncel kullanıcıyı çeker (onay başka cihazda/tarayıcıda
+  /// verilmiş olabilir; push gelmez, SORMAK gerekir). Oturum ve `currentUser`
+  /// tazelenir.
+  Future<void> refreshUser() async {
+    await _client.auth.refreshSession();
   }
+
+  /// Askıdaki e-posta değişikliğinin onay postasını yeniden gönderir.
+  Future<void> resendEmailChange(String email) =>
+      _client.auth.resend(type: OtpType.emailChange, email: email);
+
+  /// İlk kayıt onayının postasını yeniden gönderir (giriş ekranındaki
+  /// "e-postan doğrulanmamış" durumu için).
+  Future<void> resendSignUp(String email) =>
+      _client.auth.resend(type: OtpType.signup, email: email);
 
   Future<void> signOut() => _client.auth.signOut();
 }

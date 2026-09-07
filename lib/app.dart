@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'features/auth/auth_gate.dart';
-import 'features/home/home_shell.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'services/notification_router.dart';
-import 'services/supabase_config.dart';
 import 'state/app_settings.dart';
 import 'theme/app_theme.dart';
 
@@ -18,9 +16,11 @@ class AiYksCoachApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Supabase yapılandırılmışsa giriş kapısı, değilse doğrudan mock uygulama.
-    final Widget home =
-        SupabaseConfig.isConfigured ? const AuthGate() : const HomeShell();
+    // Uygulama her zaman gerçek kimlik doğrulamasından başlar. Eski
+    // mock/demo yolu (yapılandırma yoksa doğrudan HomeShell) Task 03'te
+    // kaldırıldı: yanlış yapılandırılmış bir yayın derlemesi kimlik
+    // doğrulamasız açılamaz (bkz. main.dart'taki fail-fast).
+    const Widget home = AuthGate();
 
     // Yalnızca tema modu dinleniyor; `home` sabit tutulup child olarak
     // geçiliyor ki tercih değiştiğinde ekran ağacı baştan kurulmasın.

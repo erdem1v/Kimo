@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../services/supabase_config.dart';
+import '../services/push_service.dart';
+
 
 /// Hesap silme.
 ///
@@ -25,10 +26,10 @@ class AccountRepository {
   /// Dönen sayı silinen depolama nesnesi adedi (kayıt/teşhis için).
   /// Başarısızlıkta [Exception] fırlatıyor.
   Future<int> deleteAccount() async {
-    if (!SupabaseConfig.isConfigured) {
-      throw StateError('Supabase yapılandırılmadı');
-    }
-
+    // Jeton kaydı hesap silinmeden ÖNCE temizlenir (satır kullanıcıya bağlı;
+    // sonrasında oturum da kalmayacak). Başarısızlığı silmeyi engellemez —
+    // unregisterDevice kendi içinde raporlayıp yutar.
+    await push.unregisterDevice();
     // `uid` GÖNDERİLMİYOR: fonksiyon onu çağıranın JWT'sinden okuyor. Gövdeden
     // göndermek, servis rolüyle çalışan bir uç noktayı "herkesi sil"
     // primitifine çevirirdi.

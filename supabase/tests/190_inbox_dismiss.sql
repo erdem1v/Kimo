@@ -57,6 +57,10 @@ values (
   '[{"label":"A","text":"1"},{"label":"B","text":"2"}]'::jsonb, 1
 );
 
+-- Fotoğraf taraması (0050): gönderim politikası 'clear' ister.
+update public.mistakes set photo_scan = 'clear'
+ where user_id = tests.get_supabase_uid('sender');
+
 select tests.authenticate_as('sender');
 insert into public.question_sends (sender_id, receiver_id, mistake_id)
 values (

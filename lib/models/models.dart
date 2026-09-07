@@ -76,16 +76,48 @@ class QuestionOption {
 }
 
 /// AI foto analizinin sonucu. [ok] true ise fotoğrafta okunabilir bir soru +
-/// şıklar var demektir; değilse [reason] kısa bir Türkçe sebep içerir.
+/// şıklar var demektir; değilse [failure] nedeni söyler.
+///
+/// **Modelden gelen serbest metin YOK (Task 03):** eski `reason` alanı
+/// modelin yazdığı Türkçe cümleyi taşıyordu. Hazırlanmış bir görsel o alana
+/// istediği metni yazdırabilirdi; sunucu artık yalnızca enum kod döndürüyor
+/// ve istemci kendi yerelleştirilmiş metnini gösteriyor.
 ///
 /// Geçerliyse AI ayrıca soruyu sınıflandırır: [exam] (TYT/AYT), [subject]
 /// (ders) ve [concept] (konu). [conceptValid] true ise konu taksonomideki bir
 /// adla birebir eşleşmiştir; false ise AI'nın en yakın tahminidir.
+/// Analizin başarısızlık nedeni — sunucudaki `reason_code` enum'unun
+/// istemci karşılığı + yalnızca istemcide oluşan `network`.
+enum AnalysisFailure {
+  /// Fotoğraf okunaklı değil (bulanık, karanlık, kesik).
+  unreadable,
+
+  /// Görselde bir soru ifadesi yok (ör. yalnızca şıklar).
+  noQuestion,
+
+  /// Şıklar görünmüyor.
+  noOptions,
+
+  /// Sunucuya hiç ulaşılamadı (çevrimdışı / zaman aşımı). Sunucudan gelmez.
+  network,
+
+  /// Sunucu tanımadığımız bir kod döndürdü ya da gövde bozuktu.
+  unknown;
+
+  static AnalysisFailure? fromCode(String? code) => switch (code) {
+        'ok' => null,
+        'unreadable' => AnalysisFailure.unreadable,
+        'no_question' => AnalysisFailure.noQuestion,
+        'no_options' => AnalysisFailure.noOptions,
+        _ => AnalysisFailure.unknown,
+      };
+}
+
 class QuestionAnalysis {
   const QuestionAnalysis({
     required this.ok,
     required this.options,
-    this.reason,
+    this.failure,
     this.exam,
     this.subject,
     this.concept,
@@ -102,7 +134,7 @@ class QuestionAnalysis {
   const QuestionAnalysis.outOfCredit({this.creditResetsAt})
       : ok = false,
         options = const <QuestionOption>[],
-        reason = null,
+        failure = null,
         exam = null,
         subject = null,
         concept = null,
@@ -112,7 +144,8 @@ class QuestionAnalysis {
 
   final bool ok;
   final List<QuestionOption> options;
-  final String? reason;
+  /// Analiz neden başarısız oldu (`ok == false` iken); `null` = bilinmiyor.
+  final AnalysisFailure? failure;
 
   /// 'TYT' | 'AYT' | null.
   final String? exam;

@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../services/supabase_config.dart';
 
 /// Cevap gönderimleri için KALICI kuyruk.
 ///
@@ -103,7 +102,6 @@ class SubmissionQueue {
   /// çağıran kullanıcıya "kaydedildi" DEMEMELİ. Eskiden void dönüyordu ve
   /// arayüz her hâlükârda "kaydedildi" diyordu.
   Future<bool> enqueue(Map<String, dynamic> entry) async {
-    if (!SupabaseConfig.isConfigured) return false;
     final String? uid = _client.auth.currentUser?.id;
     if (uid == null) {
       debugPrint('oturum yok: gönderim kuyruğa ALINAMADI');
@@ -144,7 +142,6 @@ class SubmissionQueue {
   ///
   /// Kuyruk boşsa bu bir no-op; hiç ağ isteği yapılmıyor.
   Future<void> drainIfPending() async {
-    if (!SupabaseConfig.isConfigured) return;
     if ((await _load()).isEmpty) return;
     await flush();
   }
@@ -155,7 +152,7 @@ class SubmissionQueue {
   /// `GameProgress.applyServerTotals` ile uygular, böylece yerel iyimser
   /// değerler sunucununkiyle uzlaşır.
   Future<Map<String, dynamic>?> flush() async {
-    if (_flushing || !SupabaseConfig.isConfigured) return null;
+    if (_flushing) return null;
     final String? uid = _client.auth.currentUser?.id;
     if (uid == null) return null;
 
@@ -227,6 +224,30 @@ class SubmissionQueue {
         });
       case 'goal':
         return _one('claim_daily_goal', <String, dynamic>{});
+      case 'schedule':
+        // Tekrar TAKVİMİ yazımı (adım/tarih/leech/mastered). `submit_review`
+        // RPC'si yalnızca XP'yi işler, takvimi İŞLEMEZ; bu yüzden takvim ayrı
+        // bir kayıt türü. Değerler MUTLAK olduğu için tekrar oynatmak
+        // idempotenttir (en-az-bir-kez sözleşmesine uyar); silinen bir hata
+        // PostgrestException ile reddedilir ve üstteki dal kaydı düşürür.
+        await _client
+            .from('mistakes')
+            .update(<String, dynamic>{
+              'step': e['step'],
+              'lapses': e['lapses'],
+              'is_leech': e['is_leech'],
+              'mastered': e['mastered'],
+              // Yeni kayıtlar zaman damgası yazar (0049); eskiler yalnızca
+              // tarih taşır. Hangisi varsa o gönderilir — ikisi de geçerli,
+              // tetikleyici tarihi damgadan türetir.
+              if (e['next_review_at'] != null)
+                'next_review_at': e['next_review_at']
+              else
+                'next_review_date': e['next_review_date'],
+              'last_reviewed_at': e['last_reviewed_at'],
+            })
+            .eq('id', e['mistake_id'] as Object);
+        return null;
       default:
         // Bilinmeyen kayıt türü (eski sürümden kalmış olabilir): at.
         debugPrint('bilinmeyen kuyruk kaydı düşürüldü: $kind');

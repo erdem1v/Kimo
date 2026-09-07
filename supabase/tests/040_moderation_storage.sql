@@ -28,6 +28,10 @@ values
    tests.get_supabase_uid('alice')::text || '/soru.jpg',
    '[{"label":"A","text":"1"}]'::jsonb, 0, true);
 
+-- Fotoğraf taraması (0050): paylaşım dalı 'clear' ister.
+update public.mistakes set photo_scan = 'clear'
+ where user_id = tests.get_supabase_uid('alice');
+
 insert into storage.objects (bucket_id, name)
 values ('mistake-photos', tests.get_supabase_uid('alice')::text || '/soru.jpg');
 

@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/crash_service.dart';
 import '../models/models.dart';
 import '../models/report_reason.dart';
 
@@ -75,7 +78,10 @@ class ModerationRepository {
     try {
       final dynamic v = await _client.rpc<dynamic>('is_admin');
       return v == true;
-    } catch (_) {
+    } catch (e, st) {
+      // Ağ hatası "admin değil" ile aynı görünür — admin olmayan çoğunluk
+      // için doğru varsayılan; yine de iz bırak.
+      unawaited(reportError(e, st, context: 'moderation.isAdmin'));
       return false;
     }
   }
@@ -118,6 +124,29 @@ class ModerationRepository {
     );
   }
 
+  /// Makine taramasının şüpheli bulduğu fotoğraflar (0050 — admin incelemesi).
+  Future<List<FlaggedPhoto>> flaggedPhotos() async {
+    final dynamic rows = await _client.rpc<dynamic>('admin_flagged_photos');
+    if (rows is! List) return const <FlaggedPhoto>[];
+    return <FlaggedPhoto>[
+      for (final dynamic r in rows)
+        FlaggedPhoto.fromRow((r as Map).cast<String, dynamic>()),
+    ];
+  }
+
+  /// Şüpheli fotoğraf kararı: [clear] = yanlış pozitif (paylaşıma açılır);
+  /// değilse içerik yayından kaldırılır (mevcut purge kuyruğuna düşer —
+  /// çağıran ardından [purgePhoto] ile dosyayı da silmeli).
+  Future<void> reviewPhotoScan(String mistakeId, {required bool clear}) async {
+    await _client.rpc<void>(
+      'admin_review_photo_scan',
+      params: <String, dynamic>{
+        'p_id': mistakeId,
+        'p_action': clear ? 'clear' : 'remove',
+      },
+    );
+  }
+
   /// Nesnesi hâlâ duran kaldırılmış içerikler (yarım kalan temizlikler).
   Future<List<({String mistakeId, String photoPath})>> pendingPurges() async {
     final List<dynamic> rows =
@@ -133,6 +162,33 @@ class ModerationRepository {
 }
 
 final ModerationRepository moderationRepository = ModerationRepository.instance;
+
+/// Makine taramasının şüpheli bulduğu bir fotoğraf (admin kuyruğu).
+class FlaggedPhoto {
+  const FlaggedPhoto({
+    required this.mistakeId,
+    required this.photoPath,
+    required this.subject,
+    required this.concept,
+    this.flaggedAt,
+  });
+
+  final String mistakeId;
+  final String? photoPath;
+  final String subject;
+  final String concept;
+  final DateTime? flaggedAt;
+
+  factory FlaggedPhoto.fromRow(Map<String, dynamic> row) => FlaggedPhoto(
+        mistakeId: row['mistake_id'] as String,
+        photoPath: row['photo_path'] as String?,
+        subject: (row['subject'] as String?) ?? '',
+        concept: (row['concept'] as String?) ?? '',
+        flaggedAt: row['flagged_at'] is String
+            ? DateTime.tryParse(row['flagged_at'] as String)
+            : null,
+      );
+}
 
 /// Yönetim ekranındaki bir soru (moderatör tüm kullanıcıların sorularını
 /// görür ve düzeltebilir).

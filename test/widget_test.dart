@@ -1,28 +1,57 @@
 import 'package:ai_yks_coach/app.dart';
+import 'package:ai_yks_coach/features/home/home_shell.dart';
 import 'package:ai_yks_coach/features/home/today_screen.dart';
 import 'package:ai_yks_coach/features/league/league_screen.dart';
 import 'package:ai_yks_coach/features/mistakes/mistakes_screen.dart';
+import 'package:ai_yks_coach/features/onboarding/welcome_screen.dart';
 import 'package:ai_yks_coach/features/profile/profile_screen.dart';
+import 'package:ai_yks_coach/l10n/generated/app_localizations.dart';
 import 'package:ai_yks_coach/state/app_settings.dart';
+import 'package:ai_yks_coach/theme/app_theme.dart';
 import 'package:ai_yks_coach/widgets/kit/kimo_nav_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Kabuk testi: uygulama açılıyor mu ve navigasyon doğru mu?
 ///
-/// Eski hâli sahte "Koç" sekmesine ve "Koç Baykuş" adına dayanıyordu; ikisi de
-/// kaldırıldı (task kararı).
+/// **Mock mod KALDIRILDI (Task 03).** Eski test, yapılandırma yokken
+/// `HomeShell`'e mock veriyle düşen dala dayanıyordu; o dal silindi. Testler
+/// artık iki katmanda çalışıyor:
+///  1. Kabuk testleri `HomeShell`'i sahte kimlikli GERÇEK bir Supabase
+///     istemcisiyle doğrudan pompalıyor. Test ortamında HTTP her zaman 400
+///     döner; ekranların tamamı ağ hatasını zaten yakalıyor (hata durumları
+///     görünür ama yapı kurulur) — iddialar metne değil YAPIYA bakıyor.
+///  2. Tema/dil testi `AiYksCoachApp`'i pompalıyor; oturum olmadığı için
+///     karşılama ekranı açılır, iddialar `MaterialApp` özelliklerinde.
 ///
-/// **Metne göre değil YAPIYA göre iddia ediyor.** Önceki sürümü "Günlük Tekrar
+/// **Metne göre değil YAPIYA göre iddia ediyor.** Önceki sürüm "Günlük Tekrar
 /// Hedefi" metnini arıyordu; o metin "Bugün" ekranı yeniden yazılınca değişti
 /// ve test bir daha asla geçemezdi. Seçili sekmeyi artık `KimoNavBar`ın
-/// `selectedIndex`i söylüyor: yeniden yazılan bir metne bağlı değil.
+/// `selectedIndex`i söylüyor.
 ///
 /// `IndexedStack` seçili olmayan çocukları OFFSTAGE işaretliyor ve `find.*`
 /// varsayılan olarak onları atlıyor; dört ekranın da kurulduğunu doğrulamak
 /// için `skipOffstage: false` gerekiyor.
 void main() {
+  setUpAll(() async {
+    // Supabase, oturum saklamak için SharedPreferences ister; sahte depo
+    // initialize'dan ÖNCE kurulmalı.
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'settings.sound_enabled': false,
+    });
+    await Supabase.initialize(
+      url: 'https://test.invalid',
+      publishableKey: 'sb_publishable_test',
+      // Test ortamında app_links eklentisi yok; derin bağlantı dinleme kapalı.
+      authOptions: const FlutterAuthClientOptions(detectSessionInUri: false),
+    );
+    // Oturum yenileme zamanlayıcısı test bitiminde "pending timer" hatası
+    // veriyor; testte oturum zaten yok.
+    Supabase.instance.client.auth.stopAutoRefresh();
+  });
+
   setUp(() async {
     // Ses eklentisi testte yok; tercih artık diske yazıldığı için sahte depo.
     SharedPreferences.setMockInitialValues(<String, Object>{
@@ -33,14 +62,23 @@ void main() {
     await appSettings.load();
   });
 
-  /// Uygulamayı kurar ve birkaç kare ilerletir.
+  /// Kabuğu test bandında kurar ve birkaç kare ilerletir.
   ///
   /// **`pumpAndSettle` KULLANILMIYOR.** Kimo sürekli animasyonlu (nefes 3,4 sn,
   /// göz kırpma 5 sn) ve boşta döngüsü hiç bitmiyor; `pumpAndSettle` "hiçbir
   /// animasyon kalmayana kadar" beklediği için asla dönmez ve test zaman
   /// aşımına uğrar. Sabit sayıda kare ilerletmek burada doğru olan.
   Future<void> boot(WidgetTester tester) async {
-    await tester.pumpWidget(const AiYksCoachApp());
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        localizationsDelegates: L10n.localizationsDelegates,
+        supportedLocales: L10n.supportedLocales,
+        locale: const Locale('tr'),
+        home: const HomeShell(),
+      ),
+    );
     await tester.pump(const Duration(milliseconds: 32));
     await tester.pump(const Duration(milliseconds: 32));
   }
@@ -57,7 +95,7 @@ void main() {
   int selectedIndex(WidgetTester tester) =>
       tester.widget<KimoNavBar>(find.byType(KimoNavBar)).selectedIndex;
 
-  testWidgets('Uygulama açılır ve dört sekme de kurulur',
+  testWidgets('Kabuk kurulur ve dört sekme de inşa edilir',
       (WidgetTester tester) async {
     await boot(tester);
 
@@ -112,13 +150,24 @@ void main() {
     expect(find.text('Sosyal'), findsNothing);
   });
 
-  testWidgets('Varsayılan tema sistemi takip eder', (WidgetTester tester) async {
-    await boot(tester);
+  testWidgets('Uygulama oturumsuz karşılama ekranına düşer; tema sistemi izler',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const AiYksCoachApp());
+    await tester.pump(const Duration(milliseconds: 32));
+    await tester.pump(const Duration(milliseconds: 32));
 
-    final MaterialApp app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    // Mock mod kalktı: oturum yoksa ana kabuk DEĞİL, karşılama açılır.
+    expect(find.byType(WelcomeScreen), findsOneWidget);
+    expect(find.byType(HomeShell), findsNothing);
+
+    final MaterialApp app =
+        tester.widget<MaterialApp>(find.byType(MaterialApp));
     expect(app.themeMode, ThemeMode.system);
     expect(app.darkTheme, isNotNull, reason: 'koyu tema tanımlı olmalı');
     // Tek desteklenen dil Türkçe; İngilizce beyanı kaldırıldı.
-    expect(app.supportedLocales.map((Locale l) => l.languageCode), <String>['tr']);
+    expect(
+      app.supportedLocales.map((Locale l) => l.languageCode),
+      <String>['tr'],
+    );
   });
 }
