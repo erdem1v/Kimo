@@ -16,7 +16,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(20);
+select plan(21);
 
 select tests.create_supabase_user('alice');
 
@@ -53,6 +53,9 @@ select ok(has_function_privilege('authenticated',
 select ok(has_function_privilege('authenticated',
             'public.are_friends(uuid,uuid)', 'EXECUTE'),
           'are_friends AÇIK (question_sends politikası bunu çağırıyor)');
+select ok(has_function_privilege('authenticated',
+            'public.is_blocked_between(uuid,uuid)', 'EXECUTE'),
+          'is_blocked_between AÇIK (engel kontrolü politikaların içinde)');
 select ok(has_function_privilege('authenticated', 'public.is_admin()', 'EXECUTE'),
           'is_admin AÇIK (istemci rpc(''is_admin'') çağırıyor)');
 select ok(has_function_privilege('authenticated',

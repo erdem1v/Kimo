@@ -489,7 +489,7 @@ süresiz, leech/clamp davranışları).
 1. **Supabase Dashboard → Database → Extensions**: `pg_cron` ve `pg_net`'i
    etkinleştirin (göç 0051'i çalıştırmadan ÖNCE).
 2. **SQL Editor**: `supabase/migrations/202609030001..0900` dosyalarını
-   SIRAYLA çalıştırın (9 dosya). `db push` KULLANMAYIN (mevcut kural).
+   SIRAYLA çalıştırın (10 dosya). `db push` KULLANMAYIN (mevcut kural).
 3. **Vault + app_config** (cron HTTP işleri için — yapılmazsa lig cron'u yine
    çalışır; yalnız tarama süpürmesi ve anonim temizlik uyur):
    ```sql
@@ -560,6 +560,19 @@ de `android:screenOrientation="portrait"` kondu.
 
 **Tekrar motorunun sınav-tarihi davranışı** (ürün değerlendirmesi için):
 `docs/tekrar-motoru-sinav-davranisi.md`.
+
+**CI'nın ilk gerçek koşusunda yakalanan güvenlik açığı (düzeltildi):**
+pgTAP süiti bugüne dek hiç çalıştırılmamıştı; ilk koşu, engel (block)
+kontrolünün RLS'in altından kaçtığını gösterdi. `user_blocks`'ı bilerek yalnız
+engelleyen görür; ama gönderim ve arkadaşlık-isteği politikaları engeli düz
+alt sorguyla kontrol ediyordu ve politika alt sorgusu İŞLEMİ YAPANIN RLS'iyle
+çalışır — engellenen kişi engel satırını göremediği için kontrol hep
+geçiyordu: **engellenen kullanıcı, engelleyen kişiye soru ve arkadaşlık
+isteği göndermeye devam edebiliyordu.** Çözüm `are_friends` deseni:
+`is_blocked_between(a,b)` definer yardımcı fonksiyonu
+(`20260903000800_block_enforcement.sql`) — iki politika da ona geçti,
+beyaz listeye ve 098'e eklendi. 150_blocks'un 7 ve 11. iddiaları artık bu
+korumayı gerçekten kanıtlıyor.
 
 ## Değişen dosyalar (özet)
 

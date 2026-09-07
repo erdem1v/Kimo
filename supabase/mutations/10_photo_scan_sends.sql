@@ -14,14 +14,10 @@ create policy sends_insert_friend on public.question_sends
        where p.id = auth.uid() and p.is_anonymous
     )
     and public.are_friends(sender_id, receiver_id)
-    and not exists (
-      select 1 from public.user_blocks b
-       where (b.blocker_id = receiver_id and b.blocked_id = sender_id)
-          or (b.blocker_id = sender_id   and b.blocked_id = receiver_id)
-    )
+    and not public.is_blocked_between(sender_id, receiver_id)
   );
 -- @UNDO
--- Tarama şartlı politikayı (0050) geri kur.
+-- Tarama şartlı kanonik politikayı (0053b) geri kur.
 drop policy if exists sends_insert_friend on public.question_sends;
 create policy sends_insert_friend on public.question_sends
   for insert to authenticated
@@ -32,11 +28,7 @@ create policy sends_insert_friend on public.question_sends
        where p.id = auth.uid() and p.is_anonymous
     )
     and public.are_friends(sender_id, receiver_id)
-    and not exists (
-      select 1 from public.user_blocks b
-       where (b.blocker_id = receiver_id and b.blocked_id = sender_id)
-          or (b.blocker_id = sender_id   and b.blocked_id = receiver_id)
-    )
+    and not public.is_blocked_between(sender_id, receiver_id)
     and exists (
       select 1 from public.mistakes m
        where m.id = mistake_id

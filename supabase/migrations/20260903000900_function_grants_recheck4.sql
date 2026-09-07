@@ -23,6 +23,7 @@ declare
     'can_read_avatar',
     'is_minor_now',
     'can_add_friends',
+    'is_blocked_between',
     -- moderasyon
     'admin_pending_reports',
     'admin_all_questions',
