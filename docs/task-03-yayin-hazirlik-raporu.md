@@ -4,10 +4,11 @@ Durum: **istemci ve sunucu işleri tamamlandı; Xcode gerektiren iOS adımları 
 cihaz duman testleri sizin makinenizde yapılacak** (adımlar bu raporda ve
 `docs/ios-kurulum.md`'de).
 
-Doğrulama durumu (bu makinede): `flutter analyze` temiz · **128 test yeşil** ·
-`check_symbols` / `check_imports` / `check_sql` (59 göç) temiz. pgTAP süiti ve
-mutasyon kontrolü Docker gerektirir; bu makinede Docker yok — **CI'da koşacak**
-(ci.yml değişmedi, mevcut işler yeni test dosyalarını otomatik alır).
+Doğrulama durumu: `flutter analyze` temiz · **128 Flutter testi yeşil** ·
+`check_symbols` / `check_imports` / `check_sql` (60 göç) temiz. **CI (koşu
+#34136156237, main): üç iş de yeşil** — pgTAP **26 dosya / 413 iddia, PASS**;
+mutasyon kontrolü **11/11 ayırt edildi, 0 sorun** (her mutant üç fazdan geçti:
+mutasyon öncesi yeşil → mutasyonla kırmızı → geri almayla yeşil).
 
 ---
 
@@ -573,6 +574,26 @@ isteği göndermeye devam edebiliyordu.** Çözüm `are_friends` deseni:
 (`20260903000800_block_enforcement.sql`) — iki politika da ona geçti,
 beyaz listeye ve 098'e eklendi. 150_blocks'un 7 ve 11. iddiaları artık bu
 korumayı gerçekten kanıtlıyor.
+
+**CI kapanış sonuçları:** koşu #34136156237 — pgTAP 26 dosya / **413 iddia
+PASS**, mutasyon **11/11** (üç faz), `analyze + test` ve `statik kontroller`
+yeşil. İlk gerçek koşunun çıkardığı ve düzeltilen test-altyapısı hataları
+(ürün kodu değişmedi, tek istisna yukarıdaki engel açığı): (1) 41 adet
+`throws_ok(sql, kod, 'açıklama')` — 3. argüman pgTAP'ta hata MESAJI olarak
+karşılaştırılır; hepsi `null` errmsg'li 4-argüman forma çevrildi. (2) Testler
+başka kullanıcının satırını hedef rolün RLS'i altında sorguluyordu (bob'un
+arkadaş kodu, alice/sahip'in soru kimliği) → alt sorgu boş dönüp çağrıyı
+sessiz no-op yapıyordu; kimlikler ayrıcalıklı temp fikstürlere alındı ve
+`SET ROLE` sonrası okunabilmeleri için açık `grant select` verildi.
+(3) `mutations/` klasörü `supabase test db`'nin pgTAP süpürmesine takılıyordu
+→ `supabase/mutations/`'a taşındı. (4) Eski mutantların geri almaları
+tarama-öncesi kanonik metni kuruyordu → 0050 sürümüne güncellendi.
+(5) 110'daki çarpan-tavanı testi lateral'da `generate_series`'e referans
+vermiyordu; yeni PG volatil çağrıyı tek kez çalıştırıyordu. (6) 130'da onay
+geri-alma kaydı aynı işlemde aynı `now()` damgasını alıp defter sıralamasını
+belirsiz bırakıyordu; fikstüre açık +1 sn verildi. (7) 180'in `user_blocks`
+INSERT iddiası tablo düzeyindeydi; kilit modeli kolon bazlı — iddia kolona
+çevrildi.
 
 ## Değişen dosyalar (özet)
 
