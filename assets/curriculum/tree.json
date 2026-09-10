@@ -1,0 +1,3374 @@
+{
+ "version": "7d00385d45b1",
+ "curricula": {
+  "eski": {
+   "TYT": [
+    {
+     "subject": "Türkçe",
+     "units": [
+      {
+       "unit": "Anlam Bilgisi",
+       "topics": [
+        {
+         "topic": "Sözcükte Anlam",
+         "aliases": []
+        },
+        {
+         "topic": "Cümlede Anlam",
+         "aliases": []
+        },
+        {
+         "topic": "Paragrafta Anlam",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Dil Bilgisi",
+       "topics": [
+        {
+         "topic": "Ses Bilgisi",
+         "aliases": []
+        },
+        {
+         "topic": "Biçim Bilgisi",
+         "aliases": []
+        },
+        {
+         "topic": "Sözcük Türleri",
+         "aliases": [
+          "Edat-Bağlaç-Ünlem",
+          "Sıfat",
+          "Zamir",
+          "Zarf",
+          "İsim (Ad)"
+         ]
+        },
+        {
+         "topic": "Fiiller",
+         "aliases": [
+          "Fiilde Anlam (Kip-Kişi)",
+          "Fiilimsi"
+         ]
+        },
+        {
+         "topic": "Cümlenin Ögeleri",
+         "aliases": []
+        },
+        {
+         "topic": "Cümle Türleri",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Yazım ve Anlatım",
+       "topics": [
+        {
+         "topic": "Yazım Kuralları",
+         "aliases": []
+        },
+        {
+         "topic": "Noktalama İşaretleri",
+         "aliases": []
+        },
+        {
+         "topic": "Anlatım Bozuklukları",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Matematik",
+     "units": [
+      {
+       "unit": "Mantık",
+       "topics": [
+        {
+         "topic": "Önermeler ve Bileşik Önermeler",
+         "aliases": [
+          "Mantık"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Kümeler",
+       "topics": [
+        {
+         "topic": "Kümelerde Temel Kavramlar",
+         "aliases": [
+          "Kümeler"
+         ]
+        },
+        {
+         "topic": "Kümelerde İşlemler",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Sayılar ve Denklemler",
+       "topics": [
+        {
+         "topic": "Sayı Kümeleri",
+         "aliases": [
+          "rasyonel sayılar",
+          "irrasyonel sayılar",
+          "tam sayılar",
+          "mutlak değer",
+          "Temel Kavramlar"
+         ]
+        },
+        {
+         "topic": "Bölünebilme Kuralları",
+         "aliases": [
+          "asal çarpan",
+          "ebob",
+          "ekok",
+          "kalan bulma",
+          "Bölme-Bölünebilme"
+         ]
+        },
+        {
+         "topic": "Birinci Dereceden Denklemler ve Eşitsizlikler",
+         "aliases": [
+          "Basit Eşitsizlikler"
+         ]
+        },
+        {
+         "topic": "Üslü İfadeler ve Denklemler",
+         "aliases": [
+          "üs",
+          "köklü ifadeler",
+          "Üslü Sayılar"
+         ]
+        },
+        {
+         "topic": "Denklemler ve Eşitsizlikler ile İlgili Uygulamalar",
+         "aliases": [
+          "problemler",
+          "yaş problemi",
+          "hız problemi",
+          "işçi problemi",
+          "yüzde",
+          "oran orantı",
+          "kâr zarar",
+          "karışım",
+          "Sayı Problemleri"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Veri",
+       "topics": [
+        {
+         "topic": "Merkezi Eğilim ve Yayılım Ölçüleri",
+         "aliases": [
+          "ortalama",
+          "medyan",
+          "mod",
+          "standart sapma",
+          "açıklık",
+          "İstatistik"
+         ]
+        },
+        {
+         "topic": "Verilerin Grafikle Gösterilmesi",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Sayma ve Olasılık",
+       "topics": [
+        {
+         "topic": "Sıralama ve Seçme",
+         "aliases": [
+          "permütasyon",
+          "kombinasyon",
+          "faktöriyel",
+          "Permütasyon-Kombinasyon"
+         ]
+        },
+        {
+         "topic": "Basit Olayların Olasılıkları",
+         "aliases": [
+          "olasılık",
+          "zar",
+          "madeni para",
+          "Olasılık"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Fonksiyonlar",
+       "topics": [
+        {
+         "topic": "Fonksiyon Kavramı ve Gösterimi",
+         "aliases": [
+          "Fonksiyonlar"
+         ]
+        },
+        {
+         "topic": "İki Fonksiyonun Bileşkesi ve Bir Fonksiyonun Tersi",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Polinomlar",
+       "topics": [
+        {
+         "topic": "Polinom Kavramı ve Polinomlarda İşlemler",
+         "aliases": [
+          "Polinomlar"
+         ]
+        },
+        {
+         "topic": "Polinomların Çarpanlara Ayrılması",
+         "aliases": [
+          "özdeşlikler",
+          "iki kare farkı",
+          "tam kare",
+          "çarpanlara ayırma"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "İkinci Dereceden Denklemler",
+       "topics": [
+        {
+         "topic": "İkinci Dereceden Bir Bilinmeyenli Denklemler",
+         "aliases": [
+          "diskriminant",
+          "kökler toplamı",
+          "parabol",
+          "İkinci Dereceden Denklemler"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Geometri",
+     "units": [
+      {
+       "unit": "Üçgenler",
+       "topics": [
+        {
+         "topic": "Üçgenlerde Temel Kavramlar",
+         "aliases": [
+          "Üçgende Açılar"
+         ]
+        },
+        {
+         "topic": "Üçgenlerde Eşlik ve Benzerlik",
+         "aliases": [
+          "benzerlik",
+          "thales",
+          "eşlik",
+          "Üçgende Benzerlik"
+         ]
+        },
+        {
+         "topic": "Üçgenin Yardımcı Elemanları",
+         "aliases": [
+          "açıortay",
+          "kenarortay",
+          "yükseklik",
+          "iç teğet çember",
+          "Açıortay",
+          "Kenarortay"
+         ]
+        },
+        {
+         "topic": "Dik Üçgen ve Trigonometri",
+         "aliases": [
+          "pisagor",
+          "öklid",
+          "özel üçgenler",
+          "30-60-90",
+          "Dik Üçgen"
+         ]
+        },
+        {
+         "topic": "Üçgenin Alanı",
+         "aliases": [
+          "Üçgende Alan"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Dörtgenler ve Çokgenler",
+       "topics": [
+        {
+         "topic": "Çokgenler",
+         "aliases": [
+          "beşgen",
+          "altıgen",
+          "iç açılar toplamı",
+          "düzgün çokgen"
+         ]
+        },
+        {
+         "topic": "Dörtgenler ve Özellikleri",
+         "aliases": []
+        },
+        {
+         "topic": "Özel Dörtgenler",
+         "aliases": [
+          "paralelkenar",
+          "eşkenar dörtgen",
+          "yamuk",
+          "dikdörtgen",
+          "kare",
+          "deltoid",
+          "Dikdörtgen ve Kare",
+          "Paralelkenar"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Katı Cisimler",
+       "topics": [
+        {
+         "topic": "Katı Cisimler",
+         "aliases": [
+          "prizma",
+          "piramit",
+          "küp",
+          "silindir",
+          "koni",
+          "küre"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Fizik",
+     "units": [
+      {
+       "unit": "Mekanik",
+       "topics": [
+        {
+         "topic": "Fizik Bilimine Giriş",
+         "aliases": []
+        },
+        {
+         "topic": "Madde ve Özellikleri",
+         "aliases": [
+          "özkütle",
+          "yoğunluk",
+          "adezyon",
+          "kohezyon",
+          "yüzey gerilimi"
+         ]
+        },
+        {
+         "topic": "Hareket ve Kuvvet",
+         "aliases": [
+          "atışlar",
+          "eğik atış",
+          "dikey atış",
+          "yatay atış",
+          "newton yasaları",
+          "ivme",
+          "sürtünme kuvveti",
+          "hız-zaman grafiği",
+          "Basit Makineler",
+          "Doğrusal Hareket",
+          "Kuvvet ve Denge (Vektörler)"
+         ]
+        },
+        {
+         "topic": "Enerji",
+         "aliases": [
+          "iş",
+          "güç",
+          "kinetik enerji",
+          "potansiyel enerji",
+          "verim",
+          "İş-Güç-Enerji"
+         ]
+        },
+        {
+         "topic": "Basınç ve Kaldırma Kuvveti",
+         "aliases": [
+          "arşimet",
+          "akışkanlar",
+          "bernoulli",
+          "sıvı basıncı",
+          "gaz basıncı",
+          "Basınç",
+          "Sıvıların Kaldırma Kuvveti"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Isı, Elektrik ve Manyetizma",
+       "topics": [
+        {
+         "topic": "Isı ve Sıcaklık",
+         "aliases": [
+          "genleşme",
+          "hâl değişimi",
+          "kalorimetre",
+          "öz ısı"
+         ]
+        },
+        {
+         "topic": "Elektrostatik",
+         "aliases": [
+          "yük",
+          "coulomb",
+          "elektroskop",
+          "topraklama"
+         ]
+        },
+        {
+         "topic": "Elektrik ve Manyetizma",
+         "aliases": [
+          "devre",
+          "direnç",
+          "ohm kanunu",
+          "kondansatör",
+          "mıknatıs",
+          "ampul",
+          "Elektrik Akımı ve Devreler",
+          "Mıknatıslar ve Manyetik Alan"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Dalgalar ve Optik",
+       "topics": [
+        {
+         "topic": "Dalgalar",
+         "aliases": [
+          "ses dalgası",
+          "su dalgası",
+          "yay dalgası",
+          "deprem dalgası",
+          "Dalgalar (Temel)",
+          "Yay ve Su Dalgaları"
+         ]
+        },
+        {
+         "topic": "Optik",
+         "aliases": [
+          "mercek",
+          "ayna",
+          "kırılma",
+          "yansıma",
+          "gölge",
+          "prizma",
+          "renk",
+          "Düzlem Ayna",
+          "Işık ve Gölge",
+          "Küresel Aynalar",
+          "Kırılma ve Renkler",
+          "Mercekler"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Kimya",
+     "units": [
+      {
+       "unit": "Kimyanın Temelleri",
+       "topics": [
+        {
+         "topic": "Kimya Bilimi",
+         "aliases": [
+          "Kimya Bilimine Giriş"
+         ]
+        },
+        {
+         "topic": "Atom ve Periyodik Sistem",
+         "aliases": [
+          "Atomun Yapısı",
+          "Periyodik Sistem"
+         ]
+        },
+        {
+         "topic": "Kimyasal Türler Arası Etkileşimler",
+         "aliases": [
+          "Kovalent Bağ",
+          "Metalik Bağ ve Zayıf Etkileşimler",
+          "İyonik Bağ"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Maddenin Hâlleri ve Karışımlar",
+       "topics": [
+        {
+         "topic": "Maddenin Hâlleri",
+         "aliases": [
+          "Maddenin Halleri"
+         ]
+        },
+        {
+         "topic": "Kimyanın Temel Kanunları ve Kimyasal Hesaplamalar",
+         "aliases": [
+          "Kimyanın Temel Kanunları",
+          "Mol Kavramı ve Hesaplamalar"
+         ]
+        },
+        {
+         "topic": "Karışımlar",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Asitler, Bazlar ve Günlük Kimya",
+       "topics": [
+        {
+         "topic": "Asitler, Bazlar ve Tuzlar",
+         "aliases": [
+          "Asit-Baz"
+         ]
+        },
+        {
+         "topic": "Kimya Her Yerde",
+         "aliases": []
+        },
+        {
+         "topic": "Doğa ve Kimya",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Biyoloji",
+     "units": [
+      {
+       "unit": "Canlıların Temel Bileşenleri",
+       "topics": [
+        {
+         "topic": "Canlıların Ortak Özellikleri",
+         "aliases": []
+        },
+        {
+         "topic": "Canlıların Yapısında Bulunan İnorganik Bileşikler",
+         "aliases": [
+          "İnorganik Bileşikler"
+         ]
+        },
+        {
+         "topic": "Canlıların Yapısında Bulunan Organik Bileşikler",
+         "aliases": [
+          "Enzimler",
+          "Nükleik Asitler",
+          "Organik Bileşikler (Karbonhidrat-Lipit-Protein)"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Hücre",
+       "topics": [
+        {
+         "topic": "Hücresel Yapılar ve Görevleri",
+         "aliases": [
+          "organel",
+          "mitokondri",
+          "ribozom",
+          "çekirdek",
+          "Hücre ve Organelleri"
+         ]
+        },
+        {
+         "topic": "Hücre Zarından Madde Geçişleri",
+         "aliases": [
+          "difüzyon",
+          "osmoz",
+          "aktif taşıma",
+          "endositoz",
+          "Hücre Zarından Madde Geçişi"
+         ]
+        },
+        {
+         "topic": "Hücre Döngüsü ve Mitoz",
+         "aliases": [
+          "mitoz",
+          "hücre bölünmesi",
+          "Mitoz ve Eşeysiz Üreme"
+         ]
+        },
+        {
+         "topic": "Eşeysiz Üreme",
+         "aliases": []
+        },
+        {
+         "topic": "Mayoz",
+         "aliases": [
+          "krossing over",
+          "mayoz bölünme",
+          "Mayoz ve Eşeyli Üreme"
+         ]
+        },
+        {
+         "topic": "Eşeyli Üreme",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Canlılar Dünyası ve Kalıtım",
+       "topics": [
+        {
+         "topic": "Canlıların Sınıflandırılması",
+         "aliases": [
+          "sınıflandırma",
+          "taksonomi"
+         ]
+        },
+        {
+         "topic": "Canlı Âlemleri",
+         "aliases": []
+        },
+        {
+         "topic": "Kalıtım",
+         "aliases": [
+          "mendel",
+          "genetik",
+          "çaprazlama",
+          "kan grupları"
+         ]
+        },
+        {
+         "topic": "Genetik Varyasyonlar",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Ekoloji",
+       "topics": [
+        {
+         "topic": "Ekosistem Ekolojisi",
+         "aliases": [
+          "besin zinciri",
+          "madde döngüsü",
+          "enerji piramidi",
+          "Madde Döngüleri"
+         ]
+        },
+        {
+         "topic": "Güncel Çevre Sorunları",
+         "aliases": []
+        },
+        {
+         "topic": "Doğal Kaynakların Sürdürülebilirliği",
+         "aliases": []
+        },
+        {
+         "topic": "Biyolojik Çeşitliliğin Korunması",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Tarih",
+     "units": [
+      {
+       "unit": "Tarih Bilimi",
+       "topics": [
+        {
+         "topic": "Tarih ve Zaman",
+         "aliases": [
+          "İnsanlığın İlk Dönemleri"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "İlk Çağlardan Türk-İslam Dünyasına",
+       "topics": [
+        {
+         "topic": "İlk ve Orta Çağlarda Türk Dünyası",
+         "aliases": [
+          "Orta Çağ'da Dünya"
+         ]
+        },
+        {
+         "topic": "İslam Medeniyetinin Doğuşu",
+         "aliases": []
+        },
+        {
+         "topic": "Türk İslam Tarihindeki Siyasi Gelişmeler, Türklerin İslamiyet'i Kabulü",
+         "aliases": [
+          "Türklerin İslamiyet'i Kabulü"
+         ]
+        },
+        {
+         "topic": "Yerleşme ve Devletleşme Sürecinde Selçuklu Türkiyesi",
+         "aliases": [
+          "Selçuklu Türkiyesi"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Osmanlı Tarihi",
+       "topics": [
+        {
+         "topic": "Beylikten Devlete Osmanlı Siyaseti (1302-1453)",
+         "aliases": [
+          "Beylikten Devlete Osmanlı (1302-1453)"
+         ]
+        },
+        {
+         "topic": "Devletleşme Sürecinde Savaşçılar ve Askerler",
+         "aliases": []
+        },
+        {
+         "topic": "Beylikten Devlete Osmanlı Medeniyeti",
+         "aliases": [
+          "Osmanlı Medeniyeti"
+         ]
+        },
+        {
+         "topic": "Dünya Gücü Osmanlı (1453-1595)",
+         "aliases": []
+        },
+        {
+         "topic": "Sultan ve Osmanlı Merkez Teşkilatı",
+         "aliases": [
+          "Osmanlı Merkez Teşkilatı"
+         ]
+        },
+        {
+         "topic": "Klasik Çağda Osmanlı Toplum Düzeni",
+         "aliases": []
+        },
+        {
+         "topic": "Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti (1595-1774)",
+         "aliases": []
+        },
+        {
+         "topic": "Değişim Çağında Avrupa ve Osmanlı",
+         "aliases": []
+        },
+        {
+         "topic": "Uluslararası İlişkilerde Denge Stratejisi (1774-1914)",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Yakın Çağ ve Cumhuriyet",
+       "topics": [
+        {
+         "topic": "Devrimler Çağında Değişen Devlet-Toplum İlişkileri",
+         "aliases": []
+        },
+        {
+         "topic": "XIX. ve XX. Yüzyılda Değişen Sosyo-Ekonomik Hayat",
+         "aliases": []
+        },
+        {
+         "topic": "XX. Yüzyıl Başlarında Osmanlı Devleti ve Dünya",
+         "aliases": []
+        },
+        {
+         "topic": "Millî Mücadele",
+         "aliases": []
+        },
+        {
+         "topic": "Atatürkçülük ve Türk İnkılabı",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Coğrafya",
+     "units": [
+      {
+       "unit": "Doğal Sistemler",
+       "topics": [
+        {
+         "topic": "Coğrafya Bilimi, İnsan ve Doğa",
+         "aliases": [
+          "Doğa ve İnsan"
+         ]
+        },
+        {
+         "topic": "Dünya'nın Şekli ve Hareketleri",
+         "aliases": []
+        },
+        {
+         "topic": "Yer ve Zaman, Koordinat Sistemi",
+         "aliases": []
+        },
+        {
+         "topic": "Harita Bilimi",
+         "aliases": [
+          "Harita Bilgisi"
+         ]
+        },
+        {
+         "topic": "İklim Bilimi",
+         "aliases": [
+          "Atmosfer ve Sıcaklık",
+          "Basınç ve Rüzgârlar",
+          "Nem-Yağış-Buharlaşma"
+         ]
+        },
+        {
+         "topic": "Dünya'nın Yapısı ve Oluşum Süreci",
+         "aliases": [
+          "Dış Kuvvetler",
+          "İç Kuvvetler"
+         ]
+        },
+        {
+         "topic": "Su Kaynakları, Topraklar, Bitkiler",
+         "aliases": [
+          "Su Kaynakları",
+          "Toprak ve Bitki Örtüsü"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Beşerî Sistemler",
+       "topics": [
+        {
+         "topic": "Yerleşmeler",
+         "aliases": [
+          "Yerleşme"
+         ]
+        },
+        {
+         "topic": "Nüfus, Göç, Ekonomik Faaliyetler",
+         "aliases": [
+          "Ekonomik Faaliyetler",
+          "Göç",
+          "Nüfus"
+         ]
+        },
+        {
+         "topic": "Ulaşım",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Küresel Ortam",
+       "topics": [
+        {
+         "topic": "Bölgeler ve Ülkeler",
+         "aliases": [
+          "Bölgeler"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Çevre ve Toplum",
+       "topics": [
+        {
+         "topic": "İnsan ve Çevre",
+         "aliases": [
+          "Çevre ve Toplum"
+         ]
+        },
+        {
+         "topic": "Afetler",
+         "aliases": [
+          "Doğal Afetler"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Felsefe",
+     "units": [
+      {
+       "unit": "Felsefeye Giriş",
+       "topics": [
+        {
+         "topic": "Felsefeyi Tanıma",
+         "aliases": [
+          "Felsefenin Konusu"
+         ]
+        },
+        {
+         "topic": "Felsefe ile Düşünme",
+         "aliases": []
+        },
+        {
+         "topic": "Felsefi Okuma ve Yazma",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Felsefenin Temel Konuları",
+       "topics": [
+        {
+         "topic": "Varlık Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "Bilgi Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "Bilim Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "Ahlak Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "Din Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "Siyaset Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "Sanat Felsefesi",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Felsefe Tarihi",
+       "topics": [
+        {
+         "topic": "MÖ 6. Yüzyıl-MS 2. Yüzyıl Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "MS 2. Yüzyıl-MS 15. Yüzyıl Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "15. Yüzyıl-17. Yüzyıl Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "18. Yüzyıl-19. Yüzyıl Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "20. Yüzyıl Felsefesi",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Din Kültürü",
+     "units": [
+      {
+       "unit": "İnanç",
+       "topics": [
+        {
+         "topic": "Bilgi ve İnanç",
+         "aliases": []
+        },
+        {
+         "topic": "Din ve İslam",
+         "aliases": []
+        },
+        {
+         "topic": "Allah İnsan İlişkisi",
+         "aliases": [
+          "Allah-İnsan İlişkisi"
+         ]
+        },
+        {
+         "topic": "İslam Düşüncesinde İtikadi, Siyasi ve Fıkhi Yorumlar",
+         "aliases": [
+          "İslam Düşüncesinde Yorumlar"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "İbadet ve Ahlak",
+       "topics": [
+        {
+         "topic": "İslam ve İbadet",
+         "aliases": []
+        },
+        {
+         "topic": "Ahlaki Tutum Davranışlar",
+         "aliases": [
+          "Ahlaki Tutum ve Davranışlar"
+         ]
+        },
+        {
+         "topic": "Din ve Hayat",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Değerler ve Kültür",
+       "topics": [
+        {
+         "topic": "Gençlik ve Değerler",
+         "aliases": []
+        },
+        {
+         "topic": "Gönül Coğrafyamız",
+         "aliases": []
+        },
+        {
+         "topic": "Hz. Muhammed ve Gençlik",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AYT": [
+    {
+     "subject": "Matematik",
+     "units": [
+      {
+       "unit": "Trigonometri",
+       "topics": [
+        {
+         "topic": "Yönlü Açılar",
+         "aliases": [
+          "Trigonometri: Yönlü Açılar"
+         ]
+        },
+        {
+         "topic": "Trigonometrik Fonksiyonlar",
+         "aliases": [
+          "sinüs",
+          "kosinüs",
+          "tanjant",
+          "birim çember",
+          "Kosinüs ve Sinüs Teoremi",
+          "Sinüs ve Kosinüs Fonksiyonlarının Grafikleri",
+          "Ters Trigonometrik Fonksiyonlar"
+         ]
+        },
+        {
+         "topic": "Toplam-Fark ve İki Kat Açı Formülleri",
+         "aliases": [
+          "Trigonometri: Toplam-Fark ve İki Kat Açı"
+         ]
+        },
+        {
+         "topic": "Trigonometrik Denklemler",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Fonksiyonlarda Uygulamalar",
+       "topics": [
+        {
+         "topic": "Fonksiyonların Grafik ve Problemleri",
+         "aliases": [
+          "Fonksiyonlarda Uygulamalar (Ters-Bileşke)"
+         ]
+        },
+        {
+         "topic": "İkinci Dereceden Fonksiyonlar ve Grafikleri",
+         "aliases": [
+          "Parabol",
+          "İkinci Dereceden Denklemler"
+         ]
+        },
+        {
+         "topic": "Fonksiyonların Dönüşümleri",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Denklem ve Eşitsizlik Sistemleri",
+       "topics": [
+        {
+         "topic": "İkinci Dereceden İki Bilinmeyenli Denklem Sistemleri",
+         "aliases": []
+        },
+        {
+         "topic": "İkinci Dereceden Eşitsizlikler",
+         "aliases": [
+          "Eşitsizlikler"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Üstel ve Logaritmik Fonksiyonlar",
+       "topics": [
+        {
+         "topic": "Üstel Fonksiyon",
+         "aliases": []
+        },
+        {
+         "topic": "Logaritma Fonksiyonu",
+         "aliases": [
+          "logaritma",
+          "log",
+          "Logaritma"
+         ]
+        },
+        {
+         "topic": "Üstel ve Logaritmik Denklem ve Eşitsizlikler",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Diziler",
+       "topics": [
+        {
+         "topic": "Diziler",
+         "aliases": [
+          "aritmetik dizi",
+          "geometrik dizi",
+          "limit dizi"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Türev",
+       "topics": [
+        {
+         "topic": "Limit ve Süreklilik",
+         "aliases": [
+          "limit",
+          "süreklilik",
+          "belirsizlik"
+         ]
+        },
+        {
+         "topic": "Türev",
+         "aliases": [
+          "türev alma",
+          "teğet eğimi"
+         ]
+        },
+        {
+         "topic": "Türev Uygulamaları",
+         "aliases": [
+          "maksimum minimum",
+          "artan azalan",
+          "ekstremum",
+          "asimptot",
+          "Türev Uygulamaları (Optimizasyon)"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "İntegral",
+       "topics": [
+        {
+         "topic": "Belirsiz İntegral",
+         "aliases": [
+          "integral",
+          "ilkel fonksiyon",
+          "İntegral"
+         ]
+        },
+        {
+         "topic": "Belirli İntegral ve Alan Hesabı",
+         "aliases": [
+          "alan hesabı",
+          "hacim hesabı",
+          "İntegral ile Alan Hesabı"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Olasılık",
+       "topics": [
+        {
+         "topic": "Koşullu Olasılık",
+         "aliases": [
+          "bağımlı olay",
+          "bayes"
+         ]
+        },
+        {
+         "topic": "Deneysel ve Teorik Olasılık",
+         "aliases": [
+          "Binom ve Olasılık"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Geometri",
+     "units": [
+      {
+       "unit": "Analitik Geometri",
+       "topics": [
+        {
+         "topic": "Doğrunun Analitik İncelenmesi",
+         "aliases": [
+          "eğim",
+          "doğru denklemi",
+          "analitik düzlem",
+          "Analitik Geometri (Doğru)"
+         ]
+        },
+        {
+         "topic": "Çemberin Analitik İncelenmesi",
+         "aliases": [
+          "çember denklemi"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Dönüşümler",
+       "topics": [
+        {
+         "topic": "Analitik Düzlemde Temel Dönüşümler",
+         "aliases": [
+          "öteleme",
+          "dönme",
+          "simetri",
+          "yansıma"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Çember ve Daire",
+       "topics": [
+        {
+         "topic": "Çemberde Temel Kavramlar",
+         "aliases": [
+          "Çember ve Daire"
+         ]
+        },
+        {
+         "topic": "Çemberde Açılar",
+         "aliases": [
+          "çevre açı",
+          "merkez açı",
+          "teğet-kiriş açı"
+         ]
+        },
+        {
+         "topic": "Çemberde Teğet",
+         "aliases": [
+          "teğet",
+          "kuvvet"
+         ]
+        },
+        {
+         "topic": "Dairenin Çevresi ve Alanı",
+         "aliases": [
+          "daire alanı",
+          "daire dilimi",
+          "yay uzunluğu"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Uzay Geometri",
+       "topics": [
+        {
+         "topic": "Katı Cisimler (Küre, Silindir, Koni)",
+         "aliases": [
+          "küre",
+          "silindir",
+          "koni",
+          "hacim",
+          "Katı Cisimler (Piramit-Koni-Küre)",
+          "Katı Cisimler (Prizma-Silindir)"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Fizik",
+     "units": [
+      {
+       "unit": "Mekanik",
+       "topics": [
+        {
+         "topic": "Kuvvet ve Hareket",
+         "aliases": [
+          "atışlar",
+          "eğik atış",
+          "dikey atış",
+          "yatay atış",
+          "newton yasaları",
+          "momentum",
+          "itme",
+          "tork",
+          "denge",
+          "Bağıl Hareket",
+          "Bir Boyutta Sabit İvmeli Hareket",
+          "Enerji ve Hareket",
+          "Kuvvet",
+          "Tork ve Denge",
+          "Newton'un Hareket Yasaları",
+          "Vektörler",
+          "İki Boyutta Sabit İvmeli Hareket",
+          "İtme ve Momentum"
+         ]
+        },
+        {
+         "topic": "Çembersel Hareket",
+         "aliases": [
+          "merkezcil kuvvet",
+          "açısal hız",
+          "dönme",
+          "eylemsizlik momenti"
+         ]
+        },
+        {
+         "topic": "Basit Harmonik Hareket",
+         "aliases": [
+          "sarkaç",
+          "yay sarkacı",
+          "periyot"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Elektromanyetizma ve Dalgalar",
+       "topics": [
+        {
+         "topic": "Elektrik ve Manyetizma",
+         "aliases": [
+          "indüksiyon",
+          "transformatör",
+          "manyetik alan",
+          "alternatif akım",
+          "Elektrik Alan ve Potansiyel",
+          "Kondansatörler",
+          "Manyetizma ve İndüksiyon"
+         ]
+        },
+        {
+         "topic": "Dalga Mekaniği",
+         "aliases": [
+          "girişim",
+          "kırınım",
+          "doppler",
+          "elektromanyetik dalga",
+          "Dalga Mekaniği (Girişim-Kırınım-Doppler)"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Modern Fizik",
+       "topics": [
+        {
+         "topic": "Atom Fiziğine Giriş ve Radyoaktivite",
+         "aliases": [
+          "radyoaktivite",
+          "yarılanma süresi",
+          "atom modelleri",
+          "fisyon",
+          "füzyon",
+          "Atom Fiziği ve Radyoaktivite"
+         ]
+        },
+        {
+         "topic": "Modern Fizik",
+         "aliases": [
+          "özel görelilik",
+          "fotoelektrik",
+          "compton",
+          "kara cisim ışıması",
+          "Compton ve de Broglie",
+          "Fotoelektrik Olay",
+          "Özel Görelilik"
+         ]
+        },
+        {
+         "topic": "Modern Fiziğin Teknolojideki Uygulamaları",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Kimya",
+     "units": [
+      {
+       "unit": "Atom, Gazlar ve Çözeltiler",
+       "topics": [
+        {
+         "topic": "Modern Atom Teorisi",
+         "aliases": []
+        },
+        {
+         "topic": "Gazlar",
+         "aliases": []
+        },
+        {
+         "topic": "Sıvı Çözeltiler ve Çözünürlük",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Tepkimelerde Enerji, Hız ve Denge",
+       "topics": [
+        {
+         "topic": "Kimyasal Tepkimelerde Enerji",
+         "aliases": []
+        },
+        {
+         "topic": "Kimyasal Tepkimelerde Hız",
+         "aliases": []
+        },
+        {
+         "topic": "Kimyasal Tepkimelerde Denge",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Elektrokimya ve Organik Kimya",
+       "topics": [
+        {
+         "topic": "Kimya ve Elektrik",
+         "aliases": [
+          "Elektrokimyasal Hücreler ve Piller",
+          "Elektroliz",
+          "Redoks Tepkimeleri"
+         ]
+        },
+        {
+         "topic": "Karbon Kimyasına Giriş",
+         "aliases": [
+          "Karbon Kimyasına Giriş (Hibritleşme)"
+         ]
+        },
+        {
+         "topic": "Organik Bileşikler",
+         "aliases": [
+          "Aldehit ve Ketonlar",
+          "Alkoller ve Eterler",
+          "Hidrokarbonlar",
+          "Karboksilik Asitler ve Esterler"
+         ]
+        },
+        {
+         "topic": "Enerji Kaynakları ve Bilimsel Gelişmeler",
+         "aliases": [
+          "Enerji Kaynakları"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Biyoloji",
+     "units": [
+      {
+       "unit": "İnsan Fizyolojisi",
+       "topics": [
+        {
+         "topic": "Sinir Sistemi",
+         "aliases": [
+          "nöron",
+          "refleks",
+          "merkezi sinir sistemi"
+         ]
+        },
+        {
+         "topic": "Endokrin Sistem",
+         "aliases": [
+          "hormon",
+          "hipofiz",
+          "tiroit",
+          "Endokrin Sistem ve Hormonlar"
+         ]
+        },
+        {
+         "topic": "İskelet Sistemi",
+         "aliases": [
+          "Destek ve Hareket Sistemi"
+         ]
+        },
+        {
+         "topic": "Kas Sistemi",
+         "aliases": [
+          "kas",
+          "kas kasılması"
+         ]
+        },
+        {
+         "topic": "Duyu Organları",
+         "aliases": [
+          "göz",
+          "kulak",
+          "deri"
+         ]
+        },
+        {
+         "topic": "Kan Dolaşımı",
+         "aliases": [
+          "kalp",
+          "damar",
+          "kan",
+          "Dolaşım Sistemi"
+         ]
+        },
+        {
+         "topic": "Lenf Dolaşımı",
+         "aliases": []
+        },
+        {
+         "topic": "Sindirim Sistemi",
+         "aliases": [
+          "mide",
+          "karaciğer",
+          "sindirim enzimleri"
+         ]
+        },
+        {
+         "topic": "Solunum Sistemi",
+         "aliases": [
+          "akciğer",
+          "soluk alıp verme"
+         ]
+        },
+        {
+         "topic": "Üriner Sistem",
+         "aliases": [
+          "böbrek",
+          "nefron",
+          "boşaltım",
+          "Boşaltım Sistemi"
+         ]
+        },
+        {
+         "topic": "Üreme Sistemi",
+         "aliases": [
+          "Üreme Sistemi ve Embriyonik Gelişim"
+         ]
+        },
+        {
+         "topic": "Bağışıklık Sistemi",
+         "aliases": [
+          "antikor",
+          "aşı",
+          "savunma"
+         ]
+        },
+        {
+         "topic": "Embriyonik Gelişim",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Ekoloji",
+       "topics": [
+        {
+         "topic": "Komünite Ekolojisi",
+         "aliases": []
+        },
+        {
+         "topic": "Popülasyon Ekolojisi",
+         "aliases": [
+          "popülasyon",
+          "büyüme eğrisi"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Genetik ve Enerji Dönüşümleri",
+       "topics": [
+        {
+         "topic": "Nükleik Asitler",
+         "aliases": [
+          "dna",
+          "rna",
+          "replikasyon",
+          "DNA Replikasyonu"
+         ]
+        },
+        {
+         "topic": "Genetik Şifre ve Protein Sentezi",
+         "aliases": [
+          "transkripsiyon",
+          "translasyon",
+          "protein sentezi",
+          "Protein Sentezi"
+         ]
+        },
+        {
+         "topic": "Genetik Mühendisliği ve Biyoteknoloji",
+         "aliases": [
+          "Modern Genetik Uygulamaları"
+         ]
+        },
+        {
+         "topic": "Canlılık ve Enerji",
+         "aliases": []
+        },
+        {
+         "topic": "Fotosentez",
+         "aliases": [
+          "kloroplast",
+          "ışık reaksiyonları",
+          "calvin"
+         ]
+        },
+        {
+         "topic": "Kemosentez",
+         "aliases": []
+        },
+        {
+         "topic": "Hücresel Solunum",
+         "aliases": [
+          "glikoliz",
+          "krebs",
+          "etaş"
+         ]
+        },
+        {
+         "topic": "Fermantasyon",
+         "aliases": [
+          "laktik asit",
+          "etil alkol"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Bitki Biyolojisi",
+       "topics": [
+        {
+         "topic": "Bitkisel Dokular",
+         "aliases": []
+        },
+        {
+         "topic": "Bitkisel Organlar",
+         "aliases": [
+          "kök",
+          "gövde",
+          "yaprak"
+         ]
+        },
+        {
+         "topic": "Bitkilerde Madde Taşınması",
+         "aliases": [
+          "terleme",
+          "ksilem",
+          "floem",
+          "Bitkilerde Taşıma-Beslenme-Terleme"
+         ]
+        },
+        {
+         "topic": "Bitkilerde Hareket",
+         "aliases": []
+        },
+        {
+         "topic": "Bitki Hormonları",
+         "aliases": [
+          "Bitkisel Hormonlar"
+         ]
+        },
+        {
+         "topic": "Bitkilerde Eşeyli Üreme",
+         "aliases": [
+          "Bitkilerde Üreme"
+         ]
+        },
+        {
+         "topic": "Canlılar ve Çevre",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Edebiyat",
+     "units": [
+      {
+       "unit": "Giriş ve Genel Konular",
+       "topics": [
+        {
+         "topic": "Edebiyata Giriş",
+         "aliases": [
+          "Edebiyat Bilgisi ve Metin Türleri"
+         ]
+        },
+        {
+         "topic": "Şiir Bilgisi",
+         "aliases": []
+        },
+        {
+         "topic": "Edebî Sanatlar",
+         "aliases": []
+        },
+        {
+         "topic": "Edebî Akımlar",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Şiir",
+       "topics": [
+        {
+         "topic": "İslamiyet Öncesi Türk Şiiri",
+         "aliases": [
+          "İslamiyet Öncesi Türk Edebiyatı"
+         ]
+        },
+        {
+         "topic": "Geçiş Dönemi Türk Şiiri",
+         "aliases": [
+          "Geçiş Dönemi Eserleri"
+         ]
+        },
+        {
+         "topic": "Halk Şiiri",
+         "aliases": [
+          "Halk Edebiyatı (Âşık-Anonim)"
+         ]
+        },
+        {
+         "topic": "Divan Şiiri",
+         "aliases": [
+          "Divan Edebiyatı"
+         ]
+        },
+        {
+         "topic": "Tanzimat Dönemi Türk Şiiri",
+         "aliases": [
+          "Tanzimat Edebiyatı"
+         ]
+        },
+        {
+         "topic": "Servetifünun Dönemi Türk Şiiri",
+         "aliases": [
+          "Servet-i Fünun Edebiyatı"
+         ]
+        },
+        {
+         "topic": "Fecriati Dönemi Türk Şiiri",
+         "aliases": []
+        },
+        {
+         "topic": "Millî Edebiyat Dönemi Türk Şiiri",
+         "aliases": [
+          "Millî Edebiyat"
+         ]
+        },
+        {
+         "topic": "Cumhuriyet Dönemi Türk Şiiri",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Hikâye",
+       "topics": [
+        {
+         "topic": "Hikâye Türleri ve Hikâyenin Yapı Unsurları",
+         "aliases": [
+          "Hikâye"
+         ]
+        },
+        {
+         "topic": "Tanzimat Dönemi'ne Kadar Halk Hikâyesi ve Mesneviler",
+         "aliases": []
+        },
+        {
+         "topic": "Tanzimat ve Servetifünun Dönemi Türk Hikâyesi",
+         "aliases": []
+        },
+        {
+         "topic": "Millî Edebiyat Dönemi Türk Hikâyesi",
+         "aliases": []
+        },
+        {
+         "topic": "Cumhuriyet Dönemi Türk Hikâyesi",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Roman",
+       "topics": [
+        {
+         "topic": "Roman Türü ve Yapı Unsurları",
+         "aliases": [
+          "Roman"
+         ]
+        },
+        {
+         "topic": "Tanzimat Dönemi Türk Romanı",
+         "aliases": []
+        },
+        {
+         "topic": "Servetifünun Dönemi Türk Romanı",
+         "aliases": []
+        },
+        {
+         "topic": "Millî Edebiyat Dönemi Türk Romanı",
+         "aliases": []
+        },
+        {
+         "topic": "Cumhuriyet Dönemi Türk Romanı",
+         "aliases": []
+        },
+        {
+         "topic": "Dünya Edebiyatında Roman",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Tiyatro",
+       "topics": [
+        {
+         "topic": "Tiyatro Türü ve Yapı Unsurları",
+         "aliases": [
+          "Tiyatro"
+         ]
+        },
+        {
+         "topic": "Geleneksel Türk Tiyatrosu",
+         "aliases": []
+        },
+        {
+         "topic": "Tanzimat, Servetifünun ve Millî Edebiyat Dönemi Türk Tiyatrosu",
+         "aliases": []
+        },
+        {
+         "topic": "Cumhuriyet Dönemi Türk Tiyatrosu",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Diğer Türler",
+       "topics": [
+        {
+         "topic": "Masal/Fabl",
+         "aliases": []
+        },
+        {
+         "topic": "Destan/Efsane",
+         "aliases": []
+        },
+        {
+         "topic": "Öğretici Metinler",
+         "aliases": []
+        },
+        {
+         "topic": "Divan Edebiyatı Nesir Türleri",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Tarih",
+     "units": [
+      {
+       "unit": "Tarih Bilimi",
+       "topics": [
+        {
+         "topic": "Tarih ve Zaman",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "İlk Çağlardan Türk-İslam Dünyasına",
+       "topics": [
+        {
+         "topic": "İlk ve Orta Çağlarda Türk Dünyası",
+         "aliases": []
+        },
+        {
+         "topic": "İslam Medeniyetinin Doğuşu",
+         "aliases": []
+        },
+        {
+         "topic": "Türk İslam Tarihindeki Siyasi Gelişmeler, Türklerin İslamiyet'i Kabulü",
+         "aliases": []
+        },
+        {
+         "topic": "Yerleşme ve Devletleşme Sürecinde Selçuklu Türkiyesi",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Osmanlı Tarihi",
+       "topics": [
+        {
+         "topic": "Beylikten Devlete Osmanlı Siyaseti (1302-1453)",
+         "aliases": []
+        },
+        {
+         "topic": "Devletleşme Sürecinde Savaşçılar ve Askerler",
+         "aliases": []
+        },
+        {
+         "topic": "Beylikten Devlete Osmanlı Medeniyeti",
+         "aliases": []
+        },
+        {
+         "topic": "Dünya Gücü Osmanlı (1453-1595)",
+         "aliases": []
+        },
+        {
+         "topic": "Sultan ve Osmanlı Merkez Teşkilatı",
+         "aliases": []
+        },
+        {
+         "topic": "Klasik Çağda Osmanlı Toplum Düzeni",
+         "aliases": []
+        },
+        {
+         "topic": "Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti (1595-1774)",
+         "aliases": [
+          "Değişen Dünya Dengeleri ve Osmanlı Siyaseti (1595-1774)"
+         ]
+        },
+        {
+         "topic": "Değişim Çağında Avrupa ve Osmanlı",
+         "aliases": []
+        },
+        {
+         "topic": "Uluslararası İlişkilerde Denge Stratejisi (1774-1914)",
+         "aliases": [
+          "Uluslararası İlişkilerde Denge (1774-1914)"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Yakın Çağ ve Cumhuriyet",
+       "topics": [
+        {
+         "topic": "Devrimler Çağında Değişen Devlet-Toplum İlişkileri",
+         "aliases": [
+          "Devrimler Çağı"
+         ]
+        },
+        {
+         "topic": "XIX. ve XX. Yüzyılda Değişen Sosyo-Ekonomik Hayat",
+         "aliases": [
+          "Sermaye ve Emek",
+          "XIX-XX. Yüzyılda Gündelik Hayat"
+         ]
+        },
+        {
+         "topic": "XX. Yüzyıl Başlarında Osmanlı Devleti ve Dünya",
+         "aliases": [
+          "XX. Yüzyıl Başlarında Osmanlı"
+         ]
+        },
+        {
+         "topic": "Millî Mücadele",
+         "aliases": []
+        },
+        {
+         "topic": "Atatürkçülük ve Türk İnkılabı",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Çağdaş Türkiye ve Dünya",
+       "topics": [
+        {
+         "topic": "İki Savaş Arasındaki Dönemde Türkiye ve Dünya",
+         "aliases": [
+          "İki Savaş Arası Dönem"
+         ]
+        },
+        {
+         "topic": "II. Dünya Savaşı Sürecinde Türkiye ve Dünya",
+         "aliases": [
+          "II. Dünya Savaşı"
+         ]
+        },
+        {
+         "topic": "II. Dünya Savaşı Sonrasında Türkiye ve Dünya",
+         "aliases": [
+          "Soğuk Savaş Dönemi"
+         ]
+        },
+        {
+         "topic": "Toplumsal Devrim Çağında Dünya ve Türkiye",
+         "aliases": []
+        },
+        {
+         "topic": "XXI. Yüzyılın Eşiğinde Türkiye ve Dünya",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Coğrafya",
+     "units": [
+      {
+       "unit": "Ekosistem ve Doğa",
+       "topics": [
+        {
+         "topic": "Ekosistemlerin İşleyişi ve Özellikleri",
+         "aliases": [
+          "Doğal Sistemler (Biyoçeşitlilik)",
+          "Ekosistem ve Madde Döngüsü"
+         ]
+        },
+        {
+         "topic": "Ekstrem Doğa Olayları ve Doğa Olaylarının Geleceği",
+         "aliases": [
+          "Doğal Afetler ve Toplum"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Beşerî ve Ekonomik Sistemler",
+       "topics": [
+        {
+         "topic": "Nüfus Politikaları ve Yerleşmeler",
+         "aliases": [
+          "Beşerî Sistemler",
+          "Nüfus Politikaları",
+          "Türkiye'de Nüfus ve Yerleşme"
+         ]
+        },
+        {
+         "topic": "Ekonomik Faaliyetler ve Doğal Kaynaklar",
+         "aliases": [
+          "Doğal Kaynaklar"
+         ]
+        },
+        {
+         "topic": "Türkiye'de Ekonomi",
+         "aliases": [
+          "Türkiye Ekonomisinin Sektörel Dağılımı",
+          "Türkiye'de Madenler ve Enerji Kaynakları",
+          "Türkiye'de Sanayi",
+          "Türkiye'de Tarım"
+         ]
+        },
+        {
+         "topic": "Ekonomi, Şehirleşme ve Göç",
+         "aliases": [
+          "Göç ve Şehirleşme"
+         ]
+        },
+        {
+         "topic": "Ulaşım, Ticaret, Turizm",
+         "aliases": [
+          "Türkiye'de Ticaret-Ulaşım-Turizm"
+         ]
+        },
+        {
+         "topic": "Türkiye'nin İşlevsel Bölgeleri ve Kalkınma Projeleri",
+         "aliases": [
+          "Bölgesel Kalkınma Projeleri"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Kültür ve Küresel Ortam",
+       "topics": [
+        {
+         "topic": "Kültür Bölgeleri",
+         "aliases": []
+        },
+        {
+         "topic": "Küreselleşen Dünya",
+         "aliases": [
+          "Küresel Ortam: Bölgeler ve Ülkeler"
+         ]
+        },
+        {
+         "topic": "Jeopolitik Konum ve Ülkeler Arası Etkileşim",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Çevre ve Toplum",
+       "topics": [
+        {
+         "topic": "Çevre Sorunları",
+         "aliases": [
+          "Çevre ve Toplum"
+         ]
+        },
+        {
+         "topic": "Doğal Çevrenin Sınırlılığı, Çevresel Örgüt ve Anlaşmalar",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Felsefe Grubu",
+     "units": [
+      {
+       "unit": "Felsefe",
+       "topics": [
+        {
+         "topic": "Felsefeyi Tanıma",
+         "aliases": []
+        },
+        {
+         "topic": "Felsefe ile Düşünme",
+         "aliases": []
+        },
+        {
+         "topic": "Felsefi Okuma ve Yazma",
+         "aliases": []
+        },
+        {
+         "topic": "Varlık Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "Bilgi Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "Bilim Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "Ahlak Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "Din Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "Siyaset Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "Sanat Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "MÖ 6. Yüzyıl-MS 2. Yüzyıl Felsefesi",
+         "aliases": [
+          "İlk Çağ Felsefesi"
+         ]
+        },
+        {
+         "topic": "MS 2. Yüzyıl-MS 15. Yüzyıl Felsefesi",
+         "aliases": [
+          "Ortaçağ Felsefesi"
+         ]
+        },
+        {
+         "topic": "15. Yüzyıl-17. Yüzyıl Felsefesi",
+         "aliases": [
+          "Yeni Çağ Felsefesi"
+         ]
+        },
+        {
+         "topic": "18. Yüzyıl-19. Yüzyıl Felsefesi",
+         "aliases": [
+          "19. Yüzyıl Felsefesi"
+         ]
+        },
+        {
+         "topic": "20. Yüzyıl Felsefesi",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Mantık",
+       "topics": [
+        {
+         "topic": "Mantığa Giriş",
+         "aliases": []
+        },
+        {
+         "topic": "Klasik Mantık",
+         "aliases": []
+        },
+        {
+         "topic": "Mantık ve Dil",
+         "aliases": []
+        },
+        {
+         "topic": "Sembolik Mantık",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Psikoloji",
+       "topics": [
+        {
+         "topic": "Psikoloji Bilimini Tanıyalım",
+         "aliases": []
+        },
+        {
+         "topic": "Psikolojinin Temel Süreçleri",
+         "aliases": []
+        },
+        {
+         "topic": "Öğrenme, Bellek, Düşünme",
+         "aliases": []
+        },
+        {
+         "topic": "Ruh Sağlığının Temelleri",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Sosyoloji",
+       "topics": [
+        {
+         "topic": "Sosyolojiye Giriş",
+         "aliases": []
+        },
+        {
+         "topic": "Toplumsal Yapı",
+         "aliases": []
+        },
+        {
+         "topic": "Birey ve Toplum",
+         "aliases": []
+        },
+        {
+         "topic": "Toplum ve Kültür",
+         "aliases": []
+        },
+        {
+         "topic": "Toplumsal Kurumlar",
+         "aliases": []
+        },
+        {
+         "topic": "Toplumsal Değişme ve Gelişme",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Din Kültürü",
+     "units": [
+      {
+       "unit": "İnanç ve İbadet",
+       "topics": [
+        {
+         "topic": "Dünya ve Ahiret",
+         "aliases": []
+        },
+        {
+         "topic": "İnançla İlgili Meseleler",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Kur'an ve Hz. Muhammed",
+       "topics": [
+        {
+         "topic": "Kur'an'a Göre Hz. Muhammed",
+         "aliases": []
+        },
+        {
+         "topic": "Kur'an'da Bazı Kavramlar",
+         "aliases": [
+          "Kur'an'da Kavramlar"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Dinler ve Kültür",
+       "topics": [
+        {
+         "topic": "Yahudilik ve Hristiyanlık",
+         "aliases": []
+        },
+        {
+         "topic": "Hint ve Çin Dinleri",
+         "aliases": []
+        },
+        {
+         "topic": "Anadolu'da İslam",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "İslam Düşüncesi",
+       "topics": [
+        {
+         "topic": "İslam ve Bilim",
+         "aliases": []
+        },
+        {
+         "topic": "İslam Düşüncesinde Tasavvufi Yorumlar",
+         "aliases": [
+          "Tasavvufi Yorumlar"
+         ]
+        },
+        {
+         "topic": "Güncel Dinî Meseleler",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "maarif": {
+   "TYT": [
+    {
+     "subject": "Türkçe",
+     "units": [
+      {
+       "unit": "Metin Türleri",
+       "topics": [
+        {
+         "topic": "Şiir",
+         "aliases": []
+        },
+        {
+         "topic": "Öyküleyici Metin",
+         "aliases": []
+        },
+        {
+         "topic": "Tiyatro",
+         "aliases": []
+        },
+        {
+         "topic": "Öğretici Metin",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Dil Bilgisi",
+       "topics": [
+        {
+         "topic": "Ses Bilgisi",
+         "aliases": []
+        },
+        {
+         "topic": "Yapı Bilgisi (Ekler)",
+         "aliases": []
+        },
+        {
+         "topic": "İsim ve Sıfat",
+         "aliases": []
+        },
+        {
+         "topic": "Zamir-Zarf-Edat",
+         "aliases": []
+        },
+        {
+         "topic": "Fiil ve Fiilimsi",
+         "aliases": []
+        },
+        {
+         "topic": "Cümlenin Ögeleri",
+         "aliases": []
+        },
+        {
+         "topic": "Anlatım Bozuklukları",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Matematik",
+     "units": [
+      {
+       "unit": "Sayılar",
+       "topics": [
+        {
+         "topic": "Üslü İfadeler",
+         "aliases": []
+        },
+        {
+         "topic": "Köklü İfadeler",
+         "aliases": []
+        },
+        {
+         "topic": "Sayı Kümeleri",
+         "aliases": []
+        },
+        {
+         "topic": "Özdeşlikler (İki Kare Farkı-Tam Kare)",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Nicelikler ve Değişimler",
+       "topics": [
+        {
+         "topic": "Doğrusal Fonksiyonlar",
+         "aliases": []
+        },
+        {
+         "topic": "Mutlak Değer",
+         "aliases": []
+        },
+        {
+         "topic": "Denklem-Eşitsizlik",
+         "aliases": []
+        },
+        {
+         "topic": "Fonksiyonlar ve Denklemler",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Mantıksal Çıkarım",
+       "topics": [
+        {
+         "topic": "Mantıksal Çıkarım",
+         "aliases": []
+        },
+        {
+         "topic": "Algoritma ve Bilişim",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Trigonometri",
+       "topics": [
+        {
+         "topic": "Trigonometriye Giriş",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Veriden Olasılığa",
+       "topics": [
+        {
+         "topic": "Veriden Olasılığa",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Geometri",
+     "units": [
+      {
+       "unit": "Üçgenler",
+       "topics": [
+        {
+         "topic": "Üçgende Eşlik ve Benzerlik",
+         "aliases": [
+          "benzerlik",
+          "thales",
+          "pisagor",
+          "açıortay",
+          "kenarortay"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Çokgenler ve Dörtgenler",
+       "topics": [
+        {
+         "topic": "Çokgenler",
+         "aliases": [
+          "beşgen",
+          "altıgen",
+          "iç açılar toplamı"
+         ]
+        },
+        {
+         "topic": "Dörtgenler",
+         "aliases": [
+          "paralelkenar",
+          "yamuk",
+          "dikdörtgen",
+          "kare",
+          "eşkenar dörtgen"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Çember",
+       "topics": [
+        {
+         "topic": "Çember",
+         "aliases": [
+          "çevre açı",
+          "merkez açı",
+          "teğet",
+          "daire alanı"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Analitik Geometri",
+       "topics": [
+        {
+         "topic": "Analitik Geometriye Giriş",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Fizik",
+     "units": [
+      {
+       "unit": "Fizik Bilimi",
+       "topics": [
+        {
+         "topic": "Fizik Bilimi ve Kariyer",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Kuvvet ve Hareket",
+       "topics": [
+        {
+         "topic": "Kuvvet ve Hareket",
+         "aliases": [
+          "atışlar",
+          "eğik atış",
+          "dikey atış",
+          "yatay atış",
+          "newton yasaları",
+          "ivme",
+          "sürtünme kuvveti"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Akışkanlar",
+       "topics": [
+        {
+         "topic": "Akışkanlar (Basınç)",
+         "aliases": [
+          "basınç",
+          "sıvı basıncı",
+          "gaz basıncı"
+         ]
+        },
+        {
+         "topic": "Akışkanlar (Kaldırma Kuvveti-Bernoulli)",
+         "aliases": [
+          "arşimet",
+          "kaldırma kuvveti",
+          "bernoulli"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Enerji",
+       "topics": [
+        {
+         "topic": "Enerji (Isı-Hâl Değişimi)",
+         "aliases": [
+          "ısı",
+          "hâl değişimi",
+          "öz ısı",
+          "genleşme"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Elektrik",
+       "topics": [
+        {
+         "topic": "Elektrik",
+         "aliases": [
+          "devre",
+          "direnç",
+          "ohm kanunu",
+          "yük"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Dalgalar",
+       "topics": [
+        {
+         "topic": "Dalgalar",
+         "aliases": [
+          "ses dalgası",
+          "su dalgası",
+          "girişim"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Kimya",
+     "units": [
+      {
+       "unit": "Etkileşim",
+       "topics": [
+        {
+         "topic": "Kimya Hayattır",
+         "aliases": []
+        },
+        {
+         "topic": "Atomdan Periyodik Tabloya",
+         "aliases": []
+        },
+        {
+         "topic": "Kimyasal Türler Arası Etkileşimler",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Çeşitlilik",
+       "topics": [
+        {
+         "topic": "Kimyasal Tepkimeler",
+         "aliases": []
+        },
+        {
+         "topic": "Gazlar",
+         "aliases": []
+        },
+        {
+         "topic": "Çözeltiler",
+         "aliases": []
+        },
+        {
+         "topic": "Redoks (Etkileşim)",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Sürdürülebilirlik",
+       "topics": [
+        {
+         "topic": "Sürdürülebilirlik",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Biyoloji",
+     "units": [
+      {
+       "unit": "Yaşam",
+       "topics": [
+        {
+         "topic": "Canlıların Ortak Özellikleri",
+         "aliases": []
+        },
+        {
+         "topic": "Üç Âlem/Domain Sistemi",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Organizasyon",
+       "topics": [
+        {
+         "topic": "Hücre",
+         "aliases": [
+          "organel",
+          "mitokondri",
+          "ribozom",
+          "hücre zarı",
+          "difüzyon",
+          "osmoz"
+         ]
+        },
+        {
+         "topic": "Organik Moleküller",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Enerji",
+       "topics": [
+        {
+         "topic": "Fotosentez",
+         "aliases": [
+          "kloroplast",
+          "ışık reaksiyonları"
+         ]
+        },
+        {
+         "topic": "Hücresel Solunum",
+         "aliases": [
+          "glikoliz",
+          "krebs",
+          "fermantasyon"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Ekoloji",
+       "topics": [
+        {
+         "topic": "Ekosistem Ekolojisi",
+         "aliases": [
+          "besin zinciri",
+          "madde döngüsü"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Tarih",
+     "units": [
+      {
+       "unit": "Tarih Bilimi",
+       "topics": [
+        {
+         "topic": "Geçmişin İnşa Sürecinde Tarih",
+         "aliases": []
+        },
+        {
+         "topic": "Medeniyet/Uygarlık Tarihi",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Türk Tarihi",
+       "topics": [
+        {
+         "topic": "Türkistan'dan Türkiye'ye",
+         "aliases": []
+        },
+        {
+         "topic": "Beylikten Devlete Osmanlı",
+         "aliases": []
+        },
+        {
+         "topic": "Cihan Devleti Osmanlı (İstanbul'un Fethi)",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Coğrafya",
+     "units": [
+      {
+       "unit": "Coğrafi Beceriler",
+       "topics": [
+        {
+         "topic": "Coğrafyanın Doğası",
+         "aliases": []
+        },
+        {
+         "topic": "Mekânsal Bilgi Teknolojileri",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Doğal Sistemler",
+       "topics": [
+        {
+         "topic": "Doğal Sistemler ve Süreçler (İklim)",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Beşerî Sistemler",
+       "topics": [
+        {
+         "topic": "Beşerî Sistemler ve Süreçler",
+         "aliases": []
+        },
+        {
+         "topic": "Ekonomik Faaliyetler ve Etkileri",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Çevre ve Küresel Bağlantılar",
+       "topics": [
+        {
+         "topic": "Afetler ve Sürdürülebilir Çevre",
+         "aliases": []
+        },
+        {
+         "topic": "Bölgesel/Küresel Bağlantılar",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Felsefe",
+     "units": [
+      {
+       "unit": "Felsefeye Giriş",
+       "topics": [
+        {
+         "topic": "Felsefeye Giriş",
+         "aliases": []
+        },
+        {
+         "topic": "Felsefe ile Düşünme (Argümantasyon)",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Felsefenin Temel Konuları",
+       "topics": [
+        {
+         "topic": "Bilgi Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "Bilim Felsefesi",
+         "aliases": []
+        },
+        {
+         "topic": "Ahlak Felsefesi",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Din Kültürü",
+     "units": [
+      {
+       "unit": "İnanç",
+       "topics": [
+        {
+         "topic": "Allah-İnsan İlişkisi",
+         "aliases": []
+        },
+        {
+         "topic": "İslam'da İnanç Esasları",
+         "aliases": []
+        },
+        {
+         "topic": "İslam'da Varlık ve Bilgi",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "İbadet ve Ahlak",
+       "topics": [
+        {
+         "topic": "İslam'da İbadetler",
+         "aliases": []
+        },
+        {
+         "topic": "İslam'da Ahlak İlkeleri",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Hz. Muhammed ve Güncel Konular",
+       "topics": [
+        {
+         "topic": "Kur'an'a Göre Hz. Muhammed",
+         "aliases": []
+        },
+        {
+         "topic": "Din, Çevre ve Teknoloji",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AYT": [
+    {
+     "subject": "Matematik",
+     "units": [
+      {
+       "unit": "Nicelikler ve Değişimler",
+       "topics": [
+        {
+         "topic": "Nicelikler ve Değişimler",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "İstatistiksel Araştırma",
+       "topics": [
+        {
+         "topic": "İstatistiksel Araştırma Süreci",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Analiz",
+       "topics": [
+        {
+         "topic": "Türev",
+         "aliases": [
+          "türev alma",
+          "limit",
+          "maksimum minimum"
+         ]
+        },
+        {
+         "topic": "İntegral",
+         "aliases": [
+          "alan hesabı",
+          "belirli integral"
+         ]
+        },
+        {
+         "topic": "Logaritma",
+         "aliases": [
+          "log",
+          "üslü ifade"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Geometri",
+     "units": [
+      {
+       "unit": "Geometrik Şekiller",
+       "topics": [
+        {
+         "topic": "Geometrik Şekiller",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Fizik",
+     "units": [
+      {
+       "unit": "Kuvvet ve Hareket",
+       "topics": [
+        {
+         "topic": "Kuvvet ve Hareket (Newton Yasaları)",
+         "aliases": [
+          "atışlar",
+          "eğik atış",
+          "dikey atış",
+          "yatay atış",
+          "momentum",
+          "tork",
+          "denge"
+         ]
+        },
+        {
+         "topic": "Çembersel Hareket",
+         "aliases": [
+          "merkezcil kuvvet",
+          "açısal hız",
+          "dönme"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Elektrik ve Manyetizma",
+       "topics": [
+        {
+         "topic": "Elektriksel ve Manyetik Alan",
+         "aliases": [
+          "manyetik alan",
+          "elektrik alan",
+          "coulomb"
+         ]
+        },
+        {
+         "topic": "İndüksiyon ve Transformatörler",
+         "aliases": [
+          "indüksiyon",
+          "transformatör",
+          "alternatif akım"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Madde ve Doğası",
+       "topics": [
+        {
+         "topic": "Madde ve Doğası (Yarı İletkenler)",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Optik, Enerji ve Dalgalar",
+       "topics": [
+        {
+         "topic": "Optik",
+         "aliases": [
+          "mercek",
+          "ayna",
+          "kırılma",
+          "yansıma"
+         ]
+        },
+        {
+         "topic": "Enerji",
+         "aliases": []
+        },
+        {
+         "topic": "Dalgalar",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Kimya",
+     "units": [
+      {
+       "unit": "Tepkimeler",
+       "topics": [
+        {
+         "topic": "Kimyasal Tepkimeler ve Enerji",
+         "aliases": []
+        },
+        {
+         "topic": "Tepkime Hızı",
+         "aliases": []
+        },
+        {
+         "topic": "Kimyasal Denge",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Çözeltilerde Denge",
+       "topics": [
+        {
+         "topic": "Asit-Baz Dengeleri",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Sürdürülebilirlik",
+       "topics": [
+        {
+         "topic": "Sürdürülebilirlik (Yeşil Kimya)",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Biyoloji",
+     "units": [
+      {
+       "unit": "Tepki",
+       "topics": [
+        {
+         "topic": "Sinir Sistemi ve Refleks",
+         "aliases": [
+          "nöron",
+          "refleks",
+          "sinir"
+         ]
+        },
+        {
+         "topic": "İskelet-Kas-Eklem Sistemi",
+         "aliases": [
+          "kemik",
+          "kas",
+          "eklem"
+         ]
+        },
+        {
+         "topic": "Bağışıklık ve Alerji",
+         "aliases": [
+          "antikor",
+          "aşı",
+          "alerji"
+         ]
+        }
+       ]
+      },
+      {
+       "unit": "Homeostazi",
+       "topics": [
+        {
+         "topic": "Endokrin Sistem",
+         "aliases": [
+          "hormon",
+          "hipofiz",
+          "tiroit"
+         ]
+        },
+        {
+         "topic": "Dolaşım Sistemi",
+         "aliases": [
+          "kalp",
+          "damar",
+          "kan"
+         ]
+        },
+        {
+         "topic": "Solunum Sistemi",
+         "aliases": [
+          "akciğer",
+          "soluk alıp verme"
+         ]
+        },
+        {
+         "topic": "Boşaltım Sistemi",
+         "aliases": [
+          "böbrek",
+          "nefron"
+         ]
+        },
+        {
+         "topic": "Denge Bozuklukları (Diyabet-Hipertansiyon-Obezite)",
+         "aliases": [
+          "diyabet",
+          "hipertansiyon",
+          "obezite",
+          "şeker hastalığı"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Edebiyat",
+     "units": [
+      {
+       "unit": "Bir Diyeceğim Var!",
+       "topics": [
+        {
+         "topic": "Mektup-Dilekçe-E-posta",
+         "aliases": []
+        },
+        {
+         "topic": "Geleneksel Türk Tiyatrosu",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Kültür Yolculuğu",
+       "topics": [
+        {
+         "topic": "Orhun Abideleri ve Geçiş Dönemi",
+         "aliases": []
+        },
+        {
+         "topic": "Âşık Tarzı Halk Şiiri",
+         "aliases": []
+        },
+        {
+         "topic": "Halk Hikâyesi",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Yaşamın İzinde",
+       "topics": [
+        {
+         "topic": "Roman",
+         "aliases": []
+        },
+        {
+         "topic": "Biyografi ve Tezkire",
+         "aliases": []
+        },
+        {
+         "topic": "Radyo Tiyatrosu",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Hayatın Aynası",
+       "topics": [
+        {
+         "topic": "Modern Türk Tiyatrosu",
+         "aliases": []
+        },
+        {
+         "topic": "Küçürek Hikâye",
+         "aliases": []
+        },
+        {
+         "topic": "Belgesel",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Tarih",
+     "units": [
+      {
+       "unit": "Osmanlı ve Değişim",
+       "topics": [
+        {
+         "topic": "Osmanlı'da Gerileme ve Değişim",
+         "aliases": []
+        },
+        {
+         "topic": "Fransız İhtilali ve Milliyetçilik",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Savaşlar Çağı",
+       "topics": [
+        {
+         "topic": "Balkan Savaşları",
+         "aliases": []
+        },
+        {
+         "topic": "I. Dünya Savaşı'na Giden Süreç",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "subject": "Coğrafya",
+     "units": [
+      {
+       "unit": "Beşerî Coğrafya",
+       "topics": [
+        {
+         "topic": "İleri Nüfus",
+         "aliases": []
+        },
+        {
+         "topic": "İleri Yerleşme",
+         "aliases": []
+        }
+       ]
+      },
+      {
+       "unit": "Ekonomik Coğrafya",
+       "topics": [
+        {
+         "topic": "Ekonomik Coğrafya",
+         "aliases": []
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ }
+}
