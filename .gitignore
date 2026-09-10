@@ -65,3 +65,6 @@ lib/l10n/generated/
 
 # build artık symlink olabilir (iCloud çözümü); dizin deseni symlink dosyasını yakalamıyor.
 /build
+# Finder/iCloud çakışma kopyaları: "build 2", "build 3"… Bunlar da derleme
+# çıktısı (iOS SourcePackages dâhil) ve depoya girmemeli.
+/build [0-9]*

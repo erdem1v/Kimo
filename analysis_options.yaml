@@ -25,6 +25,10 @@ analyzer:
     # ile elle calistiriliyorlar.
     - tools/bin/**
     - build/**
+    # "build 2" gibi Finder/iCloud çakışma kopyaları: içlerinde iOS
+    # SourcePackages'tan gelen üçüncü taraf test dosyaları var ve
+    # `flutter analyze` çıktısını 91 yabancı hatayla dolduruyorlar.
+    - build */**
     - android/**
     - ios/**
     - web/**

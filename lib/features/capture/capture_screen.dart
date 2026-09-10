@@ -56,6 +56,16 @@ class _CaptureScreenState extends State<CaptureScreen> {
   /// beklemekten vazgeçtiyse sonucu ONA RAĞMEN açmıyoruz.
   bool _cancelled = false;
 
+  /// Tamamlanmış ama henüz kullanılmamış analiz sonucu.
+  ///
+  /// NEDEN VAR: "Vazgeç" isteği İPTAL ETMİYOR — `functions.invoke` iptal
+  /// kabul etmiyor, yani istek sunucuda tamamlanıyor ve hak ZATEN harcanmış
+  /// oluyor. Sonucu çöpe atmak, aynı fotoğrafla devam eden kullanıcıya ikinci
+  /// bir çağrı (ve ikinci bir ücret) çıkarırdı. Burada tutuluyor; aynı
+  /// fotoğrafla devam edilirse bedava kullanılıyor. Yeni fotoğraf çekilince
+  /// sıfırlanıyor.
+  QuestionAnalysis? _pendingAnalysis;
+
   @override
   void initState() {
     super.initState();
@@ -95,6 +105,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
         _bytes = bytes;
         _aspect = null;
         _cancelled = false;
+        _pendingAnalysis = null;
       });
       unawaited(_decodeAspect(bytes));
       // AKTARIM BİLDİRİMİ (Task 03, 4.2): fotoğraf OpenAI'ya gitmeden önce,
@@ -157,6 +168,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
     _kimo.scanning = false;
     setState(() {
       _analyzing = false;
+      // Sonuç HER ZAMAN saklanıyor: iptal edildiyse ya da onay ekranından
+      // geri dönülürse aynı fotoğrafla devam etmek ikinci bir çağrı
+      // gerektirmesin (hak çoktan harcandı).
+      _pendingAnalysis = result;
       // Sunucu her yanıtta kalan hakkı bildiriyor; istemcide ayrıca saymıyoruz.
       if (result.creditRemaining != null) _creditLeft = result.creditRemaining;
       if (result.outOfCredit) _creditLeft = 0;
@@ -403,7 +418,21 @@ class _CaptureScreenState extends State<CaptureScreen> {
           ),
         ),
         const SizedBox(height: Gap.md),
-        if (_analyzing) _scanPanel(context, t, l) else _offlineNote(context, l),
+        if (_analyzing)
+          _scanPanel(context, t, l)
+        else ...<Widget>[
+          _offlineNote(context, l),
+          const SizedBox(height: Gap.md),
+          // KAYDETME YOLU ASLA KAPANMAZ — bu dal onu deliyordu. Analiz iptal
+          // edilince (ya da onay ekranından geri dönülünce) fotoğraf ekranda
+          // kalıyor ama `_pickActions` artık çizilmediği için kaydetmeye/elle
+          // girişe götüren HİÇBİR düğme kalmıyordu; tek çıkış "Yeniden çek"
+          // yani ikinci bir can harcamaktı.
+          KimoButton(
+            label: l.actionContinue,
+            onPressed: () => _openConfirm(_bytes, _pendingAnalysis),
+          ),
+        ],
         const SizedBox(height: Gap.screen),
       ],
     );
