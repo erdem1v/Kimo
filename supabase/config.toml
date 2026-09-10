@@ -232,6 +232,16 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
+#
+# TASK 06 — KAPALI VE KAPALI KALACAK. E-posta dogrulamasi tamamen kaldirildi:
+# SMTP saglayici kurulmuyor (Supabase'in yerlesigi saatte 2 e-postayla sinirli)
+# ve karsilama akisindaki dogrulama adimi silindi. Sonuclari:
+#   * `convertToPermanent` ANINDA tamamlanir; adres askida kalmaz ve
+#     `profiles.is_anonymous` kayit aninda duser. Katman ayrimi bu tek bayrak.
+#   * Sahte e-postayla hesap acmak bedava. Kayit tarafindaki tek fren artik
+#     `[auth.hook.before_user_created]` kancasi (IP basina hiz siniri).
+# URETIMDE DE KAPALI OLDUGU Dashboard'dan TEYIT EDILMELI: bu dosya yalnizca
+# yerel gelistirmeyi yapilandirir.
 enable_confirmations = false
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false

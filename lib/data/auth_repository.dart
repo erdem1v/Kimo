@@ -37,6 +37,11 @@ class AuthRepository {
   /// kayıtları olduğu yerde kalıyor; taşınacak hiçbir şey yok. Yeni bir hesap
   /// açıp veriyi kopyalamak, yükleme yarıda kalırsa kullanıcının ilk
   /// fotoğrafını kaybetmesi demekti.
+  ///
+  /// TASK 06: e-posta doğrulaması kaldırıldığı için (`enable_confirmations =
+  /// false`) `updateUser` ANINDA tamamlanıyor — adres askıda kalmıyor ve
+  /// sunucudaki `profiles.is_anonymous` hemen düşüyor. Katman ayrımı bu tek
+  /// bayrağa dayandığı için kullanıcı kayıt anında ücretsiz kotaya geçiyor.
   Future<void> convertToPermanent({
     required String email,
     required String password,
@@ -50,23 +55,10 @@ class AuthRepository {
   // karşılama akışının sonundaki convertToPermanent ile yapılıyor. Ölü ikinci
   // bir kayıt yolu, e-posta doğrulama akışını da ikiye bölerdi.
 
-  /// Onay bekleyen e-posta değişikliği (anonim → kalıcı dönüşümün askıdaki
-  /// adresi). Sunucuda e-posta onayı KAPALIYSA hiç askıda kalmaz, null döner.
-  String? get pendingEmail => currentUser?.newEmail;
-
-  /// Oturumun e-postası onaylanmış mı?
-  bool get emailConfirmed => currentUser?.emailConfirmedAt != null;
-
-  /// Sunucudaki güncel kullanıcıyı çeker (onay başka cihazda/tarayıcıda
-  /// verilmiş olabilir; push gelmez, SORMAK gerekir). Oturum ve `currentUser`
-  /// tazelenir.
-  Future<void> refreshUser() async {
-    await _client.auth.refreshSession();
-  }
-
-  /// Askıdaki e-posta değişikliğinin onay postasını yeniden gönderir.
-  Future<void> resendEmailChange(String email) =>
-      _client.auth.resend(type: OtpType.emailChange, email: email);
+  // pendingEmail / emailConfirmed / refreshUser / resendEmailChange SİLİNDİ
+  // (Task 06): dördünü de yalnızca karşılama akışındaki e-posta doğrulama
+  // adımı kullanıyordu, o adım kaldırıldı. Doğrulama geri gelirse bunlar da
+  // geri gelir; şu hâlleriyle sıfır çağrılı ölü yüzeydiler.
 
   /// İlk kayıt onayının postasını yeniden gönderir (giriş ekranındaki
   /// "e-postan doğrulanmamış" durumu için).

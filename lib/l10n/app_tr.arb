@@ -602,31 +602,6 @@
   "signInAction": "Giriş yap",
   "signInFailed": "Giriş yapılamadı. E-posta ve parolanı kontrol et.",
   "signInEmailNotConfirmed": "E-postan henüz doğrulanmamış. Gelen kutunu kontrol et — doğrulama bağlantısını yeniden gönderdim.",
-  "verifyTitle": "Gelen kutunu kontrol et",
-  "verifyBody": "{email} adresine bir doğrulama bağlantısı gönderdim. Bağlantıya dokunduğunda hesabın hazır.",
-  "@verifyBody": {
-    "placeholders": {
-      "email": {
-        "type": "String"
-      }
-    }
-  },
-  "verifyWaiting": "Doğrulama bekleniyor…",
-  "verifyDone": "E-postan doğrulandı!",
-  "verifyResend": "Yeniden gönder",
-  "verifyResendCooldown": "{seconds} sn sonra yeniden gönderebilirsin",
-  "@verifyResendCooldown": {
-    "placeholders": {
-      "seconds": {
-        "type": "int"
-      }
-    }
-  },
-  "verifyResendSent": "Doğrulama postası yeniden gönderildi.",
-  "verifyRateLimited": "Saatte en fazla iki e-posta gönderilebiliyor; biraz sonra yeniden dene.",
-  "verifyChangeAddress": "Adresi değiştir",
-  "verifyContinueAnyway": "Şimdilik devam et",
-  "verifyContinueNote": "Doğrulanana kadar hesabın yalnızca bu cihazda açık kalır.",
   "guardianStatusMinor": "18 yaş altı",
   "guardianStatusNeeded": "Arkadaş ekleme veli onayına bağlı",
   "profileTitle": "Profil",
