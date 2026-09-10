@@ -90,6 +90,33 @@ jobs:
       - name: SQL göçleri ve pgTAP plan sayıları
         run: python tools/check_sql.py
 
+      # Uygulama adı "Kimo" olarak kesinleşti (mağazada "Kimo: AI YKS").
+      # Eski ad üç ayrı biçimde geçiyordu (boşluklu, alt tireli ve camelCase)
+      # ve bir tanesini atlamak sessiz bir tutarsızlık bırakır — hukuki
+      # metinlerde B-12 olarak zaten bir uyumluluk bulgusuydu.
+      #
+      # NOT: ne bu yorum ne de desenin kendisi eski adı LİTERAL yazıyor —
+      # yazsaydı kapı kendi satırını yakalar ve muafiyet listesi şişerdi.
+      # Ayırıcı isteğe bağlı (`[ _-]?`) olduğu için tek desen üç varyantı da
+      # kapsıyor; ayrı bir "bitişik" alternatifi gereksiz ve o alternatif
+      # literal olacağı için kendi kendini yakalardı.
+      #
+      # İKİ MUAFİYET, ikisi de bilinçli:
+      #   • docs/task-*.md — tarihli çalışma raporları. Geçmişi yeniden
+      #     yazmak yanlış olur; o belgeler o günün gerçeğini anlatıyor.
+      #   • supabase/migrations/ — UYGULANMIŞ göçler. `send_push` üç kez
+      #     `create or replace` edildi; eski gövdeler geçmişte eski adı
+      #     yazıyor ve grep hangisinin YÜRÜRLÜKTE olduğunu bilemez. O soru
+      #     `supabase/tests/240_persona.sql` içinde katalogdan soruluyor:
+      #     canlı fonksiyon gövdelerinde eski ad geçmiyor.
+      - name: Eski uygulama adı kalmamış mı
+        run: |
+          if git grep -n -i -E "ai[ _-]?yks[ _-]?coach" \
+               -- . ':!docs/task-*.md' ':!supabase/migrations/*.sql'; then
+            echo "::error::Eski uygulama adı hâlâ geçiyor (yukarıdaki satırlar)."
+            exit 1
+          fi
+
   # ---------------------------------------------------------------------- Dart
   flutter:
     name: analyze + test

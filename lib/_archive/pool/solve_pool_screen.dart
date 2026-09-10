@@ -3,16 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'pool_repository.dart';
-import 'package:ai_yks_coach/data/question_send_repository.dart';
+import 'package:kimo/data/question_send_repository.dart';
 import 'public_question.dart';
-import 'package:ai_yks_coach/services/sound_service.dart';
-import 'package:ai_yks_coach/state/game_progress.dart';
-import 'package:ai_yks_coach/theme/app_colors.dart';
-import 'package:ai_yks_coach/widgets/drawing_canvas.dart';
-import 'package:ai_yks_coach/widgets/game_button.dart';
-import 'package:ai_yks_coach/widgets/mistake_photo.dart';
+import 'package:kimo/services/sound_service.dart';
+import 'package:kimo/state/game_progress.dart';
+import 'package:kimo/theme/app_colors.dart';
+import 'package:kimo/widgets/drawing_canvas.dart';
+import 'package:kimo/widgets/game_button.dart';
+import 'package:kimo/widgets/mistake_photo.dart';
 import 'report_question_sheet.dart';
-import 'package:ai_yks_coach/features/inbox/send_question_sheet.dart';
+import 'package:kimo/features/inbox/send_question_sheet.dart';
 
 /// Soru havuzu: başka öğrencilerin paylaştığı hataları rastgele çözdürür.
 /// Her sorunun üstünde sahibinin takma adı ve havuz istatistikleri görünür.

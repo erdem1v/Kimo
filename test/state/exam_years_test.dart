@@ -1,5 +1,5 @@
-import 'package:ai_yks_coach/features/reviews/domain/review_scheduler.dart';
-import 'package:ai_yks_coach/state/user_profile.dart';
+import 'package:kimo/features/reviews/domain/review_scheduler.dart';
+import 'package:kimo/state/user_profile.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Seçilebilir sınav yılları.

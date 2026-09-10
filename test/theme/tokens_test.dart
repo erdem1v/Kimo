@@ -1,6 +1,6 @@
-import 'package:ai_yks_coach/theme/app_theme.dart';
-import 'package:ai_yks_coach/theme/tokens.dart';
-import 'package:ai_yks_coach/theme/typography.dart';
+import 'package:kimo/theme/app_theme.dart';
+import 'package:kimo/theme/tokens.dart';
+import 'package:kimo/theme/typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

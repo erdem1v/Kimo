@@ -1,11 +1,11 @@
 {
-    "name": "ai_yks_coach",
-    "short_name": "ai_yks_coach",
+    "name": "Kimo",
+    "short_name": "Kimo",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "AI YKS Coach",
+    "description": "Kimo — YKS hata arşivi ve aralıklı tekrar",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

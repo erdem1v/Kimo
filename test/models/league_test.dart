@@ -1,4 +1,4 @@
-import 'package:ai_yks_coach/models/social.dart';
+import 'package:kimo/models/social.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

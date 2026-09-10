@@ -1,8 +1,8 @@
 {
   "@@locale": "tr",
-  "appTitle": "AI YKS Coach",
+  "appTitle": "Kimo",
   "@appTitle": {
-    "description": "Uygulama adı — görev yöneticisinde ve pencere başlığında görünür."
+    "description": "Uygulama adı — görev yöneticisinde ve pencere başlığında görünür. Mağaza listelemesi \"Kimo: AI YKS\", uygulamanın adı \"Kimo\" (maskotun adı)."
   },
   "navToday": "Bugün",
   "@navToday": {

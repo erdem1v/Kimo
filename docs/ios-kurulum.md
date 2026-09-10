@@ -113,7 +113,7 @@ Simülatör imza istemez, gerçek cihaz ister. Xcode'da
 1. Runner hedefi → **Signing & Capabilities**
 2. **Team**: Apple ID'nizi ekleyin (ücretsiz hesap yeterli; profil 7 günde
    dolar)
-3. **Bundle Identifier**: `com.stratejico.aiYksCoach` başkası tarafından
+3. **Bundle Identifier**: `com.stratejico.kimo` başkası tarafından
    alınmışsa benzersiz bir değerle değiştirin
 
 Depoda `DEVELOPMENT_TEAM` tanımlı değildir — bilinçli, çünkü kişiye özeldir.

@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:ai_yks_coach/data/notification_lines.dart';
-import 'package:ai_yks_coach/models/mascot.dart';
+import 'package:kimo/data/notification_lines.dart';
+import 'package:kimo/models/mascot.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

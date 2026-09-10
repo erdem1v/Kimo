@@ -18,7 +18,7 @@ import os
 import re
 import sys
 
-PACKAGE = 'ai_yks_coach'
+PACKAGE = 'kimo'
 ROOTS = ('lib', 'test')
 SKIP_DIR_MARKER = '_archive'
 

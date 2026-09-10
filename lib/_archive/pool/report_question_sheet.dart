@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'package:ai_yks_coach/data/question_send_repository.dart';
-import 'package:ai_yks_coach/models/report_reason.dart';
-import 'package:ai_yks_coach/services/sound_service.dart';
-import 'package:ai_yks_coach/theme/app_colors.dart';
-import 'package:ai_yks_coach/widgets/game_button.dart';
+import 'package:kimo/data/question_send_repository.dart';
+import 'package:kimo/models/report_reason.dart';
+import 'package:kimo/services/sound_service.dart';
+import 'package:kimo/theme/app_colors.dart';
+import 'package:kimo/widgets/game_button.dart';
 
 /// Havuz sorusunu şikayet etme alt sayfası. Gönderilirse true döner
 /// (çağıran ekran o soruyu atlar).

@@ -1,5 +1,5 @@
-name: ai_yks_coach
-description: "AI YKS Coach — YKS hata arşivi ve aralıklı tekrar uygulaması"
+name: kimo
+description: "Kimo — YKS hata arşivi ve aralıklı tekrar uygulaması"
 publish_to: 'none'
 version: 1.0.0+1
 

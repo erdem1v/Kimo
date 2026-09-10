@@ -1,4 +1,4 @@
-import 'package:ai_yks_coach/features/reviews/domain/review_scheduler.dart';
+import 'package:kimo/features/reviews/domain/review_scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

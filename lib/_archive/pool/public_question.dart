@@ -1,4 +1,4 @@
-import 'package:ai_yks_coach/models/models.dart';
+import 'package:kimo/models/models.dart';
 
 /// Havuzdaki bir soru: başka bir kullanıcının paylaşıma açtığı hatası ya da
 /// yüklediğimiz bir çıkmış soru. Sahibinden yalnızca takma ad taşınır

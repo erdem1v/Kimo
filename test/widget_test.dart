@@ -1,14 +1,14 @@
-import 'package:ai_yks_coach/app.dart';
-import 'package:ai_yks_coach/features/home/home_shell.dart';
-import 'package:ai_yks_coach/features/home/today_screen.dart';
-import 'package:ai_yks_coach/features/league/league_screen.dart';
-import 'package:ai_yks_coach/features/mistakes/mistakes_screen.dart';
-import 'package:ai_yks_coach/features/onboarding/welcome_screen.dart';
-import 'package:ai_yks_coach/features/profile/profile_screen.dart';
-import 'package:ai_yks_coach/l10n/generated/app_localizations.dart';
-import 'package:ai_yks_coach/state/app_settings.dart';
-import 'package:ai_yks_coach/theme/app_theme.dart';
-import 'package:ai_yks_coach/widgets/kit/kimo_nav_bar.dart';
+import 'package:kimo/app.dart';
+import 'package:kimo/features/home/home_shell.dart';
+import 'package:kimo/features/home/today_screen.dart';
+import 'package:kimo/features/league/league_screen.dart';
+import 'package:kimo/features/mistakes/mistakes_screen.dart';
+import 'package:kimo/features/onboarding/welcome_screen.dart';
+import 'package:kimo/features/profile/profile_screen.dart';
+import 'package:kimo/l10n/generated/app_localizations.dart';
+import 'package:kimo/state/app_settings.dart';
+import 'package:kimo/theme/app_theme.dart';
+import 'package:kimo/widgets/kit/kimo_nav_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,7 +23,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 ///     istemcisiyle doğrudan pompalıyor. Test ortamında HTTP her zaman 400
 ///     döner; ekranların tamamı ağ hatasını zaten yakalıyor (hata durumları
 ///     görünür ama yapı kurulur) — iddialar metne değil YAPIYA bakıyor.
-///  2. Tema/dil testi `AiYksCoachApp`'i pompalıyor; oturum olmadığı için
+///  2. Tema/dil testi `KimoApp`'i pompalıyor; oturum olmadığı için
 ///     karşılama ekranı açılır, iddialar `MaterialApp` özelliklerinde.
 ///
 /// **Metne göre değil YAPIYA göre iddia ediyor.** Önceki sürüm "Günlük Tekrar
@@ -152,7 +152,7 @@ void main() {
 
   testWidgets('Uygulama oturumsuz karşılama ekranına düşer; tema sistemi izler',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const AiYksCoachApp());
+    await tester.pumpWidget(const KimoApp());
     await tester.pump(const Duration(milliseconds: 32));
     await tester.pump(const Duration(milliseconds: 32));
 

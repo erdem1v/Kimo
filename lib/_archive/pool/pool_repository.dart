@@ -1,7 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:ai_yks_coach/data/question_send_repository.dart' show AnswerResult;
-import 'package:ai_yks_coach/data/submission_queue.dart';
+import 'package:kimo/data/question_send_repository.dart' show AnswerResult;
+import 'package:kimo/data/submission_queue.dart';
 
 import 'public_question.dart';
 

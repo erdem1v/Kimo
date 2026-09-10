@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:ai_yks_coach/data/sanction_repository.dart';
+import 'package:kimo/data/sanction_repository.dart';
 
 void main() {
   group('SanctionStatus.kind', () {

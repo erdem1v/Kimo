@@ -221,7 +221,7 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify({
           message: {
             token,
-            notification: { title: title || "AI YKS Coach", body },
+            notification: { title: title || "Kimo", body },
             data: { kind },
             android: {
               priority: "HIGH",

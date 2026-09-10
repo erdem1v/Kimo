@@ -1,4 +1,4 @@
-import 'package:ai_yks_coach/services/crash_service.dart';
+import 'package:kimo/services/crash_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 

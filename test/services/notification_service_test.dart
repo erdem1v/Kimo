@@ -1,4 +1,4 @@
-import 'package:ai_yks_coach/services/notification_service.dart';
+import 'package:kimo/services/notification_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Sessiz saat kaydırıcısının sözleşmesi: aralığa denk gelen hatırlatma

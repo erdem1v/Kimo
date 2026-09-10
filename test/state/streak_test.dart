@@ -1,4 +1,4 @@
-import 'package:ai_yks_coach/state/game_progress.dart';
+import 'package:kimo/state/game_progress.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Seri mantığı: art arda günlerde çözünce büyür, gün atlanınca sıfırlanır,

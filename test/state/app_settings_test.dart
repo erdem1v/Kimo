@@ -1,4 +1,4 @@
-import 'package:ai_yks_coach/state/app_settings.dart';
+import 'package:kimo/state/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';

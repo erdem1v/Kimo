@@ -11,8 +11,8 @@ import 'theme/app_theme.dart';
 /// Tema modu `AppSettings`'ten gelir ve varsayılanı **sistem**: cihaz koyu
 /// moddaysa uygulama koyu açılır, kullanıcı elle seçim yapana kadar sistemi
 /// takip eder.
-class AiYksCoachApp extends StatelessWidget {
-  const AiYksCoachApp({super.key});
+class KimoApp extends StatelessWidget {
+  const KimoApp({super.key});
 
   @override
   Widget build(BuildContext context) {

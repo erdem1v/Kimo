@@ -10,7 +10,7 @@ tasarlanması istenmiyor.
   yani buradaki kod `flutter analyze` sonucunu etkilemiyor.
 - Hiçbir canlı dosya buradan içe aktarma yapmıyor, dolayısıyla derlemeye de
   girmiyor (Dart yalnızca giriş noktasından erişilebilen kodu derler).
-- İçe aktarmalar `package:ai_yks_coach/...` biçimine çevrildi; böylece dosyalar
+- İçe aktarmalar `package:kimo/...` biçimine çevrildi; böylece dosyalar
   yerlerinden bağımsız çözümleniyor ve geri taşıma saf bir dosya taşımasına
   indi.
 

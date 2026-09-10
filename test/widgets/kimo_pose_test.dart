@@ -1,5 +1,5 @@
-import 'package:ai_yks_coach/widgets/kimo/kimo.dart';
-import 'package:ai_yks_coach/widgets/kimo/kimo_pose.dart';
+import 'package:kimo/widgets/kimo/kimo.dart';
+import 'package:kimo/widgets/kimo/kimo_pose.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Maskotun durum makinesi saf: zaman girdi olarak veriliyor, poz çıktı.

@@ -3,15 +3,15 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-import 'package:ai_yks_coach/data/progress_repository.dart';
+import 'package:kimo/data/progress_repository.dart';
 import '../pool/pool_repository.dart';
-import 'package:ai_yks_coach/data/yks_curriculum.dart';
-import 'package:ai_yks_coach/models/topic_progress.dart';
-import 'package:ai_yks_coach/services/sound_service.dart';
-import 'package:ai_yks_coach/state/user_profile.dart';
-import 'package:ai_yks_coach/theme/app_colors.dart';
-import 'package:ai_yks_coach/widgets/game_button.dart';
-import 'package:ai_yks_coach/widgets/mistake_style.dart';
+import 'package:kimo/data/yks_curriculum.dart';
+import 'package:kimo/models/topic_progress.dart';
+import 'package:kimo/services/sound_service.dart';
+import 'package:kimo/state/user_profile.dart';
+import 'package:kimo/theme/app_colors.dart';
+import 'package:kimo/widgets/game_button.dart';
+import 'package:kimo/widgets/mistake_style.dart';
 import '../pool/solve_pool_screen.dart';
 
 /// Müfredat haritası: seçilen dersin konuları yılankavi bir yol üzerinde

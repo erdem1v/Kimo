@@ -1,4 +1,4 @@
-import 'package:ai_yks_coach/models/topic_progress.dart';
+import 'package:kimo/models/topic_progress.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

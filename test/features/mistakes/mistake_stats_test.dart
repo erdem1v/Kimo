@@ -1,6 +1,6 @@
-import 'package:ai_yks_coach/features/mistakes/mistake_stats.dart';
-import 'package:ai_yks_coach/features/reviews/domain/review_scheduler.dart';
-import 'package:ai_yks_coach/models/models.dart';
+import 'package:kimo/features/mistakes/mistake_stats.dart';
+import 'package:kimo/features/reviews/domain/review_scheduler.dart';
+import 'package:kimo/models/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// "Hatalarım" ekranının gösterdiği her sayı burada iddia ediliyor.

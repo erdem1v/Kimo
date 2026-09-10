@@ -94,7 +94,7 @@ Future<void> _run() async {
     await reportError(e, st, context: 'notify.linesLoad');
   }
   unawaited(notificationLines.refresh());
-  runApp(const AiYksCoachApp());
+  runApp(const KimoApp());
 }
 
 /// Yayında build aşaması hatası gri kutu yerine dostane bir kart göstersin.

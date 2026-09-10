@@ -1,7 +1,7 @@
 import 'dart:ui' as ui;
 
-import 'package:ai_yks_coach/widgets/kit/kimo_icons.dart';
-import 'package:ai_yks_coach/widgets/kit/svg_path.dart';
+import 'package:kimo/widgets/kit/kimo_icons.dart';
+import 'package:kimo/widgets/kit/svg_path.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// İkonların geometrisi tasarımdan gelen SVG yol verisiyle tanımlı. Ayrıştırıcı

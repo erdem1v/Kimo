@@ -1,4 +1,4 @@
-# AI YKS Coach
+# Kimo
 
 YKS'ye hazırlanan lise öğrencileri için Türkçe bir **AI koçluk ve sınav
 hazırlık** uygulaması. Uygulamanın kalbi şu döngüdür:
@@ -64,8 +64,8 @@ bir junction** üzerinden erişip codegen'i oradan çalıştırın:
 
 ```bash
 # Yönetici GEREKMEZ:
-cmd /c mklink /J C:\aiyks "C:\Users\Taha Karagöz\Desktop\aiykscoach"
-cd C:\aiyks
+cmd /c mklink /J C:\kimo "C:\Users\Taha Karagöz\Desktop\kimo"
+cd C:\kimo
 dart run build_runner build
 ```
 

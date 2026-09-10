@@ -22,7 +22,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(27);
+select plan(30);
 
 select tests.create_supabase_user('alice');
 
@@ -174,6 +174,40 @@ select throws_ok(
 select lives_ok(
   $$select public.upsert_my_profile('Alice', 'sanayi_ustasi')$$,
   'geçerli persona yazılabiliyor'
+);
+
+-- ==================================== uygulama adı: canlı tanımda eski ad YOK
+-- Ad "Kimo" olarak kesinleşti (mağazada "Kimo: AI YKS"). Depo tarafında bir
+-- `git grep` kapısı var ama o, UYGULANMIŞ GÖÇ dosyalarını muaf tutmak zorunda:
+-- `send_push` üç kez `create or replace` edildi ve eski gövdeler geçmişte
+-- eski adı yazıyor. Grep onları ayırt edemez — hangi tanımın YÜRÜRLÜKTE
+-- olduğunu bilmez.
+--
+-- Bu iddia tam olarak onu soruyor: katalogdaki CANLI fonksiyon gövdelerinde
+-- eski ad geçmiyor. Yani "eski ad kaldı mı" sorusu dosya metnine değil
+-- veritabanının kendisine soruluyor. Bildirim başlığı minörlere giden bir
+-- kanal; yanlış marka adı orada görünür.
+select is(
+  (select count(*)::int
+     from pg_proc p
+     join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.prosrc ilike '%yks coach%'),
+  0,
+  'canlı fonksiyon gövdelerinin hiçbirinde eski uygulama adı yok'
+);
+
+-- AŞIRI KİLİTLEME KARŞI-İDDİASI: yukarıdaki sayım fonksiyonlar SİLİNSE de
+-- sıfır dönerdi. Bu satır bildirim yolunun hâlâ ayakta olduğunu söylüyor —
+-- ve başlıkların hiçbirinin eski adı taşımadığını.
+select is(
+  (select count(*)::int from public.push_kinds where title ilike '%yks coach%'),
+  0,
+  'bildirim başlıklarında eski uygulama adı yok'
+);
+select ok(
+  (select count(*) from public.push_kinds where coalesce(title, '') <> '') = 10,
+  'on senaryonun da başlığı yerinde (send_push yedeği yalnız boşlukta devreye girer)'
 );
 
 select * from finish();

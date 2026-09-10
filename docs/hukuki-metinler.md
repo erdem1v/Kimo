@@ -4,7 +4,15 @@
 üretildi; içindeki her veri/aktarım ifadesinin arkasında bir dosya:satır dayanağı
 var. Köşeli parantezli alanlar (`[şirket unvanı]` gibi) siz doldurana kadar boş.
 
-**Sürüm:** 1.1 · **Hazırlanma tarihi:** [tarih] · **Dayanak commit:** `3f9c4ba`
+**Sürüm:** 1.2 · **Hazırlanma tarihi:** [tarih] · **Dayanak commit:** `2aa8d4a`
+
+> **1.2'de ne değişti (Task 09).** Uygulama adı kesinleşti ve metinlere
+> işlendi: mağaza listelemesi **"Kimo: AI YKS"**, uygulamanın adı **"Kimo"**.
+> Metinlerdeki yedi `[uygulama adı]` yer tutucusu dolduruldu ve **B-12 bayrağı
+> kapandı** — depo, bildirim başlığı ve belgeler artık tek isimde. Metin
+> HÜKÜMLERİNDE değişiklik yok; bu sürüm bir *tamamlama*, taraf
+> yükümlülüklerinde bir değişiklik değil. Yine de `app_config.legal_version`
+> **1.2** yapılmalı: onay kayıtları o değeri damgalıyor.
 
 > **1.1'de ne değişti (Task 07).** Üç ürün kararı metinlere işlendi:
 > **(a) veli onayı rejimi tümüyle kaldırıldı** — mekanizma zaten hiç
@@ -723,7 +731,7 @@ uyumsuzluğuna dönüşür. Hepsi aşağıdaki metinlerde karşılandı.
 | B-9 | Moderasyon için bir süre taahhüdü (SLA) verilmiyor — bu bilinçli bir karar (`20260902000600_blocks_and_reports.sql:15-18`) | Kullanım Koşulları §9 "makul süre" ifadesiyle |
 | B-10 | EXIF/konum temizleme garanti edilmiyor | Hiçbir metinde temizlik iddia edilmedi; Kullanım Koşulları §5 kullanıcıyı uyarıyor |
 | B-11 | Alıcının gelen kutusundan "sil"i satırı silmiyor, yalnızca gizliyor | Gizlilik Politikası §8 |
-| B-12 | Uygulama adı tutarsız: depo "Kimo", bildirim varsayılan başlığı "AI YKS Coach" (`send-push/index.ts:224`), README "AI YKS Coach" | Yayından önce tek isimde birleştirin; belgelerde `[uygulama adı]` yer tutucusu bırakıldı |
+| B-12 | ~~Uygulama adı tutarsız~~ — **KAPANDI (sürüm 1.2).** Ad "Kimo" olarak kesinleşti; görünen ad, bildirim yedek başlığı, paket kimliği (`com.stratejico.kimo`), README ve bu belgedeki sekiz yer tutucu tek isimde birleştirildi. Mağaza listelemesi "Kimo: AI YKS" | Kapandı; CI'daki tarama kapısı eski varyantın geri gelmesini engelliyor |
 
 ## C · Depo dışından doğrulanması gerekenler
 
@@ -855,9 +863,9 @@ tutarsızlık sayılmaz.**
 
 ---
 
-## [uygulama adı] — Kişisel Verilerin Korunması Hakkında Aydınlatma Metni
+## Kimo — Kişisel Verilerin Korunması Hakkında Aydınlatma Metni
 
-**Son güncelleme:** [tarih] · **Sürüm:** 1.1
+**Son güncelleme:** [tarih] · **Sürüm:** 1.2
 
 Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu'nun ("KVKK") 10.
 maddesi uyarınca hazırlanmıştır. Amacı, uygulamayı kullandığınızda hangi
@@ -877,7 +885,7 @@ hem velisinin okuyabileceği bir dille yazdık. Anlamadığınız bir yer olursa
 | **E-posta** | [iletişim e-postası] |
 | **KEP adresi** | [KEP adresi] |
 | **VERBİS kaydı** | [VERBİS kayıt bilgisi / "kayıt yükümlülüğümüz bulunmamaktadır"] |
-| **Uygulama** | [uygulama adı] (iOS ve Android) |
+| **Uygulama** | Kimo (iOS ve Android) |
 
 ### 2. Hangi bilgilerinizi işliyoruz?
 
@@ -1176,11 +1184,11 @@ ayrıca bilgilendiririz.
 
 ---
 
-## [uygulama adı] Gizlilik Politikası
+## Kimo Gizlilik Politikası
 
-**Son güncelleme:** [tarih] · **Sürüm:** 1.1
+**Son güncelleme:** [tarih] · **Sürüm:** 1.2
 
-[uygulama adı], YKS'ye hazırlanan öğrenciler için bir çalışma uygulamasıdır.
+Kimo, YKS'ye hazırlanan öğrenciler için bir çalışma uygulamasıdır.
 Kullanıcılarımızın çoğu lise öğrencisi olduğu için bu metni kısa ve anlaşılır
 tutmaya çalıştık.
 
@@ -1416,13 +1424,13 @@ bilgilendiririz. Sayfanın en üstündeki tarih son güncelleme tarihidir.
 
 ---
 
-## [uygulama adı] Kullanım Koşulları
+## Kimo Kullanım Koşulları
 
-**Yürürlük tarihi:** [tarih] · **Sürüm:** 1.1
+**Yürürlük tarihi:** [tarih] · **Sürüm:** 1.2
 
 ### 1. Bu sözleşme kim ile kim arasında?
 
-Bu koşullar, [uygulama adı] uygulamasını işleten **[şirket unvanı]**
+Bu koşullar, Kimo uygulamasını işleten **[şirket unvanı]**
 ("biz", "Şirket") ile uygulamayı kullanan siz ("kullanıcı", "siz") arasındaki
 sözleşmedir.
 
@@ -1436,7 +1444,7 @@ taleplerinizin muhatabı biziz.
 
 ### 2. Uygulama ne yapıyor?
 
-[uygulama adı], YKS'ye hazırlanan öğrenciler için bir çalışma uygulamasıdır.
+Kimo, YKS'ye hazırlanan öğrenciler için bir çalışma uygulamasıdır.
 Kısaca:
 
 - Yanlış yaptığınız soruyu fotoğraflarsınız.
@@ -1993,5 +2001,6 @@ Bu belge tek başına yayına yetmez. Sıra:
 ---
 
 *Bu belgenin 1.0 sürümü kod tabanının `5bbe43c` hâline dayanıyordu; 1.1 sürümü
-Task 07 sonrası (`3f9c4ba`) hâle göre revize edildi. Kod değiştiğinde, özellikle
-§1 envanteri ve §3 form cevapları yeniden gözden geçirilmelidir.*
+Task 07 sonrası (`3f9c4ba`), 1.2 sürümü Task 09 sonrası (`2aa8d4a`) hâle göre
+revize edildi. Kod değiştiğinde, özellikle §1 envanteri ve §3 form cevapları
+yeniden gözden geçirilmelidir.*

@@ -1,4 +1,4 @@
-package com.stratejico.ai_yks_coach
+package com.stratejico.kimo
 
 import android.content.Intent
 import android.net.Uri
