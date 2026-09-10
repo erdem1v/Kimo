@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/auth_repository.dart';
 import '../../data/notification_lines.dart';
 import '../../data/daily_state_repository.dart';
+import '../../services/legal_links.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/mascot.dart';
 import '../../services/notification_service.dart';
@@ -21,16 +23,19 @@ import '../capture/capture_screen.dart';
 import 'age_gate_step.dart';
 import 'persona_card.dart';
 
-/// Karşılama akışı — **on bir adımdan beşe**.
+/// Karşılama akışı.
 ///
-/// Adımlar: yaş kapısı · takma ad + sınav yılı · maskot · bildirim · kayıt.
+/// Adımlar: (ilk çekim) · yaş kapısı · takma ad + sınav yılı · persona ·
+/// bildirim · (kayıt). Parantezliler yalnızca anonim oturumdan gelenler için.
 /// Kaldırılanlar: üç "nasıl çalışır" anlatım sayfası (ürünün kendisi zaten
-/// anlatıyor: çekim ekranı ne yapacağını, cevap paneli tekrarın ne zaman
-/// geleceğini söylüyor) ve "merhaba" sayfası (karşılama ekranına taşındı).
+/// anlatıyor), "merhaba" sayfası (karşılama ekranına taşındı) ve e-posta
+/// doğrulama adımı (Task 06).
 ///
 /// **Kayıt SONDA.** Anonim oturumla gelen kullanıcı ilk yanlışını çoktan
 /// çekmiş oluyor; son adımda `updateUser` ile aynı `uid` kalıcı hesaba
-/// dönüşüyor, yani taşınacak veri yok.
+/// dönüşüyor, yani taşınacak veri yok. Koşul onayının kayıt adımında
+/// alınabilmesinin nedeni de bu: `auth.uid()` o an ZATEN var ve dönüşümde
+/// değişmiyor, yani onay doğru hesaba yazılıyor.
 class OnboardingFlow extends StatefulWidget {
   const OnboardingFlow({super.key, required this.onDone});
 
@@ -55,7 +60,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   Mascot? _mascot;
   bool? _notify;
   bool _saving = false;
-  GuardianStatus? _guardian;
+  AgeStatus? _age;
+
+  /// Kullanım Koşulları ve Gizlilik Politikası kabul edildi mi (Apple 1.2).
+  bool _termsAccepted = false;
 
   static const List<int> _examYears = <int>[2026, 2027, 2028, 2029, 2030];
 
@@ -93,7 +101,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     _nickname.addListener(() => setState(() {}));
     _password.addListener(() => setState(() {}));
     _email.addListener(() => setState(() {}));
-    _loadGuardian();
+    _loadAge();
   }
 
   @override
@@ -105,9 +113,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     super.dispose();
   }
 
-  Future<void> _loadGuardian() async {
-    final GuardianStatus? s = await dailyStateRepository.guardianStatus();
-    if (mounted) setState(() => _guardian = s);
+  Future<void> _loadAge() async {
+    final AgeStatus? s = await dailyStateRepository.ageStatus();
+    if (mounted) setState(() => _age = s);
   }
 
   _Step get _current => _steps[_index];
@@ -116,24 +124,21 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   /// Adım tamamlanabilir mi.
   ///
-  /// **Yaş kapısı ilerlemeyi ENGELLEMİYOR.** Doğum yılı yazıldıysa geçilir;
-  /// veli onayı beklemek bir engel değil — onay yalnızca arkadaş eklemeyi
-  /// kapatıyor ve o kısıt SUNUCUDA (`can_add_friends`). Kullanıcıyı burada
-  /// bekletmek, veliye ulaşamayan bir öğrenciyi uygulamadan tamamen dışarıda
-  /// bırakırdı.
+  /// **YAŞ KAPISI ARTIK ZORUNLU (Task 07).** Eskiden durum okunamadığında
+  /// (ağ hatası) geçişe izin veriliyordu; gerekçe "atlayan kullanıcı sunucuda
+  /// reşit olmayan sayılır, arkadaş ekleme kapalı kalır"dı. Veli onayı
+  /// kalkınca o kapalı taraf da kalktı ve bypass, 13 yaş sınırını atlatan bir
+  /// deliğe dönüştü. Artık yıl yazılmadan ilerlenmiyor; ağ hatasında kullanıcı
+  /// "Kaydet"e yeniden basıyor ve nedenini görüyor.
   bool get _canContinue => switch (_current) {
         _Step.firstCapture => true,
-        // Durum OKUNAMADIYSA (ağ hatası, ilk yükleme sürüyor) ilerlemeye
-        // izin veriliyor. Bu bir boşluk değil: `is_minor_now` bilinmeyen
-        // doğum yılını REŞİT OLMAYAN sayıyor, yani atlayan kullanıcıda
-        // arkadaş ekleme sunucuda kapalı kalıyor. Kilitlenmek ise gerçekten
-        // zarar verirdi — kullanıcı uygulamaya hiç giremezdi.
-        _Step.age => _guardian == null || _guardian!.birthYearSet,
+        _Step.age => _age?.birthYearSet ?? false,
         _Step.profile => _nickname.text.trim().length >= 2 && _year != null,
         // Ön seçili geldiği için kilitlenmez; sürtünme eklemeden geçilir.
         _Step.mascot => true,
         _Step.notifications => _notify != null,
-        _Step.signUp => _emailOk && _passwordOk,
+        // Onay verilmeden kayıt TAMAMLANMIYOR (Apple 1.2).
+        _Step.signUp => _emailOk && _passwordOk && _termsAccepted,
       };
 
   bool get _emailOk {
@@ -199,7 +204,13 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   /// Anonim oturumu kalıcıya çevirir. **Yeni hesap AÇMIYOR**: `uid` aynı
   /// kalıyor, dolayısıyla çekilen fotoğraf, kaydedilen soru ve onay kaydı
   /// olduğu yerde duruyor.
+  ///
+  /// SIRA ÖNEMLİ: koşul onayı ÖNCE deftere yazılıyor, hesap SONRA kalıcı
+  /// oluyor. Ters sırada, onay yazımı başarısız olsaydı ortada onayı olmayan
+  /// kalıcı bir hesap kalırdı — "onay verilmeden kayıt tamamlanmasın"
+  /// şartının gerçek karşılığı bu. Onay hatası yutulmuyor.
   Future<void> _register() async {
+    await dailyStateRepository.acceptLegalTerms();
     await authRepository.convertToPermanent(
       email: _email.text.trim(),
       password: _password.text,
@@ -282,7 +293,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   Widget _page(BuildContext context, L10n l) {
     return switch (_current) {
       _Step.firstCapture => _firstCapturePage(context, l),
-      _Step.age => AgeGateStep(status: _guardian, onChanged: _loadGuardian),
+      _Step.age => AgeGateStep(status: _age, onChanged: _loadAge),
       _Step.profile => _profilePage(context, l),
       _Step.mascot => _mascotPage(context, l),
       _Step.notifications => _notifyPage(context, l),
@@ -485,6 +496,68 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             ),
           ),
         ),
+        const SizedBox(height: Gap.lg),
+        _termsRow(context, l),
+      ],
+    );
+  }
+
+  /// Koşul ve gizlilik onayı (Apple 1.2 · hukuki denetim A-4).
+  ///
+  /// Kutu ÖN SEÇİLİ DEĞİL ve "Kaydol" düğmesi işaretlenene kadar pasif:
+  /// önceden işaretlenmiş bir onay kutusu onay sayılmaz.
+  ///
+  /// İki metin AYRI AYRI tıklanabilir. Adres verilmemişse (henüz
+  /// yayınlanmadıysa) o parça düz metin olarak kalıyor — kırık bir bağlantı
+  /// göstermek, bağlantı göstermemekten kötü.
+  Widget _termsRow(BuildContext context, L10n l) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+
+    TextSpan link(String label, String url) {
+      if (!LegalLinks.has(url)) {
+        return TextSpan(text: label, style: t.captionStrong);
+      }
+      return TextSpan(
+        text: label,
+        style: t.captionStrong.copyWith(
+          color: c.actionText,
+          decoration: TextDecoration.underline,
+        ),
+        recognizer: TapGestureRecognizer()
+          ..onTap = () {
+            sound.tap();
+            unawaited(openLegalUrl(url));
+          },
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Checkbox(
+          value: _termsAccepted,
+          onChanged: (bool? v) {
+            sound.tap();
+            setState(() => _termsAccepted = v ?? false);
+          },
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: Gap.sm),
+            child: Text.rich(
+              TextSpan(
+                style: t.caption.copyWith(color: c.inkSecondary),
+                children: <InlineSpan>[
+                  link(l.consentTermsLink, LegalLinks.terms),
+                  TextSpan(text: l.consentJoin),
+                  link(l.consentPrivacyLink, LegalLinks.privacy),
+                  TextSpan(text: l.consentTail),
+                ],
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -516,6 +589,4 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     return l.actionContinue;
   }
 
-  // NOT: doğrulama adımında geri düğmesi kayıt adımına döner (varsayılan
-  // _back davranışı) — "adresi değiştir" ile aynı yol; ayrıca engellemiyoruz.
 }

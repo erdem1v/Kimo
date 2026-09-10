@@ -449,12 +449,10 @@ verify_jwt = true
 [functions.scan-photos]
 verify_jwt = true
 
-# Veli onayi. KIMLIKSIZ ve bu ZORUNLU: velinin hesabi yok, olmasi da
-# beklenmiyor. Guvenlik token'in kendisinde: 32 bayt rastgele, veritabaninda
-# yalnizca SHA-256 hash'i, tek kullanimlik, 7 gun gecerli. Fonksiyon token'i
-# yalnizca tasiyor; dogrulama `confirm_guardian_consent` icinde.
-[functions.guardian-confirm]
-verify_jwt = false
+# NOT (Task 07 / goc 0063): `guardian-confirm` KALDIRILDI. Veli onayi rejimi
+# tumuyle cikarildi (13+ konumlandirmasi); fonksiyon, `guardian_requests`
+# tablosu ve `profiles.guardian_email` sutunu dustu. Bu blok da onlarla
+# birlikte silindi ki `supabase functions deploy` artik onu aramasin.
 
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"

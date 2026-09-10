@@ -42,7 +42,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _isAdmin = false;
-  GuardianStatus? _guardian;
+  AgeStatus? _age;
 
   @override
   void initState() {
@@ -54,14 +54,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Bağımsız iki sorgu: paralel (Task 03, 10.2 deseni).
     final List<Object?> parts = await Future.wait<Object?>(<Future<Object?>>[
       moderationRepository.isAdmin(),
-      dailyStateRepository.guardianStatus(),
+      dailyStateRepository.ageStatus(),
     ]);
     final bool admin = parts[0]! as bool;
-    final GuardianStatus? g = parts[1] as GuardianStatus?;
+    final AgeStatus? age = parts[1] as AgeStatus?;
     if (!mounted) return;
     setState(() {
       _isAdmin = admin;
-      _guardian = g;
+      _age = age;
     });
   }
 
@@ -154,7 +154,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
               const SizedBox(height: Gap.sm),
-              _guardianRow(context, l),
+              _birthYearRow(context, l),
               const SizedBox(height: Gap.sm),
               // Veri aktarımı bildirimi ve hukuki metinlerin yuvası (Task 03).
               _row(
@@ -492,22 +492,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ----------------------------------------------------------------- hesap
 
-  Widget _guardianRow(BuildContext context, L10n l) {
-    final GuardianStatus? g = _guardian;
-    final String? value = g == null
-        ? null
-        : !g.birthYearSet
-            ? l.settingsBirthYearUnset
-            : g.consentGranted
-                ? l.ageGuardianGranted
-                : g.isMinor
-                    ? l.guardianStatusNeeded
-                    : l.settingsBirthYear;
+  /// Doğum yılı durumu. Yılın KENDİSİ gösterilmiyor — sunucu da döndürmüyor
+  /// (`my_age_status`); satırın tek işi yaş kapısının tamamlandığını söylemek.
+  ///
+  /// Task 07: veli onayı satırının yerini aldı. Yaş artık hiçbir özelliği
+  /// kapatmıyor, dolayısıyla burada gösterilecek bir "bekleniyor" durumu yok.
+  Widget _birthYearRow(BuildContext context, L10n l) {
+    final AgeStatus? a = _age;
     return _row(
       context,
       icon: KimoIcons.lock,
-      label: (g?.isMinor ?? false) ? l.settingsGuardian : l.settingsBirthYear,
-      value: value,
+      label: l.settingsBirthYear,
+      value: a == null
+          ? null
+          : (a.birthYearSet ? l.ageWriteOnceNote : l.settingsBirthYearUnset),
     );
   }
 

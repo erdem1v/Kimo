@@ -147,6 +147,46 @@ class ModerationRepository {
     );
   }
 
+  /// Bir kullanıcının yaptırım geçmişi ve ihlal sayaçları.
+  ///
+  /// Yetki SUNUCUDA doğrulanıyor (`is_admin()`); yönetici olmayan çağıran boş
+  /// liste alır, hata almaz — `admin_flagged_photos` ile aynı desen.
+  Future<List<UserSanction>> userSanctions(String userId) async {
+    final dynamic rows = await _client.rpc<dynamic>(
+      'admin_user_sanctions',
+      params: <String, dynamic>{'p_user': userId},
+    );
+    if (rows is! List) return const <UserSanction>[];
+    return <UserSanction>[
+      for (final dynamic r in rows)
+        UserSanction.fromRow((r as Map).cast<String, dynamic>()),
+    ];
+  }
+
+  /// Kullanıcıyı askıya alır, yasaklar ya da yaptırımı kaldırır.
+  ///
+  /// [days] yalnızca `suspend` için anlamlı; verilmezse askı SÜRESİZ olur
+  /// (yönetici kaldırana kadar). Hata YUTULMUYOR: yaptırım kararının sessizce
+  /// düşmesi, verilmemiş olmasından kötü.
+  Future<void> sanctionUser(
+    String userId, {
+    required String action,
+    int? days,
+    String reason = 'abuse',
+    String? note,
+  }) async {
+    await _client.rpc<void>(
+      'admin_suspend_user',
+      params: <String, dynamic>{
+        'p_user': userId,
+        'p_action': action,
+        'p_days': days,
+        'p_reason': reason,
+        'p_note': note,
+      },
+    );
+  }
+
   /// Nesnesi hâlâ duran kaldırılmış içerikler (yarım kalan temizlikler).
   Future<List<({String mistakeId, String photoPath})>> pendingPurges() async {
     final List<dynamic> rows =
@@ -167,6 +207,7 @@ final ModerationRepository moderationRepository = ModerationRepository.instance;
 class FlaggedPhoto {
   const FlaggedPhoto({
     required this.mistakeId,
+    required this.ownerId,
     required this.photoPath,
     required this.subject,
     required this.concept,
@@ -174,6 +215,12 @@ class FlaggedPhoto {
   });
 
   final String mistakeId;
+
+  /// Yaptırım kararı KULLANICIYA veriliyor, içeriğe değil (Task 07): kuyruk
+  /// satırından doğrudan askıya alabilmek için sahibin kimliği gerekli.
+  /// `admin_flagged_photos` bunu zaten döndürüyordu, model taşımıyordu.
+  final String ownerId;
+
   final String? photoPath;
   final String subject;
   final String concept;
@@ -181,12 +228,65 @@ class FlaggedPhoto {
 
   factory FlaggedPhoto.fromRow(Map<String, dynamic> row) => FlaggedPhoto(
         mistakeId: row['mistake_id'] as String,
+        ownerId: (row['owner_id'] as String?) ?? '',
         photoPath: row['photo_path'] as String?,
         subject: (row['subject'] as String?) ?? '',
         concept: (row['concept'] as String?) ?? '',
         flaggedAt: row['flagged_at'] is String
             ? DateTime.tryParse(row['flagged_at'] as String)
             : null,
+      );
+}
+
+/// Bir kullanıcının yaptırım defterindeki tek satır (`admin_user_sanctions`).
+class UserSanction {
+  const UserSanction({
+    required this.action,
+    required this.source,
+    required this.reasonCode,
+    required this.createdAt,
+    required this.violations180d,
+    required this.violationsAll,
+    this.until,
+    this.note,
+    this.voidedAt,
+  });
+
+  /// suspend · ban · lift
+  final String action;
+
+  /// auto_photo (tarama) · admin (elle)
+  final String source;
+
+  final String reasonCode;
+  final DateTime createdAt;
+
+  /// Otomatik eşiğin baktığı 180 günlük pencere sayacı.
+  final int violations180d;
+
+  /// Ömür boyu sayaç. Otomatik karar pencereye bakıyor; İNSAN kararı tam
+  /// geçmişi görebilmeli — ikisi bilerek ayrı.
+  final int violationsAll;
+
+  final DateTime? until;
+  final String? note;
+  final DateTime? voidedAt;
+
+  bool get voided => voidedAt != null;
+
+  static DateTime? _at(Object? v) =>
+      v is String ? DateTime.tryParse(v)?.toLocal() : null;
+
+  factory UserSanction.fromRow(Map<String, dynamic> row) => UserSanction(
+        action: (row['action'] as String?) ?? '',
+        source: (row['source'] as String?) ?? '',
+        reasonCode: (row['reason_code'] as String?) ?? '',
+        createdAt: _at(row['created_at']) ?? DateTime.now(),
+        violations180d: (row['violations_180d'] as num?)?.toInt() ?? 0,
+        violationsAll: (row['violations_all'] as num?)?.toInt() ?? 0,
+        until: _at(row['until']),
+        note: row['note'] as String?,
+        voidedAt: _at(row['voided_at']),
       );
 }
 

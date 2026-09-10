@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/daily_state_repository.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -9,19 +10,29 @@ import '../../widgets/kit/kimo_button.dart';
 import '../../widgets/kit/kimo_chips.dart';
 import '../../widgets/kit/kimo_surfaces.dart';
 
-/// 3b — Yaş kapısı.
+/// Yaş kapısı.
 ///
 /// **Yalnızca doğum YILI toplanıyor.** Tam doğum tarihi gereğinden fazla
 /// kişisel veri ve yaş sınırını uygulamak için gerekmiyor. Yıl bir kez
-/// yazılıyor (`set_birth_year` ikinci çağrıyı `22023` ile reddediyor): 18 altı
-/// bir kullanıcının kısıtı aşmak için yılı değiştirmesini engelliyor.
+/// yazılıyor (`set_birth_year` ikinci çağrıyı reddediyor).
 ///
 /// Reşitlik SAKLANMIYOR, türetiliyor (`is_minor_now`). Bir sonraki doğum günü
 /// geldiğinde kimsenin bir alanı güncellemesi gerekmiyor.
 ///
-/// Veli onayı **yalnızca arkadaş eklemeyi** kapatıyor. Kaydetme, tekrar, lig,
-/// gelen kutusu — hepsi açık. Onay beklemek bir ceza değil; kapatılan tek şey
-/// tanımadığın biriyle temas kurma yolu.
+/// **TASK 07 — iki değişiklik.**
+///
+/// 1. Veli onayı kaldırıldı. 13-17 yaş için hukuken zorunlu değil ve mekanizma
+///    zaten hiç çalışmamıştı (onay bağlantısındaki parametre adı uyuşmuyordu).
+///    Yaş artık HİÇBİR özelliği kapatmıyor; yalnızca 13 sınırı için soruluyor.
+///
+/// 2. 13 yaş alt sınırı sunucuda zorlanıyor. Çark aralığı BİLEREK
+///    daraltılmadı: yalnızca geçerli yılları göstermek kapıyı ortadan
+///    kaldırırdı — kullanıcı reddedilmez, sadece yalan söylerdi. Nötr yaş
+///    kapısının davranışı budur: yıl serbestçe girilir, sunucu reddeder ve
+///    kullanıcı NEDEN reddedildiğini öğrenir.
+///
+/// Reddedilen deneme bir YAZMA değil, dolayısıyla hesap kilitlenmiyor;
+/// kullanıcı tek yazımlık hakkını da kaybetmiyor.
 class AgeGateStep extends StatefulWidget {
   const AgeGateStep({
     super.key,
@@ -30,9 +41,9 @@ class AgeGateStep extends StatefulWidget {
   });
 
   /// Sunucudan okunan güncel durum. `null` = henüz okunmadı.
-  final GuardianStatus? status;
+  final AgeStatus? status;
 
-  /// Yıl ya da onay durumu değiştiğinde akış yeniden okusun diye.
+  /// Yıl kaydedildiğinde akış yeniden okusun diye.
   final Future<void> Function() onChanged;
 
   @override
@@ -40,11 +51,11 @@ class AgeGateStep extends StatefulWidget {
 }
 
 class _AgeGateStepState extends State<AgeGateStep> {
-  final TextEditingController _email = TextEditingController();
-
   int? _year;
-  bool _savingYear = false;
-  bool _sending = false;
+  bool _saving = false;
+
+  /// 13 yaşından küçük olduğu için reddedildi. Ekranda nazik açıklama çıkıyor.
+  bool _tooYoung = false;
 
   /// Yaş kapısının kapsadığı aralık. Alt sınır 1990: daha eskisi bu üründe
   /// gerçekçi değil ve uzun bir çark kaydırmayı zorlaştırıyor.
@@ -52,67 +63,39 @@ class _AgeGateStepState extends State<AgeGateStep> {
 
   int get _maxYear => DateTime.now().year;
 
-  @override
-  void dispose() {
-    _email.dispose();
-    super.dispose();
-  }
-
-  /// Girilen yıla göre reşit mi. Sunucu da aynı hesabı yapıyor
-  /// (`is_minor_now`); buradaki yalnızca formu şekillendiriyor.
-  bool get _minorByInput {
-    final int? y = _year;
-    if (y == null) return false;
-    return _maxYear - y < 18;
-  }
-
-  bool get _minor => widget.status?.isMinor ?? _minorByInput;
   bool get _yearSet => widget.status?.birthYearSet ?? false;
+
+  // 13 SINIRININ İSTEMCİ KOPYASI YOK — bilinçli. Kotada olduğu gibi: sınırın
+  // iki yerde yaşaması, birinin sessizce eskimesi demek. Çark her yılı
+  // gösteriyor, kararı `set_birth_year` veriyor ve reddini AYRI bir SQLSTATE
+  // ile bildiriyor; buradaki tek iş o cevabı nazik bir ekrana çevirmek.
 
   Future<void> _saveYear() async {
     final int? y = _year;
-    if (y == null || _savingYear) return;
+    if (y == null || _saving) return;
     final L10n l = L10n.of(context);
-    setState(() => _savingYear = true);
+    setState(() {
+      _saving = true;
+      _tooYoung = false;
+    });
     try {
       await dailyStateRepository.setBirthYear(y);
       await widget.onChanged();
+    } on PostgrestException catch (e) {
+      // Sunucu 13 sınırını AYRI bir SQLSTATE ile bildiriyor: "geçersiz yıl"
+      // ile "çok küçüksün" iki farklı ekran gerektiriyor.
+      if (e.code == DailyStateRepository.tooYoungCode) {
+        if (mounted) setState(() => _tooYoung = true);
+      } else {
+        debugPrint('doğum yılı kaydedilemedi: $e');
+        if (mounted) _snack(l.ageSaveFailed);
+      }
     } catch (e) {
       debugPrint('doğum yılı kaydedilemedi: $e');
       if (mounted) _snack(l.ageSaveFailed);
     } finally {
-      if (mounted) setState(() => _savingYear = false);
+      if (mounted) setState(() => _saving = false);
     }
-  }
-
-  Future<void> _sendGuardian() async {
-    final String email = _email.text.trim();
-    final L10n l = L10n.of(context);
-    if (!_looksLikeEmail(email)) {
-      _snack(l.ageGuardianInvalid);
-      return;
-    }
-    if (_sending) return;
-    setState(() => _sending = true);
-    try {
-      await dailyStateRepository.requestGuardianConsent(email);
-      await widget.onChanged();
-      if (mounted) _snack(l.ageGuardianSent);
-    } catch (e) {
-      debugPrint('veli onayı istenemedi: $e');
-      if (mounted) _snack(l.ageGuardianFailed);
-    } finally {
-      if (mounted) setState(() => _sending = false);
-    }
-  }
-
-  /// Kaba biçim kontrolü. Adresin GERÇEK olup olmadığını yalnızca gönderilen
-  /// e-postanın tıklanması kanıtlıyor; burada amaç bariz yazım hatasını
-  /// kullanıcıya erken söylemek.
-  static bool _looksLikeEmail(String v) {
-    final int at = v.indexOf('@');
-    final int dot = v.lastIndexOf('.');
-    return at > 0 && dot > at + 1 && dot < v.length - 1 && !v.contains(' ');
   }
 
   void _snack(String message) {
@@ -138,8 +121,8 @@ class _AgeGateStepState extends State<AgeGateStep> {
           Row(
             children: <Widget>[
               StatusBadge(
-                label: _minor ? l.guardianStatusMinor : l.ageWriteOnceNote,
-                tone: _minor ? BadgeTone.pending : BadgeTone.mastered,
+                label: l.ageWriteOnceNote,
+                tone: BadgeTone.mastered,
               ),
             ],
           )
@@ -155,15 +138,36 @@ class _AgeGateStepState extends State<AgeGateStep> {
             label: l.actionSave,
             expand: false,
             minHeight: Sizes.rowMin,
-            onPressed: (_year == null || _savingYear) ? null : _saveYear,
+            onPressed: (_year == null || _saving) ? null : _saveYear,
           ),
-        ],
-
-        if (_yearSet && _minor) ...<Widget>[
-          const SizedBox(height: Gap.xl),
-          _guardianCard(context, l),
+          if (_tooYoung) ...<Widget>[
+            const SizedBox(height: Gap.lg),
+            _tooYoungCard(context, l),
+          ],
         ],
       ],
+    );
+  }
+
+  /// 13 yaş altı reddi. Suçlayıcı DEĞİL: kullanıcı yanlış bir şey yapmadı,
+  /// yalnızca ürün ona uygun değil. Kapı kapanmıyor — büyüyünce dönebilir.
+  Widget _tooYoungCard(BuildContext context, L10n l) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return KimoCard(
+      color: c.honeyTint,
+      elevated: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            l.ageTooYoungTitle,
+            style: t.bodyStrong.copyWith(color: c.honeyText),
+          ),
+          const SizedBox(height: Gap.xs),
+          Text(l.ageTooYoungBody, style: t.caption),
+        ],
+      ),
     );
   }
 
@@ -185,7 +189,10 @@ class _AgeGateStepState extends State<AgeGateStep> {
         physics: const FixedExtentScrollPhysics(),
         onSelectedItemChanged: (int i) {
           sound.tap();
-          setState(() => _year = years[i]);
+          setState(() {
+            _year = years[i];
+            _tooYoung = false;
+          });
         },
         childDelegate: ListWheelChildBuilderDelegate(
           childCount: years.length,
@@ -198,66 +205,6 @@ class _AgeGateStepState extends State<AgeGateStep> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _guardianCard(BuildContext context, L10n l) {
-    final KimoColors c = context.c;
-    final KimoTypography t = context.t;
-    final GuardianStatus? s = widget.status;
-    final bool granted = s?.consentGranted ?? false;
-    final bool pending = !granted && (s?.guardianEmail != null);
-
-    return KimoCard(
-      color: granted ? c.mintTint : c.honeyTint,
-      elevated: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            l.ageMinorTitle,
-            style: t.bodyStrong.copyWith(
-              color: granted ? c.mintText : c.honeyText,
-            ),
-          ),
-          const SizedBox(height: Gap.xs),
-          Text(l.ageMinorBody, style: t.caption),
-          const SizedBox(height: Gap.md),
-          if (granted)
-            StatusBadge(label: l.ageGuardianGranted, tone: BadgeTone.mastered)
-          else ...<Widget>[
-            if (pending) ...<Widget>[
-              StatusBadge(
-                label: l.ageGuardianPending,
-                tone: BadgeTone.pending,
-              ),
-              const SizedBox(height: Gap.md),
-            ],
-            TextField(
-              controller: _email,
-              keyboardType: TextInputType.emailAddress,
-              autocorrect: false,
-              style: t.body,
-              decoration: InputDecoration(
-                hintText: l.ageGuardianHint,
-                filled: true,
-                fillColor: c.card,
-                border: OutlineInputBorder(
-                  borderRadius: Radii.all(Radii.tile),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              onSubmitted: (_) => _sendGuardian(),
-            ),
-            const SizedBox(height: Gap.sm),
-            KimoButton(
-              label: l.ageGuardianSend,
-              minHeight: Sizes.rowMin,
-              onPressed: _sending ? null : _sendGuardian,
-            ),
-          ],
-        ],
       ),
     );
   }

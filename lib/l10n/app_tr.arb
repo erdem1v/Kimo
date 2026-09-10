@@ -63,7 +63,10 @@
   "captureEmptyBody": "Şıklarını ve konusunu ben çıkarayım; sen yalnızca doğru şıkkı işaretle.",
   "captureAiNote": "Fotoğraf, soruyu okumak için yapay zekâ servisine (OpenAI) gönderilir.",
   "aiConsentTitle": "Fotoğrafın nereye gidiyor?",
-  "aiConsentBody": "Çektiğin fotoğraf — el yazın ve karede ne varsa — soruyu okumak için yurt dışındaki yapay zekâ servisine (OpenAI) gönderilir. Fotoğraf orada saklanmaz ama gönderim geri alınamaz. Ayrıntılar için Ayarlar → Veri ve Gizlilik.",
+  "aiConsentBody": "Çektiğin fotoğraf — el yazın ve karede ne varsa — soruyu okumak için yurt dışındaki yapay zekâ servisine (OpenAI) gönderilir. Kim olduğun gönderilmez. Fotoğrafın orada model eğitiminde kullanılmaz, ama kötüye kullanım denetimi için kısa bir süre tutulabilir. Gönderim geri alınamaz. Ayrıntılar için Ayarlar → Veri ve Gizlilik.",
+  "@aiConsentBody": {
+    "description": "A-5 düzeltmesi. Eski metin 'Fotoğraf orada saklanmaz' diyordu; kodda sıfır-saklama (ZDR) ayarı, store:false parametresi ya da ilgili bir başlık YOK — aktarım OpenAI'ın varsayılan koşullarına tabi."
+  },
   "aiConsentAccept": "Anladım, devam et",
   "aiConsentDecline": "Fotoğrafsız devam et",
   "photoBrokenNote": "Fotoğraf gösterilemiyor",
@@ -496,18 +499,11 @@
   },
   "ageWriteOnceNote": "Doğum yılı bir kez yazılır, sonradan değiştirilemez.",
   "ageSaveFailed": "Doğum yılı kaydedilemedi.",
-  "ageMinorTitle": "Velinin e-postası",
-  "ageMinorBody": "18 yaşından küçüksün. Arkadaş ekleme, velin onay verene kadar kapalı. Kalan her şeyi şimdi kullanabilirsin.",
-  "@ageMinorBody": {
-    "description": "Onay YALNIZCA arkadaş eklemeyi kapatıyor; başka hiçbir özellik onaya bağlı değil."
+  "ageTooYoungTitle": "Kimo şu an sana biraz büyük",
+  "ageTooYoungBody": "Kimo 13 yaş ve üzeri için hazırlandı. Yaşın gelince seni burada bekliyoruz. Bir yanlışlık olduğunu düşünüyorsan bize yazabilirsin.",
+  "@ageTooYoungBody": {
+    "description": "13 yaş sınırı reddi. SUÇLAYICI DEĞİL: kullanıcı yanlış bir şey yapmadı, ürün ona uygun değil. Kapı kapanmıyor; hesap kilitlenmiyor."
   },
-  "ageGuardianHint": "veli@ornek.com",
-  "ageGuardianSend": "Onay e-postası gönder",
-  "ageGuardianSent": "E-posta gönderildi. Velin bağlantıya tıklayınca arkadaş ekleme açılacak.",
-  "ageGuardianFailed": "E-posta gönderilemedi. Adresi kontrol edip tekrar dene.",
-  "ageGuardianInvalid": "Geçerli bir e-posta adresi yaz.",
-  "ageGuardianPending": "Onay bekleniyor",
-  "ageGuardianGranted": "Veli onayı alındı",
   "profileStepTitle": "Seni nasıl çağırayım?",
   "profileNicknameHint": "Takma adın",
   "profileExamYearTitle": "Hangi yıl gireceksin?",
@@ -602,8 +598,6 @@
   "signInAction": "Giriş yap",
   "signInFailed": "Giriş yapılamadı. E-posta ve parolanı kontrol et.",
   "signInEmailNotConfirmed": "E-postan henüz doğrulanmamış. Gelen kutunu kontrol et — doğrulama bağlantısını yeniden gönderdim.",
-  "guardianStatusMinor": "18 yaş altı",
-  "guardianStatusNeeded": "Arkadaş ekleme veli onayına bağlı",
   "profileTitle": "Profil",
   "profileSettings": "Ayarlar",
   "profileXp": "Toplam XP",
@@ -634,9 +628,17 @@
   "settingsPrivacy": "Veri ve gizlilik",
   "privacyTitle": "Veri ve Gizlilik",
   "privacyAiHeading": "Soru fotoğrafların",
-  "privacyAiBody": "Çektiğin soru fotoğrafları, soruyu okumak ve sınıflandırmak için yurt dışındaki yapay zekâ servisine (OpenAI) gönderilir. Gönderime kimliğin eklenmez; fotoğraf yalnızca senin arşivinde saklanır ve hesabını sildiğinde silinir.",
+  "privacyAiBody": "Çektiğin soru fotoğrafları, soruyu okumak ve sınıflandırmak için yurt dışındaki yapay zekâ servisine (OpenAI) gönderilir. Gönderime kimliğin eklenmez. Fotoğraf senin arşivinde saklanır; yalnızca sen, gönderdiğin arkadaşın ve bir şikâyet ya da güvenlik incelemesi hâlinde yetkili moderatörümüz görebilir. Hesabını sildiğinde silinir.",
+  "@privacyAiBody": {
+    "description": "A-5 düzeltmesi. Eski metin 'yalnızca senin arşivinde' diyerek yönetici erişimini dışlar gibi okunuyordu; can_read_mistake_photo is_admin() ile kısa devre yapıyor."
+  },
   "privacyLegalHeading": "Yasal metinler",
-  "privacyLegalPlaceholder": "KVKK aydınlatma metni, kullanım koşulları ve gizlilik politikası hazırlanıyor; yayınlandığında burada yer alacak.",
+  "privacyLegalIntro": "Metinlerin tamamı tarayıcıda açılır.",
+  "privacyTermsLink": "Kullanım Koşulları",
+  "privacyPrivacyLink": "Gizlilik Politikası",
+  "privacyKvkkLink": "KVKK Aydınlatma Metni",
+  "privacyDeletionLink": "Hesap silme sayfası",
+  "privacyLinkFailed": "Bağlantı açılamadı.",
   "settingsSound": "Ses efektleri",
   "settingsNotifications": "Bildirimler",
   "settingsReviewHour": "Tekrar hatırlatması",
@@ -670,7 +672,6 @@
   "settingsExamYear": "Sınav yılı",
   "settingsBirthYear": "Doğum yılı",
   "settingsBirthYearUnset": "Belirtilmedi",
-  "settingsGuardian": "Veli onayı",
   "settingsAdmin": "Yönetim",
   "settingsModeration": "Şikâyet kuyruğu",
   "settingsAllQuestions": "Tüm sorular",
@@ -735,7 +736,45 @@
       }
     }
   },
-  "friendsAddBlockedByGuardian": "Arkadaş ekleme, velinin onayı gelene kadar kapalı.",
+  "friendsAddBlockedBySuspension": "Hesabın askıda olduğu için arkadaş ekleyemezsin.",
+  "@friendsAddBlockedBySuspension": {
+    "description": "add_friend_by_code'un 'askida' cevabı. Eskiden 'onay_bekleniyor' idi ve veli onayını anlatıyordu (Task 07'de kaldırıldı)."
+  },
+  "consentTermsLink": "Kullanım Koşulları",
+  "consentJoin": "'nı ve ",
+  "consentPrivacyLink": "Gizlilik Politikası",
+  "consentTail": "'nı okudum, kabul ediyorum.",
+  "@consentTail": {
+    "description": "Kayıt adımındaki onay cümlesi dört parçaya bölündü çünkü iki belge AYRI AYRI tıklanabilir olmak zorunda. Kutu ön seçili değil; önceden işaretlenmiş bir onay, onay sayılmaz."
+  },
+  "suspendedTitle": "Hesabın şu an kısıtlı",
+  "suspendedTitlePermanent": "Hesabın kapatıldı",
+  "suspendedWhat": "Fotoğraf yükleme, arkadaşına soru gönderme ve arkadaş ekleme şu an kapalı.",
+  "suspendedStillOpen": "Arşivin, tekrarların ve ligin açık kalmaya devam ediyor.",
+  "suspendedUntil": "{date} tarihine kadar",
+  "@suspendedUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "suspendedNoEnd": "Süre belirtilmedi.",
+  "suspendedReasonPhoto": "Sebep: paylaşıma uygun olmayan fotoğraf tespiti.",
+  "suspendedReasonOther": "Sebep: kullanım koşullarının ihlali.",
+  "suspendedAppeal": "Bir hata olduğunu düşünüyorsan itiraz et",
+  "@suspendedAppeal": {
+    "description": "İtiraz yolu ZORUNLU: otomatik bir sınıflandırıcının verdiği karar, insan incelemesine açık olmak zorunda."
+  },
+  "suspendedAppealUnavailable": "İtiraz için destek adresi henüz tanımlı değil.",
+  "suspendedContinue": "Uygulamaya dön",
+  "warningTitleGentle": "Bir fotoğrafın paylaşıma çıkamadı",
+  "warningBodyGentle": "Otomatik içerik taraması bir fotoğrafını paylaşıma uygun bulmadı. Fotoğraf arşivinde duruyor ve sen görebiliyorsun; yalnızca arkadaşlarına gönderilemiyor.",
+  "warningTitleFirm": "İkinci kez oldu",
+  "warningBodyFirm": "Bir fotoğrafın daha paylaşıma uygun bulunmadı. Bu tekrarlarsa hesabın bir süreliğine kısıtlanır. Kadraja giren her şeyin paylaşılabilir olduğundan emin ol.",
+  "warningTitleSuspended": "Hesabın kısıtlandı",
+  "warningBodySuspended": "Tekrarlanan tespitler nedeniyle paylaşım özelliklerin bir süreliğine kapatıldı. Bir hata olduğunu düşünüyorsan itiraz edebilirsin.",
+  "warningAction": "Anladım",
   "friendsAddNotFound": "Böyle bir kod yok.",
   "@friendsAddNotFound": {
     "description": "TEK MESAJ: kod yok / kendi kodun / engelli / anonim ayrımı yapılmıyor. Ayırmak kod uzayını taramayı ucuzlatırdı."

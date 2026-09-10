@@ -147,10 +147,22 @@ kolayca test edilebilir):
 
 ## Güvenlik ve gizlilik (reşit olmayan kullanıcılar)
 
-- Kullanıcı kitlesi ağırlıkla 14–18 yaş. Kayıt akışına **yaş/veli onayı**
-  adımı baştan tasarlanacaktır (UI iskeleti sonraki fazda).
+- **Uygulama 13 yaş ve üzeri içindir** ve bu sınır kodda zorlanır
+  (`set_birth_year`, göç `0063`): 13 yaşından küçük bir doğum yılı `KM013`
+  ile reddedilir ve kullanıcı nazik bir açıklama görür.
+- **Veli onayı mekanizması YOKTUR** (Task 07'de kaldırıldı). 13–17 yaş için
+  hukuken zorunlu değil: COPPA 13 altı için geçerli, Apple veli onayını Kids
+  Category'de arıyor, Play Families 13 altını hedefleyenler için. Koşullarda
+  belirtilir, mekanizma kurulmaz.
+- Kayıt adımında **Kullanım Koşulları ve Gizlilik Politikası onayı** alınır ve
+  metin sürümüyle birlikte `user_consents` defterine yazılır.
+- Kötüye kullanan kullanıcı **askıya alınabilir ya da kalıcı olarak
+  yasaklanabilir** (`user_sanctions`); uygunsuz içerikte üç ihlalde otomatik
+  askı devreye girer. Yasak veri katmanında zorlanır, istemci kapısı değildir.
 - Gereksiz kişisel veri (konum, kişi listesi vb.) toplanmaz.
 - Sırlar `.env` ile yönetilir ve `.gitignore`'dadır; `.env.example`'a bakın.
+  Hukuki metin adresleri `supabase.json` içinde `--dart-define-from-file` ile
+  gelir (`supabase.example.json`'a bakın).
 
 > ⚖️ **Yasal uyarı:** Tam **KVKK uyumluluğu** ayrı bir hukuki inceleme
 > gerektirir; bu depo teknik iskeleti sağlar, hukuki uygunluğu garanti etmez.
@@ -162,4 +174,4 @@ kolayca test edilebilir):
 - [ ] drift kalıcı katmanı + hata bankası
 - [ ] Oyunlaştırma modülü (kalıcı can/XP/seri/lig/rozet)
 - [ ] Tip A şekil kütüphanesinin genişletilmesi, statik soru bankası
-- [ ] Onboarding + yaş/veli onayı, AI koçluk sohbeti (sunucu gateway ile)
+- [ ] AI koçluk sohbeti (sunucu gateway ile)

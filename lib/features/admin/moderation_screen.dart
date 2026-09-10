@@ -161,6 +161,116 @@ class _ModerationScreenState extends State<ModerationScreen> {
     }
   }
 
+  /// Kullanıcıya yaptırım. Kararı İÇERİĞE değil KİŞİYE veriyor: Apple 1.2'nin
+  /// dördüncü şartı (kötüye kullananı sistemden çıkarabilmek) tam olarak bu.
+  ///
+  /// Onay penceresi var çünkü işlem karşı tarafta görünür bir sonuç doğuruyor
+  /// ve tek dokunuşla verilmemeli. Sicil de aynı sayfada gösteriliyor: karar
+  /// geçmişe bakmadan verilmemeli.
+  Future<void> _sanction(String userId) async {
+    if (userId.isEmpty) return;
+    List<UserSanction> history = const <UserSanction>[];
+    try {
+      history = await moderationRepository.userSanctions(userId);
+    } catch (_) {
+      // Sicil okunamadıysa karar yine verilebilir; geçmişsiz gösteriyoruz.
+    }
+    if (!mounted) return;
+
+    final ({String action, int? days})? choice =
+        await showModalBottomSheet<({String action, int? days})>(
+      context: context,
+      builder: (BuildContext ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text('Kullanıcıya yaptırım',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+              const SizedBox(height: 6),
+              Text(
+                history.isEmpty
+                    ? 'Sicilde kayıt yok.'
+                    : 'Son 180 gün: ${history.first.violations180d} ihlal · '
+                        'toplam: ${history.first.violationsAll} · '
+                        'kayıt: ${history.length}',
+                style: const TextStyle(fontSize: 13, color: Colors.black54),
+              ),
+              const SizedBox(height: 12),
+              for (final UserSanction h in history.take(5))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    '${_stamp(h.createdAt)} · ${h.action} · ${h.source}'
+                    '${h.voided ? ' (geçersiz)' : ''}',
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  ),
+                ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('7 gün askıya al'),
+                onTap: () =>
+                    Navigator.of(ctx).pop((action: 'suspend', days: 7)),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('30 gün askıya al'),
+                onTap: () =>
+                    Navigator.of(ctx).pop((action: 'suspend', days: 30)),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Kalıcı olarak yasakla'),
+                textColor: AppColors.red,
+                onTap: () => Navigator.of(ctx).pop((action: 'ban', days: null)),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Yaptırımı kaldır'),
+                onTap: () => Navigator.of(ctx).pop((action: 'lift', days: null)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (choice == null || !mounted) return;
+
+    try {
+      await moderationRepository.sanctionUser(
+        userId,
+        action: choice.action,
+        days: choice.days,
+        reason: 'photo_repeat',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(switch (choice.action) {
+            'lift' => 'Yaptırım kaldırıldı.',
+            'ban' => 'Kullanıcı kalıcı olarak yasaklandı.',
+            _ => 'Kullanıcı ${choice.days} gün askıya alındı.',
+          }),
+          backgroundColor:
+              choice.action == 'lift' ? AppColors.green : AppColors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('İşlem tamamlanamadı.')),
+      );
+    }
+  }
+
+  static String _stamp(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}.'
+      '${d.month.toString().padLeft(2, '0')}.${d.year}';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -320,6 +430,19 @@ class _ModerationScreenState extends State<ModerationScreen> {
                       ),
                     ),
                   ],
+                ),
+                // İçeriği kaldırmak yetmiyor: tekrar edeni sistemden
+                // çıkarabilmek Apple 1.2'nin ayrı bir şartı. Sunucu bunu
+                // üçüncü ihlalde zaten otomatik yapıyor; buradaki yol
+                // yöneticinin daha erken ya da daha ağır karar verebilmesi
+                // için (ör. tek bir ihlal yeterince ağırsa).
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: busy ? null : () => _sanction(f.ownerId),
+                    child: const Text('Kullanıcıya yaptırım…'),
+                  ),
                 ),
               ],
             ),

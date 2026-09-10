@@ -1,4 +1,10 @@
 {
   "SUPABASE_URL": "https://YOUR-PROJECT.supabase.co",
-  "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_XXXXXXXXXXXXXXXX"
+  "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_XXXXXXXXXXXXXXXX",
+
+  "LEGAL_TERMS_URL": "https://ornek.com/kullanim-kosullari",
+  "LEGAL_PRIVACY_URL": "https://ornek.com/gizlilik-politikasi",
+  "LEGAL_KVKK_URL": "https://ornek.com/kvkk-aydinlatma",
+  "LEGAL_DELETE_URL": "https://ornek.com/hesap-silme",
+  "SUPPORT_EMAIL": "destek@ornek.com"
 }

@@ -164,7 +164,7 @@ class _FriendsViewState extends State<FriendsView> {
       // uzayını taramayı ucuzlatırdı.
       _snack(switch (res.reason) {
         'eklendi' => l.friendsAddSent(res.nickname ?? l.defaultNickname),
-        'onay_bekleniyor' => l.friendsAddBlockedByGuardian,
+        'askida' => l.friendsAddBlockedBySuspension,
         _ => l.friendsAddNotFound,
       });
       if (res.ok) {

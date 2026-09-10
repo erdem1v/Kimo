@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../data/notification_lines.dart';
+import '../../data/sanction_repository.dart';
 import '../../data/social_repository.dart';
 import '../../data/submission_queue.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -20,6 +21,7 @@ import '../../widgets/kit/kimo_nav_bar.dart';
 import '../capture/capture_screen.dart';
 import '../mistakes/mistakes_screen.dart';
 import '../profile/profile_screen.dart';
+import '../settings/suspended_screen.dart';
 import '../league/league_screen.dart';
 import 'today_screen.dart';
 
@@ -94,6 +96,26 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     NotificationRouter.tabRequest.addListener(_onTabRequest);
     NotificationRouter.ready();
     WidgetsBinding.instance.addObserver(this);
+    unawaited(_showPendingWarnings());
+  }
+
+  /// Gösterilmemiş içerik ihlali uyarılarını sırayla açar.
+  ///
+  /// Bugüne kadar şüpheli işaretlenen fotoğraf SESSİZCE paylaşımdan
+  /// düşüyordu; kullanıcı ne olduğunu asla öğrenmiyordu (Task 07 §4.2).
+  /// Burada gösteriliyor çünkü ihlal, kullanıcı uygulamada değilken (pg_cron
+  /// süpürücüsü) da işaretlenebiliyor — tek güvenilir an bir sonraki açılış.
+  ///
+  /// PUSH KULLANILMIYOR: yeni bir bildirim türü, dört persona × beş varyant =
+  /// yirmi yeni metin ve `240_persona.sql`de üç sabit sayı demek. Yaptırım
+  /// geri bildirimi uygulama içi kalıyor.
+  Future<void> _showPendingWarnings() async {
+    final List<PhotoWarning> pending =
+        await sanctionRepository.pendingWarnings();
+    for (final PhotoWarning w in pending) {
+      if (!mounted) return;
+      await showPhotoWarning(context, w);
+    }
   }
 
   @override

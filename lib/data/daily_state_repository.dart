@@ -107,44 +107,29 @@ class DailyState {
   }
 }
 
-/// Yaş kapısı ve veli onayının durumu.
+/// Yaş kapısının durumu.
 ///
-/// Yaşın KENDİSİNİ taşımıyor: arayüzün ihtiyacı olan tek şey kapının açık olup
-/// olmadığı ve onayın hangi adrese gittiği.
+/// Yaşın KENDİSİNİ taşımıyor: arayüzün ihtiyacı olan tek şey yılın yazılıp
+/// yazılmadığı ve (ayarlar satırı için) reşitlik.
+///
+/// Task 07: `GuardianStatus`ın yerini aldı. Veli onayı rejimi kaldırıldığı için
+/// `consentGranted`, `guardianEmail` ve `canAddFriends` alanları düştü —
+/// arkadaş ekleme artık yaşa bağlı değil, askıya bağlı ([SanctionStatus]).
 @immutable
-class GuardianStatus {
-  const GuardianStatus({
-    required this.isMinor,
-    required this.birthYearSet,
-    required this.consentGranted,
-    required this.canAddFriends,
-    this.guardianEmail,
-  });
+class AgeStatus {
+  const AgeStatus({required this.birthYearSet, required this.isMinor});
 
-  final bool isMinor;
   final bool birthYearSet;
-  final bool consentGranted;
-  final bool canAddFriends;
-  final String? guardianEmail;
+  final bool isMinor;
 
-  /// Onay istendi ama henüz gelmedi.
-  bool get waitingForGuardian =>
-      isMinor && guardianEmail != null && !consentGranted;
+  /// Sunucudan okunamadığında kullanılan kapalı taraf: yıl yazılmamış sayılır,
+  /// yani karşılama akışı kullanıcıyı yaş adımında tutar.
+  static const AgeStatus unknown = AgeStatus(birthYearSet: false, isMinor: true);
 
-  static const GuardianStatus unknown = GuardianStatus(
-    isMinor: true,
-    birthYearSet: false,
-    consentGranted: false,
-    canAddFriends: false,
-  );
-
-  factory GuardianStatus.fromRow(Map<String, dynamic> row) {
-    return GuardianStatus(
-      isMinor: row['is_minor'] == true,
+  factory AgeStatus.fromRow(Map<String, dynamic> row) {
+    return AgeStatus(
       birthYearSet: row['birth_year_set'] == true,
-      consentGranted: row['consent_granted'] == true,
-      canAddFriends: row['can_add_friends'] == true,
-      guardianEmail: row['guardian_email'] as String?,
+      isMinor: row['is_minor'] == true,
     );
   }
 }
@@ -175,18 +160,18 @@ class DailyStateRepository {
   // gitmeden önce. İstemcinin önden dallanması, kotanın iki yerde yaşadığı
   // yanılsamasını üretirdi.
 
-  Future<GuardianStatus?> guardianStatus() async {
+  Future<AgeStatus?> ageStatus() async {
     try {
-      final dynamic res = await _client.rpc<dynamic>('my_guardian_status');
+      final dynamic res = await _client.rpc<dynamic>('my_age_status');
       if (res is List && res.isNotEmpty) {
-        return GuardianStatus.fromRow((res.first as Map).cast<String, dynamic>());
+        return AgeStatus.fromRow((res.first as Map).cast<String, dynamic>());
       }
       if (res is Map) {
-        return GuardianStatus.fromRow(res.cast<String, dynamic>());
+        return AgeStatus.fromRow(res.cast<String, dynamic>());
       }
       return null;
     } catch (e) {
-      debugPrint('veli onayı durumu okunamadı: $e');
+      debugPrint('yaş durumu okunamadı: $e');
       return null;
     }
   }
@@ -194,6 +179,8 @@ class DailyStateRepository {
   /// Doğum yılını yazar. TEK YAZIMLIK — ikinci çağrı sunucuda reddedilir.
   ///
   /// Hata YUTULMUYOR: yaş kapısı yasal bir adım, sessizce geçilmemeli.
+  /// 13 yaşından küçük bir yıl [tooYoungCode] ile reddedilir; çağıran o dalı
+  /// "geçersiz yıl"dan ayırıp nazik bir açıklama gösterir.
   Future<void> setBirthYear(int year) async {
     await _client.rpc<void>(
       'set_birth_year',
@@ -201,12 +188,16 @@ class DailyStateRepository {
     );
   }
 
-  /// Veli onayı bağlantısını gönderir. Hata yukarı verilir.
-  Future<void> requestGuardianConsent(String email) async {
-    await _client.rpc<void>(
-      'request_guardian_consent',
-      params: <String, dynamic>{'p_email': email},
-    );
+  /// `set_birth_year`in 13 yaş sınırı için kullandığı özel SQLSTATE (göç 0063).
+  static const String tooYoungCode = 'KM013';
+
+  /// Kullanım Koşulları + Gizlilik Politikası onayını deftere yazar ve
+  /// damgalanan METİN SÜRÜMÜNÜ döndürür.
+  ///
+  /// Hata YUTULMUYOR: onay yazılamadıysa kayıt tamamlanmamalı.
+  Future<String?> acceptLegalTerms() async {
+    final dynamic res = await _client.rpc<dynamic>('accept_legal_terms');
+    return res is String ? res : null;
   }
 }
 

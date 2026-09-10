@@ -29,6 +29,14 @@ dependencies:
   firebase_messaging: ^16.5.0
   app_settings: ^9.0.0
   sentry_flutter: ^9.29.0
+  # Hukuki metin bağlantıları ve yaptırım itirazının destek adresi (Task 07).
+  # Kullanım koşulları / gizlilik politikası bağlantısı mağaza şartı
+  # (Apple 1.2; ASC ve Play Console'da zorunlu alan) ve uygulama içinden bir
+  # URL açmanın başka yolu yok. `shared_preferences` ile aynı durum: paket
+  # zaten GEÇİŞLİ olarak geliyordu, buraya alınması sürümü değiştirmiyor —
+  # yalnızca pubspec.lock'taki `dependency` alanı `transitive` -> `direct main`
+  # oluyor. O satır da güncellendi.
+  url_launcher: ^6.3.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

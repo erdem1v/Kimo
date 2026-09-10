@@ -16,7 +16,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(22);
+select plan(31);
 
 select tests.create_supabase_user('alice');
 
@@ -89,6 +89,38 @@ select ok(has_function_privilege('authenticated',
 select ok(not has_function_privilege('authenticated',
             'public.league_weekly_rollover()', 'EXECUTE'),
           'league_weekly_rollover KAPALI (yalnızca pg_cron çağırır)');
+
+-- Task 07 (0062/0063). Kapalı olması gerekenler önce: tetikleyici fonksiyonu
+-- açık olsaydı herkes istediği kullanıcı için ihlal kaydı uydurabilirdi.
+select ok(not has_function_privilege('authenticated',
+            'public.mistakes_photo_violation()', 'EXECUTE'),
+          'mistakes_photo_violation KAPALI (tetikleyici; ihlal uydurulamaz)');
+-- is_suspended DÖRT politikanın içinde çağrılıyor; kapanırsa fotoğraf yükleme,
+-- soru gönderme ve arkadaşlık isteği birden çöker.
+select ok(has_function_privilege('authenticated',
+            'public.is_suspended(uuid)', 'EXECUTE'),
+          'is_suspended AÇIK (politika ifadeleri çağırıyor)');
+select ok(has_function_privilege('authenticated',
+            'public.my_sanction()', 'EXECUTE'),
+          'my_sanction AÇIK (askı ekranı ve itiraz yolu)');
+select ok(has_function_privilege('authenticated',
+            'public.my_photo_warnings()', 'EXECUTE'),
+          'my_photo_warnings AÇIK (ihlal uyarısı)');
+select ok(has_function_privilege('authenticated',
+            'public.ack_photo_warnings()', 'EXECUTE'),
+          'ack_photo_warnings AÇIK (kullanıcı uyarıyı okundu işaretler)');
+select ok(has_function_privilege('authenticated',
+            'public.admin_suspend_user(uuid,text,int,text,text)', 'EXECUTE'),
+          'admin_suspend_user AÇIK (yetki içeride is_admin ile)');
+select ok(has_function_privilege('authenticated',
+            'public.admin_user_sanctions(uuid)', 'EXECUTE'),
+          'admin_user_sanctions AÇIK (yetki içeride is_admin ile)');
+select ok(has_function_privilege('authenticated',
+            'public.accept_legal_terms()', 'EXECUTE'),
+          'accept_legal_terms AÇIK (kayıt adımındaki koşul onayı)');
+select ok(has_function_privilege('authenticated',
+            'public.my_age_status()', 'EXECUTE'),
+          'my_age_status AÇIK (my_guardian_status''ın yerini aldı)');
 
 -- ====================================================== DAVRANIŞ
 select tests.authenticate_as('alice');

@@ -60,10 +60,13 @@ grant select on _bob_code to authenticated;
 
 select tests.authenticate_as('alice');
 
--- Reşit olmayan/onaysız hesapta kapı kapalı; testin bu bölümü için yaşı ver.
+-- 0063'e kadar bu satır ZORUNLUYDU: kapı reşit olmayan/onaysız hesapta
+-- kapalıydı. Veli onayı kalkınca yaş arkadaş eklemeyi etkilemiyor; çağrı
+-- yerinde bırakıldı çünkü akış hâlâ gerçekçi (kullanıcı yaşını girer) ve
+-- `set_birth_year`in mutlu yolunu bu dosyada da tutuyor.
 select lives_ok(
   format('select public.set_birth_year(%s)', extract(year from now())::int - 25),
-  'yaş kaydedildi (kapı açılsın)'
+  'yaş kaydedilebiliyor (kapıyı artık etkilemiyor)'
 );
 
 select is(

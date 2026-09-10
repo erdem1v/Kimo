@@ -25,8 +25,10 @@ select ok(not has_column_privilege('authenticated', 'public.profiles', 'friend_c
           'friend_code yazılamaz (kimse kendi kodunu seçemez)');
 select ok(not has_column_privilege('authenticated', 'public.profiles', 'birth_year', 'UPDATE'),
           'birth_year yazılamaz (yaş kapısı atlanamaz)');
-select ok(not has_column_privilege('authenticated', 'public.profiles', 'guardian_email', 'UPDATE'),
-          'guardian_email yazılamaz (onay başka adrese yönlendirilemez)');
+-- 0063 bu sütunu DÜŞÜRDÜ (veli onayı rejimi kaldırıldı): "yazılamaz" iddiası
+-- "hiç yok" iddiasına dönüştü — sütun geri gelirse test kırmızı olur.
+select hasnt_column('public'::name, 'profiles'::name, 'guardian_email'::name,
+                    'guardian_email düşürüldü (veli e-postası artık tutulmuyor)');
 select ok(not has_column_privilege('authenticated', 'public.profiles', 'is_anonymous', 'UPDATE'),
           'is_anonymous yazılamaz (sosyal yüzeye sızılamaz)');
 select ok(not has_column_privilege('authenticated', 'public.profiles', 'gems', 'UPDATE'),
@@ -47,8 +49,8 @@ select hasnt_column('public'::name, 'profiles'::name, 'guardian_consent'::name,
 -- ================================================ KATALOG: yeni tablolar
 select ok(not has_table_privilege('authenticated', 'public.rate_limits', 'INSERT'),
           'rate_limits yazılamaz');
-select ok(not has_table_privilege('authenticated', 'public.guardian_requests', 'SELECT'),
-          'guardian_requests okunamaz');
+select hasnt_table('public'::name, 'guardian_requests'::name,
+                   'guardian_requests düşürüldü (0063)');
 -- Kilit modeli KOLON bazlı: tablo düzeyi INSERT bilinçli olarak verilmiyor
 -- (created_at istemciden yazılamasın). has_table_privilege kolon grant'larını
 -- saymaz; iddia kolonda yapılır (ilk CI koşusunun düzeltmesi).
@@ -102,10 +104,12 @@ select throws_ok(
   '42501', null,
   'kullanıcı kendine yapay zekâ hakkı yazamıyor'
 );
+-- Hedef `guardian_requests`ti; o tablo 0063'te düştü. İddianın amacı
+-- ("sunucu-özel bir defter istemciden okunamaz") yaşayan bir tabloya taşındı.
 select throws_ok(
-  'select * from public.guardian_requests',
+  'select * from public.user_sanctions',
   '42501', null,
-  'kullanıcı veli onayı token hash''lerini okuyamıyor'
+  'kullanıcı yaptırım defterini okuyamıyor'
 );
 
 -- Meşru akış hâlâ çalışıyor (aşırı kilitleme kontrolü).
