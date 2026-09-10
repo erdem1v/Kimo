@@ -88,8 +88,19 @@ create table if not exists public.curriculum_aliases (
   -- 'eski' türünde, kaydın ESKİ sınavı farklıysa. Tek gerçek örnek:
   -- TYT/Geometri 'Çember ve Daire' → AYT/Geometri 'Çemberde Temel Kavramlar'.
   src_exam   text,
-  primary key (curriculum, exam, subject, alias_norm)
+  primary key (curriculum, exam, subject, alias)
 );
+
+-- EŞSİZLİK NORMALİZE BİÇİMDE: "İvme" ile "ivme" aynı satırı hedefler ve
+-- ikisinin farklı konulara işaret etmesi çözümlemeyi belirsiz kılardı.
+--
+-- Neden birincil anahtar DEĞİL de ayrı bir benzersiz index: `alias_norm`
+-- ÜRETİLMİŞ bir sütun ve üretilmiş sütunların birincil anahtarda
+-- kullanılabilirliği sürüme bağlı. Benzersiz index her sürümde çalışıyor ve
+-- garanti aynı. `tools/build_taxonomy.py` bu çakışmayı zaten göç öncesinde
+-- yakalıyor; bu index ikinci katman.
+create unique index if not exists curriculum_aliases_norm_key
+  on public.curriculum_aliases (curriculum, exam, subject, alias_norm);
 
 comment on table public.curriculum_aliases is
   'Konu arama etiketleri (kind=''ara'') ve eski adlar (kind=''eski''). '
@@ -199,6 +210,10 @@ grant  execute on function public.curriculum_tree(text, text) to authenticated;
 -- `authenticated`'a açık olmak ZORUNDA (0052'nin dersi: politika ifadeleri
 -- çağıranın yetkisiyle değerlendiriliyor, tablo görünmezse alt sorgu her zaman
 -- boş döner ve kapı hiç ısırmaz).
+-- SINAV BİLİNMİYORSA TYT+AYT BİRLEŞİMİNDE arıyor. `mistakes.exam` nullable
+-- ve eski satırların çoğunda boş; sıkı davranıp reddetmek onları düzeltmeyi
+-- imkânsız kılardı. Yüzey yine kapalı: konu, o dersin ağacında BİR YERDE
+-- olmak zorunda. Edge function'daki `isValidPair` de aynı kuralı uyguluyor.
 create or replace function public.is_valid_topic(
   p_curriculum text,
   p_exam       text,
@@ -211,7 +226,7 @@ as $fn$
   select exists (
     select 1 from public.curriculum_topics c
      where c.curriculum = coalesce(p_curriculum, 'eski')
-       and c.exam = p_exam
+       and (p_exam is null or p_exam not in ('TYT', 'AYT') or c.exam = p_exam)
        and c.subject = p_subject
        and c.topic = p_topic
   );
@@ -421,3 +436,49 @@ revoke execute on function public.ai_cache_put(text, text, jsonb, text)
   from public, anon;
 grant  execute on function public.ai_cache_put(text, text, jsonb, text)
   to authenticated;
+
+-- ------------------------------------------- yönetici listesi müfredatı taşısın
+-- `all_questions_screen.dart` konu geçerliliğini MODERATÖRÜN kendi
+-- müfredatına göre kontrol ediyordu; maarif öğrencisinin doğru kaydı, eski
+-- müfredatlı bir moderatöre "müfredatta karşılığı yok" görünüyordu. Satırın
+-- kendi müfredatı listeye eklendi ki doğrulama doğru ağaca baksın.
+--
+-- Dönüş tipi değiştiği için `create or replace` yetmiyor (0066'nın aynı
+-- deseni).
+drop function if exists public.admin_all_questions(int, int);
+create or replace function public.admin_all_questions(
+  p_limit  int default 200,
+  p_offset int default 0
+)
+returns table (
+  id             uuid,
+  subject        text,
+  concept        text,
+  extra_concepts text[],
+  exam           text,
+  photo_path     text,
+  options        jsonb,
+  correct_index  int,
+  is_public      bool,
+  moderation     text,
+  report_count   int,
+  owner_nickname text,
+  photo_scan     text,
+  curriculum     text,
+  created_at     timestamptz
+)
+language sql stable security definer set search_path = public
+as $fn$
+  select m.id, m.subject, m.concept, m.extra_concepts, m.exam, m.photo_path,
+         m.options, m.correct_index, m.is_public, m.moderation, m.report_count,
+         p.nickname, m.photo_scan, m.curriculum, m.created_at
+    from public.mistakes m
+    join public.profiles p on p.id = m.user_id
+   where public.is_admin()
+   order by m.created_at desc
+   limit greatest(1, least(p_limit, 500))
+  offset greatest(0, p_offset);
+$fn$;
+
+revoke execute on function public.admin_all_questions(int, int) from public, anon;
+grant  execute on function public.admin_all_questions(int, int) to authenticated;

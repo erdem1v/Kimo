@@ -28,6 +28,9 @@ select tests.create_supabase_user('bekci');
 -- Yaş kapısı (0067) `mistakes` INSERT'te doğum yılı şart koşuyor; bu testin
 -- konusu o değil, fikstürün kurulabilmesi için ön koşul (bkz. seed.sql).
 select tests.age_all_users();
+-- Konu doğrulaması (0071) fikstürlerdeki uydurma konuları reddederdi; bu
+-- testin konusu o değil (bkz. seed.sql).
+select tests.skip_topic_check();
 
 select tests.reset_role();
 insert into public.admins (user_id) values (tests.get_supabase_uid('bekci'));

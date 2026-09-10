@@ -6,12 +6,14 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
+import 'data/curriculum_repository.dart';
 import 'data/notification_lines.dart';
 import 'services/crash_service.dart';
 import 'services/notification_service.dart';
 import 'services/push_service.dart';
 import 'services/supabase_config.dart';
 import 'state/app_settings.dart';
+import 'state/user_profile.dart';
 
 Future<void> main() async {
   // Yapılandırma yoksa uygulama AÇILMAZ: eski mock/demo modu kaldırıldı.
@@ -94,6 +96,21 @@ Future<void> _run() async {
     await reportError(e, st, context: 'notify.linesLoad');
   }
   unawaited(notificationLines.refresh());
+
+  // Konu ağacı da aynı desende: önbellek diskten (ağsız), tazeleme ağdan ve
+  // AWAIT EDİLMEDEN. Fark şu — ağaç yoksa kullanıcı KONU SEÇEMEZ, yani soru
+  // kaydedemez; bu yüzden `load()` önbellek boşsa gömülü yedeğe düşüyor ve
+  // çekirdek akış ilk açılışta/çevrimdışıyken de çalışıyor.
+  //
+  // Tazeleme burada oturum GERİ YÜKLENMEDEN çalışmış olabilir; ikinci deneme
+  // `home_shell` içinde, oturum kesinleştikten sonra (notification_lines'ın
+  // aynı gerekçesi).
+  try {
+    await curriculumRepository.load();
+  } catch (e, st) {
+    await reportError(e, st, context: 'curriculum.load');
+  }
+  unawaited(curriculumRepository.refresh(userProfile.curriculum));
   runApp(const KimoApp());
 }
 

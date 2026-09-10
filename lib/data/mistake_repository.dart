@@ -9,6 +9,7 @@ import '../features/reviews/domain/review_scheduler.dart';
 import '../models/models.dart';
 import '../services/crash_service.dart';
 import '../state/user_profile.dart';
+import 'curriculum_repository.dart';
 import 'submission_queue.dart';
 
 /// Hata bankasının Supabase uygulaması: `mistakes` tablosu + `mistake-photos`
@@ -355,6 +356,20 @@ class MistakeRepository {
       rethrow;
     }
     final dynamic data = res.data;
+
+    // BAYAT AĞAÇ KONTROLÜ (Task 09). Sunucu her yanıtta yürürlükteki taksonomi
+    // sürümünü bildiriyor. Elimizdeki farklıysa onay ekranı AÇILMADAN ÖNCE
+    // tazeleniyor: yoksa kullanıcı listede olmayan bir konu seçer ve
+    // kaydederken `KM022` alır — sebebini anlamadığı bir hata.
+    //
+    // Sürüm aynıysa çağrı yapılmıyor; farklıysa tek bir RPC turu.
+    if (data is Map) {
+      await curriculumRepository.refreshIfStale(
+        userProfile.curriculum,
+        data['taxonomy_version'] as String?,
+      );
+    }
+
     if (data is! Map) {
       return const QuestionAnalysis(
           ok: false,
@@ -422,6 +437,12 @@ class MistakeRepository {
         failure: failure,
         creditRemaining: remaining);
   }
+
+  /// Sunucunun "konu ağaçta yok" hatası (göç 0071).
+  ///
+  /// İstemcinin ağacı bayatladığında görülüyor. Çağıran bunu yakalayıp ağacı
+  /// tazeliyor ve kullanıcıya konuyu yeniden seçmesini söylüyor.
+  static const String staleTopicCode = 'KM022';
 
   /// Tek bir soruyu KALICI olarak siler: satır ve depodaki fotoğraf birlikte.
   ///

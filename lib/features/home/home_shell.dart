@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../data/curriculum_repository.dart';
 import '../../data/notification_lines.dart';
 import '../../data/sanction_repository.dart';
 import '../../data/social_repository.dart';
@@ -163,6 +164,9 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       // Bildirim metinlerini tazele. Açılıştaki ilk deneme oturum geri
       // yüklenmeden önce çalışmış olabilir; burada oturum kesin var.
       unawaited(notificationLines.refresh());
+      // Konu ağacı için aynı gerekçe. Sürüm pazarlıklı: değişmemişse sunucu
+      // ağacı hiç göndermiyor, yani bu çağrı çoğu açılışta birkaç bayt.
+      unawaited(curriculumRepository.refresh(userProfile.curriculum));
       // Onaylar ve istatistikler birbirinden BAĞIMSIZ: paralel çekiliyor
       // (soğuk açılışta bir gidiş-dönüş tasarrufu — Task 03, 10.2 deseni).
       final List<Object?> parts = await Future.wait<Object?>(<Future<Object?>>[

@@ -705,7 +705,7 @@
   "examYearOld": "Mevcut müfredat (2018)",
   "examYearSaveFailed": "Sınav yılı kaydedilemedi.",
   "topicPickerTitle": "Konu seç",
-  "topicPickerSearch": "Konu ara",
+  "topicPickerSearch": "Konu ara — \"atışlar\", \"türev\", \"paralelkenar\"",
   "topicPickerNoMatch": "Eşleşen konu yok.",
   "sendTitle": "Arkadaşına gönder",
   "sendNoFriends": "Henüz arkadaşın yok. Arkadaş kodunu paylaşınca burada görünecekler.",
@@ -847,5 +847,15 @@
   "practiceCompleteAction": "Şıkları ekle",
   "practiceCompleteCorrect": "Doğru şık hangisiydi?",
   "practiceCompleteSaved": "Soru tamamlandı; bir sonraki turda şıklı gelecek.",
-  "practiceCompleteFailed": "Kaydedilemedi. Tekrar dene."
+  "practiceCompleteFailed": "Kaydedilemedi. Tekrar dene.",
+  "@topicPickerSearch": {
+    "description": "Arama tüm derslerde çalışıyor ve arama etiketlerini de eşliyor (Task 09)."
+  },
+  "topicPickerHint": "Ara ya da dersten seç — kaydedilen ad müfredattaki addır.",
+  "topicPickerNoTree": "Konu listesi henüz inmedi. Bağlantı gelince yenilenecek.",
+  "topicPickerAllSubjects": "Tüm dersler",
+  "confirmTopicStale": "Konu listesi güncellendi; konuyu yeniden seç.",
+  "@confirmTopicStale": {
+    "description": "Sunucu ağaç dışı konuyu KM022 ile reddetti — bayat istemci ağacı."
+  }
 }

@@ -169,6 +169,9 @@ select is(public.has_birth_year(tests.get_supabase_uid('yetiskin')), true,
           'has_birth_year dolu yılı görüyor');
 
 select tests.create_supabase_user('yilsiz');
+-- Konu doğrulaması (0071) fikstürlerdeki uydurma konuları reddederdi; bu
+-- testin konusu o değil (bkz. seed.sql).
+select tests.skip_topic_check();
 select tests.authenticate_as('yilsiz');
 
 select is(public.ai_age_ok(), false,

@@ -17,24 +17,91 @@ import 'supabase_admin.dart';
 ///
 /// Yükleme için ortam değişkenleri gerekir (bkz. tools/README.md):
 ///   SUPABASE_URL, SUPABASE_SERVICE_KEY
-/// Müfredat listesindeki ders adları (yks_curriculum.dart). Manifestteki
-/// `subject` bunlardan biri olmazsa soru haritada hiçbir konuya düşmez —
-/// bozuk kodlanmış bir ders adı ("CoÄŸrafya") havuza sessizce girip
-/// görünmez soru yığını bırakmıştı, bir daha olmasın.
-const Set<String> _subjects = <String>{
-  'Türkçe',
-  'Matematik',
-  'Geometri',
-  'Fizik',
-  'Kimya',
-  'Biyoloji',
-  'Edebiyat',
-  'Tarih',
-  'Coğrafya',
-  'Felsefe',
-  'Felsefe Grubu',
-  'Din Kültürü',
-};
+/// Konu ağacı — ÜRETİLEN varlıktan okunuyor (`assets/curriculum/tree.json`).
+///
+/// Task 09'a kadar burada elle yazılmış 12 ders adı vardı: ağacın DÖRDÜNCÜ
+/// kopyası. Bozuk kodlanmış bir ders adı ("CoÄŸrafya") havuza sessizce girip
+/// görünmez soru yığını bırakmıştı; kontrol o yüzden vardı ama listeyi elle
+/// tutmak aynı sınıf hatayı başka bir yerde üretiyordu.
+///
+/// KONU DA ARTIK DOĞRULANIYOR. Eskiden yalnızca `subject` bakılıyordu;
+/// manifestteki MEB etiketi (`Destek ve Hareket Sistemi`) ham hâliyle
+/// veritabanına giriyor ve `tools/remap_konu.sql` ELLE çalıştırılana kadar
+/// haritada hiçbir konuya düşmüyordu. O betik artık yok: etiketler ağacın
+/// kendisinde (`eski:`) ve burada çözülüyor.
+class _Taxonomy {
+  _Taxonomy(this._topics, this._aliases);
+
+  /// `'<sınav>|<ders>'` -> kanonik konu adları
+  final Map<String, Set<String>> _topics;
+
+  /// `'<sınav>|<ders>'` -> normalize etiket -> kanonik konu
+  final Map<String, Map<String, String>> _aliases;
+
+  Set<String> get subjects => <String>{
+        for (final String k in _topics.keys) k.split('|')[1],
+      };
+
+  /// Kanonik adı döndürür; ağaçta karşılığı yoksa null.
+  String? resolve(String exam, String subject, String concept) {
+    final String key = '$exam|$subject';
+    final String norm = _norm(concept);
+    for (final String t in _topics[key] ?? const <String>{}) {
+      if (_norm(t) == norm) return t;
+    }
+    return _aliases[key]?[norm];
+  }
+
+  /// `public.tr_norm` ve `tools/build_taxonomy.py` ile AYNI sonucu vermeli.
+  static String _norm(String v) {
+    const String from = 'ÇĞİÖŞÜÂÎÛçğıöşüâîû';
+    const String to = 'CGIOSUAIUcgiosuaiu';
+    final StringBuffer out = StringBuffer();
+    for (final int r in v.runes) {
+      final int i = from.runes.toList().indexOf(r);
+      out.writeCharCode(i >= 0 ? to.codeUnitAt(i) : r);
+    }
+    return out.toString().toLowerCase().split(RegExp(r'\s+')).where(
+          (String s) => s.isNotEmpty,
+        ).join(' ');
+  }
+
+  /// MEB soruları eski müfredattan; ağacın o dalı okunuyor.
+  static _Taxonomy load(String root) {
+    final File f = File('$root/assets/curriculum/tree.json');
+    if (!f.existsSync()) {
+      stderr.writeln('Konu agaci bulunamadi: ${f.path}\n'
+          'Once `python3 tools/build_taxonomy.py` calistirin.');
+      exit(66);
+    }
+    final Map<String, dynamic> doc =
+        (jsonDecode(f.readAsStringSync()) as Map).cast<String, dynamic>();
+    final Map<String, dynamic> eski =
+        ((doc['curricula'] as Map)['eski'] as Map).cast<String, dynamic>();
+
+    final Map<String, Set<String>> topics = <String, Set<String>>{};
+    final Map<String, Map<String, String>> aliases =
+        <String, Map<String, String>>{};
+    for (final String exam in <String>['TYT', 'AYT']) {
+      for (final dynamic sRaw in (eski[exam] as List<dynamic>? ?? <dynamic>[])) {
+        final Map<String, dynamic> s = (sRaw as Map).cast<String, dynamic>();
+        final String key = '$exam|${s['subject']}';
+        for (final dynamic uRaw in (s['units'] as List<dynamic>)) {
+          final Map<String, dynamic> u = (uRaw as Map).cast<String, dynamic>();
+          for (final dynamic tRaw in (u['topics'] as List<dynamic>)) {
+            final Map<String, dynamic> t = (tRaw as Map).cast<String, dynamic>();
+            final String topic = t['topic'] as String;
+            (topics[key] ??= <String>{}).add(topic);
+            for (final dynamic a in (t['aliases'] as List<dynamic>)) {
+              (aliases[key] ??= <String, String>{})[_norm(a as String)] = topic;
+            }
+          }
+        }
+      }
+    }
+    return _Taxonomy(topics, aliases);
+  }
+}
 
 // Sayfa 200 dpi taranır (kesim koordinatları o çözünürlükte isabetli), sonra
 // çıktı 150 dpi'ye indirilir. Testler siyah-beyaz çizim ve metin olduğu için
@@ -72,6 +139,12 @@ Future<void> main(List<String> args) async {
           as Map<String, dynamic>;
   final List<dynamic> tests = manifest['tests'] as List<dynamic>;
 
+  // Ağaç depo kökünden okunuyor. Bu betik `tools/` içinden çalıştırılıyor
+  // (bkz. tools/README.md), yani kök bir üst dizin.
+  final _Taxonomy taxonomy = _Taxonomy.load(
+    Directory.current.path.endsWith('tools') ? '..' : '.',
+  );
+
   SupabaseAdmin? admin;
   if (dryRun) {
     stdout.writeln('KURU ÇALIŞMA — hiçbir şey yüklenmeyecek.');
@@ -93,15 +166,29 @@ Future<void> main(List<String> args) async {
     if (only != null && !only.contains(no)) continue;
 
     final String subject = t['subject'] as String;
-    if (!_subjects.contains(subject)) {
+    if (!taxonomy.subjects.contains(subject)) {
       stderr.writeln(
         'Bilinmeyen ders adi: "$subject" (test $no). '
-        'Manifest bozuk — yks_curriculum.dart ile ayni olmali.',
+        'Manifest bozuk — taxonomy/yks-konulari.md ile ayni olmali.',
       );
       exit(65);
     }
     final String url = t['url'] as String;
-    final String concept = t['concept'] as String;
+    final String rawConcept = t['concept'] as String;
+    final String? resolved =
+        taxonomy.resolve(t['exam'] as String, subject, rawConcept);
+    if (resolved == null) {
+      // DURUYOR, atlamıyor: sessizce gecen bir konu adi, havuzda hicbir
+      // konuya dusmeyen gorunmez sorular birakiyordu.
+      stderr.writeln(
+        'Konu agacinda karsiligi yok: "$rawConcept" '
+        '(${t['exam']} · $subject, test $no).\n'
+        'Ya manifesti duzeltin ya da taxonomy/yks-konulari.md icinde ilgili '
+        'konuya `eski: $rawConcept` etiketi ekleyip ureticiyi calistirin.',
+      );
+      exit(65);
+    }
+    final String concept = resolved;
     final String answers = (t['answers'] as String)
         .replaceAll(RegExp(r'\s'), '')
         .toUpperCase();

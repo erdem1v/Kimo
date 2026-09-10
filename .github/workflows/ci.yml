@@ -90,6 +90,20 @@ jobs:
       - name: SQL göçleri ve pgTAP plan sayıları
         run: python tools/check_sql.py
 
+      # Konu ağacının tek kaynağı `taxonomy/yks-konulari.md`; SQL tohumu ve
+      # istemci varlığı ondan ÜRETİLİYOR. Üreticinin kendi sınaması, bu depoda
+      # bir denetleyicinin sessizce hiçbir şey bulmama hatasına düşmüş
+      # olmasından ders: bozuk girdiyi gerçekten yakaladığını her koşuda
+      # kanıtlıyor.
+      - name: Taksonomi üreticisinin kendi sınaması
+        run: python3 tools/build_taxonomy.py --selftest
+
+      # Üretilen dosyalar kaynakla eş mi (pubspec.lock kapısının aynısı).
+      # Kaynağı düzenleyip üreticiyi çalıştırmayı unutmak, veritabanı ile
+      # istemcinin farklı ağaç görmesi demek.
+      - name: Taksonomi çıktıları güncel mi
+        run: python3 tools/build_taxonomy.py --check
+
       # Uygulama adı "Kimo" olarak kesinleşti (mağazada "Kimo: AI YKS").
       # Eski ad üç ayrı biçimde geçiyordu (boşluklu, alt tireli ve camelCase)
       # ve bir tanesini atlamak sessiz bir tutarsızlık bırakır — hukuki

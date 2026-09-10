@@ -58,6 +58,27 @@ as $$
      );
 $$;
 
+-- --------------------------------------------- konu doğrulamasını atla (0071)
+-- 0071'den beri `mistakes` INSERT/UPDATE'i konuyu müfredat ağacına karşı
+-- doğruluyor. Test fikstürlerinin çoğu bilerek UYDURMA konular kullanıyor
+-- ('Tarih'/'a1', 'Fizik'/'Kuvvet') — kısa ve okunur olsunlar diye. Onları
+-- gerçek konu adlarına çevirmek testleri okunmaz yapardı ve testin konusu da
+-- o değil.
+--
+-- DAHA ÖNEMLİSİ: `270_sanctions` askıdaki kullanıcının INSERT'inin 42501 ile
+-- reddedildiğini iddia ediyor. BEFORE tetikleyicisi RLS'ten ÖNCE çalıştığı
+-- için doğrulama açıkken o satır KM022 ile düşer ve test ASKIYI değil konuyu
+-- ölçmeye başlar — sessizce yanlış bir şeyi kanıtlayan bir test.
+--
+-- `290_curriculum.sql` bunu ÇAĞIRMIYOR: orada doğrulamanın kendisi test.
+create or replace function tests.skip_topic_check()
+returns void
+language plpgsql security definer set search_path = public, pg_temp
+as $$
+begin
+  execute 'alter table public.mistakes disable trigger mistakes_topic_check';
+end $$;
+
 create or replace function tests.get_supabase_uid(identifier text)
 returns uuid
 language sql stable security definer set search_path = auth, pg_temp

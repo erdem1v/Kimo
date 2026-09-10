@@ -5,9 +5,10 @@ import 'package:flutter/material.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../data/curriculum_repository.dart';
 import '../../data/mistake_repository.dart';
 import '../../data/photo_queue.dart';
-import '../../data/yks_curriculum.dart';
+import '../../models/curriculum.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/models.dart';
 import '../../services/sound_service.dart';
@@ -95,7 +96,7 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
       if (a.exam == 'TYT' || a.exam == 'AYT') _exam = a.exam!;
       if (a.subject != null && _subjects.contains(a.subject)) {
         _subject = a.subject;
-        if (a.concept != null && _topicsOf(a.subject!).contains(a.concept)) {
+        if (a.concept != null && _topicValid(a.subject!, a.concept!)) {
           _concept = a.concept;
         }
       }
@@ -110,7 +111,7 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
       if (subject is String && _subjects.contains(subject)) {
         _subject = subject;
         final Object? concept = f['concept'];
-        if (concept is String && _topicsOf(subject).contains(concept)) {
+        if (concept is String && _topicValid(subject, concept)) {
           _concept = concept;
         }
       }
@@ -152,15 +153,15 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
 
   bool get _outOfCredit => widget.analysis?.outOfCredit ?? false;
 
-  List<String> get _subjects =>
-      YksCurriculum.forExam(userProfile.curriculum, _exam).keys.toList();
+  /// Ağaç artık sunucudan geliyor ve tazelenince değişebiliyor; bu yüzden
+  /// her okuma repository'den (bkz. `CurriculumRepository`).
+  CurriculumTree get _tree =>
+      curriculumRepository.treeFor(userProfile.curriculum);
 
-  List<String> _topicsOf(String subject) {
-    final List<Unit> units =
-        YksCurriculum.forExam(userProfile.curriculum, _exam)[subject] ??
-            <Unit>[];
-    return <String>[for (final Unit u in units) ...u.topics];
-  }
+  List<String> get _subjects => _tree.subjectNames(_exam);
+
+  bool _topicValid(String subject, String topic) =>
+      _tree.isValidTopic(_exam, subject, topic);
 
   bool get _canSave =>
       !_saving && _subject != null && _concept != null && _correctIndex != null;
@@ -215,7 +216,19 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
       debugPrint('hata kaydı sunucuca reddedildi: ${e.code} ${e.message}');
       if (!mounted) return;
       setState(() => _saving = false);
-      messenger.showSnackBar(SnackBar(content: Text(l.confirmSaveFailed)));
+      if (e.code == MistakeRepository.staleTopicCode) {
+        // Ağaç bizde bayat: konu artık müfredatta yok. Sessiz bir "kaydedilemedi"
+        // yerine sebebi söyleniyor ve liste tazeleniyor — kullanıcı yeni ağaçtan
+        // seçebilsin.
+        unawaited(curriculumRepository
+            .refresh(userProfile.curriculum)
+            .then((_) {
+          if (mounted) setState(() => _concept = null);
+        }));
+        messenger.showSnackBar(SnackBar(content: Text(l.confirmTopicStale)));
+      } else {
+        messenger.showSnackBar(SnackBar(content: Text(l.confirmSaveFailed)));
+      }
     } catch (e) {
       // AĞ HATASI: kaydetme yolu kapanmıyor — kayıt kuyruğa giriyor ve
       // bağlantı gelince kendiliğinden gönderiliyor. Fotoğraf da diskte
@@ -621,15 +634,24 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
 
   Future<void> _pickTopic(BuildContext context) async {
     sound.tap();
-    final String? picked = await showTopicPicker(
+    // Ders ARTIK ZORUNLU DEĞİL: seçici tüm derslerde arıyor ve dersi de
+    // kendisi döndürüyor. "atışlar" yazan kullanıcı Fizik'i hiç seçmeden
+    // Fizik'in konusuna inebiliyor.
+    final TopicPick? picked = await showTopicPicker(
       context,
       curriculum: userProfile.curriculum,
       exam: _exam,
-      subject: _subject!,
+      subject: _subject,
       selected: _concept,
     );
     if (!mounted || picked == null) return;
-    setState(() => _concept = picked);
+    setState(() {
+      if (picked.subject != _subject) {
+        _subject = picked.subject;
+        _extras.clear();   // ek konular dersle birlikte geçersizleşiyor
+      }
+      _concept = picked.topic;
+    });
   }
 
   Widget _correctOptionCard(BuildContext context, L10n l) {

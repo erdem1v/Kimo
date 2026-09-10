@@ -307,6 +307,7 @@ class AdminQuestion {
     this.correctIndex,
     this.extraConcepts = const <String>[],
     this.photoScan = 'clear',
+    this.curriculum = 'eski',
   });
 
   final String id;
@@ -332,6 +333,13 @@ class AdminQuestion {
   /// açmak mümkün ve bunun bilerek yapılması gerekiyor.
   final String photoScan;
 
+  /// Sorunun KENDİ müfredatı (`eski` | `maarif`, göç 0071).
+  ///
+  /// Konu geçerliliği buna göre denetleniyor. Task 09'a kadar moderatörün
+  /// kendi müfredatı kullanılıyordu ve maarif öğrencisinin doğru kaydı, eski
+  /// müfredatlı bir moderatöre "müfredatta karşılığı yok" görünüyordu.
+  final String curriculum;
+
   bool get inPool => isPublic && moderation == 'ok';
 
   factory AdminQuestion.fromRow(Map<String, dynamic> row) {
@@ -347,6 +355,7 @@ class AdminQuestion {
       reportCount: (row['report_count'] as int?) ?? 0,
       photoPath: row['photo_path'] as String?,
       photoScan: (row['photo_scan'] as String?) ?? 'clear',
+      curriculum: (row['curriculum'] as String?) ?? 'eski',
       options: raw is List
           ? raw
               .map((dynamic o) =>

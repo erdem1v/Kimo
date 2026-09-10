@@ -110,9 +110,17 @@ listesinden alındı — PDF'in kendi metin katmanındaki Türkçe harfler bozuk
 }
 ```
 
-`concept` değeri **`lib/data/yks_curriculum.dart` ile birebir aynı olmalı**,
-yoksa soru haritada hiçbir konuya düşmez. `answers` cevap anahtarından gelir —
-doğru şıkkı AI'ya sordurmuyoruz, güvenilmez.
+`concept` değerinin **konu ağacında karşılığı olmalı**: ya kanonik ad ya da
+`taxonomy/yks-konulari.md` içinde o konuya bağlanmış bir `eski:` etiketi. Araç
+ağacı `assets/curriculum/tree.json`'dan okuyup çözüyor ve çözemezse **duruyor**.
+
+Eskiden yalnızca `subject` doğrulanıyordu: MEB etiketi ham hâliyle veritabanına
+giriyor ve `tools/remap_konu.sql` ELLE çalıştırılana kadar haritada hiçbir
+konuya düşmüyordu. O betik artık yok — 265 eşlemesi ağacın `eski:` etiketlerine
+taşındı ve remap'i `tools/build_taxonomy.py` üretiyor.
+
+`answers` cevap anahtarından gelir — doğru şıkkı AI'ya sordurmuyoruz,
+güvenilmez.
 
 ## Nasıl çalışıyor
 

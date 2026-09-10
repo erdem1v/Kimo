@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../data/moderation_repository.dart';
-import '../../data/yks_curriculum.dart';
-import '../../state/user_profile.dart';
+import '../../data/curriculum_repository.dart';
+import '../../models/curriculum.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/game_button.dart';
 import '../../widgets/mistake_photo.dart';
@@ -57,13 +57,16 @@ class _AllQuestionsScreenState extends State<AllQuestionsScreen> {
   }
 
   /// Konu müfredatta var mı? (yanlış sınıflandırmayı bulmak için)
+  ///
+  /// SATIRIN KENDİ MÜFREDATINA bakıyor, moderatörünkine değil. Task 09'a
+  /// kadar `userProfile.curriculum` kullanılıyordu ve maarif öğrencisinin
+  /// DOĞRU kaydı, eski müfredatlı bir moderatöre "müfredatta karşılığı yok"
+  /// görünüyordu. `mistakes.curriculum` (göç 0071) bunu mümkün kıldı.
   bool _isValid(AdminQuestion q) {
     if (q.exam != 'TYT' && q.exam != 'AYT') return false;
-    final Map<String, List<Unit>> subjects =
-        YksCurriculum.forExam(userProfile.curriculum, q.exam!);
-    final List<Unit>? units = subjects[q.subject];
-    if (units == null) return false;
-    return units.any((Unit u) => u.topics.contains(q.concept));
+    return curriculumRepository
+        .treeFor(q.curriculum)
+        .isValidTopic(q.exam!, q.subject, q.concept);
   }
 
   List<AdminQuestion> get _filtered => switch (_filter) {
@@ -366,40 +369,55 @@ class _QuestionEditorState extends State<_QuestionEditor> {
   bool _saving = false;
   static const int _maxExtras = 2;
 
-  Map<String, List<Unit>> get _subjects => YksCurriculum.forExam(
-      userProfile.curriculum, _exam == 'AYT' ? 'AYT' : 'TYT');
+  /// Sorunun KENDİ müfredatının ağacı (moderatörünki değil).
+  CurriculumTree get _tree =>
+      curriculumRepository.treeFor(widget.question.curriculum);
+
+  String get _examOrTyt => _exam == 'AYT' ? 'AYT' : 'TYT';
+
+  List<String> get _subjectNames => _tree.subjectNames(_examOrTyt);
 
   bool get _conceptValid =>
       _exam != null && _concept != null && _topicExists(_concept!);
 
   /// Konu, seçili sınav+ders altında müfredatta var mı?
-  bool _topicExists(String topic) {
-    final List<Unit>? units = _subjects[_subject];
-    return units?.any((Unit u) => u.topics.contains(topic)) ?? false;
-  }
+  bool _topicExists(String topic) =>
+      _tree.isValidTopic(_examOrTyt, _subject, topic);
 
   Future<void> _pickTopic() async {
     if (_exam == null) return;
-    final String? picked = await showTopicPicker(
+    // Sorunun KENDİ müfredatı; moderatörünki değil (bkz. `_isValid`).
+    final TopicPick? picked = await showTopicPicker(
       context,
-      curriculum: userProfile.curriculum,
+      curriculum: widget.question.curriculum,
       exam: _exam!,
       subject: _subject,
       selected: _concept,
     );
-    if (!mounted) return;
-    if (picked != null) setState(() => _concept = picked);
+    if (!mounted || picked == null) return;
+    setState(() {
+      if (picked.subject != _subject) {
+        _subject = picked.subject;
+        _extras.clear();
+      }
+      _concept = picked.topic;
+    });
   }
 
   Future<void> _pickExtra() async {
     if (_exam == null) return;
-    final String? picked = await showTopicPicker(
+    final TopicPick? pick = await showTopicPicker(
       context,
-      curriculum: userProfile.curriculum,
+      curriculum: widget.question.curriculum,
       exam: _exam!,
       subject: _subject,
     );
-    if (!mounted || picked == null) return;
+    if (!mounted || pick == null) return;
+    // Ek konu ANA KONUYLA aynı derste olmalı: soru ana konusunda gruplanıyor
+    // ve ölçüm ek konulara da yazılıyor; başka bir dersin konusu o gruplamayı
+    // bozardı.
+    if (pick.subject != _subject) return;
+    final String picked = pick.topic;
     if (picked == _concept || _extras.contains(picked)) return;
     setState(() => _extras.add(picked));
   }
@@ -511,8 +529,9 @@ class _QuestionEditorState extends State<_QuestionEditor> {
                   onSelected: (_) => setState(() {
                     _exam = e;
                     // Sınav değişince ders/konu geçerliliği bozulabilir.
-                    if (!_subjects.containsKey(_subject)) {
-                      _subject = _subjects.keys.first;
+                    if (!_subjectNames.contains(_subject) &&
+                        _subjectNames.isNotEmpty) {
+                      _subject = _subjectNames.first;
                     }
                     if (!_conceptValid) _concept = null;
                     _extras.removeWhere((String c) => !_topicExists(c));
@@ -536,7 +555,7 @@ class _QuestionEditorState extends State<_QuestionEditor> {
             spacing: 8,
             runSpacing: 8,
             children: <Widget>[
-              for (final String s in _subjects.keys)
+              for (final String s in _subjectNames)
                 ChoiceChip(
                   label: Text(s),
                   selected: _subject == s,

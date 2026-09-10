@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../data/curriculum_repository.dart';
 import '../data/notification_lines.dart';
 import '../data/social_repository.dart';
 import '../features/reviews/domain/review_scheduler.dart';
@@ -182,6 +185,10 @@ class UserProfile extends ChangeNotifier {
       'curriculum': _curriculum,
       'exam_year': year,
     });
+    // Müfredat DEĞİŞTİ: konu ağacı da öyle. Gömülü yedek iki müfredatı da
+    // taşıdığı için seçici hemen çalışıyor; bu çağrı sunucudaki güncel ağacı
+    // arka planda getiriyor.
+    unawaited(curriculumRepository.refresh(_curriculum!));
   }
 
   Future<void> setNickname(String nickname) async {

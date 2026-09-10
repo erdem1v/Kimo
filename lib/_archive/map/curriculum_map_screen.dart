@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 
 import 'package:kimo/data/progress_repository.dart';
 import '../pool/pool_repository.dart';
-import 'package:kimo/data/yks_curriculum.dart';
+import 'package:kimo/data/curriculum_repository.dart';
+import 'package:kimo/models/curriculum.dart';
 import 'package:kimo/models/topic_progress.dart';
 import 'package:kimo/services/sound_service.dart';
 import 'package:kimo/state/user_profile.dart';
@@ -79,11 +80,19 @@ class _CurriculumMapScreenState extends State<CurriculumMapScreen> {
     await _load();
   }
 
-  Map<String, List<Unit>> get _subjects =>
-      YksCurriculum.forExam(userProfile.curriculum, _exam);
+  // Task 09: ağaç artık sunucudan geliyor (bkz. CurriculumRepository).
+  // `YksCurriculum` silindi; bu ekran arşivde ve derlemeye girmiyor, ama
+  // içe aktarmaları çalışır durumda tutuluyor ki geri taşıma saf bir dosya
+  // taşıması olarak kalsın (bkz. lib/_archive/README.md).
+  Map<String, List<UnitNode>> get _subjects => <String, List<UnitNode>>{
+        for (final SubjectNode s in curriculumRepository
+            .treeFor(userProfile.curriculum)
+            .subjectsOf(_exam))
+          s.subject: s.units,
+      };
 
   String get _activeSubject {
-    final Map<String, List<Unit>> s = _subjects;
+    final Map<String, List<UnitNode>> s = _subjects;
     if (_subject != null && s.containsKey(_subject)) return _subject!;
     return s.keys.first;
   }
@@ -321,7 +330,7 @@ class _MapTrail extends StatelessWidget {
   });
 
   final String subject;
-  final List<Unit> units;
+  final List<UnitNode> units;
   final TopicProgress Function(String concept) progressOf;
   final int Function(String concept) availableOf;
   final void Function(TopicProgress) onTapTopic;

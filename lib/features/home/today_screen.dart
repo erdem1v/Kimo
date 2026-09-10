@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../../data/daily_state_repository.dart';
 import '../../data/mistake_repository.dart';
 import '../../data/photo_queue.dart';
-import '../../data/yks_subjects.dart';
+import '../../data/curriculum_repository.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/mascot.dart';
 import '../../models/models.dart';
@@ -205,7 +205,10 @@ class _TodayScreenState extends State<TodayScreen> {
         child: ListenableBuilder(
           // Dinleyici DAR: yalnızca ilerleme ve profil. Tema değişimi
           // (AppSettings) bu ağacı yeniden kurmuyor.
-          listenable: Listenable.merge(<Listenable>[gameProgress, userProfile]),
+          // `curriculumRepository` de dinleniyor: ağaç sunucudan tazelenince
+          // ders listesi kendiliğinden güncellenmeli.
+          listenable: Listenable.merge(
+              <Listenable>[gameProgress, userProfile, curriculumRepository]),
           builder: (BuildContext context, _) => _body(context),
         ),
       ),
@@ -560,8 +563,11 @@ class _TodayScreenState extends State<TodayScreen> {
 
   Widget _subjects(BuildContext context, L10n l) {
     final Map<String, int> counts = _countsForExam(_exam);
+    // Ders listesi ARTIK AĞACIN KENDİSİNDEN türüyor. `YksSubjects` ayrı bir
+    // liste tutuyordu (üçüncü kopya) ve `YksCurriculum`ın anahtarlarıyla aynı
+    // olmak zorundaydı — derleyici bunu zorlamıyordu.
     final List<String> subjects = List<String>.of(
-      YksSubjects.forExam(userProfile.curriculum, _exam),
+      curriculumRepository.treeFor(userProfile.curriculum).subjectNames(_exam),
     );
     for (final String s in counts.keys) {
       if (!subjects.contains(s)) subjects.add(s);

@@ -18,6 +18,9 @@ select tests.create_supabase_user('mallory');
 -- Yaş kapısı (0067) `mistakes` INSERT'te doğum yılı şart koşuyor; bu testin
 -- konusu o değil, fikstürün kurulabilmesi için ön koşul (bkz. seed.sql).
 select tests.age_all_users();
+-- Konu doğrulaması (0071) fikstürlerdeki uydurma konuları reddederdi; bu
+-- testin konusu o değil (bkz. seed.sql).
+select tests.skip_topic_check();
 
 -- ============================================================ (1) CHECK kısıtı
 select tests.authenticate_as('mallory');

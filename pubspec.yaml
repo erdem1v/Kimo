@@ -57,6 +57,13 @@ flutter:
   generate: true
   assets:
     - assets/sounds/
+    # Konu agacinin GOMULU YEDEGI (Task 09). Uretilen dosya; kaynagi
+    # taxonomy/yks-konulari.md, ureticisi tools/build_taxonomy.py.
+    #
+    # Neden gomulu: agacin tek calisma zamani kaynagi veritabani, ama ilk
+    # acilista ve cevrimdisiyken konu secilemezse SORU KAYDEDILEMEZ. Yedek
+    # olmadan uygulamanin cekirdek akisi aga bagimli hale gelirdi.
+    - assets/curriculum/tree.json
   # Yazı tipleri depoya gömüldü: çalışma anında indirme yok (düşük donanımlı
   # Android ve çevrimdışı ilk açılış için). Google Fonts'tan latin+latin-ext
   # altkümesi alındı; 12 Türkçe glifin hepsi her ağırlıkta doğrulandı.
