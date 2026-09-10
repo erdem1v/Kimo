@@ -23,7 +23,13 @@
 // OpenAI anahtarı SADECE burada (Supabase secret: OPENAI_API_KEY).
 // Deploy: supabase functions deploy analyze-question
 
-import { type Curriculum, isValidPair, taxonomyText } from "./taxonomy.ts";
+import {
+  type Curriculum,
+  isValidPair,
+  loadTaxonomy,
+  type Taxonomy,
+  taxonomyText,
+} from "./taxonomy.ts";
 
 // CORS BİLİNÇLİ OLARAK YOK (Task 03). Bu fonksiyonu yalnızca mobil istemci
 // çağırıyor; native HTTP Origin göndermez ve preflight yapmaz. Eski `*`
@@ -185,6 +191,23 @@ Deno.serve(async (req: Request) => {
       return deny(503, `yaş kapısı sorulamadı: ${e}`);
     }
 
+    // ------------------------------------------------------------ KONU AĞACI
+    // Önbellekten de önce: önbellek anahtarı taksonomi SÜRÜMÜNÜ içeriyor
+    // (0071). Ağaç değiştiğinde eski yanıtlar artık var olmayan bir konu adı
+    // döndürüp yeni doğrulamaya takılırdı — kullanıcı hiçbir şey yapmadan.
+    //
+    // Ağaç okunamazsa analiz YAPILMIYOR. Açık taraf (fail-open) burada yanlış
+    // olurdu: sınıflandırma doğrulamasız kalır ve arşive uydurma konu girer.
+    let taxonomy: Taxonomy;
+    try {
+      taxonomy = await loadTaxonomy(
+        (name, body) => rpc(authHeader, name, body),
+        curriculum,
+      );
+    } catch (e) {
+      return deny(503, `konu ağacı okunamadı: ${e}`);
+    }
+
     // ------------------------------------------------------------ ÖNBELLEK
     // KOTADAN DA ÖNCE. Aynı fotoğraf ikinci kez gönderildiğinde amaç ücretin
     // ÇIKMAMASI; sonradan iade etmek değil. En sık tetikleyici ürünün kendi
@@ -198,11 +221,13 @@ Deno.serve(async (req: Request) => {
       const hit = await rpc(authHeader, "ai_cache_get", {
         p_sha_hex: shaHex,
         p_curriculum: curriculum,
+        p_taxonomy_version: taxonomy.version,
       });
       if (hit && typeof hit === "object") {
         return json({
           ...(hit as Record<string, unknown>),
           allowed: true,
+          taxonomy_version: taxonomy.version,
           // İstemci `remaining` yoksa eldeki sayıyı KORUYOR; doğrusu bu,
           // çünkü bu çağrıda hiçbir hak harcanmadı.
           cached: true,
@@ -256,7 +281,7 @@ Deno.serve(async (req: Request) => {
             "yaz: unreadable (metin okunmuyor), no_question (soru ifadesi yok), " +
             "no_options (şıklar yok). Geçerliyse 'ok' yaz. SERBEST METİN YAZMA.\n\n" +
             "KONU LİSTESİ (" + curriculum + " müfredat):\n" +
-            taxonomyText(curriculum),
+            taxonomyText(taxonomy),
         },
         {
           role: "user",
@@ -364,7 +389,7 @@ Deno.serve(async (req: Request) => {
     parsed.konu_valid = Boolean(
       parsed.ders &&
         parsed.konu &&
-        isValidPair(curriculum, parsed.sinav ?? "", parsed.ders, parsed.konu),
+        isValidPair(taxonomy, parsed.sinav ?? "", parsed.ders, parsed.konu),
     );
     parsed.curriculum = curriculum;
 
@@ -377,6 +402,7 @@ Deno.serve(async (req: Request) => {
         p_sha_hex: shaHex,
         p_curriculum: curriculum,
         p_result: parsed,
+        p_taxonomy_version: taxonomy.version,
       });
     } catch (e) {
       console.error(`[analyze-question] önbelleğe yazılamadı: ${e}`);
@@ -385,6 +411,11 @@ Deno.serve(async (req: Request) => {
     // Hak harcandı; istemci kalan sayıyı HUD'da gösteriyor.
     parsed.allowed = true;
     parsed.remaining = credit.remaining;
+    // Taksonomi sürümü HER yanıtta: istemci elindeki ağacın bayatladığını
+    // böyle anlıyor ve onay ekranı açılmadan ÖNCE tazeliyor. Olmasaydı
+    // kullanıcı listede olmayan bir konu seçip sebebini anlamadığı bir hata
+    // alırdı — bu paketin kapatmak için var olduğu senaryo.
+    parsed.taxonomy_version = taxonomy.version;
     parsed.resets_at = credit.resetsAt;
     return json(parsed, 200);
   } catch (e) {

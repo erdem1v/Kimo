@@ -17,6 +17,11 @@
 // kendiliğinden sıyırıyor). Prompt metni aşağıda aynalanmış durumda ve
 // `index.ts` ile eşleştiği her koşumda denetleniyor.
 //
+// AĞAÇ ARTIK VERİTABANINDA (Task 09). Bu betiğin veritabanı bağlantısı yok ve
+// olmamalı — ölçüm aracı. Ağacı, aynı kaynaktan üretilen istemci varlığından
+// (`assets/curriculum/tree.json`) okuyor. İkisi `tools/build_taxonomy.py` ile
+// birlikte üretildiği için sürüm ayrışması mümkün değil.
+//
 // KULLANIM:
 //   OPENAI_API_KEY=sk-... node tools/ab_model_bench.mjs <foto-dizini> [--limit N]
 //
@@ -36,6 +41,20 @@ const FN_DIR = path.join(HERE, '..', 'supabase', 'functions', 'analyze-question'
 
 const { taxonomyText, isValidPair } = await import(path.join(FN_DIR, 'taxonomy.ts'));
 
+/** Üretilen istemci varlığını edge function'ın beklediği düz biçime çevirir. */
+async function loadTaxonomyFromAsset(curriculum) {
+  const raw = await readFile(
+    path.join(HERE, '..', 'assets', 'curriculum', 'tree.json'), 'utf8');
+  const doc = JSON.parse(raw);
+  const byExam = { TYT: {}, AYT: {} };
+  for (const exam of ['TYT', 'AYT']) {
+    for (const s of doc.curricula?.[curriculum]?.[exam] ?? []) {
+      byExam[exam][s.subject] = s.units.flatMap(u => u.topics.map(t => t.topic));
+    }
+  }
+  return { version: doc.version, byExam };
+}
+
 // ---------------------------------------------------------------- fiyatlar
 // developers.openai.com/api/docs/pricing — $/1M token. Koşumdan önce teyit et:
 // fiyat değişirse buradaki tablo sessizce yanlış maliyet üretir.
@@ -52,6 +71,7 @@ const CONFIGS = [
 ];
 const WIDTHS = [1600, 1200];
 const CURRICULUM = 'eski';
+const TAXONOMY = await loadTaxonomyFromAsset(CURRICULUM);
 const MAX_COMPLETION_TOKENS = 800;
 const CONCURRENCY = 3;
 
@@ -74,7 +94,7 @@ const SYSTEM_PROMPT =
   "yaz: unreadable (metin okunmuyor), no_question (soru ifadesi yok), " +
   "no_options (şıklar yok). Geçerliyse 'ok' yaz. SERBEST METİN YAZMA.\n\n" +
   "KONU LİSTESİ (" + CURRICULUM + " müfredat):\n" +
-  taxonomyText(CURRICULUM);
+  taxonomyText(TAXONOMY);
 
 const RESPONSE_FORMAT = {
   type: 'json_schema',
@@ -311,7 +331,7 @@ async function main() {
           option_count: Array.isArray(parsed.options) ? parsed.options.length : 0,
           option_labels: Array.isArray(parsed.options) ? parsed.options.map(o => o.label).join('') : '',
           konu_valid: Boolean(parsed.ders && parsed.konu &&
-            isValidPair(CURRICULUM, parsed.sinav ?? '', parsed.ders, parsed.konu)),
+            isValidPair(TAXONOMY, parsed.sinav ?? '', parsed.ders, parsed.konu)),
         },
       };
     });
