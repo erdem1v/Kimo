@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -60,23 +58,15 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
     } on AuthException catch (e) {
+      // `email_not_confirmed` DALI KALDIRILDI (Task 08). Doğrulama Task 06'da
+      // kaldırılmıştı; dal Task 07'de bilinçli korunmuştu çünkü üretim
+      // Dashboard'ında `enable_confirmations = false` olduğu teyit
+      // edilmemişti. Teyit verildi: doğrulama kapalı ve açılmayacak, yani bu
+      // dal hiçbir zaman çalışmıyor ve `resendSignUp` çağrısı sessiz bir
+      // hataya (ya da oran sınırına) gidiyordu.
       debugPrint('giriş reddedildi: ${e.code} ${e.message}');
       if (!mounted) return;
-      // "E-posta doğrulanmamış" diğer retlerden AYRILIYOR: kullanıcının
-      // yapabileceği şey farklı (gelen kutusuna bakmak / yeniden göndermek),
-      // genel "giriş başarısız" bunu asla söylemiyordu.
-      if (e.code == 'email_not_confirmed') {
-        _snack(l.signInEmailNotConfirmed);
-        unawaited(
-          authRepository.resendSignUp(email).catchError((Object err) {
-            // Oran sınırına takılmış olabilir (saatte 2 e-posta); giriş
-            // ekranında ikinci bir hata göstermek kafa karıştırırdı.
-            debugPrint('doğrulama postası yeniden gönderilemedi: $err');
-          }),
-        );
-      } else {
-        _snack(l.signInFailed);
-      }
+      _snack(l.signInFailed);
     } catch (e) {
       debugPrint('giriş başarısız: $e');
       if (mounted) _snack(l.errorGeneric);

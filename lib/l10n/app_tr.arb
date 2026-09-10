@@ -55,9 +55,9 @@
     "description": "AI analizi sürerken gösterilen başlık"
   },
   "captureScanningDetail": "Şıklarını ve konusunu çıkarıyorum",
-  "captureOfflineNote": "İnternet giderse fotoğraf kuyruğa girmez — şıkları ve konuyu elle girip yine de kaydedebilirsin.",
+  "captureOfflineNote": "Bağlantı yokken Kimo okuyamaz. Fotoğrafı sıraya alabilir ya da şıkları ve konuyu elle girip hemen kaydedebilirsin.",
   "@captureOfflineNote": {
-    "description": "Çevrimdışıyken AI çalışmaz ama kaydetme yolu açık kalır."
+    "description": "Çevrimdışıyken iki yol da açık: kuyruk ya da elle giriş (Task 08)."
   },
   "captureEmptyTitle": "Çözemediğin soruyu çek",
   "captureEmptyBody": "Şıklarını ve konusunu ben çıkarayım; sen yalnızca doğru şıkkı işaretle.",
@@ -597,7 +597,6 @@
   "signInTitle": "Tekrar hoş geldin",
   "signInAction": "Giriş yap",
   "signInFailed": "Giriş yapılamadı. E-posta ve parolanı kontrol et.",
-  "signInEmailNotConfirmed": "E-postan henüz doğrulanmamış. Gelen kutunu kontrol et — doğrulama bağlantısını yeniden gönderdim.",
   "profileTitle": "Profil",
   "profileSettings": "Ayarlar",
   "profileXp": "Toplam XP",
@@ -778,5 +777,75 @@
   "friendsAddNotFound": "Böyle bir kod yok.",
   "@friendsAddNotFound": {
     "description": "TEK MESAJ: kod yok / kendi kodun / engelli / anonim ayrımı yapılmıyor. Ayırmak kod uzayını taramayı ucuzlatırdı."
-  }
+  },
+  "captureQueuedBody": "Kimo yaş adımından sonra bakacak. Bu arada kuruluma devam edebilirsin.",
+  "@captureQueuedBody": {
+    "description": "Onboarding ilk çekim: analiz yaş kapısının arkasına alındı (A-2)."
+  },
+  "captureQueuedOffline": "Bağlantı gelince Kimo bu fotoğrafa bakacak.",
+  "photoQueueBanner": "{count, plural, =1{1 fotoğrafın sırada bekliyor} other{{count} fotoğrafın sırada bekliyor}}",
+  "@photoQueueBanner": {
+    "description": "Bekleyen fotoğraf şeridi",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "photoQueueTitle": "Bekleyen fotoğraflar",
+  "photoQueueEmpty": "Bekleyen fotoğraf yok.",
+  "photoQueueStateAnalyzing": "Analiz bekliyor",
+  "photoQueueStateNeedsUser": "Doğru şıkkı işaretle",
+  "photoQueueStateReady": "Gönderilmeyi bekliyor",
+  "photoQueueStateAgeGate": "Yaş adımından sonra",
+  "photoQueueComplete": "Tamamla",
+  "photoQueueDeleteTitle": "Fotoğrafı sil",
+  "photoQueueDeleteBody": "Bu fotoğraf silinecek ve kaydedilmeyecek.",
+  "photoQueueFullTitle": "Sıra dolu",
+  "photoQueueFullBody": "Bekleyen fotoğraf sayısı üst sınırda. Önce bekleyenlerden birini tamamla ya da sil.",
+  "photoQueueFullAction": "Bekleyenleri gör",
+  "photoQueueNoSession": "Oturum düştü; fotoğraf sıraya alınamadı.",
+  "photoQueueDiskError": "Fotoğraf cihaza yazılamadı; yer açıp tekrar dene.",
+  "photoQueueMissingPhoto": "Bu kaydın fotoğrafı bulunamadı.",
+  "confirmOptionCount": "Kaç şık vardı?",
+  "confirmOptionCountValue": "{count} şık",
+  "@confirmOptionCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "confirmNoteLabel": "Not (isteğe bağlı)",
+  "confirmNoteHint": "Soruyu ya da nerede takıldığını yaz",
+  "confirmWaitAnalysis": "Analizi bekle",
+  "confirmWaitAnalysisBody": "Fotoğraf sırada kalır; bağlantı gelince Kimo okur ve doğru şıkkı işaretlemen için sana döner.",
+  "confirmSavedQueued": "Sıraya alındı — bağlantı gelince gönderilecek.",
+  "analysisReasonAgeRequired": "Yaş adımı tamamlanmadan Kimo fotoğrafa bakamıyor.",
+  "settingsBlocked": "Engellenen kişiler",
+  "blockedTitle": "Engellenen kişiler",
+  "blockedEmpty": "Kimseyi engellemedin.",
+  "blockedUnblock": "Engeli kaldır",
+  "blockedConfirmTitle": "Engeli kaldır",
+  "blockedConfirmBody": "{name} sana yeniden soru gönderebilir ve arkadaş isteği atabilir.",
+  "@blockedConfirmBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "blockedDone": "Engel kaldırıldı.",
+  "blockedFailed": "Engel kaldırılamadı. Tekrar dene.",
+  "mistakesDelete": "Soruyu sil",
+  "mistakesDeleteTitle": "Soruyu sil",
+  "mistakesDeleteBody": "Bu soru ve fotoğrafı kalıcı olarak silinecek. Geri alınamaz.",
+  "mistakesDeleted": "Soru silindi.",
+  "mistakesDeleteFailed": "Silinemedi. Tekrar dene.",
+  "practiceIncompleteTitle": "Bu soruda şık yok",
+  "practiceIncompleteBody": "Şıkları ve doğru cevabı ekleyince soru normal akışa girer.",
+  "practiceCompleteAction": "Şıkları ekle",
+  "practiceCompleteCorrect": "Doğru şık hangisiydi?",
+  "practiceCompleteSaved": "Soru tamamlandı; bir sonraki turda şıklı gelecek.",
+  "practiceCompleteFailed": "Kaydedilemedi. Tekrar dene."
 }

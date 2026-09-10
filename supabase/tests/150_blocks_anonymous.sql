@@ -11,6 +11,9 @@ select plan(17);
 
 select tests.create_supabase_user('alice');
 select tests.create_supabase_user('bob');
+-- Yaş kapısı (0067) `mistakes` INSERT'te doğum yılı şart koşuyor; bu testin
+-- konusu o değil, fikstürün kurulabilmesi için ön koşul (bkz. seed.sql).
+select tests.age_all_users();
 
 -- ============================================================== YAPI
 select has_table('public'::name, 'user_blocks'::name, 'user_blocks tablosu var');
@@ -112,16 +115,20 @@ select throws_ok(
 
 -- =============================================================== ANONİM
 select tests.create_supabase_user('anon_user');
+-- Yaş kapısı (0067) `mistakes` INSERT'te doğum yılı şart koşuyor; bu testin
+-- konusu o değil, fikstürün kurulabilmesi için ön koşul (bkz. seed.sql).
+select tests.age_all_users();
 select tests.reset_role();
 update public.profiles set is_anonymous = true
  where id = tests.get_supabase_uid('anon_user');
 
 select tests.authenticate_as('alice');
+-- Okuma RPC'den (0068: görünüm istemciye kapandı); süzgeç görünümün İÇİNDE.
 select is(
-  (select count(*)::int from public.profiles_public
-    where id = tests.get_supabase_uid('anon_user')),
+  (select count(*)::int from public.profiles_by_ids(
+     array[tests.get_supabase_uid('anon_user')])),
   0,
-  'anonim kullanıcı profiles_public''te GÖRÜNMÜYOR'
+  'anonim kullanıcı herkese açık profillerde GÖRÜNMÜYOR'
 );
 
 select tests.authenticate_as('anon_user');

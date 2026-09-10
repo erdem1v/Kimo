@@ -10,6 +10,9 @@ set search_path to public, extensions, tests;
 select plan(8);
 
 select tests.create_supabase_user('acemi');
+-- Yaş kapısı (0067) `mistakes` INSERT'te doğum yılı şart koşuyor; bu testin
+-- konusu o değil, fikstürün kurulabilmesi için ön koşul (bkz. seed.sql).
+select tests.age_all_users();
 
 select tests.authenticate_as('acemi');
 

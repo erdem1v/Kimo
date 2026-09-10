@@ -7,17 +7,21 @@ import '../models/mascot.dart';
 import '../services/crash_service.dart';
 import '../models/social.dart';
 
-/// Sosyal katman: herkese açık profiller (arama/liderlik) ve karşılıklı
+/// Sosyal katman: herkese açık profiller (arkadaş listesi/liderlik) ve karşılıklı
 /// onaylı arkadaşlık istekleri.
 ///
-/// Okuma `profiles_public` görünümünden yapılır (yalnızca güvenli kolonlar:
-/// id, nickname, mascot, xp, streak). Yazma kendi `profiles` satırına.
+/// Okuma `profiles_by_ids(uuid[])` RPC'sinden yapılır: kaynak hâlâ
+/// `profiles_public` görünümü (yalnızca güvenli kolonlar: id, nickname,
+/// mascot, xp, streak) ama görünüm Task 08'de istemciye KAPATILDI — serbest
+/// `select` bütün dizini döküyordu. Yazma kendi `profiles` satırına.
 class SocialRepository {
   SocialRepository._();
   static final SocialRepository instance = SocialRepository._();
 
-  /// Arama/liderlik için okunan görünüm.
-  static const String _publicView = 'profiles_public';
+  // `_publicView = 'profiles_public'` sabiti KALDIRILDI (Task 08 / göç 0068):
+  // görünüm artık `authenticated`'a kapalı ve istemcide adına başvuran hiçbir
+  // sorgu yok. Sabiti bırakmak, kapanmış bir yolun hâlâ kullanıldığı
+  // izlenimini verirdi.
 
   SupabaseClient get _client => Supabase.instance.client;
   String? get _uid => _client.auth.currentUser?.id;
@@ -103,12 +107,8 @@ class SocialRepository {
   Future<PublicProfile?> myProfile() async {
     final String? uid = _uid;
     if (uid == null) return null;
-    final Map<String, dynamic>? row = await _client
-        .from(_publicView)
-        .select()
-        .eq('id', uid)
-        .maybeSingle();
-    return row == null ? null : PublicProfile.fromRow(row);
+    final List<PublicProfile> rows = await profilesByIds(<String>[uid]);
+    return rows.isEmpty ? null : rows.first;
   }
 
   // TAKMA AD ARAMASI KALDIRILDI (Task 02, Dalga 5).
@@ -123,8 +123,9 @@ class SocialRepository {
   // açık bırakmıştı. Yerini arkadaş kodu aldı: 31 harflik alfabeden 6 karakter
   // (≈887 milyon) ve `add_friend_by_code` saatte 20 denemeyle sınırlı.
   //
-  // Görünüm DURUYOR: kimliğe göre tekil/çoklu okuma (arkadaş listesi, lig
-  // tahtası) hâlâ gerekiyor. Giden yalnızca serbest metin araması.
+  // Görünüm DURUYOR ama artık istemciye KAPALI (Task 08 / göç 0068): kimliğe
+  // göre okuma `profiles_by_ids` RPC'sinden geçiyor, üst sınırı 60 kimlik.
+  // Aramayı kaldırmak dizini kapatmamıştı — görünüm hâlâ toplu okunabiliyordu.
 
   /// Beni ilgilendiren tüm arkadaşlık kayıtları (istek + kabul).
   Future<List<Friendship>> relations() async {
@@ -138,25 +139,42 @@ class SocialRepository {
   }
 
   /// Verilen kimliklerin profillerini getirir.
+  ///
+  /// GÖRÜNÜM ARTIK DOĞRUDAN OKUNMUYOR (Task 08 / göç 0068). `profiles_public`
+  /// `authenticated` rolüne açıktı; uygulamayı hiç çalıştırmadan
+  /// `select * from profiles_public` ile bütün dizin sayfa sayfa
+  /// dökülebiliyordu. Takma ad araması Task 02'de kaldırılmıştı ama YÜZEY
+  /// kapanmamıştı — yalnızca arayüzden gizlenmişti.
+  ///
+  /// Sunucu en fazla [maxProfileIds] kimlik kabul ediyor; istemci de aynı
+  /// sayıda parçalıyor ki büyük bir arkadaş listesi hata almasın.
   Future<List<PublicProfile>> profilesByIds(List<String> ids) async {
     if (ids.isEmpty) return <PublicProfile>[];
-    final List<Map<String, dynamic>> rows = await _client
-        .from(_publicView)
-        .select()
-        .inFilter('id', ids)
-        .order('xp', ascending: false);
-    return rows.map(PublicProfile.fromRow).toList();
+    final List<PublicProfile> out = <PublicProfile>[];
+    for (int i = 0; i < ids.length; i += maxProfileIds) {
+      final List<String> chunk = ids.sublist(
+          i, i + maxProfileIds > ids.length ? ids.length : i + maxProfileIds);
+      final List<dynamic> rows = await _client.rpc<List<dynamic>>(
+        'profiles_by_ids',
+        params: <String, dynamic>{'p_ids': chunk},
+      );
+      out.addAll(rows.map((dynamic r) =>
+          PublicProfile.fromRow((r as Map).cast<String, dynamic>())));
+    }
+    // Sıralama İSTEMCİDE: RPC sırayı garanti etmiyor ve arkadaş listesi
+    // eskiden `order('xp')` ile geliyordu.
+    out.sort((PublicProfile a, PublicProfile b) => b.xp.compareTo(a.xp));
+    return out;
   }
+
+  /// `profiles_by_ids` RPC'sinin kabul ettiği en fazla kimlik (göç 0068).
+  static const int maxProfileIds = 60;
 
   /// Tek bir kullanıcının açık profili (profil kartı ekranı için).
   Future<PublicProfile?> profileById(String id) async {
     try {
-      final Map<String, dynamic>? row = await _client
-          .from(_publicView)
-          .select()
-          .eq('id', id)
-          .maybeSingle();
-      return row == null ? null : PublicProfile.fromRow(row);
+      final List<PublicProfile> rows = await profilesByIds(<String>[id]);
+      return rows.isEmpty ? null : rows.first;
     } catch (e, st) {
       unawaited(reportError(e, st, context: 'social.profileById'));
       return null;

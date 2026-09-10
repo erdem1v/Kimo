@@ -14,6 +14,9 @@ select plan(10);
 
 select tests.create_supabase_user('caliskan');
 select tests.create_supabase_user('gonderen');
+-- Yaş kapısı (0067) `mistakes` INSERT'te doğum yılı şart koşuyor; bu testin
+-- konusu o değil, fikstürün kurulabilmesi için ön koşul (bkz. seed.sql).
+select tests.age_all_users();
 
 select tests.reset_role();
 

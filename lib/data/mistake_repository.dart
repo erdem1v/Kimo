@@ -23,14 +23,31 @@ class MistakeRepository {
 
   SupabaseClient get _client => Supabase.instance.client;
 
-  /// Kullanıcının TÜM hataları (en yeni önce) — Hatalarım ekranı için.
+  /// En yeni [archiveLimit] hata — Hatalarım ekranı için.
+  ///
+  /// LİMİT AÇIKÇA YAZILIYOR (Task 08). Sorgu eskiden limitsizdi ama sınırsız
+  /// değildi: PostgREST'in `max-rows` ayarı (varsayılan 1000) listeyi SESSİZCE
+  /// kesiyordu ve istemci kesildiğini fark edemiyordu. Açık bir limit en
+  /// azından davranışı okunur kılıyor; ekranın sayaçları zaten `totalCount()`
+  /// ile ayrı geliyor, yani "kaç sorum var" doğru kalıyor.
   Future<List<MistakeEntry>> fetch() async {
     final List<Map<String, dynamic>> rows = await _client
         .from('mistakes')
         .select()
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false)
+        .limit(archiveLimit);
     return _mapRows(rows);
   }
+
+  /// Arşiv ekranının tek seferde indirdiği en fazla satır.
+  static const int archiveLimit = 500;
+
+  /// Tek tekrar oturumunda inen en fazla satır.
+  ///
+  /// Vade sırasına göre EN YAKIN olanlar geliyor, yani kesilen kısım her zaman
+  /// "daha az acil" olan. 60, bir oturumda çözülebilecek soru sayısının rahat
+  /// üstünde; kalanlar bir sonraki açılışta düşüyor.
+  static const int dueLimit = 60;
 
   // reviewedTodayCount KALDIRILDI (Task 03): hem saat dilimi hatalıydı
   // (yerel saati offset'siz gönderiyordu; gün sınırı 03:00'a kayıyordu) hem
@@ -55,6 +72,12 @@ class MistakeRepository {
   /// Vade artık ZAMAN damgası (`next_review_at`, 0049): yeni eklenen soru
   /// aynı gün, ~3 saat sonra düşer. Eski istemcilerin kuyruğundan yalnızca
   /// tarih yazılmış satırlar için `next_review_date` yedeği korunuyor.
+  ///
+  /// **[dueLimit] ile sınırlı (Task 08).** Sorgu eskiden vadesi gelmiş HER
+  /// satırı indiriyordu; 800 kaydı olan bir kullanıcıda ekran açılışı yavaşlar
+  /// ve bellek şişerdi. Sayaç bu listenin uzunluğundan DEĞİL sunucudaki
+  /// `my_daily_state.due_count` alanından okunuyor (bkz. today_screen), yani
+  /// limit kullanıcıya yanlış bir sayı göstermiyor.
   Future<List<MistakeEntry>> dueReviews() async {
     final String nowIso = DateTime.now().toUtc().toIso8601String();
     final String today = _dateStr(DateTime.now());
@@ -64,7 +87,8 @@ class MistakeRepository {
         .eq('mastered', false)
         .or('next_review_at.lte.$nowIso,'
             'and(next_review_at.is.null,next_review_date.lte.$today)')
-        .order('next_review_at', ascending: true, nullsFirst: false);
+        .order('next_review_at', ascending: true, nullsFirst: false)
+        .limit(dueLimit);
     return _mapRows(rows);
   }
 
@@ -249,13 +273,22 @@ class MistakeRepository {
   /// (oturum düşmüş) hata fırlar; çağıran bunu kullanıcıya gösteriyor.
   /// Sunucu REDDİ (silinmiş kayıt vb.) kuyruğa alınmaz — tekrar denemek aynı
   /// sonucu verir — ve olduğu gibi fırlatılır.
-  Future<ReviewOutcome> submitReview(MistakeEntry entry, bool correct) async {
+  ///
+  /// [selfReported]: doğruluk kullanıcının BEYANINDAN geliyor (şıksız satırda
+  /// "Doğru çözdüm / Bilemedim"). Planlayıcı beyanı daha temkinli işliyor —
+  /// bkz. [ReviewScheduler] başlığı.
+  Future<ReviewOutcome> submitReview(
+    MistakeEntry entry,
+    bool correct, {
+    bool selfReported = false,
+  }) async {
     final ReviewOutcome o = _scheduler.review(
       step: entry.step,
       lapses: entry.lapses,
       correct: correct,
       reviewedOn: DateTime.now(),
       examDate: ReviewScheduler.examCutoffFor(userProfile.examYear),
+      selfReported: selfReported,
     );
     final String? id = entry.id;
     if (id == null) return o;
@@ -294,14 +327,33 @@ class MistakeRepository {
   /// Fotoğrafı AI Gateway (Edge Function) ile değerlendirir: okunabilir bir
   /// soru + şıklar var mı? Geçerliyse şıkları, değilse sebebi döndürür.
   Future<QuestionAnalysis> analyzeQuestion(Uint8List imageBytes) async {
-    final FunctionResponse res = await _client.functions.invoke(
-      'analyze-question',
-      body: <String, dynamic>{
-        'imageBase64': base64Encode(imageBytes),
-        'mimeType': 'image/jpeg',
-        'curriculum': userProfile.curriculum,
-      },
-    );
+    final FunctionResponse res;
+    try {
+      res = await _client.functions.invoke(
+        'analyze-question',
+        body: <String, dynamic>{
+          'imageBase64': base64Encode(imageBytes),
+          'mimeType': 'image/jpeg',
+          'curriculum': userProfile.curriculum,
+        },
+      );
+    } on FunctionException catch (e) {
+      // Yaş kapısı (0067): fotoğraf OpenAI'a HİÇ gitmedi. Ağ hatasından
+      // ayrılıyor çünkü çıkış yolu farklı — yeniden denemek bağlantıyla değil,
+      // yaş adımının tamamlanmasıyla çözülüyor. Kuyruk bu ayrımı kullanıp
+      // kaydı düşürmeden bekletiyor.
+      final Object? details = e.details;
+      final Object? reason =
+          details is Map ? details['reason'] : null;
+      if (e.status == 403 && reason == 'age_required') {
+        return const QuestionAnalysis(
+          ok: false,
+          options: <QuestionOption>[],
+          failure: AnalysisFailure.ageRequired,
+        );
+      }
+      rethrow;
+    }
     final dynamic data = res.data;
     if (data is! Map) {
       return const QuestionAnalysis(
@@ -369,6 +421,40 @@ class MistakeRepository {
         options: <QuestionOption>[],
         failure: failure,
         creditRemaining: remaining);
+  }
+
+  /// Tek bir soruyu KALICI olarak siler: satır ve depodaki fotoğraf birlikte.
+  ///
+  /// Kullanıcının arşivinden bir soruyu çıkarmasının tek yolu bugüne kadar
+  /// TÜM HESABI silmekti (A-9). Yanlış eklenen ya da özel bilgi içeren bir
+  /// fotoğraf için makul bir yol olması gerekiyordu.
+  ///
+  /// NEDEN EDGE FUNCTION: silme iki nesneye dokunuyor. İstemci satırı
+  /// silseydi `photo_path`i kaybeder ve dosya yetim kalırdı; SQL'den
+  /// `storage.objects` silmek de yetmez (metadata gider, nesne kalır — 0031'in
+  /// dersi). `delete-question` sahipliği doğruluyor, önce nesneyi sonra satırı
+  /// siliyor. İstemcinin doğrudan DELETE yetkisi 0069'da geri alındı.
+  Future<void> deleteMistake(String id) async {
+    await _client.functions.invoke(
+      'delete-question',
+      body: <String, dynamic>{'mistakeId': id},
+    );
+  }
+
+  /// Eksik bir eski satırı tamamlar: şık etiketleri + doğru şık.
+  ///
+  /// Yeni kayıtlar hep eksiksiz (`ConfirmMistakeScreen` şıksız kaydetmiyor);
+  /// bu yol yalnızca o kural konmadan önce yazılmış satırlar için. İki sütun
+  /// da `authenticated`'ın UPDATE listesinde (0069), yani RPC gerekmiyor.
+  Future<void> completeMistake(
+    String id, {
+    required List<QuestionOption> options,
+    required int correctIndex,
+  }) async {
+    await _client.from('mistakes').update(<String, dynamic>{
+      'options': options.map((QuestionOption o) => o.toJson()).toList(),
+      'correct_index': correctIndex,
+    }).eq('id', id);
   }
 
   static String _dateStr(DateTime d) =>

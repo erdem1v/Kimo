@@ -8,11 +8,14 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(16);
+select plan(21);
 
 select tests.create_supabase_user('sahip');
 select tests.create_supabase_user('dost');
 select tests.create_supabase_user('bekci');
+-- Yaş kapısı (0067) `mistakes` INSERT'te doğum yılı şart koşuyor; bu testin
+-- konusu o değil, fikstürün kurulabilmesi için ön koşul (bkz. seed.sql).
+select tests.age_all_users();
 
 select tests.reset_role();
 insert into public.admins (user_id) values (tests.get_supabase_uid('bekci'));
@@ -161,6 +164,73 @@ select is(
   (select count(*)::int from public.admin_photo_purge_queue()),
   1,
   'kaldırma mevcut purge kuyruğuna düştü (Değişmez 3 zinciri aynen işliyor)'
+);
+
+-- ==================================== 0066: 'unsupported' terminal durumu
+-- SORUN: `scan-photos` MIME'ı sabit `image/jpeg` yazıyordu. PNG/WebP
+-- yüklenince moderation isteği reddediliyor, satır 'pending' KALIYOR ve
+-- süpürücü on dakikada bir aynı indirmeyi boşuna tekrarlıyordu — sonsuz kuyruk.
+--
+-- Terminal durum ŞART, ama 'flagged' YANLIŞ olurdu: 0062'nin ihlal
+-- tetikleyicisi 'flagged'da ateşliyor ve kullanıcı DOSYA BİÇİMİ yüzünden
+-- yaptırım merdivenine girerdi.
+--
+-- TEMİZ SAYFA ŞART: yukarıdaki 'sahip' fikstürü bilerek 'flagged'dan geçti,
+-- yani onun ihlal sayacı ZATEN dolu. Sıfır iddiası orada anlamsız olurdu;
+-- ayrı bir kullanıcı ve ayrı bir satır kuruluyor.
+select tests.reset_role();
+select tests.create_supabase_user('bicim');
+select tests.age_all_users();
+
+insert into public.mistakes
+  (user_id, subject, concept, photo_path, options, correct_index, is_public)
+values (tests.get_supabase_uid('bicim'), 'Fizik', 'Optik',
+        tests.get_supabase_uid('bicim')::text || '/webp_sanilan.png',
+        '[{"label":"A","text":""},{"label":"B","text":""}]'::jsonb, 0, true);
+
+create temporary table _unsup on commit drop as
+select id from public.mistakes where user_id = tests.get_supabase_uid('bicim');
+
+select lives_ok(
+  format('update public.mistakes set photo_scan = ''unsupported'' where id = %L',
+         (select id from _unsup)),
+  'photo_scan CHECK''i ''unsupported'' değerini kabul ediyor'
+);
+
+select is(
+  (select count(*)::int from public.photo_violations v
+    where v.user_id = tests.get_supabase_uid('bicim')),
+  0,
+  'unsupported İHLAL SAYILMIYOR — dosya biçimi yaptırım merdivenini işletmez'
+);
+
+-- Süpürücü kuyruğu `photo_scan = 'pending'` kısmi index'i üzerinden dönüyor;
+-- terminal durum oradan da çıkmış olmalı, yoksa sonsuz tekrar sürerdi.
+select is(
+  (select count(*)::int from public.mistakes m
+    where m.photo_scan = 'pending' and m.user_id = tests.get_supabase_uid('bicim')),
+  0,
+  'unsupported satır süpürücü kuyruğunda DEĞİL'
+);
+
+select tests.authenticate_as('dost');
+select is(
+  (select count(*)::int from public.public_questions q
+    where q.owner_id = tests.get_supabase_uid('bicim')),
+  0,
+  'unsupported fotoğraf havuzda GÖRÜNMÜYOR (paylaşım kapıları ''clear'' arıyor)'
+);
+
+-- ============================ yönetici listesi tarama durumunu GÖSTERİYOR
+-- `admin_review_photo_scan(id,'clear')` durumdan bağımsız çalışıyor: yönetici
+-- hiç taranmamış bir fotoğrafı da paylaşıma açabilir. Yetki bilerek duruyor,
+-- ama kararın bilerek verilmesi için durum listede görünmek zorunda.
+select tests.authenticate_as('bekci');
+select is(
+  (select q.photo_scan from public.admin_all_questions(200, 0) q
+    where q.id = (select id from _unsup)),
+  'unsupported',
+  'admin_all_questions tarama durumunu döndürüyor'
 );
 
 select * from finish();

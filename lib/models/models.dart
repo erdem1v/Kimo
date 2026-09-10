@@ -101,6 +101,13 @@ enum AnalysisFailure {
   /// Sunucuya hiç ulaşılamadı (çevrimdışı / zaman aşımı). Sunucudan gelmez.
   network,
 
+  /// Yaş adımı henüz tamamlanmadı; sunucu analizi REDDETTİ (0067).
+  ///
+  /// Ağ hatasından ayrı tutuluyor çünkü çıkış yolu farklı: bekleyen fotoğraf
+  /// kuyrukta kalır ama yeniden denemek bağlantıyla değil, kullanıcının yaş
+  /// adımını tamamlamasıyla çözülür.
+  ageRequired,
+
   /// Sunucu tanımadığımız bir kod döndürdü ya da gövde bozuktu.
   unknown;
 
@@ -109,6 +116,7 @@ enum AnalysisFailure {
         'unreadable' => AnalysisFailure.unreadable,
         'no_question' => AnalysisFailure.noQuestion,
         'no_options' => AnalysisFailure.noOptions,
+        'age_required' => AnalysisFailure.ageRequired,
         _ => AnalysisFailure.unknown,
       };
 }

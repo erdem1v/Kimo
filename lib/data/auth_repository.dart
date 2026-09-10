@@ -60,10 +60,11 @@ class AuthRepository {
   // adımı kullanıyordu, o adım kaldırıldı. Doğrulama geri gelirse bunlar da
   // geri gelir; şu hâlleriyle sıfır çağrılı ölü yüzeydiler.
 
-  /// İlk kayıt onayının postasını yeniden gönderir (giriş ekranındaki
-  /// "e-postan doğrulanmamış" durumu için).
-  Future<void> resendSignUp(String email) =>
-      _client.auth.resend(type: OtpType.signup, email: email);
+  // resendSignUp() SİLİNDİ (Task 08): tek çağıranı giriş ekranındaki
+  // `email_not_confirmed` dalıydı ve o dal da kaldırıldı. E-posta doğrulaması
+  // Task 06'da kapatıldı; üretimde `enable_confirmations = false` olduğu
+  // teyit edildi ve açılmayacak. Doğrulama bir gün geri gelirse bu metot da
+  // geri gelir — şu hâliyle çalışması mümkün olmayan bir yüzeydi.
 
   Future<void> signOut() => _client.auth.signOut();
 }

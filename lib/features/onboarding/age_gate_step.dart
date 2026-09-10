@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/daily_state_repository.dart';
+import '../../data/photo_queue.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../services/sound_service.dart';
 import '../../theme/tokens.dart';
@@ -80,11 +83,21 @@ class _AgeGateStepState extends State<AgeGateStep> {
     });
     try {
       await dailyStateRepository.setBirthYear(y);
+      // YAŞ KAPISI AÇILDI (A-2): ilk çekimde kuyruğa alınan fotoğraf artık
+      // analiz edilebilir. `flush` bilinçli ateşle-unut — kullanıcı sonraki
+      // adıma geçerken analiz arkada çalışıyor; sonucu "tamamlanmayı
+      // bekliyor" olarak bulacak.
+      await photoQueue.releaseAgeGate();
+      unawaited(photoQueue.flush());
       await widget.onChanged();
     } on PostgrestException catch (e) {
       // Sunucu 13 sınırını AYRI bir SQLSTATE ile bildiriyor: "geçersiz yıl"
       // ile "çok küçüksün" iki farklı ekran gerektiriyor.
       if (e.code == DailyStateRepository.tooYoungCode) {
+        // 13 ALTI REDDEDİLDİ: bekleyen fotoğraf hiç analiz edilmemeli ve
+        // hiçbir yerde bırakılmamalı. Depoya zaten yüklenmedi; silinecek tek
+        // kopya cihazdaki dosya.
+        await photoQueue.purgeAgeGated();
         if (mounted) setState(() => _tooYoung = true);
       } else {
         debugPrint('doğum yılı kaydedilemedi: $e');

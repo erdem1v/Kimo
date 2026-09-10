@@ -17,7 +17,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(44);
+select plan(46);
 
 select tests.create_supabase_user('ihlalci');
 select tests.create_supabase_user('temiz');
@@ -25,6 +25,9 @@ select tests.create_supabase_user('askili');
 select tests.create_supabase_user('yanlis');
 select tests.create_supabase_user('dost');
 select tests.create_supabase_user('bekci');
+-- Yaş kapısı (0067) `mistakes` INSERT'te doğum yılı şart koşuyor; bu testin
+-- konusu o değil, fikstürün kurulabilmesi için ön koşul (bkz. seed.sql).
+select tests.age_all_users();
 
 select tests.reset_role();
 insert into public.admins (user_id) values (tests.get_supabase_uid('bekci'));
@@ -314,6 +317,23 @@ select throws_ok(
   'values (''Tarih'', ''yasak'')',
   '42501', null,
   'ASKIDAN SONRA: aynı hata kaydı REDDEDİLİYOR'
+);
+-- İKİ KOŞUL BİRLİKTE YAŞIYOR (Task 08 / göç 0067). `mistakes` INSERT
+-- politikasına yaş koşulu eklenirken askı koşulunun düşürülmesi bu paketin en
+-- olası regresyonuydu: yaş testi (130) yeşil kalır, koruma sessizce kaybolurdu.
+-- Bu kullanıcının doğum yılı DOLU (age_all_users), yani yukarıdaki ret yaştan
+-- değil askıdan geliyor — iddia ancak ikisi ayrıştığında anlam taşıyor.
+select is(
+  public.has_birth_year(tests.get_supabase_uid('askili')),
+  true,
+  'askılı kullanıcının doğum yılı DOLU — ret yaş kapısından değil askıdan'
+);
+select ok(
+  (select with_check like '%is_suspended%' and with_check like '%has_birth_year%'
+     from pg_policies
+    where schemaname = 'public' and tablename = 'mistakes'
+      and cmd = 'INSERT'),
+  'INSERT politikası HEM askı HEM yaş koşulunu taşıyor'
 );
 select throws_ok(
   format('insert into public.question_sends (sender_id, receiver_id, mistake_id) '

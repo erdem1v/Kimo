@@ -36,10 +36,10 @@ values ('11111111-2222-3333-4444-555555555555',
 select tests.authenticate_as('seyirci');
 
 select is(
-  (select p.streak from public.profiles_public p
-    where p.id = tests.get_supabase_uid('gazi')),
+  (select p.streak from public.profiles_by_ids(
+     array[tests.get_supabase_uid('gazi')]) p),
   0,
-  'profiles_public: 5 gün önceki 30''luk seri BAŞKALARINA 0 görünür'
+  'herkese açık profil: 5 gün önceki 30''luk seri BAŞKALARINA 0 görünür'
 );
 
 select tests.authenticate_as('gazi');
@@ -78,8 +78,8 @@ update public.profiles
 
 select tests.authenticate_as('seyirci');
 select is(
-  (select p.streak from public.profiles_public p
-    where p.id = tests.get_supabase_uid('gazi')),
+  (select p.streak from public.profiles_by_ids(
+     array[tests.get_supabase_uid('gazi')]) p),
   30,
   'dün aktifse seri yaşıyor: 30 görünür'
 );

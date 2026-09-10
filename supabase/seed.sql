@@ -35,6 +35,29 @@ begin
   return v_id;
 end $$;
 
+-- ------------------------------------------------------- yaş kapısını aç (0067)
+-- 0067'den beri `mistakes` INSERT politikası doğum yılı ŞART koşuyor (A-2:
+-- fotoğraf yaş bilinmeden yurt dışına çıkmasın). Fikstür kullanıcıları
+-- tetikleyiciyle doğuyor ve doğum yılları boş; yaş kapısını sınamayan her test
+-- bu yüzden kendi fikstürünü kuramaz hâle gelirdi.
+--
+-- Bu yardımcı, testin KONUSU olmayan bir ön koşulu tek satırda sağlıyor.
+-- `130_age_gate.sql` bilerek ÇAĞIRMIYOR: orada boş doğum yılı testin kendisi.
+create or replace function tests.age_all_users(p_year int default null)
+returns void
+language sql security definer set search_path = public, auth, pg_temp
+as $$
+  update public.profiles p
+     set birth_year = coalesce(
+           p_year,
+           extract(year from (now() at time zone 'Europe/Istanbul'))::int - 20)
+   where p.birth_year is null
+     and exists (
+       select 1 from auth.users u
+        where u.id = p.id and u.raw_user_meta_data ? 'test_identifier'
+     );
+$$;
+
 create or replace function tests.get_supabase_uid(identifier text)
 returns uuid
 language sql stable security definer set search_path = auth, pg_temp

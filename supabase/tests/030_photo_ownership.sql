@@ -15,6 +15,9 @@ select plan(14);
 
 select tests.create_supabase_user('alice');
 select tests.create_supabase_user('mallory');
+-- Yaş kapısı (0067) `mistakes` INSERT'te doğum yılı şart koşuyor; bu testin
+-- konusu o değil, fikstürün kurulabilmesi için ön koşul (bkz. seed.sql).
+select tests.age_all_users();
 
 -- ============================================================ (1) CHECK kısıtı
 select tests.authenticate_as('mallory');
@@ -105,6 +108,9 @@ select is(public.can_read_mistake_photo(
 -- Ve daha kötüsü de kapalı: gölge satır is_public=true olduğu için eski kodda
 -- kurbanın özel fotoğrafı HERKESE açılıyordu.
 select tests.create_supabase_user('carol');
+-- Yaş kapısı (0067) `mistakes` INSERT'te doğum yılı şart koşuyor; bu testin
+-- konusu o değil, fikstürün kurulabilmesi için ön koşul (bkz. seed.sql).
+select tests.age_all_users();
 select tests.authenticate_as('carol');
 select is(public.can_read_mistake_photo(
             tests.get_supabase_uid('alice')::text || '/ozel.jpg'),

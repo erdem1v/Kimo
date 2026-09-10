@@ -11,6 +11,7 @@ import '../../models/models.dart';
 import '../../services/crash_service.dart';
 import '../../services/sound_service.dart';
 import '../../state/game_progress.dart';
+import '../../state/refresh_bus.dart';
 import '../../state/user_profile.dart';
 import '../reviews/domain/review_scheduler.dart';
 import '../../theme/tokens.dart';
@@ -143,7 +144,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
   void _selfGrade(bool correct) {
     if (_revealed != null) return;
-    unawaited(_answer(correct: correct, choice: null));
+    unawaited(_answer(correct: correct, choice: null, selfReported: true));
   }
 
   /// Cevabı işler.
@@ -152,7 +153,17 @@ class _PracticeScreenState extends State<PracticeScreen> {
   /// XP ve çarpan gelince rozetler ekleniyor. Ağı beklemek, çevrimdışında
   /// ekranı süresiz kilitlerdi; ödülü tahmin etmek ise verilmemiş bir XP'yi
   /// verilmiş gibi göstermek olurdu.
-  Future<void> _answer({required bool correct, required int? choice}) async {
+  ///
+  /// [selfReported]: doğruluk BEYANDAN geliyor (şıksız satırda "Doğru çözdüm /
+  /// Bilemedim"). Planlayıcı beyanı daha temkinli işliyor — aralık bir kademe
+  /// kısa, `mastered` hiç yazılmıyor. Gerekçe [ReviewScheduler] başlığında:
+  /// dört kez "doğru çözdüm" diyen öğrenci hiç öğrenmediği soruyu kalıcı
+  /// arşive atabiliyordu.
+  Future<void> _answer({
+    required bool correct,
+    required int? choice,
+    bool selfReported = false,
+  }) async {
     final MistakeEntry entry = _current;
 
     if (correct) {
@@ -171,6 +182,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
       correct: correct,
       reviewedOn: DateTime.now(),
       examDate: ReviewScheduler.examCutoffFor(userProfile.examYear),
+      selfReported: selfReported,
     );
     bool scheduleFailed = false;
 
@@ -190,7 +202,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
       // Ağ hatasında yazım kuyruğa girer ve bu çağrı NORMAL döner; buraya
       // yalnızca sunucu reddi ya da kuyruğun da başarısızlığı (oturum düşmüş)
       // düşer. O durumda panel `scheduleFailed` gösterir ve hata raporlanır.
-      plan = await mistakeRepository.submitReview(entry, correct);
+      plan = await mistakeRepository.submitReview(entry, correct,
+          selfReported: selfReported);
     } catch (e, st) {
       unawaited(reportError(e, st, context: 'submitReview.schedule'));
       scheduleFailed = true;
@@ -628,7 +641,153 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
   Widget _answerSection(BuildContext context, L10n l, MistakeEntry e) {
     if (e.hasOptions && e.correctIndex != null) return _options(context, e);
-    return _selfGradeButtons(context, l);
+    // ŞIKSIZ SATIR. Öz-değerlendirme KALIYOR: fotoğrafı bulanık çıkmış ya da
+    // şıkları okunamayan eski bir kayıtta kullanıcının tek çıkışı bu. Ama
+    // ağırlığı düştü (bkz. `_answer`'ın `selfReported` bayrağı) ve yanında
+    // kalıcı çözüm duruyor: şıkları ekleyip soruyu normal akışa sokmak.
+    //
+    // Yeni kayıtlar zaten hep eksiksiz — `ConfirmMistakeScreen` şıksız
+    // kaydetmiyor — yani bu blok yalnızca eski satırlarda görünüyor.
+    return Column(
+      children: <Widget>[
+        if (e.id != null) ...<Widget>[
+          _completePrompt(context, l, e),
+          const SizedBox(height: Gap.md),
+        ],
+        _selfGradeButtons(context, l),
+      ],
+    );
+  }
+
+  Widget _completePrompt(BuildContext context, L10n l, MistakeEntry e) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return KimoCard(
+      color: c.honeyTint,
+      elevated: false,
+      padding: const EdgeInsets.all(Gap.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(l.practiceIncompleteTitle,
+              style: t.bodyStrong.copyWith(color: c.honeyText)),
+          const SizedBox(height: Gap.xs),
+          Text(l.practiceIncompleteBody, style: t.caption),
+          const SizedBox(height: Gap.md),
+          KimoButton(
+            label: l.practiceCompleteAction,
+            kind: KimoButtonKind.secondary,
+            onPressed: _revealed != null ? null : () => _complete(e),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Eksik bir satırı tamamlar: şık sayısı + doğru şık.
+  ///
+  /// Tamamlandıktan sonra soru BU TURDA cevaplanmıyor, bir sonrakine
+  /// bırakılıyor: doğru şıkkı az önce kendisi işaretleyen kullanıcıya aynı
+  /// soruyu sormak, tekrarın ölçtüğü şeyi ölçmez.
+  Future<void> _complete(MistakeEntry e) async {
+    final String? id = e.id;
+    if (id == null) return;
+    sound.tap();
+    final L10n l = L10n.of(context);
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final _CompletionChoice? choice = await _askCompletion(l);
+    if (choice == null || !mounted) return;
+    try {
+      await mistakeRepository.completeMistake(
+        id,
+        options: <QuestionOption>[
+          for (int i = 0; i < choice.optionCount; i++)
+            QuestionOption(label: String.fromCharCode(65 + i), text: ''),
+        ],
+        correctIndex: choice.correctIndex,
+      );
+      messenger.showSnackBar(SnackBar(content: Text(l.practiceCompleteSaved)));
+      refreshBus.ping();
+      await _advance();
+    } catch (err) {
+      debugPrint('soru tamamlanamadı: $err');
+      messenger.showSnackBar(SnackBar(content: Text(l.practiceCompleteFailed)));
+    }
+  }
+
+  Future<_CompletionChoice?> _askCompletion(L10n l) async {
+    int count = 5;
+    int? correct;
+    return showModalBottomSheet<_CompletionChoice>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.c.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
+      ),
+      builder: (BuildContext ctx) => StatefulBuilder(
+        builder: (BuildContext ctx, StateSetter setSheet) {
+          final KimoTypography t = ctx.t;
+          return Padding(
+            padding: EdgeInsets.fromLTRB(Gap.screen, Gap.screen, Gap.screen,
+                Gap.screen + MediaQuery.of(ctx).padding.bottom),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Text(l.practiceIncompleteTitle, style: t.section),
+                const SizedBox(height: Gap.lg),
+                Text(l.confirmOptionCount, style: t.caption),
+                const SizedBox(height: Gap.sm),
+                Wrap(
+                  spacing: Gap.sm,
+                  children: <Widget>[
+                    for (final int n in <int>[4, 5])
+                      KimoChip(
+                        label: l.confirmOptionCountValue(n),
+                        selected: count == n,
+                        onTap: () => setSheet(() {
+                          count = n;
+                          if (correct != null && correct! >= n) correct = null;
+                        }),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: Gap.lg),
+                Text(l.practiceCompleteCorrect, style: t.caption),
+                const SizedBox(height: Gap.sm),
+                Wrap(
+                  spacing: Gap.sm,
+                  children: <Widget>[
+                    for (int i = 0; i < count; i++)
+                      KimoChip(
+                        label: String.fromCharCode(65 + i),
+                        selected: correct == i,
+                        onTap: () => setSheet(() => correct = i),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: Gap.lg),
+                KimoButton(
+                  label: L10n.of(ctx).actionSave,
+                  onPressed: correct == null
+                      ? null
+                      : () => Navigator.of(ctx).pop(
+                            _CompletionChoice(count, correct!),
+                          ),
+                ),
+                const SizedBox(height: Gap.sm),
+                KimoButton(
+                  label: L10n.of(ctx).actionCancel,
+                  kind: KimoButtonKind.tertiary,
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Widget _selfGradeButtons(BuildContext context, L10n l) {
@@ -702,4 +861,12 @@ class _PracticeScreenState extends State<PracticeScreen> {
       ),
     );
   }
+}
+
+/// [_askCompletion] sonucu: şık sayısı + doğru şıkkın indeksi.
+class _CompletionChoice {
+  const _CompletionChoice(this.optionCount, this.correctIndex);
+
+  final int optionCount;
+  final int correctIndex;
 }

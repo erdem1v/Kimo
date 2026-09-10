@@ -65,7 +65,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   /// Kullanım Koşulları ve Gizlilik Politikası kabul edildi mi (Apple 1.2).
   bool _termsAccepted = false;
 
-  static const List<int> _examYears = <int>[2026, 2027, 2028, 2029, 2030];
+  // Sınav yılı listesi MEVCUT YILDAN türetiliyor (Task 08); sabit liste
+  // bayatlıyordu. Tek kaynak: UserProfile.examYears().
+  static List<int> get _examYears => UserProfile.examYears();
 
   /// Kayıt öncesi geçici kimlikle mi geldik.
   bool get _anonymous => authRepository.isAnonymous;
@@ -239,8 +241,14 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   Future<void> _capture() async {
     sound.tap();
+    // ANALİZ ERTELENİYOR (A-2): kullanıcının yaşı henüz bilinmiyor, dolayısıyla
+    // fotoğraf ne OpenAI'a ne depoya gidiyor. Yerelde kuyruğa alınıyor; yaş
+    // adımı tamamlanınca `AgeGateStep` kilidi açıyor ve analiz kendiliğinden
+    // çalışıyor. Adım sırası DEĞİŞMİYOR.
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => const CaptureScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => const CaptureScreen(deferAnalysis: true),
+      ),
     );
     if (mounted) setState(() {});
   }

@@ -157,7 +157,12 @@ DateTime weekStart(DateTime now) {
   return d.subtract(Duration(days: d.weekday - DateTime.monday));
 }
 
-/// Arama/liderlik listelerinde gösterilen herkese açık profil.
+/// Arkadaş listesi, lig tahtası ve profil kartında gösterilen herkese açık
+/// profil.
+///
+/// "Arama" yok: takma adla kullanıcı aramak Task 02'de kaldırıldı, kaynak
+/// görünüm de Task 08'de (göç 0068) istemciye kapatıldı — okuma yalnızca
+/// `profiles_by_ids` RPC'sinden, kimliği bilinen kişiler için.
 class PublicProfile {
   const PublicProfile({
     required this.id,

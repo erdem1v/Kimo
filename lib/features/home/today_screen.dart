@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/daily_state_repository.dart';
 import '../../data/mistake_repository.dart';
+import '../../data/photo_queue.dart';
 import '../../data/yks_subjects.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/mascot.dart';
@@ -23,6 +24,7 @@ import '../../widgets/kit/kimo_progress.dart';
 import '../../widgets/kit/kimo_surfaces.dart';
 import '../../widgets/mistake_style.dart';
 import '../capture/capture_screen.dart';
+import '../capture/pending_photos_screen.dart';
 import '../inbox/inbox_screen.dart';
 import '../practice/practice_screen.dart';
 
@@ -61,6 +63,11 @@ class _TodayScreenState extends State<TodayScreen> {
   /// (bugün tekrarı olmayan sorular); ikisi farklı ekran.
   bool _archiveEmpty = false;
 
+  /// Kuyrukta bekleyen fotoğraf sayısı. Diskten okunuyor: soğuk açılışta
+  /// bellek boş olurdu ve şerit tam da en çok gerektiği anda görünmezdi
+  /// (SubmissionQueue.loadPendingCount'un aynı dersi).
+  int _pendingPhotos = 0;
+
   @override
   void initState() {
     super.initState();
@@ -90,15 +97,24 @@ class _TodayScreenState extends State<TodayScreen> {
         mistakeRepository.dueReviews(),
         dailyStateRepository.read(),
         mistakeRepository.totalCount(),
+        photoQueue.loadPendingCount(),
       ]);
       final List<MistakeEntry> due = parts[0]! as List<MistakeEntry>;
       final DailyState? state = parts[1] as DailyState?;
       final int archived = parts[2]! as int;
+      final int pendingPhotos = parts[3]! as int;
       if (!mounted) return;
 
       final int incoming = state?.unsolvedReceivedCount ?? 0;
       gameProgress.syncDailyDone(state?.reviewedTodayCount ?? 0);
-      gameProgress.setDueRemaining(due.length);
+      // SAYAÇ SUNUCUDAN (Task 08): `dueReviews()` artık limitli
+      // (MistakeRepository.dueLimit) — listenin uzunluğunu sayaç olarak
+      // kullanmak, arşivi büyük bir kullanıcıya gerçekte olduğundan az tekrar
+      // olduğunu söylerdi. `my_daily_state.due_count` aynı kuralı sunucuda,
+      // Istanbul gününe göre hesaplıyor. Okunamadıysa (çevrimdışı) listeye
+      // düşüyoruz — eksik bir sayı, hiç sayı olmamasından iyi.
+      final int dueTotal = state?.dueCount ?? due.length;
+      gameProgress.setDueRemaining(dueTotal);
       if (state != null) {
         // PASİF okuma: aktivite çıkarımı yapılmaz (bkz. syncFromDailyState).
         gameProgress.syncFromDailyState(
@@ -115,7 +131,7 @@ class _TodayScreenState extends State<TodayScreen> {
         notifications.planDay(
           enabled: userProfile.notifyEnabled,
           mascot: userProfile.mascot ?? Mascot.fallback,
-          dueCount: due.length,
+          dueCount: dueTotal,
           streak: gameProgress.currentStreak,
           activeToday: gameProgress.activeToday,
         ),
@@ -126,6 +142,7 @@ class _TodayScreenState extends State<TodayScreen> {
         _incoming = incoming;
         _state = state;
         _archiveEmpty = archived == 0;
+        _pendingPhotos = pendingPhotos;
         _loading = false;
       });
     } catch (e) {
@@ -254,6 +271,16 @@ class _TodayScreenState extends State<TodayScreen> {
             ),
           ),
         ),
+        // BEKLEYEN FOTOĞRAF ŞERİDİ BURADA DA OLMAK ZORUNDA: onboarding'in ilk
+        // çekimi kuyruğa giriyor ve o an arşiv HENÜZ BOŞ. Şerit yalnızca
+        // panoda olsaydı, kurulumdan yeni çıkmış kullanıcı bekleyen tek
+        // fotoğrafını hiçbir yerde göremezdi — A-2 çözümünün sessizce
+        // kaybolduğu yer tam burası olurdu.
+        if (_pendingPhotos > 0)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Gap.screen, 0, Gap.screen, 0),
+            child: _pendingPhotosCard(context, l),
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(
               Gap.screen, Gap.md, Gap.screen, Gap.screen),
@@ -286,6 +313,10 @@ class _TodayScreenState extends State<TodayScreen> {
           if (_incoming > 0) ...<Widget>[
             const SizedBox(height: Gap.md),
             _incomingCard(context, l),
+          ],
+          if (_pendingPhotos > 0) ...<Widget>[
+            const SizedBox(height: Gap.md),
+            _pendingPhotosCard(context, l),
           ],
           const SizedBox(height: Gap.xl),
           SegmentedTabs(
@@ -489,6 +520,42 @@ class _TodayScreenState extends State<TodayScreen> {
         ],
       ),
     );
+  }
+
+  /// Bekleyen fotoğraf şeridi.
+  ///
+  /// Sessiz kuyruk bu depoda kabul edilmiyor (cevap kuyruğunun da şeridi var).
+  /// Fotoğraf kuyruğunda görünürlük daha da kritik: kayıtların bir kısmı
+  /// KULLANICI EYLEMİ bekliyor — doğru şık işaretlenmeden soru kaydedilmiyor.
+  Widget _pendingPhotosCard(BuildContext context, L10n l) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return KimoCard(
+      color: c.honeyTint,
+      elevated: false,
+      onTap: _openPendingPhotos,
+      child: Row(
+        children: <Widget>[
+          KimoIcon(KimoIcons.camera, size: 22, color: c.honeyText),
+          const SizedBox(width: Gap.md),
+          Expanded(
+            child: Text(
+              l.photoQueueBanner(_pendingPhotos),
+              style: t.bodyStrong.copyWith(color: c.honeyText),
+            ),
+          ),
+          KimoIcon(KimoIcons.back, size: 18, color: c.honeyText),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openPendingPhotos() async {
+    sound.tap();
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const PendingPhotosScreen()),
+    );
+    await _load();
   }
 
   Widget _subjects(BuildContext context, L10n l) {

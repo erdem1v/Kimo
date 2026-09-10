@@ -159,6 +159,32 @@ Deno.serve(async (req: Request) => {
       return deny(400, `desteklenmeyen mimeType: ${mimeType}`);
     }
 
+    // ----------------------------------------------------------- YAŞ KAPISI
+    // ÖNBELLEKTEN DE, KOTADAN DA, OpenAI'dan da ÖNCE (A-2).
+    //
+    // Onboarding sırası `firstCapture → age → …`: öğrencinin ilk fotoğrafı
+    // yaşı bilinmeden çekiliyor. 0063'ten beri 13 yaş sınırını zorluyoruz ve
+    // hukuki metinler "13 altını kabul etmiyoruz" diyor — reddedeceğimiz bir
+    // kullanıcının verisini reddetmeden önce yurt dışına aktarmak bu beyanla
+    // çelişirdi.
+    //
+    // İstemci de analizi erteliyor (fotoğraf yaş adımına kadar YEREL kuyrukta
+    // bekliyor) ama bu kapı ondan bağımsız: uç noktaya doğrudan istek atan
+    // biri arayüzü hiç görmez.
+    //
+    // KAPI KAPALIYSA HATA DEĞİL, ÜRÜN DURUMU: 403 + açık bir sebep. İstemci
+    // kuyruk kaydını düşürmüyor, yaş adımını bekliyor.
+    try {
+      const ageOk = await rpc(authHeader, "ai_age_ok", {});
+      if (ageOk !== true) {
+        return json({ allowed: false, reason: "age_required" }, 403);
+      }
+    } catch (e) {
+      // Kapı SORULAMADIYSA analiz YAPILMAZ. Açık taraf (fail-open) burada
+      // yanlış olurdu: ağ hatası, kapının hiç olmadığı duruma eşitlenirdi.
+      return deny(503, `yaş kapısı sorulamadı: ${e}`);
+    }
+
     // ------------------------------------------------------------ ÖNBELLEK
     // KOTADAN DA ÖNCE. Aynı fotoğraf ikinci kez gönderildiğinde amaç ücretin
     // ÇIKMAMASI; sonradan iade etmek değil. En sık tetikleyici ürünün kendi

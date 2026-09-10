@@ -14,7 +14,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(22);
+select plan(27);
 
 select tests.create_supabase_user('cocuk');
 select tests.create_supabase_user('yetiskin');
@@ -153,6 +153,45 @@ select is(
   public.is_minor_now(tests.get_supabase_uid('yetiskin')),
   false,
   '30 yaşındaki kullanıcı reşit'
+);
+
+-- ================================ YAŞ KAPISI ANALİZİN VE DEPOLAMANIN ÖNÜNDE
+-- (A-2, göç 0067). Onboarding sırası `firstCapture → age → …`, yani ilk
+-- fotoğraf yaş bilinmeden çekiliyordu ve doğrudan OpenAI'a gidiyordu. İstemci
+-- artık analizi erteliyor, ama bu kapı ondan BAĞIMSIZ: uç noktaya doğrudan
+-- istek atan biri arayüzü hiç görmez.
+--
+-- 'yetiskin' yukarıda yılını yazdı → kapı ona AÇIK olmalı. Bu pozitif iddia
+-- aşırı kilitlemeyi kapatıyor: kapı herkese kapalıysa uygulama çalışmaz.
+select is(public.ai_age_ok(), true,
+          'doğum yılı yazılmış kullanıcı analiz yaptırabiliyor');
+select is(public.has_birth_year(tests.get_supabase_uid('yetiskin')), true,
+          'has_birth_year dolu yılı görüyor');
+
+select tests.create_supabase_user('yilsiz');
+select tests.authenticate_as('yilsiz');
+
+select is(public.ai_age_ok(), false,
+          'doğum yılı YOKKEN analiz reddediliyor (fotoğraf yurt dışına çıkmaz)');
+
+-- Depolama tarafı: satır da yazılamıyor. Analiz kapısı tek başına yetmezdi —
+-- 13 altı reddedilen bir kullanıcının fotoğrafı depoda kalabilirdi.
+select throws_ok(
+  format('insert into public.mistakes (user_id, subject, concept, photo_path)
+          values (%L, ''Matematik'', ''Türev'', %L)',
+         tests.get_supabase_uid('yilsiz'),
+         tests.get_supabase_uid('yilsiz')::text || '/1.jpg'),
+  '42501', null,
+  'doğum yılı yokken hata satırı EKLENEMİYOR (fotoğraf depoda bırakılmaz)'
+);
+
+-- AŞIRI KİLİTLEME KARŞI-İDDİASI: yılı olan kullanıcı hâlâ ekleyebiliyor.
+select tests.authenticate_as('yetiskin');
+select lives_ok(
+  format('insert into public.mistakes (user_id, subject, concept)
+          values (%L, ''Matematik'', ''Türev'')',
+         tests.get_supabase_uid('yetiskin')),
+  'yılı olan kullanıcı soru eklemeye DEVAM ediyor'
 );
 
 select * from finish();

@@ -11,9 +11,12 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(29);
+select plan(33);
 
 select tests.create_supabase_user('alice');
+-- Yaş kapısı (0067) `mistakes` INSERT'te doğum yılı şart koşuyor; bu testin
+-- konusu o değil, fikstürün kurulabilmesi için ön koşul (bkz. seed.sql).
+select tests.age_all_users();
 
 -- ============================================ KATALOG: kilitli (her iki komut)
 select ok(not has_column_privilege('authenticated', 'public.mistakes', 'moderation', 'UPDATE'),
@@ -109,6 +112,29 @@ select throws_ok(
 select lives_ok(
   'update public.mistakes set note = ''düzeltilmiş not''',
   'kendi notunu güncelleyebiliyor'
+);
+
+-- ======================================== 0069: ölü sütunlar düştü (Task 08)
+-- Hiçbir SQL okumuyordu, hiçbir Dart kodu yazmıyordu; yalnızca lockdown
+-- listelerinde "sınıflandırılmış" hâlde duruyorlardı. "Yazılamaz" iddiası
+-- artık "hiç yok" iddiası — eski bir göç yeniden çalıştırılıp sütunu geri
+-- getirirse bu test kırmızı olur.
+select hasnt_column('public'::name, 'mistakes'::name, 'correct_answer'::name,
+                    'correct_answer düşürüldü (doğru cevap correct_index''te)');
+select hasnt_column('public'::name, 'mistakes'::name, 'review_count'::name,
+                    'review_count düşürüldü (hiç artırılmıyordu)');
+
+-- ==================================== 0069: istemcinin DELETE yetkisi kapandı
+-- Silme İKİ nesneye dokunuyor (satır + depo nesnesi). İstemci satırı silseydi
+-- `photo_path`i kaybeder ve dosya yetim kalırdı; "kaldırıldı gerçekten
+-- kaldırır" değişmezi yalnız ikisi birlikte gittiğinde doğru. Tek kapı
+-- `delete-question` edge function''ı.
+select ok(not has_table_privilege('authenticated', 'public.mistakes', 'DELETE'),
+          'istemci mistakes satırı SİLEMEZ (tek kapı delete-question)');
+select throws_ok(
+  'delete from public.mistakes',
+  '42501', null,
+  'silme denemesi çalışma zamanında da reddediliyor'
 );
 
 select * from finish();

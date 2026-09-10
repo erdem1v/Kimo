@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../data/daily_state_repository.dart';
 import '../../data/mistake_repository.dart';
+import '../../data/photo_queue.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/models.dart';
 import '../../services/crash_service.dart';
@@ -20,6 +21,7 @@ import '../../widgets/kit/kimo_chips.dart';
 import '../../widgets/kit/kimo_icons.dart';
 import '../../widgets/kit/kimo_surfaces.dart';
 import 'confirm_screen.dart';
+import 'pending_photos_screen.dart';
 
 /// 3e — Yanlışını çek.
 ///
@@ -33,7 +35,20 @@ import 'confirm_screen.dart';
 /// olurdu — task'ın açıkça yasakladığı şey. Onun yerine tek ve dürüst bir
 /// "okuyorum" durumu var; sonuçlar geldiklerinde görünüyor.
 class CaptureScreen extends StatefulWidget {
-  const CaptureScreen({super.key});
+  const CaptureScreen({super.key, this.deferAnalysis = false});
+
+  /// Analiz ERTELENSİN mi (onboarding'in ilk çekimi — A-2).
+  ///
+  /// Onboarding sırası `firstCapture → age → …`, yani ilk fotoğraf çekildiğinde
+  /// kullanıcının yaşı HENÜZ BİLİNMİYOR. 13 yaş sınırını zorlamaya başladığımız
+  /// hâlde fotoğrafın yaş bilinmeden yurt dışına çıkması hukuki metinlerle
+  /// çelişiyordu.
+  ///
+  /// ADIM SIRASI DEĞİŞMİYOR: öğrenci hâlâ ilk iş olarak fotoğraf çekiyor.
+  /// Değişen tek şey analizin ne zaman başladığı — fotoğraf yerelde kuyruğa
+  /// giriyor, yaş adımı tamamlanınca analiz kendiliğinden çalışıyor. 13 altı
+  /// reddedilirse kayıt ve dosya siliniyor (`PhotoQueue.purgeAgeGated`).
+  final bool deferAnalysis;
 
   @override
   State<CaptureScreen> createState() => _CaptureScreenState();
@@ -112,6 +127,13 @@ class _CaptureScreenState extends State<CaptureScreen> {
       // tam gerçekleşeceği bağlamda bir kez onay istenir. Onay verilmezse
       // analiz HİÇ çağrılmaz; fotoğraf korunur ve elle giriş yolu açılır —
       // kaydetme yolu asla kapanmaz.
+      //
+      // ERTELENMİŞ ÇEKİMDE DE SORULUYOR ve KUYRUKTAN ÖNCE soruluyor. Aktarım
+      // sonraya kalıyor ama onayın yeri değişmiyor: kuyruğa alınan fotoğraf
+      // yaş adımından sonra kendiliğinden analiz ediliyor ve o an kullanıcı
+      // ekranda olmayabilir. Onayı oraya bırakmak, aktarımı sessizce
+      // onaysız yapmak olurdu. (`PhotoQueue.flush` ayrıca ikinci bir kapı
+      // olarak onayı kontrol ediyor.)
       if (!userProfile.aiConsent) {
         final bool accepted = await _askAiConsent();
         if (!mounted) return;
@@ -120,12 +142,37 @@ class _CaptureScreenState extends State<CaptureScreen> {
           return;
         }
       }
+      if (widget.deferAnalysis) {
+        // Yaş kapısı: ne analiz ne yükleme, yalnızca yerel kuyruk.
+        await _queueForAgeGate(bytes);
+        return;
+      }
       await _analyze(bytes);
     } catch (e) {
       debugPrint('fotoğraf alınamadı: $e');
       if (!mounted) return;
       _snack(L10n.of(context).capturePhotoFailed);
     }
+  }
+
+  /// Onboarding çekimi: fotoğrafı yaş kilidiyle kuyruğa alır ve ekranı kapatır.
+  ///
+  /// Onay ekranı AÇILMIYOR: analiz henüz yapılmadığı için ders/konu alanları
+  /// boş gelirdi ve kullanıcı, kuruluşun ortasında AI'nın dolduracağı bir formu
+  /// elle doldurmak zorunda kalırdı. Kayıt yaş adımından sonra "tamamlanmayı
+  /// bekliyor" olarak görünüyor.
+  Future<void> _queueForAgeGate(Uint8List bytes) async {
+    final PhotoQueueAdd result = await photoQueue.enqueue(
+      bytes: bytes,
+      state: PhotoQueueState.needsAnalysis,
+      gatedByAge: true,
+    );
+    if (!mounted) return;
+    final L10n l = L10n.of(context);
+    final NavigatorState nav = Navigator.of(context);
+    await reportQueueAdd(context, result, okMessage: l.captureQueuedBody);
+    if (!mounted) return;
+    if (result == PhotoQueueAdd.ok) nav.pop(true);
   }
 
   /// Fotoğrafın en/boy oranı — dikey sorular küçük görünmesin diye alan buna

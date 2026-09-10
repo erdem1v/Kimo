@@ -139,5 +139,94 @@ void main() {
       expect(r.mastered, false);
       expect(r.nextReviewDate, today.add(const Duration(days: 45)));
     });
+
+    test('inatçı eşiği tek kaynaktan geliyor', () {
+      // Eşik Task 08'e kadar İKİ yerde yazılıydı (planlayıcı + MistakeStats).
+      // Artık `defaultLeechThreshold` tek kaynak ve constructor varsayılanı
+      // ona bağlı; bu iddia bağın kopmadığını gösteriyor.
+      expect(scheduler.leechThreshold, ReviewScheduler.defaultLeechThreshold);
+    });
+  });
+
+  // ------------------------------------------------------------- öz-rapor
+  //
+  // Şıksız eski satırlarda kullanıcı kendi kendini değerlendiriyor ("Doğru
+  // çözdüm / Bilemedim"). O beyan işaretlenmiş bir şık kadar kanıt değil: dört
+  // kez "doğru çözdüm" diyen öğrenci hiç öğrenmediği soruyu kalıcı arşive
+  // atabiliyordu. Kural (Task 08): merdivende ilerler ama aralık BİR KADEME
+  // KISA uygulanır ve `mastered` ASLA yazılmaz.
+  group('ReviewScheduler öz-raporlu doğru', () {
+    test('adım ilerler ama aralık bir kademe kısa', () {
+      for (final (int step, int normal, int self) in <(int, int, int)>[
+        (0, 3, 1),   // 0 → 1: normalde 3 gün, beyanla 1
+        (1, 7, 3),   // 1 → 2: normalde 7 gün, beyanla 3
+        (2, 30, 7),  // 2 → 3: normalde 30 gün, beyanla 7
+        (3, 45, 30), // 3 → bakım: normalde 45 gün, beyanla 30
+      ]) {
+        final ReviewOutcome plain = scheduler.review(
+            step: step, lapses: 0, correct: true, reviewedOn: today);
+        final ReviewOutcome reported = scheduler.review(
+            step: step,
+            lapses: 0,
+            correct: true,
+            reviewedOn: today,
+            selfReported: true);
+
+        expect(plain.nextReviewDate, today.add(Duration(days: normal)),
+            reason: 'şıklı doğrunun bugünkü davranışı DEĞİŞMEMELİ');
+        expect(reported.nextReviewDate, today.add(Duration(days: self)),
+            reason: 'beyanla gelen doğru daha erken geri gelmeli');
+        expect(reported.step, plain.step,
+            reason: 'merdiven kapanmıyor, yalnız takvim yavaşlıyor');
+      }
+    });
+
+    test('bakım basamağında da bakım aralığından kısa', () {
+      final ReviewOutcome r = scheduler.review(
+          step: scheduler.maintenanceStep,
+          lapses: 0,
+          correct: true,
+          reviewedOn: today,
+          selfReported: true);
+      expect(r.step, scheduler.maintenanceStep);
+      expect(r.nextReviewDate, today.add(const Duration(days: 30)));
+    });
+
+    test('mastered ASLA yazılmaz — aynı koşulda şıklı doğru yazıyor olsa bile',
+        () {
+      // Bakımdaki soru + bir sonraki tekrar sınavdan sonra: şıklı doğru bu
+      // durumda soruyu emekli ediyor. Beyan etmiyor.
+      final DateTime exam = today.add(const Duration(days: 10));
+      final ReviewOutcome plain = scheduler.review(
+          step: scheduler.maintenanceStep,
+          lapses: 0,
+          correct: true,
+          reviewedOn: today,
+          examDate: exam);
+      final ReviewOutcome reported = scheduler.review(
+          step: scheduler.maintenanceStep,
+          lapses: 0,
+          correct: true,
+          reviewedOn: today,
+          examDate: exam,
+          selfReported: true);
+
+      expect(plain.mastered, isTrue, reason: 'kontrol: şıklı doğru emekli eder');
+      expect(reported.mastered, isFalse,
+          reason: '"öğrenildi" damgası yalnız işaretlenmiş şıktan çıkabilir');
+    });
+
+    test('yanlış cevap iki yolda da AYNI: beyan cezalandırılmıyor', () {
+      final ReviewOutcome plain = scheduler.review(
+          step: 2, lapses: 1, correct: false, reviewedOn: today);
+      final ReviewOutcome reported = scheduler.review(
+          step: 2,
+          lapses: 1,
+          correct: false,
+          reviewedOn: today,
+          selfReported: true);
+      expect(reported, plain,
+          reason: '"bilemedim" demekte abartma güdüsü yok');
+    });
   });
 }

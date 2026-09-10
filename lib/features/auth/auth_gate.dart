@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/auth_repository.dart';
 import '../../data/sanction_repository.dart';
+import '../../data/photo_queue.dart';
 import '../../data/submission_queue.dart';
 import '../../state/user_profile.dart';
 import '../home/home_shell.dart';
@@ -93,6 +94,10 @@ class _AuthGateState extends State<AuthGate> {
       // sahibini de tutuyor ve boşaltırken yabancı kayıtları atıyor — bu iki
       // katmanın ilki.)
       submissionQueue.clear();
+      // Aynı gerekçe fotoğraflar için de geçerli, üstelik daha güçlü: kuyruk
+      // diskte JPEG tutuyor. Başka bir hesap açıldığında hem yanlış arşive
+      // yazılırlar hem de o kullanıcının cihazında yabancı bir fotoğraf kalır.
+      photoQueue.clear();
     }
 
     if (!hasSession) {

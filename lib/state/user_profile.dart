@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/notification_lines.dart';
 import '../data/social_repository.dart';
+import '../features/reviews/domain/review_scheduler.dart';
 import '../models/mascot.dart';
 
 /// Kullanıcının profil tercihleri: takma ad, sınav yılı → müfredat ve maskot
@@ -63,12 +64,36 @@ class UserProfile extends ChangeNotifier {
 
   static String curriculumForYear(int year) => year >= 2028 ? maarif : eski;
 
+  /// Seçilebilir sınav yılları — MEVCUT YILDAN türetilir.
+  ///
+  /// Task 08'e kadar iki ayrı dosyada `[2026, 2027, 2028, 2029, 2030]` sabiti
+  /// vardı. Sabit liste iki yönden bayatlıyordu: 2026 geçtiğinde artık
+  /// seçilemeyecek bir yıl listenin başında durmaya, 2031'e hazırlanan öğrenci
+  /// de hiçbir yıl bulamamaya başlıyordu.
+  ///
+  /// İlk yıl, bu yılın sınavı HENÜZ OLMADIYSA bu yıl; olduysa gelecek yıl.
+  /// Sınav tarihi tek kaynaktan geliyor: [ReviewScheduler.examCutoffFor]
+  /// (o yılın 20 Haziran'ı). Tekrar motoru "sınav geçti mi" sorusunu zaten o
+  /// tarihle yanıtlıyor; burada ikinci bir tarih uydurmak ikisini ayrıştırırdı.
+  static List<int> examYears({DateTime? now}) {
+    final DateTime today = now ?? DateTime.now();
+    final DateTime cutoff = ReviewScheduler.examCutoffFor(today.year)!;
+    final int first = today.isAfter(cutoff) ? today.year + 1 : today.year;
+    return <int>[for (int i = 0; i < examYearCount; i++) first + i];
+  }
+
+  /// Kaç yıl gösterilir. 5, bugünkü listenin uzunluğu; 12. sınıfa kadar olan
+  /// her kademe (9-12) kendi sınav yılını bu listede bulabiliyor.
+  static const int examYearCount = 5;
+
   /// Oturumdaki kullanıcının metadata'sından yükler.
   void loadFromAuth() {
     final Map<String, dynamic>? meta =
         Supabase.instance.client.auth.currentUser?.userMetadata;
     final Object? c = meta?['curriculum'];
     final Object? y = meta?['exam_year'];
+    // `display_name` OKUMA yedeği duruyor: 0069 öncesinde açılmış hesapların
+    // metadata'sında takma ad yalnızca orada olabilir. Yazma yolu kapandı.
     final Object? n = meta?['nickname'] ?? meta?['display_name'];
     _curriculum = (c == eski || c == maarif) ? c as String : null;
     _examYear = y is int ? y : (y is num ? y.toInt() : null);
@@ -164,7 +189,10 @@ class UserProfile extends ChangeNotifier {
     if (value.isEmpty) return;
     _nickname = value;
     notifyListeners();
-    await _save(<String, dynamic>{'nickname': value, 'display_name': value});
+    // `display_name` ARTIK YAZILMIYOR (0069): `profiles.display_name` sütunu
+    // düştü, metadata'daki kopya da nickname ile çift kayıttı ve
+    // `upsert_my_profile` onu hiç güncellemediği için bayatlıyordu.
+    await _save(<String, dynamic>{'nickname': value});
   }
 
   /// Personayı kaydeder — **iki yere birden**.

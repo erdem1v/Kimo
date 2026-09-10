@@ -263,6 +263,10 @@ class _AllQuestionsScreenState extends State<AllQuestionsScreen> {
                               color: AppColors.inkLight, fontSize: 11.5)),
                       const SizedBox(width: 8),
                       _badge(q),
+                      if (_scanBadge(q) != null) ...<Widget>[
+                        const SizedBox(width: 6),
+                        _scanBadge(q)!,
+                      ],
                       if (q.reportCount > 0) ...<Widget>[
                         const SizedBox(width: 6),
                         Text('🚩${q.reportCount}',
@@ -285,6 +289,34 @@ class _AllQuestionsScreenState extends State<AllQuestionsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Makine taramasının durumu (göç 0066).
+  ///
+  /// NEDEN VAR: `admin_review_photo_scan(id, 'clear')` bir satırı DURUMUNA
+  /// BAKMADAN paylaşıma açıyor. Yani yönetici hiç taranmamış (`pending`) ya da
+  /// taranamamış (`unsupported`) bir fotoğrafı da temiz işaretleyebilir. Bu
+  /// yetki bilerek duruyor — son söz insanda — ama kararın BİLEREK verilmesi
+  /// gerekiyor. `clear` durumunda rozet çizilmiyor: mutlu yol gürültü olmasın.
+  Widget? _scanBadge(AdminQuestion q) {
+    if (q.photoPath == null) return null;
+    final (String label, Color color) = switch (q.photoScan) {
+      'pending' => ('taranmadı', AppColors.orange),
+      'unsupported' => ('taranamadı', AppColors.orange),
+      'flagged' => ('şüpheli', AppColors.red),
+      _ => ('', AppColors.green),
+    };
+    if (label.isEmpty) return null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              color: color, fontWeight: FontWeight.w700, fontSize: 10.5)),
     );
   }
 

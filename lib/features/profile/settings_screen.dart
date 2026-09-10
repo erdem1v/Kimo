@@ -26,6 +26,7 @@ import '../onboarding/exam_year_sheet.dart';
 import '../onboarding/mascot_sheet.dart';
 import '../onboarding/persona_card.dart';
 import '../settings/delete_account_screen.dart';
+import '../settings/blocked_users_screen.dart';
 import '../settings/privacy_screen.dart';
 
 /// Tek ayarlar ekranı. Profilden sağ üstteki tek girişten açılıyor.
@@ -155,6 +156,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: Gap.sm),
               _birthYearRow(context, l),
+              const SizedBox(height: Gap.sm),
+              // Engellenenler (A-8). Engelleme `friends_view` ve gelen kutusu
+              // şikâyet sayfasından yapılıyordu ama geri alınamıyordu.
+              _row(
+                context,
+                icon: KimoIcons.close,
+                label: l.settingsBlocked,
+                onTap: () => _push(const BlockedUsersScreen()),
+              ),
               const SizedBox(height: Gap.sm),
               // Veri aktarımı bildirimi ve hukuki metinlerin yuvası (Task 03).
               _row(

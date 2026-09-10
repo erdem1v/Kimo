@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../data/notification_lines.dart';
 import '../../data/sanction_repository.dart';
 import '../../data/social_repository.dart';
+import '../../data/photo_queue.dart';
 import '../../data/submission_queue.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/social.dart';
@@ -62,6 +63,12 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   }
 
   /// Bekleyen cevapları gönderir ve sunucudan dönen toplamları uygular.
+  ///
+  /// Bekleyen FOTOĞRAFLAR da burada işleniyor: aynı üç tetikleyici (uygulama
+  /// öne gelince, soğuk açılış, gönderim öncesi) iki kuyruk için de geçerli.
+  /// Ayrı bir bağlantı dinleyicisi (`connectivity_plus`) EKLENMEDİ — mevcut
+  /// desen zaten çalışıyor ve yeni bir bağımlılık, "bağlantı var" diyen ama
+  /// aslında olmayan ağlarda yanlış tetikleme üretirdi.
   Future<void> _drainQueue() async {
     try {
       final Map<String, dynamic>? totals = await submissionQueue.flush();
@@ -72,6 +79,14 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       // Yerel oyun durumu geçerli kalır; kuyruk bir sonraki fırsatta yeniden
       // denenir. Çevrimdışılık dışındaki nedenler raporlanır.
       unawaited(reportError(e, st, context: 'drainQueue'));
+    }
+    try {
+      // AYRI try: cevap kuyruğu patlarsa fotoğraf kuyruğu yine denenmeli
+      // (`_bootstrapSocial`ın kendi try'ıyla aynı gerekçe).
+      final int touched = await photoQueue.flush();
+      if (touched > 0) refreshBus.ping();
+    } catch (e, st) {
+      unawaited(reportError(e, st, context: 'drainPhotoQueue'));
     }
   }
 

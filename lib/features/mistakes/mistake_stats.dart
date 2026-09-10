@@ -46,11 +46,13 @@ class MistakeStats {
     'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz',
   ];
 
-  /// İnatçı eşiği tek kaynaktan: zamanlayıcının kendi eşiği.
+  /// İnatçı eşiği — TEK KAYNAK [ReviewScheduler.defaultLeechThreshold].
   ///
-  /// Ekrandaki "en az dört kez" metni bu sabitle aynı olmak zorunda; ikisi
-  /// ayrışırsa arayüz gerçekte olmayan bir kural anlatır.
-  static const int leechThreshold = 4;
+  /// Task 08'e kadar burada ikinci bir `= 4` duruyordu ve bir test ikisinin
+  /// eşitliğini iddia ediyordu; yani sayı iki yerdeydi ve tutarlılığı testin
+  /// hatırlamasına bağlıydı. Artık takma ad: ayrışması mümkün değil.
+  /// Ekrandaki "en az dört kez" metni (`mistakesLeechBody`) de bu sayıya bağlı.
+  static const int leechThreshold = ReviewScheduler.defaultLeechThreshold;
 
   int get masteredPercent =>
       total == 0 ? 0 : ((mastered / total) * 100).round();
@@ -111,10 +113,3 @@ class MistakeStats {
 
   static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 }
-
-/// Zamanlayıcının kendi eşiği — [MistakeStats.leechThreshold] ile aynı olmak
-/// zorunda. Derleyici bunu yakalayamıyor (biri `const`, diğeri bir örnek
-/// alanı), bu yüzden `test/features/mistakes/mistake_stats_test.dart` ikisinin
-/// eşitliğini açıkça iddia ediyor. Ayrışırlarsa arayüz gerçekte olmayan bir
-/// kural anlatır.
-final int schedulerLeechThreshold = const ReviewScheduler().leechThreshold;

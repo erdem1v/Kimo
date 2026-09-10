@@ -78,35 +78,42 @@ select is(
 -- ==================================================== profiles_public gating
 -- Kolon KALDIRILMADI, İLİŞKİYE bağlandı: arkadaş listesi avatarları
 -- kaybetmesin ama toplu döküm depolama yolu sızdırmasın.
+--
+-- OKUMA `profiles_by_ids` RPC'SİNDEN (Task 08 / göç 0068): görünümün kendisi
+-- artık istemciye kapalı — "toplu döküm" yolu bu dosyanın başlığında bir risk
+-- olarak yazılıydı ve 0068 onu tamamen kapattı. Görünümün İÇİNDEKİ ilişkiye
+-- bağlı avatar kuralı aynen duruyor; aşağıdaki iddialar onu sınıyor.
 select tests.authenticate_as('mallory');
 select is(
-  (select avatar_path from public.profiles_public
-    where id = tests.get_supabase_uid('alice')),
+  (select p.avatar_path from public.profiles_by_ids(
+     array[tests.get_supabase_uid('alice')]) p),
   null,
   'yabancı için profiles_public.avatar_path null (toplu döküm yol sızdırmıyor)'
 );
 
 select tests.authenticate_as('bob');
 select isnt(
-  (select avatar_path from public.profiles_public
-    where id = tests.get_supabase_uid('alice')),
+  (select p.avatar_path from public.profiles_by_ids(
+     array[tests.get_supabase_uid('alice')]) p),
   null,
   'arkadaş için avatar_path dolu (arkadaş listesi bozulmuyor)'
 );
 
 select tests.authenticate_as('alice');
 select isnt(
-  (select avatar_path from public.profiles_public
-    where id = tests.get_supabase_uid('alice')),
+  (select p.avatar_path from public.profiles_by_ids(
+     array[tests.get_supabase_uid('alice')]) p),
   null,
   'kendi profilinde avatar_path dolu'
 );
 
--- Görünümün geri kalanı yabancılar için çalışmaya devam ediyor (arama, lig).
+-- Görünümün geri kalanı yabancılar için çalışmaya devam ediyor (lig, profil
+-- kartı). Aşırı kilitleme karşı-iddiası: 0068 avatarı değil DİZİN DÖKÜMÜNÜ
+-- kapattı; kimliği bilinen bir profil hâlâ okunabiliyor.
 select tests.authenticate_as('mallory');
 select isnt(
-  (select nickname from public.profiles_public
-    where id = tests.get_supabase_uid('alice')),
+  (select p.nickname from public.profiles_by_ids(
+     array[tests.get_supabase_uid('alice')]) p),
   null,
   'görünümün diğer kolonları etkilenmedi'
 );

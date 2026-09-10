@@ -11,6 +11,9 @@ set search_path to public, extensions, tests;
 select plan(13);
 
 select tests.create_supabase_user('alice');
+-- Yaş kapısı (0067) `mistakes` INSERT'te doğum yılı şart koşuyor; bu testin
+-- konusu o değil, fikstürün kurulabilmesi için ön koşul (bkz. seed.sql).
+select tests.age_all_users();
 
 -- ============================================================== KATALOG
 select has_column('public'::name, 'profiles'::name, 'combo'::name,

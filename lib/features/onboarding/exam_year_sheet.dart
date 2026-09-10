@@ -39,7 +39,8 @@ class _ExamYearForm extends StatefulWidget {
 }
 
 class _ExamYearFormState extends State<_ExamYearForm> {
-  static const List<int> _years = <int>[2026, 2027, 2028, 2029, 2030];
+  // Tek kaynak: UserProfile.examYears() (Task 08).
+  static List<int> get _years => UserProfile.examYears();
   int? _selected;
   bool _saving = false;
 

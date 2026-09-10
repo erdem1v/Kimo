@@ -23,6 +23,14 @@
 // Tarama BAŞARISIZSA satır 'pending' kalır: paylaşıma kapalı (temkinli),
 // kişisel kullanıma açık — task'ın istediği denge.
 //
+// TÜR VE BOYUT (0066): eskiden MIME sabit `image/jpeg` yazılıyordu. PNG/WebP
+// yüklenince moderation isteği reddediliyor, satır 'pending' KALIYOR ve
+// süpürücü on dakikada bir aynı indirmeyi boşuna tekrarlıyordu. Artık tür
+// bayttan OKUNUYOR ve desteklenmeyen tür / boyut aşımı 'unsupported' terminal
+// durumuna bağlanıyor: satır kuyruktan çıkıyor, paylaşıma açılmıyor ve
+// İHLAL SAYILMIYOR ('flagged' yazsaydık 0062'nin yaptırım merdiveni dosya
+// biçimi yüzünden işlerdi).
+//
 // Gizli değerler: OPENAI_API_KEY (analyze-question ile aynı sır).
 // Deploy: supabase functions deploy scan-photos
 
@@ -33,6 +41,46 @@ const SWEEP_BATCH = 50;
 
 /** Kullanıcı hızlı yolunda taranacak en fazla satır. */
 const USER_BATCH = 10;
+
+/**
+ * Moderasyona gösterilebilen türler. `analyze-question`ın ALLOWED_MIME
+ * kümesiyle AYNI olmak zorunda: analiz kabul ettiği bir görseli tarama
+ * reddederse satır kalıcı olarak paylaşıma kapalı kalır.
+ */
+const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+/**
+ * 8 MiB. `analyze-question`ın MAX_BASE64 = 11_000_000 kapısıyla (~6 MB ham
+ * görsel) eşdeğer. Kova da 0066'da aynı sınırla kuruldu; bu kontrol kovadan
+ * ÖNCE yüklenmiş satırlar ve sınırın elle gevşetilmesi için yedek.
+ */
+const MAX_BYTES = 8 * 1024 * 1024;
+
+/**
+ * Türü BAYTTAN okur. Depodaki `content-type` istemcinin beyanı — yükleme
+ * çağrısında ne yazdıysa o; gerçek içerikle uyuşma garantisi yok. Sihirli
+ * baytlar uyuşmazsa beyana düşüyoruz, o da tanınmazsa null.
+ */
+function sniffMime(bytes: Uint8Array, declared: string): string | null {
+  if (bytes.length >= 3 &&
+      bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (bytes.length >= 8 &&
+      bytes[0] === 0x89 && bytes[1] === 0x50 &&
+      bytes[2] === 0x4e && bytes[3] === 0x47) {
+    return "image/png";
+  }
+  if (bytes.length >= 12 &&
+      bytes[0] === 0x52 && bytes[1] === 0x49 &&
+      bytes[2] === 0x46 && bytes[3] === 0x46 &&
+      bytes[8] === 0x57 && bytes[9] === 0x45 &&
+      bytes[10] === 0x42 && bytes[11] === 0x50) {
+    return "image/webp";
+  }
+  const d = declared.split(";")[0].trim().toLowerCase();
+  return ALLOWED_MIME.has(d) ? d : null;
+}
 
 function deny(status: number, logDetail: string): Response {
   console.error(`[scan-photos] ${status}: ${logDetail}`);
@@ -81,7 +129,11 @@ function toBase64(bytes: Uint8Array): string {
  * Tek bir görseli moderasyona gösterir. `true` = şüpheli.
  * Hata fırlatırsa çağıran satırı 'pending' bırakır.
  */
-async function isFlagged(apiKey: string, bytes: Uint8Array): Promise<boolean> {
+async function isFlagged(
+  apiKey: string,
+  bytes: Uint8Array,
+  mime: string,
+): Promise<boolean> {
   const resp = await fetch("https://api.openai.com/v1/moderations", {
     method: "POST",
     headers: {
@@ -92,7 +144,7 @@ async function isFlagged(apiKey: string, bytes: Uint8Array): Promise<boolean> {
       model: "omni-moderation-latest",
       input: [{
         type: "image_url",
-        image_url: { url: `data:image/jpeg;base64,${toBase64(bytes)}` },
+        image_url: { url: `data:${mime};base64,${toBase64(bytes)}` },
       }],
     }),
   });
@@ -161,7 +213,17 @@ Deno.serve(async (req: Request) => {
     const { data: rows, error } = await query;
     if (error) return deny(500, `pending listesi: ${error.message}`);
 
-    let cleared = 0, flagged = 0, failed = 0;
+    // Kararı yazar ve yarışta yönetici kararını EZMEZ.
+    const settle = async (id: string, state: string) => {
+      const { error: upErr } = await admin
+        .from("mistakes")
+        .update({ photo_scan: state, photo_scan_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("photo_scan", "pending");
+      if (upErr) throw new Error(upErr.message);
+    };
+
+    let cleared = 0, flagged = 0, unsupported = 0, failed = 0;
     for (const row of rows ?? []) {
       try {
         const { data: blob, error: dlErr } = await admin.storage
@@ -175,17 +237,31 @@ Deno.serve(async (req: Request) => {
           console.error(`[scan-photos] indirme: ${row.photo_path}: ${dlErr?.message}`);
           continue;
         }
+
+        // BOYUT: base64'e çevirmeden ÖNCE. Sırası önemli — sınırsız bir
+        // nesneyi önce belleğe üç katına şişirip sonra reddetmek, kapının
+        // korumak istediği şeyi zaten harcamış olurdu.
+        if (blob.size > MAX_BYTES) {
+          await settle(row.id, "unsupported");
+          unsupported++;
+          console.error(`[scan-photos] ${row.id}: boyut ${blob.size} > ${MAX_BYTES}`);
+          continue;
+        }
+
         const bytes = new Uint8Array(await blob.arrayBuffer());
-        const bad = await isFlagged(apiKey, bytes);
-        const { error: upErr } = await admin
-          .from("mistakes")
-          .update({
-            photo_scan: bad ? "flagged" : "clear",
-            photo_scan_at: new Date().toISOString(),
-          })
-          .eq("id", row.id)
-          .eq("photo_scan", "pending"); // yarışta admin kararını ezme
-        if (upErr) throw new Error(upErr.message);
+        const mime = sniffMime(bytes, blob.type ?? "");
+        if (mime === null) {
+          // 'pending' bırakmak yanlış olurdu: süpürücü aynı indirmeyi on
+          // dakikada bir sonsuza dek tekrarlar. 'flagged' de yanlış: bu bir
+          // içerik ihlali değil, bir dosya biçimi sorunu.
+          await settle(row.id, "unsupported");
+          unsupported++;
+          console.error(`[scan-photos] ${row.id}: tanınmayan tür (${blob.type})`);
+          continue;
+        }
+
+        const bad = await isFlagged(apiKey, bytes, mime);
+        await settle(row.id, bad ? "flagged" : "clear");
         if (bad) flagged++;
         else cleared++;
       } catch (e) {
@@ -194,7 +270,13 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    return json({ scanned: cleared + flagged, cleared, flagged, failed });
+    return json({
+      scanned: cleared + flagged,
+      cleared,
+      flagged,
+      unsupported,
+      failed,
+    });
   } catch (e) {
     return deny(500, String(e));
   }

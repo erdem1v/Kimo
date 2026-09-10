@@ -13,6 +13,9 @@ select plan(12);
 select tests.create_supabase_user('sender');
 select tests.create_supabase_user('receiver');
 select tests.create_supabase_user('stranger');
+-- Yaş kapısı (0067) `mistakes` INSERT'te doğum yılı şart koşuyor; bu testin
+-- konusu o değil, fikstürün kurulabilmesi için ön koşul (bkz. seed.sql).
+select tests.age_all_users();
 
 -- ============================================================== YAPI
 select has_column('public'::name, 'question_sends'::name, 'dismissed_at'::name,

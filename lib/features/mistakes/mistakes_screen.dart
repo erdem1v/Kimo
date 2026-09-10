@@ -60,6 +60,66 @@ class _MistakesScreenState extends State<MistakesScreen> {
     if (mounted && !_loading) _load();
   }
 
+  /// Tek soruyu siler (A-9): satır ve depodaki fotoğraf birlikte.
+  ///
+  /// ONAY ADIMI ZORUNLU — işlem geri alınamıyor ve düğme, sık kullanılan
+  /// "arkadaşına gönder"in hemen yanında.
+  Future<void> _delete(MistakeEntry e) async {
+    final String? id = e.id;
+    if (id == null) return;
+    sound.tap();
+    final L10n l = L10n.of(context);
+    final bool ok = await _confirmDelete(l);
+    if (!ok || !mounted) return;
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    try {
+      await mistakeRepository.deleteMistake(id);
+      // Bugün ekranındaki sayaçlar ve tekrar listesi de değişti.
+      refreshBus.ping();
+      messenger.showSnackBar(SnackBar(content: Text(l.mistakesDeleted)));
+      await _load();
+    } catch (err) {
+      debugPrint('soru silinemedi: $err');
+      messenger.showSnackBar(SnackBar(content: Text(l.mistakesDeleteFailed)));
+    }
+  }
+
+  Future<bool> _confirmDelete(L10n l) async {
+    final KimoTypography t = context.t;
+    final bool? ok = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: context.c.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
+      ),
+      builder: (BuildContext ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(Gap.screen, Gap.screen, Gap.screen,
+            Gap.screen + MediaQuery.of(ctx).padding.bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(l.mistakesDeleteTitle, style: t.section),
+            const SizedBox(height: Gap.sm),
+            Text(l.mistakesDeleteBody, style: t.body),
+            const SizedBox(height: Gap.lg),
+            KimoButton(
+              label: l.mistakesDeleteTitle,
+              onPressed: () => Navigator.of(ctx).pop(true),
+            ),
+            const SizedBox(height: Gap.sm),
+            KimoButton(
+              label: L10n.of(ctx).actionCancel,
+              kind: KimoButtonKind.tertiary,
+              onPressed: () => Navigator.of(ctx).pop(false),
+            ),
+          ],
+        ),
+      ),
+    );
+    return ok ?? false;
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -159,7 +219,7 @@ class _MistakesScreenState extends State<MistakesScreen> {
           _subjectFilter(context, l, stats),
           const SizedBox(height: Gap.md),
           for (final MistakeEntry e in _filtered) ...<Widget>[
-            _MistakeTile(entry: e),
+            _MistakeTile(entry: e, onDelete: () => _delete(e)),
             const SizedBox(height: Gap.sm),
           ],
           if (_filtered.isEmpty)
@@ -383,9 +443,14 @@ class _MistakesScreenState extends State<MistakesScreen> {
 
 /// Arşiv satırı.
 class _MistakeTile extends StatelessWidget {
-  const _MistakeTile({required this.entry});
+  const _MistakeTile({required this.entry, required this.onDelete});
 
   final MistakeEntry entry;
+
+  /// Tek soru silme (A-9). `null` değil çünkü her satır silinebilir olmalı —
+  /// yanlış eklenen ya da özel bilgi içeren bir fotoğraf için tek çıkış yolu
+  /// Task 08'e kadar TÜM HESABI silmekti.
+  final VoidCallback onDelete;
 
   bool get _sendable =>
       entry.id != null &&
@@ -485,6 +550,12 @@ class _MistakeTile extends StatelessWidget {
               },
               icon: KimoIcon(KimoIcons.play, size: 18, color: c.inkMuted),
               tooltip: l.mistakesSend,
+            ),
+          if (entry.id != null)
+            IconButton(
+              onPressed: onDelete,
+              icon: KimoIcon(KimoIcons.close, size: 18, color: c.inkMuted),
+              tooltip: l.mistakesDelete,
             ),
         ],
       ),

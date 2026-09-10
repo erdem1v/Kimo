@@ -94,10 +94,47 @@ void main() {
       );
     });
 
-    test('eşik zamanlayıcınınkiyle AYNI olmalı', () {
-      // Ekrandaki "en az dört kez" metni bu eşitliğe dayanıyor.
-      expect(MistakeStats.leechThreshold, const ReviewScheduler().leechThreshold);
-      expect(MistakeStats.leechThreshold, schedulerLeechThreshold);
+    test('eşik DAVRANIŞTA buluşuyor: planlayıcı inatçı derse istatistik de der',
+        () {
+      // Task 08'e kadar burada iki sabitin eşitliği iddia ediliyordu. Eşik tek
+      // kaynağa indirilince o iddia tautolojiye döndü (bir sabiti kendisiyle
+      // karşılaştırmak). Asıl korunması gereken şey ikisinin AYNI SINIRI
+      // görmesi; test artık onu, iki tarafı da çalıştırarak iddia ediyor.
+      const ReviewScheduler scheduler = ReviewScheduler();
+      const int threshold = MistakeStats.leechThreshold;
+
+      // Planlayıcı tarafı: eşiğe ulaşan yanlış inatçı işaretliyor, altındaki
+      // işaretlemiyor.
+      final ReviewOutcome atThreshold = scheduler.review(
+        step: 1,
+        lapses: threshold - 1,
+        correct: false,
+        reviewedOn: now,
+      );
+      final ReviewOutcome below = scheduler.review(
+        step: 1,
+        lapses: threshold - 2,
+        correct: false,
+        reviewedOn: now,
+      );
+      expect(atThreshold.lapses, threshold);
+      expect(atThreshold.isLeech, isTrue, reason: 'planlayıcı eşikte inatçı der');
+      expect(below.isLeech, isFalse, reason: 'planlayıcı eşiğin altında demez');
+
+      // İstatistik tarafı: `isLeech` bayrağına HİÇ bakmadan, yalnız lapses ile.
+      final MistakeStats s = MistakeStats.from(<MistakeEntry>[
+        entry(concept: 'esikte', lapses: atThreshold.lapses),
+        entry(concept: 'altinda', lapses: below.lapses),
+      ], now: now);
+      expect(
+        s.leeches.map((MistakeEntry e) => e.concept),
+        contains('esikte'),
+        reason: 'ekrandaki "en az dört kez" metni bu sınıra dayanıyor',
+      );
+      expect(
+        s.leeches.map((MistakeEntry e) => e.concept),
+        isNot(contains('altinda')),
+      );
     });
 
     test('son 7 gün penceresi: bugün sonda, 7 günden eski sayılmaz', () {

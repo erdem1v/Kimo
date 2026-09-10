@@ -3,7 +3,10 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../data/mistake_repository.dart';
+import '../../data/photo_queue.dart';
 import '../../data/yks_curriculum.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/models.dart';
@@ -17,6 +20,7 @@ import '../../widgets/kit/kimo_chips.dart';
 import '../../widgets/kit/kimo_icons.dart';
 import '../../widgets/kit/kimo_surfaces.dart';
 import '../mistakes/topic_picker_sheet.dart';
+import 'pending_photos_screen.dart';
 
 /// 3f — Onayla ve kaydet.
 ///
@@ -32,6 +36,8 @@ class ConfirmMistakeScreen extends StatefulWidget {
     super.key,
     this.imageBytes,
     this.analysis,
+    this.queueEntryId,
+    this.initialFields,
   });
 
   /// Çekilen fotoğraf. `null` ise fotoğrafsız kayıt (elle giriş).
@@ -40,6 +46,15 @@ class ConfirmMistakeScreen extends StatefulWidget {
   /// Yapay zekâ sonucu. `null` ise analiz hiç yapılmadı (çevrimdışı, iptal
   /// edildi ya da mock mod). `outOfCredit` ise hak bitti.
   final QuestionAnalysis? analysis;
+
+  /// Kuyruktaki bir kaydı tamamlıyorsak o kaydın kimliği (Task 08).
+  ///
+  /// Doluysa: kaydetme başarılı olduğunda kuyruk kaydı DÜŞÜYOR, ağ hatasında
+  /// ise kuyrukta GÜNCELLENİYOR (yeni bir kopya yaratılmıyor).
+  final String? queueEntryId;
+
+  /// Kuyruk kaydının önceden doldurulmuş alanları.
+  final Map<String, dynamic>? initialFields;
 
   @override
   State<ConfirmMistakeScreen> createState() => _ConfirmMistakeScreenState();
@@ -63,6 +78,9 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
   List<String> _labels = <String>[];
   bool _saving = false;
 
+  /// Kaydetme ağ hatasında kuyruğa düştü mü (arayüz metni değişiyor).
+  bool _queued = false;
+
   /// Ders satırı açık mı (yerinde açılan çip satırı — modal yok).
   bool _subjectOpen = false;
 
@@ -82,8 +100,48 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
         }
       }
     }
+    // Kuyruktan gelen kayıt: kullanıcının/AI'nın önceden doldurduğu alanlar.
+    // Analiz sonucundan SONRA uygulanıyor ki daha somut olan kazansın.
+    final Map<String, dynamic>? f = widget.initialFields;
+    if (f != null) {
+      final Object? exam = f['exam'];
+      if (exam == 'TYT' || exam == 'AYT') _exam = exam! as String;
+      final Object? subject = f['subject'];
+      if (subject is String && _subjects.contains(subject)) {
+        _subject = subject;
+        final Object? concept = f['concept'];
+        if (concept is String && _topicsOf(subject).contains(concept)) {
+          _concept = concept;
+        }
+      }
+      final Object? labels = f['labels'];
+      if (labels is List && labels.isNotEmpty) {
+        _labels = <String>[for (final dynamic x in labels) x as String];
+      }
+      final Object? idx = f['correct_index'];
+      if (idx is num) _correctIndex = idx.toInt();
+      _type = MistakeType.fromDb(f['type'] as String?);
+      final Object? note = f['note'];
+      if (note is String) _note.text = note;
+      final Object? extras = f['extras'];
+      if (extras is List) {
+        _extras.addAll(<String>[for (final dynamic x in extras) x as String]);
+      }
+    }
     if (_labels.isEmpty) _labels = List<String>.from(_defaultLabels);
   }
+
+  /// Kuyruk kaydına yazılacak alanlar — [_save] ile birebir aynı veri.
+  Map<String, dynamic> get _queueFields => <String, dynamic>{
+        'exam': _exam,
+        'subject': _subject,
+        'concept': _concept,
+        'labels': _labels,
+        'correct_index': _correctIndex,
+        'type': _type?.dbValue,
+        'note': _note.text.trim(),
+        'extras': _extras,
+      };
 
   @override
   void dispose() {
@@ -107,9 +165,26 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
   bool get _canSave =>
       !_saving && _subject != null && _concept != null && _correctIndex != null;
 
+  /// Seçilebilir şık sayıları. TYT/AYT beş şıklı; dört şık eski ÖSYM
+  /// sorularında ve bazı deneme kitapçıklarında geçiyor.
+  static const List<int> _optionCounts = <int>[4, 5];
+
+  void _setOptionCount(int n) {
+    sound.tap();
+    setState(() {
+      _labels = _defaultLabels.take(n).toList();
+      // Seçili şık listenin dışında kaldıysa işaret DÜŞÜYOR: yoksa kayıt
+      // var olmayan bir şıkkı doğru gösterirdi.
+      if (_correctIndex != null && _correctIndex! >= n) _correctIndex = null;
+    });
+  }
+
   Future<void> _save() async {
     if (!_canSave) return;
     setState(() => _saving = true);
+    final L10n l = L10n.of(context);
+    final NavigatorState nav = Navigator.of(context);
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     try {
       final List<QuestionOption> options = <QuestionOption>[
         for (final String label in _labels)
@@ -129,16 +204,103 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
         isPublic: false,
         extraConcepts: _extras,
       );
+      // Kuyruktan gelen bir kaydı tamamladıysak kopyası artık gereksiz.
+      final String? queueId = widget.queueEntryId;
+      if (queueId != null) await photoQueue.remove(queueId);
       sound.correct();
-      if (mounted) Navigator.of(context).pop(true);
-    } catch (e) {
-      debugPrint('hata kaydedilemedi: $e');
+      if (mounted) nav.pop(true);
+    } on PostgrestException catch (e) {
+      // SUNUCU REDDETTİ: tekrar denemek aynı sonucu verir, kuyruğa almak
+      // kaydı sonsuza dek bekletirdi (SubmissionQueue'nun kalıcı-ret dersi).
+      debugPrint('hata kaydı sunucuca reddedildi: ${e.code} ${e.message}');
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(L10n.of(context).confirmSaveFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.confirmSaveFailed)));
+    } catch (e) {
+      // AĞ HATASI: kaydetme yolu kapanmıyor — kayıt kuyruğa giriyor ve
+      // bağlantı gelince kendiliğinden gönderiliyor. Fotoğraf da diskte
+      // saklanıyor, yani uygulama kapanıp açılınca kaybolmuyor.
+      debugPrint('hata kaydedilemedi, kuyruğa alınıyor: $e');
+      final bool ok = await _queueForLater(PhotoQueueState.ready);
+      if (!mounted) return;
+      if (ok) {
+        sound.correct();
+        messenger.showSnackBar(SnackBar(content: Text(l.confirmSavedQueued)));
+        nav.pop(true);
+      } else {
+        setState(() => _saving = false);
+      }
     }
+  }
+
+  /// Kaydı fotoğraf kuyruğuna yazar (ya da kuyruktaki kaydı günceller).
+  ///
+  /// Fotoğrafsız kayıtta kuyruk YOK: kuyruğun deposu bir JPEG dosyası ve
+  /// saklanacak bir bayt yoksa kayıt yeri de yok. O durumda kullanıcı ağ
+  /// gelince tekrar deniyor — kaybolan tek şey birkaç dokunuş.
+  Future<bool> _queueForLater(PhotoQueueState state) async {
+    final String? queueId = widget.queueEntryId;
+    if (queueId != null) {
+      await photoQueue.update(queueId, _queueFields);
+      return true;
+    }
+    final Uint8List? bytes = widget.imageBytes;
+    if (bytes == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(L10n.of(context).confirmSaveFailed)),
+        );
+      }
+      return false;
+    }
+    final PhotoQueueAdd result = await photoQueue.enqueue(
+      bytes: bytes,
+      state: state,
+      fields: _queueFields,
+    );
+    if (!mounted) return false;
+    if (result != PhotoQueueAdd.ok) {
+      await reportQueueAdd(context, result);
+      return false;
+    }
+    setState(() => _queued = true);
+    return true;
+  }
+
+  /// "Analizi bekle": form doldurulmadan fotoğrafı sıraya alır.
+  ///
+  /// §5'in ikinci yolu. Kullanıcı beklemek istiyorsa Kimo bağlantı gelince
+  /// okuyor; istemiyorsa formu doldurup hemen kaydediyor. İkisi de açık.
+  Future<void> _waitForAnalysis() async {
+    sound.tap();
+    setState(() => _saving = true);
+    final L10n l = L10n.of(context);
+    final NavigatorState nav = Navigator.of(context);
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final bool ok = await _queueForLater(PhotoQueueState.needsAnalysis);
+    if (!mounted) return;
+    if (ok) {
+      messenger.showSnackBar(SnackBar(content: Text(l.captureQueuedOffline)));
+      nav.pop(true);
+    } else {
+      setState(() => _saving = false);
+    }
+  }
+
+  /// "Analizi bekle" düğmesi ne zaman görünür.
+  ///
+  /// Yalnızca fotoğraf VARSA ve analiz gerçekten yapılamadıysa: ağ hatası,
+  /// yaş kapısı ya da hiç denenmemiş olması. Başarılı bir analizden sonra
+  /// beklenecek bir şey yok; kota bitmişse beklemek de çözmüyor (hak yarın
+  /// yenileniyor ama kuyruk o kadar beklemez, kullanıcı formu doldurmalı).
+  bool get _canWaitForAnalysis {
+    if (widget.imageBytes == null || _saving || _queued) return false;
+    if (widget.queueEntryId != null) return false;
+    final QuestionAnalysis? a = widget.analysis;
+    if (a == null) return true;
+    if (a.ok || a.outOfCredit) return false;
+    return a.failure == AnalysisFailure.network ||
+        a.failure == AnalysisFailure.ageRequired;
   }
 
   @override
@@ -334,6 +496,7 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
       AnalysisFailure.noQuestion => l.analysisReasonNoQuestion,
       AnalysisFailure.noOptions => l.analysisReasonNoOptions,
       AnalysisFailure.network => l.analysisReasonNetwork,
+      AnalysisFailure.ageRequired => l.analysisReasonAgeRequired,
       AnalysisFailure.unknown => l.analysisReasonUnknown,
       // Analiz hiç yapılmadı (elle giriş, iptal, kota) → eski genel metin.
       null => l.confirmIntroManual,
@@ -476,6 +639,26 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          // ŞIK SAYISI kullanıcıda (Task 08, §5). Eskiden liste ya AI'dan
+          // geliyordu ya da beş harf sabitiyle doluyordu; dört şıklı bir
+          // soruda elle giriş yapan öğrenci olmayan bir E şıkkını işaretleyip
+          // kaydedebiliyordu. Şık METNİ hâlâ girilmiyor — pratik ekranı zaten
+          // yalnızca harfleri gösteriyor, metin girmek görünmeyen bir alanı
+          // doldurmak olurdu.
+          Text(l.confirmOptionCount, style: t.caption),
+          const SizedBox(height: Gap.sm),
+          Wrap(
+            spacing: Gap.sm,
+            children: <Widget>[
+              for (final int n in _optionCounts)
+                KimoChip(
+                  label: l.confirmOptionCountValue(n),
+                  selected: _labels.length == n,
+                  onTap: () => _setOptionCount(n),
+                ),
+            ],
+          ),
+          const SizedBox(height: Gap.lg),
           Text(l.confirmCorrectOption, style: t.caption),
           const SizedBox(height: Gap.md),
           Row(
@@ -563,6 +746,31 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
                 ),
             ],
           ),
+          const SizedBox(height: Gap.lg),
+          // NOT ALANI ARTIK GERÇEK (Task 08). Controller tanımlıydı, dispose
+          // ediliyordu, `_save` içinde okunuyordu — ama hiçbir TextField'a
+          // bağlı değildi, yani `note` her kayıtta boş gidiyordu. Fotoğrafsız
+          // bir soruda pratik ekranının gösterebildiği TEK içerik bu.
+          Text(l.confirmNoteLabel, style: t.caption),
+          const SizedBox(height: Gap.sm),
+          TextField(
+            controller: _note,
+            maxLines: 3,
+            minLines: 2,
+            maxLength: 500,
+            textCapitalization: TextCapitalization.sentences,
+            style: t.body,
+            decoration: InputDecoration(
+              hintText: l.confirmNoteHint,
+              filled: true,
+              fillColor: c.sunken,
+              counterText: '',
+              border: OutlineInputBorder(
+                borderRadius: Radii.all(Radii.tile),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -585,6 +793,20 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
             label: l.confirmSave,
             onPressed: _canSave ? _save : null,
           ),
+          if (_canWaitForAnalysis) ...<Widget>[
+            const SizedBox(height: Gap.sm),
+            KimoButton(
+              label: l.confirmWaitAnalysis,
+              kind: KimoButtonKind.secondary,
+              onPressed: _waitForAnalysis,
+            ),
+            const SizedBox(height: Gap.xs),
+            Text(
+              l.confirmWaitAnalysisBody,
+              style: t.caption.copyWith(color: c.inkMuted),
+              textAlign: TextAlign.center,
+            ),
+          ],
           const SizedBox(height: Gap.sm),
           Text(
             _canSave

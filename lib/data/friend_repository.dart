@@ -94,6 +94,11 @@ class FriendRepository {
     );
   }
 
+  /// Engeli kaldırır. Ayarlardaki "Engellenen kişiler" ekranından çağrılıyor.
+  ///
+  /// Task 08'e kadar bu metot TANIMLIYDI ama hiçbir yerden çağrılmıyordu:
+  /// kullanıcı birini engelleyebiliyor, engellediklerini göremiyor ve geri
+  /// alamıyordu (A-8). Sunucu tarafı 0044'ten beri hazırdı.
   Future<void> unblock(String userId) async {
     await _client.rpc<void>(
       'unblock_user',
@@ -101,16 +106,19 @@ class FriendRepository {
     );
   }
 
-  /// Engellediğim kullanıcıların kimlikleri.
-  Future<Set<String>> blockedIds() async {
-    try {
-      final List<Map<String, dynamic>> rows =
-          await _client.from('user_blocks').select('blocked_id');
-      return rows.map((Map<String, dynamic> r) => r['blocked_id'] as String).toSet();
-    } catch (e) {
-      debugPrint('engel listesi okunamadı: $e');
-      return <String>{};
-    }
+  /// Engellediğim kişiler — takma adlarıyla.
+  ///
+  /// `profiles_public` üzerinden okunmuyor: o görünüm anonim ve sistem
+  /// hesaplarını süzüyor (0047), yani engellediğin anonim biri listede
+  /// BOŞLUK olarak görünürdü ve engeli kaldıramazdın. Ayrıca görünüm 0068'de
+  /// istemciye tamamen kapandı. `my_blocked_users()` süzgeçsiz okuyor ve
+  /// yalnızca çağıranın listesini döndürüyor.
+  Future<List<BlockedUser>> blockedUsers() async {
+    final List<dynamic> rows =
+        await _client.rpc<List<dynamic>>('my_blocked_users');
+    return rows
+        .map((dynamic r) => BlockedUser.fromRow((r as Map).cast<String, dynamic>()))
+        .toList();
   }
 
   /// Gelen bir soruyu şikâyet eder; istenirse göndereni de engeller.
@@ -137,6 +145,30 @@ class FriendRepository {
 
 /// Kodla ekleme sonucu.
 @immutable
+/// Engellenen bir kişinin listede gösterilen bilgisi.
+///
+/// Avatar BİLEREK YOK: engellenen kişinin fotoğrafını göstermek için bir sebep
+/// yok, baş harf yeterli (`UserAvatar` zaten ona düşüyor).
+class BlockedUser {
+  const BlockedUser({
+    required this.id,
+    required this.nickname,
+    required this.blockedAt,
+  });
+
+  final String id;
+  final String nickname;
+  final DateTime blockedAt;
+
+  factory BlockedUser.fromRow(Map<String, dynamic> row) => BlockedUser(
+        id: row['id'] as String,
+        nickname: (row['nickname'] as String?) ?? 'Öğrenci',
+        blockedAt: DateTime.tryParse(row['blocked_at'] as String? ?? '')
+                ?.toLocal() ??
+            DateTime.now(),
+      );
+}
+
 class AddFriendResult {
   const AddFriendResult({
     required this.ok,

@@ -55,16 +55,36 @@ class ReviewOutcome {
 /// * Yanlış → 0. adıma (1 güne) sıfırlanır ve `lapses` artar (bakımdan da).
 /// * `lapses >= leechThreshold` → `isLeech` (kavramı baştan çalış sinyali).
 ///
+/// **ÖZ-RAPORLU DOĞRU ([review]'ün `selfReported` bayrağı, Task 08):** şıkları
+/// olmayan eski satırlarda kullanıcı "Doğru çözdüm / Bilemedim" ile kendi
+/// kendini değerlendiriyor. O beyan, işaretlenmiş bir şık kadar kanıt değil:
+/// dört kez "doğru çözdüm" diyen öğrenci hiç öğrenmediği soruyu kalıcı arşive
+/// atabiliyordu. Bu yüzden beyanla gelen doğru
+///   • merdivende ilerler (yol kapanmıyor) ama aralık BİR KADEME KISA
+///     uygulanır — soru takvimde daha yavaş uzaklaşır;
+///   • `mastered` ASLA yazmaz. "Öğrenildi" damgası yalnızca gerçekten şık
+///     işaretlenmiş bir doğrudan çıkabilir.
+/// Yanlış cevabın davranışı iki yolda da aynı: beyanla "bilemedim" demek
+/// şıklı yanlışla aynı sonucu doğurur, çünkü orada abartma güdüsü yok.
+///
 /// Saat bağımlılığı olmaması için tekrar tarihi ([reviewedOn]) dışarıdan verilir.
 class ReviewScheduler {
   const ReviewScheduler({
     this.steps = defaultSteps,
-    this.leechThreshold = 4,
+    this.leechThreshold = defaultLeechThreshold,
     this.leechCooldownDays = 3,
     this.maintenanceIntervalDays = defaultMaintenanceIntervalDays,
   });
 
   static const List<int> defaultSteps = <int>[1, 3, 7, 30];
+
+  /// "İnatçı" eşiği: kaç sıfırlanmadan sonra soru inatçı sayılır.
+  ///
+  /// TEK KAYNAK (Task 08). Aynı sayı eskiden `MistakeStats` içinde ikinci kez
+  /// yazılıydı ve bir test eşitliklerini iddia ediyordu; ayrışırlarsa arayüz
+  /// gerçekte olmayan bir kural anlatırdı. Arayüz metinleri de bu sayıya
+  /// bağlı ("Seni en az dört kez yenen sorular" — `mistakesLeechBody`).
+  static const int defaultLeechThreshold = 4;
 
   /// Bakım aralığı: merdivenin son adımından (30 gün) uzun, ama bir sınav
   /// dönemine birden fazla tekrar sığdıracak kadar kısa.
@@ -114,12 +134,17 @@ class ReviewScheduler {
   /// [examDate]: kullanıcının sınav tarihi (bkz. [examCutoffFor]). Bakım
   /// basamağında bir sonraki tekrar bu tarihi aşacaksa soru artık emekli
   /// edilir (`mastered = true`).
+  ///
+  /// [selfReported]: doğruluk kullanıcının BEYANINDAN geliyor (şık
+  /// işaretlenmedi). Sınıf başlığındaki kurala göre aralık bir kademe kısa
+  /// uygulanır ve `mastered` yazılmaz.
   ReviewOutcome review({
     required int step,
     required int lapses,
     required bool correct,
     required DateTime reviewedOn,
     DateTime? examDate,
+    bool selfReported = false,
   }) {
     final DateTime today = _dateOnly(reviewedOn);
     final int current = _clampStep(step);
@@ -127,14 +152,21 @@ class ReviewScheduler {
     if (correct) {
       final int newStep =
           current >= steps.length - 1 ? maintenanceStep : current + 1;
-      final int interval = newStep == maintenanceStep
-          ? maintenanceIntervalDays
-          : steps[newStep];
+      // Bir kademe kısa = YENİ adımın aralığı yerine BULUNULAN adımınki.
+      // Bakımdaki bir soruda `current` merdivenin dışında olabilir; o zaman
+      // en uzun merdiven adımı (30) kullanılıyor — bakım aralığından (45)
+      // kısa, yani kural orada da tutuyor.
+      final int interval = selfReported
+          ? (current >= steps.length ? steps.last : steps[current])
+          : (newStep == maintenanceStep
+              ? maintenanceIntervalDays
+              : steps[newStep]);
       final DateTime next = today.add(Duration(days: interval));
       // Emeklilik yalnızca bakımda ve yalnızca sınav tarihi biliniyorsa:
       // bir sonraki bakım tekrarı sınavdan sonraya düşecekse artık sormanın
-      // pedagojik değeri yok.
-      final bool retired = newStep == maintenanceStep &&
+      // pedagojik değeri yok. Beyanla gelen doğru bu kapıdan GEÇEMEZ.
+      final bool retired = !selfReported &&
+          newStep == maintenanceStep &&
           examDate != null &&
           next.isAfter(examDate);
       return ReviewOutcome(

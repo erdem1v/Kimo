@@ -12,7 +12,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(28);
+select plan(35);
 
 select tests.create_supabase_user('alice');
 select tests.create_supabase_user('mallory');
@@ -35,8 +35,16 @@ select hasnt_column('public'::name, 'profiles'::name, 'hearts'::name,
                     'hearts düşürüldü (can artık rate_limits üzerinden)');
 select ok(not has_column_privilege('authenticated', 'public.profiles', 'gems', 'UPDATE'),
           'gems yazılamaz');
-select ok(not has_column_privilege('authenticated', 'public.profiles', 'display_name', 'UPDATE'),
-          'display_name yazılamaz');
+-- 0069 (Task 08) beş ölü sütunu düşürdü. `display_name` diğer dördünden
+-- farklıydı: ölü değil ÇİFT KAYITTI — `nickname` ile aynı işi yapıyor,
+-- `handle_new_user` yazıyor ama `upsert_my_profile` hiç güncellemiyordu, yani
+-- takma ad değişince bayatlıyor ve hiçbir ekranda doğru göstermiyordu.
+select hasnt_column('public'::name, 'profiles'::name, 'display_name'::name,
+                    'display_name düşürüldü (nickname tek doğru)');
+select hasnt_column('public'::name, 'profiles'::name, 'exam_track'::name,
+                    'exam_track düşürüldü (ölü sütun, hiçbir yerde okunmuyordu)');
+select hasnt_column('public'::name, 'profiles'::name, 'grade'::name,
+                    'grade düşürüldü (ölü sütun)');
 select ok(not has_column_privilege('authenticated', 'public.profiles', 'created_at', 'UPDATE'),
           'created_at yazılamaz');
 
@@ -128,9 +136,51 @@ select ok(
   'touch_updated_at trigger''ı updated_at''i güncelledi'
 );
 
+-- ================================ AŞIRI KİLİTLEME KARŞI-İDDİASI: kayıt çalışıyor
+-- `display_name` düşürülürken `handle_new_user()` yeniden yazıldı. O gövdede
+-- `nickname` ataması ya da `assign_friend_code` çağrısı kaybolsaydı yeni
+-- kullanıcı adsız ya da KODSUZ doğar, arkadaş eklemenin tek yolu sessizce
+-- kapanırdı. Fikstür kullanıcıları tetikleyiciyle doğuyor; ikisini de sor.
+select isnt(
+  (select nickname from public.profiles where id = tests.get_supabase_uid('mallory')),
+  null,
+  'yeni kullanıcı takma adla doğuyor (handle_new_user bozulmadı)'
+);
+select isnt(
+  (select friend_code from public.profiles where id = tests.get_supabase_uid('mallory')),
+  null,
+  'yeni kullanıcı arkadaş koduyla doğuyor (assign_friend_code çağrısı duruyor)'
+);
+
+-- ==================================== UPDATE politikasında WITH CHECK var (0068)
+-- NEDEN KATALOG DÜZEYİNDE: `WITH CHECK`''in ısırdığı tek senaryo satırın
+-- `id`''sini başkasına çevirmek ve `id` sütun ayrıcalığında kilitli, yani
+-- çalışma zamanında tetiklenemiyor. Task 01 bu yüzden eklemeyi ertelemişti:
+-- `WITH CHECK`''i olmayan bir politikada `USING` yeni satıra da uygulanıyor ve
+-- ekleme o örtük korumayı kaldırıyor. 0068 sahiplik koşulunu AÇIKÇA yeniden
+-- yazarak ekledi; bu iki iddia hem varlığını hem içeriğini kanıtlıyor.
+select isnt(
+  (select with_check from pg_policies
+    where schemaname = 'public' and tablename = 'profiles'
+      and cmd = 'UPDATE'),
+  null,
+  'profiles UPDATE politikasının WITH CHECK''i var'
+);
+select ok(
+  (select with_check like '%auth.uid()%' and with_check like '%id%'
+     from pg_policies
+    where schemaname = 'public' and tablename = 'profiles'
+      and cmd = 'UPDATE'),
+  'WITH CHECK sahiplik koşulunu taşıyor (boş bir true değil)'
+);
+select ok(
+  (select qual like '%auth.uid()%' from pg_policies
+    where schemaname = 'public' and tablename = 'profiles'
+      and cmd = 'UPDATE'),
+  'USING koşulu korundu (with check eklenirken silinmedi)'
+);
+
 -- ============================================ RLS hâlâ satır sahipliğini koruyor
--- (WITH CHECK''i olmayan UPDATE politikasında USING yeni satıra da uygulanır,
---  yani satır bağışlama zaten mümkün değil. Burada 0 satır etkilenir, hata yok.)
 select tests.authenticate_as('mallory');
 select is(
   (select count(*)::int from public.profiles

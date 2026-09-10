@@ -439,6 +439,12 @@ verify_jwt = true
 [functions.delete-account]
 verify_jwt = true
 
+# Tek soru silme (A-9). `mistakeId` govdeden gelir ama SAHIPLIK JWT'den
+# dogrulanir; dogrulama acik olmak ZORUNDA, yoksa servis rolüyle calisan bu
+# fonksiyon herkesin her soruyu silmesine izin veren bir primitife donerdi.
+[functions.delete-question]
+verify_jwt = true
+
 # Anonim hesap temizligi. Zamanlanmis is servis rolu jetonuyla cagiriyor.
 [functions.cleanup-anonymous]
 verify_jwt = true

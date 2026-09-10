@@ -306,6 +306,7 @@ class AdminQuestion {
     this.options = const <QuestionOption>[],
     this.correctIndex,
     this.extraConcepts = const <String>[],
+    this.photoScan = 'clear',
   });
 
   final String id;
@@ -323,6 +324,14 @@ class AdminQuestion {
   /// Sorunun ayrıca değdiği konular.
   final List<String> extraConcepts;
 
+  /// Makine taramasının durumu: `pending` | `clear` | `flagged` |
+  /// `unsupported` (göç 0066).
+  ///
+  /// Yönetici listesinde GÖRÜNÜYOR çünkü `admin_review_photo_scan(id,'clear')`
+  /// durumdan bağımsız çalışıyor: hiç taranmamış bir fotoğrafı paylaşıma
+  /// açmak mümkün ve bunun bilerek yapılması gerekiyor.
+  final String photoScan;
+
   bool get inPool => isPublic && moderation == 'ok';
 
   factory AdminQuestion.fromRow(Map<String, dynamic> row) {
@@ -337,6 +346,7 @@ class AdminQuestion {
       moderation: (row['moderation'] as String?) ?? 'ok',
       reportCount: (row['report_count'] as int?) ?? 0,
       photoPath: row['photo_path'] as String?,
+      photoScan: (row['photo_scan'] as String?) ?? 'clear',
       options: raw is List
           ? raw
               .map((dynamic o) =>

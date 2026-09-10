@@ -7,7 +7,6 @@ import 'package:ai_yks_coach/theme/tokens.dart';
 import 'package:ai_yks_coach/widgets/kit/kimo_progress.dart';
 import 'package:ai_yks_coach/widgets/kit/kimo_surfaces.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -110,11 +109,15 @@ void main() {
         ),
       );
       // Renk tek taşıyıcı değil: ekran okuyucu da seçimi bildirir.
+      //
+      // `hasFlag(SemanticsFlag.…)` Flutter 3.32'de kullanımdan kaldırıldı ve
+      // `flutter analyze` bunu `info` olarak bildiriyor — o da CI'daki analyze
+      // adımını KIRMIZIYA döndürüyordu (Task 08 kapsamı dışında bulundu,
+      // düzeltildi). Yerine `isSemantics`: yalnızca ilgilendiğimiz
+      // özelliği iddia ediyor, `matchesSemantics` gibi tüm alanları değil.
       expect(
-        tester
-            .getSemantics(find.byType(PersonaCard))
-            .hasFlag(SemanticsFlag.isSelected),
-        isTrue,
+        tester.getSemantics(find.byType(PersonaCard)),
+        isSemantics(isSelected: true),
       );
       handle.dispose();
     });
