@@ -329,6 +329,12 @@ class MistakeRepository {
             .toList()
         : <QuestionOption>[];
 
+    // Kalan hak HER YANITTA geliyor ve HER YANITTA harcanmış oluyor —
+    // okunamayan bir fotoğrafta da. Eskiden yalnızca `ok` dalında parse
+    // ediliyordu, yani başarısız analizden sonra arayüzdeki sayı eski kalıyor
+    // ve kullanıcı harcadığı hakkı göremiyordu.
+    final int? remaining = (data['remaining'] as num?)?.toInt();
+
     final bool ok =
         readable && hasQuestion && hasOptions && options.isNotEmpty;
     if (ok) {
@@ -342,7 +348,7 @@ class MistakeRepository {
         subject: ders.isEmpty ? null : ders,
         concept: konu.isEmpty ? null : konu,
         conceptValid: data['konu_valid'] == true,
-        creditRemaining: (data['remaining'] as num?)?.toInt(),
+        creditRemaining: remaining,
       );
     }
 
@@ -359,7 +365,10 @@ class MistakeRepository {
               : AnalysisFailure.noOptions;
     }
     return QuestionAnalysis(
-        ok: false, options: <QuestionOption>[], failure: failure);
+        ok: false,
+        options: <QuestionOption>[],
+        failure: failure,
+        creditRemaining: remaining);
   }
 
   static String _dateStr(DateTime d) =>

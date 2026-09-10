@@ -81,20 +81,6 @@ class DailyState {
 
   static const int xpPerLevel = 1000;
 
-  /// Boş/çevrimdışı durum. Can dolu varsayılıyor: kullanıcıyı sunucuya
-  /// sormadan "hakkın bitti" diye kısıtlamak, çevrimdışında yanlış olurdu —
-  /// gerçek sınırı zaten sunucu uyguluyor.
-  static const DailyState unknown = DailyState(
-    aiLeft: 5,
-    aiQuota: 5,
-    aiResetsAt: null,
-    gems: 0,
-    xp: 0,
-    streak: 0,
-    weeklyXp: 0,
-    league: League.bronz,
-  );
-
   factory DailyState.fromRow(Map<String, dynamic> row) {
     return DailyState(
       aiLeft: (row['ai_left'] as num?)?.toInt() ?? 0,
@@ -184,18 +170,10 @@ class DailyStateRepository {
     }
   }
 
-  /// Bir yapay zekâ okutma hakkı harcar.
-  ///
-  /// Hak yoksa HATA ATMAZ: `allowed = false` döner ve çağıran elle giriş
-  /// yolunu açar. Kaydetme yolu asla kapanmıyor.
-  ///
-  /// NOT: gerçek tüketim `analyze-question` edge fonksiyonunda, OpenAI'ya
-  /// gitmeden önce yapılıyor. Bu metot yalnızca istemcinin akışı önceden
-  /// dallandırması için var; sınırı uygulayan o değil, sunucu.
-  Future<bool> hasAiCredit() async {
-    final DailyState? s = await read();
-    return s?.hasAi ?? true;
-  }
+  // hasAiCredit() SİLİNDİ (Task 06): sıfır çağrısı vardı. İstemcide kapı
+  // YOK ve olmayacak — sınırı sunucu uyguluyor, `analyze-question` OpenAI'ya
+  // gitmeden önce. İstemcinin önden dallanması, kotanın iki yerde yaşadığı
+  // yanılsamasını üretirdi.
 
   Future<GuardianStatus?> guardianStatus() async {
     try {

@@ -61,42 +61,73 @@ function deny(status: number, logDetail: string): Response {
 }
 
 /**
- * Bir yapay zekâ okutma hakkı harcar.
+ * Bir RPC'yi ÇAĞIRANIN kimliğiyle koşturur.
  *
- * Çağıranın Authorization başlığı olduğu gibi iletiliyor; böylece RPC o
- * kullanıcı olarak çalışıyor. Supabase istemci kütüphanesi yerine düz REST
- * kullanılıyor: tek bir RPC için bağımlılık ve istemci kurulumu gereksiz.
+ * Authorization başlığı olduğu gibi iletiliyor; böylece RPC o kullanıcı olarak
+ * çalışıyor ve `auth.uid()` doğru kişiyi gösteriyor. Supabase istemci
+ * kütüphanesi yerine düz REST: birkaç RPC için bağımlılık ve istemci kurulumu
+ * gereksiz.
  */
-async function consumeCredit(
+async function rpc(
   authHeader: string,
-): Promise<{ allowed: boolean; remaining: number; resetsAt: string | null }> {
+  name: string,
+  body: Record<string, unknown>,
+): Promise<unknown> {
   const url = Deno.env.get("SUPABASE_URL");
   const anon = Deno.env.get("SUPABASE_ANON_KEY");
   if (!url || !anon) {
     throw new Error("SUPABASE_URL / SUPABASE_ANON_KEY tanımlı değil");
   }
 
-  const resp = await fetch(`${url}/rest/v1/rpc/consume_ai_use`, {
+  const resp = await fetch(`${url}/rest/v1/rpc/${name}`, {
     method: "POST",
     headers: {
       "Authorization": authHeader,
       "apikey": anon,
       "Content-Type": "application/json",
     },
-    body: "{}",
+    body: JSON.stringify(body),
   });
 
   if (!resp.ok) {
-    throw new Error(`consume_ai_use ${resp.status}: ${await resp.text()}`);
+    throw new Error(`${name} ${resp.status}: ${await resp.text()}`);
   }
+  return await resp.json();
+}
 
-  const rows = await resp.json();
-  const row = Array.isArray(rows) ? rows[0] : rows;
+/** Bir yapay zekâ okutma hakkı harcar. */
+async function consumeCredit(
+  authHeader: string,
+): Promise<{ allowed: boolean; remaining: number; resetsAt: string | null }> {
+  const rows = await rpc(authHeader, "consume_ai_use", {});
+  const row = (Array.isArray(rows) ? rows[0] : rows) as Record<string, unknown>;
   return {
     allowed: row?.allowed === true,
     remaining: Number(row?.remaining ?? 0),
-    resetsAt: row?.resets_at ?? null,
+    resetsAt: (row?.resets_at as string | null) ?? null,
   };
+}
+
+/**
+ * Fotoğrafın SHA-256 özeti (hex).
+ *
+ * Base64 METNİ üzerinden hesaplanıyor, çözülmüş baytlar üzerinden değil:
+ * aynı fotoğraf aynı metni üretiyor ve 8 MB'lık bir base64'ü çözmek boşuna
+ * bellek. Farklı kodlanmış aynı görsel önbelleği ıskalar — ıskalamak zararsız,
+ * normal yola düşer.
+ *
+ * SUNUCUDA hesaplanıyor: istemcinin bildirdiği bir hash'e güvenmek, başkasının
+ * sonucunu çekmeye çalışmak için yüzey açardı (kayıtlar kullanıcıya kilitli
+ * olsa bile tasarımı zayıflatırdı).
+ */
+async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(text),
+  );
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 Deno.serve(async (req: Request) => {
@@ -126,6 +157,33 @@ Deno.serve(async (req: Request) => {
     }
     if (!ALLOWED_MIME.has(mimeType)) {
       return deny(400, `desteklenmeyen mimeType: ${mimeType}`);
+    }
+
+    // ------------------------------------------------------------ ÖNBELLEK
+    // KOTADAN DA ÖNCE. Aynı fotoğraf ikinci kez gönderildiğinde amaç ücretin
+    // ÇIKMAMASI; sonradan iade etmek değil. En sık tetikleyici ürünün kendi
+    // akışı: "Vazgeç" isteği iptal etmiyor, hak harcanıyor, kullanıcı aynı
+    // fotoğrafla devam ediyor.
+    //
+    // Önbellek HATASI analizi durdurmuyor: isabet edemezsek normal yola
+    // düşüyoruz. Sessiz de değil — teşhis sunucu günlüğünde.
+    const shaHex = await sha256Hex(imageBase64);
+    try {
+      const hit = await rpc(authHeader, "ai_cache_get", {
+        p_sha_hex: shaHex,
+        p_curriculum: curriculum,
+      });
+      if (hit && typeof hit === "object") {
+        return json({
+          ...(hit as Record<string, unknown>),
+          allowed: true,
+          // İstemci `remaining` yoksa eldeki sayıyı KORUYOR; doğrusu bu,
+          // çünkü bu çağrıda hiçbir hak harcanmadı.
+          cached: true,
+        }, 200);
+      }
+    } catch (e) {
+      console.error(`[analyze-question] önbellek okunamadı: ${e}`);
     }
 
     // ------------------------------------------------------------------ CAN
@@ -283,6 +341,21 @@ Deno.serve(async (req: Request) => {
         isValidPair(curriculum, parsed.sinav ?? "", parsed.ders, parsed.konu),
     );
     parsed.curriculum = curriculum;
+
+    // Önbelleğe YALNIZCA modelin ürettiği kısım giriyor; `allowed`/`remaining`
+    // o çağrıya özel ve bir sonraki isabette yanlış sayı göstermelerine yol
+    // açardı. Okunamayan fotoğraflar da önbelleğe giriyor: aynı bulanık kare
+    // ikinci kez de ücretlenmesin.
+    try {
+      await rpc(authHeader, "ai_cache_put", {
+        p_sha_hex: shaHex,
+        p_curriculum: curriculum,
+        p_result: parsed,
+      });
+    } catch (e) {
+      console.error(`[analyze-question] önbelleğe yazılamadı: ${e}`);
+    }
+
     // Hak harcandı; istemci kalan sayıyı HUD'da gösteriyor.
     parsed.allowed = true;
     parsed.remaining = credit.remaining;
