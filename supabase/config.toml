@@ -295,9 +295,24 @@ max_frequency = "5s"
 # inactivity_timeout = "8h"
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
-# [auth.hook.before_user_created]
-# enabled = true
-# uri = "pg-functions://postgres/auth/before-user-created-hook"
+#
+# TASK 06 / P1b — ACIK. E-posta dogrulamasi kaldirildigi icin (0057) sahte
+# adresle hesap acmak bedava; Supabase'in kendi tabani IP basina 5 dakikada
+# 30 kayda izin veriyor (= gunde 8.640) ve her hesap ucretsiz katmanin aylik
+# cap'ini aliyor. Bu kanca o sayiyi 300'e indiriyor (bkz. 0058).
+#
+# IP HAM SAKLANMIYOR: yalnizca sha256(app_config.signup_ip_salt || ip).
+# Tuz girilmemisse hiz siniri ATLANIR (fail-open) — yanlis yapilandirilmis bir
+# ortam kayit akisini kapatmasin. Limitler app_config'ten canli gevsetilebilir:
+#   signup_hour_limit (varsayilan 60) · signup_day_limit (varsayilan 300)
+#   signup_blocked_domains (virgulle ayrilmis) · signup_ip_salt
+#
+# CGNAT PAYI: TR'de mobil operatorler ve okul/yurt aglari tek IP'nin arkasinda
+# olabiliyor. 300/gun bir sinifin tamamini karsilar; script binlerce kimlik
+# uretemez. Kisitlamak gerekirse app_config'ten, goc gerekmeden.
+[auth.hook.before_user_created]
+enabled = true
+uri = "pg-functions://postgres/public/hook_before_user_created"
 
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
 # [auth.hook.custom_access_token]
