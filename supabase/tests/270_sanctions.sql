@@ -285,10 +285,13 @@ update public.mistakes set photo_scan = 'clear'
 
 select tests.authenticate_as('askili');
 
+-- `user_id` GÖNDERİLMİYOR: sütun kilitli ve `default auth.uid()` taşıyor —
+-- istemci de tam olarak böyle yazıyor (mistake_repository.dart). Açıkça
+-- göndermek 42501'i ASKIDAN DEĞİL sütun kilidinden aldırırdı ve test
+-- ölçmek istediği şeyi ölçmezdi.
 select lives_ok(
-  format('insert into public.mistakes (user_id, subject, concept) '
-         'values (%L, ''Tarih'', ''serbest'')',
-         tests.get_supabase_uid('askili')),
+  'insert into public.mistakes (subject, concept) '
+  'values (''Tarih'', ''serbest'')',
   'ASKIDAN ÖNCE: hata kaydı ekleyebiliyor'
 );
 select lives_ok(
@@ -307,9 +310,8 @@ select public.admin_suspend_user(
 select tests.authenticate_as('askili');
 
 select throws_ok(
-  format('insert into public.mistakes (user_id, subject, concept) '
-         'values (%L, ''Tarih'', ''yasak'')',
-         tests.get_supabase_uid('askili')),
+  'insert into public.mistakes (subject, concept) '
+  'values (''Tarih'', ''yasak'')',
   '42501', null,
   'ASKIDAN SONRA: aynı hata kaydı REDDEDİLİYOR'
 );
@@ -356,9 +358,8 @@ select is(
 
 select tests.authenticate_as('temiz');
 select lives_ok(
-  format('insert into public.mistakes (user_id, subject, concept) '
-         'values (%L, ''Tarih'', ''normal'')',
-         tests.get_supabase_uid('temiz')),
+  'insert into public.mistakes (subject, concept) '
+  'values (''Tarih'', ''normal'')',
   'askıda OLMAYAN kullanıcı etkilenmiyor (aşırı kilitleme yok)'
 );
 select is(
