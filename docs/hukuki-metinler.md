@@ -4,7 +4,18 @@
 üretildi; içindeki her veri/aktarım ifadesinin arkasında bir dosya:satır dayanağı
 var. Köşeli parantezli alanlar (`[şirket unvanı]` gibi) siz doldurana kadar boş.
 
-**Sürüm:** 1.0 · **Hazırlanma tarihi:** [tarih] · **Dayanak commit:** `5bbe43c`
+**Sürüm:** 1.1 · **Hazırlanma tarihi:** [tarih] · **Dayanak commit:** `3f9c4ba`
+
+> **1.1'de ne değişti (Task 07).** Üç ürün kararı metinlere işlendi:
+> **(a) veli onayı rejimi tümüyle kaldırıldı** — mekanizma zaten hiç
+> çalışmıyordu (A-1) ve 13-17 yaş için hukuken zorunlu değil;
+> **(b) uygulama 13+ olarak konumlandı** ve bu sınır artık KODDA zorlanıyor;
+> **(c) yaptırım altyapısı gerçekten yazıldı** — askıya alma, kalıcı yasak ve
+> uygunsuz içerikte kademeli yaptırım. Ayrıca koşul onayı alınmaya başlandı ve
+> onay kaydına metin sürümü eklendi. A-1, A-3, A-4, A-5, A-6 ve A-7 kapandı.
+> **Sürümlendirme uyarısı:** aşağıdaki 4, 5 ve 6. bölümlerin metin sürümü
+> `app_config.legal_version` ile birlikte güncellenmelidir; onay kayıtları o
+> değeri damgalıyor.
 
 ## İçindekiler
 
@@ -31,13 +42,18 @@ okunmasıyla çıkarıldı. **Emin olunamayan yerler açıkça işaretlendi.**
 
 | Veri | Nerede saklanıyor | Neden toplanıyor | Kim erişebiliyor | Süre | Üçüncü taraf | Dayanak |
 |---|---|---|---|---|---|---|
-| E-posta adresi | `auth.users` (Supabase Auth) | Hesabın kalıcılaştırılması, giriş, şifre sıfırlama, e-posta doğrulama | Kullanıcının kendisi; sunucu tarafı yönetim anahtarı | Hesap silinene kadar | Supabase (barındırma). Doğrulama postası Supabase SMTP'si üzerinden | `lib/data/auth_repository.dart:40-47` |
+| E-posta adresi | `auth.users` (Supabase Auth) | Hesabın kalıcılaştırılması, giriş, şifre sıfırlama | Kullanıcının kendisi; sunucu tarafı yönetim anahtarı | Hesap silinene kadar | Supabase (barındırma). Şifre sıfırlama postası Supabase SMTP'si üzerinden | `lib/data/auth_repository.dart:40-47` |
+
+> **E-posta doğrulaması KALDIRILDI (Task 06).** `enable_confirmations = false`;
+> adres kayıt anında doğrulanmıyor. Sahte kayıt maliyetini artıran mekanizma
+> artık IP başına hız sınırı (`hook_before_user_created`, §1.5). Bunun
+> envantere yansıması: e-posta adresinin **doğrulanmış olduğu iddia
+> edilmiyor** — kullanıcı beyanı olarak duruyor.
 | Parola | `auth.users` (Supabase Auth, hash'li) | Kimlik doğrulama | Hiç kimse (hash) | Hesap silinene kadar | Supabase | `auth_repository.dart:15-17` |
 | Takma ad (`nickname`, `display_name`) | `public.profiles` | Arkadaş listesinde ve lig tablosunda görünmek | **Tüm oturum açmış kullanıcılar** (`profiles_public` görünümü) | Hesap silinene kadar | Bildirim metninde Google/FCM'e gidiyor (§1.5) | `20240101000500_social.sql:11` |
 | Maskot seçimi (`mascot`) | `public.profiles` | Uygulama içi karakter/ses seçimi | Tüm oturum açmış kullanıcılar | Hesap silinene kadar | Yok | `social.sql:12` |
 | Avatar görseli | `avatars` bucket (private) + `profiles.avatar_path` | Profil fotoğrafı | Kullanıcı, **arkadaşları** ve **o haftaki lig kohortu** | Hesap silinene kadar | Supabase Storage | `20260901000700_avatar_access.sql:35-69` |
-| **Doğum yılı** (`birth_year`) | `public.profiles` | Yaş kapısı: 18 altı kullanıcıda arkadaş ekleme veli onayına bağlanıyor | Yalnızca sunucu fonksiyonları; **kullanıcıya bile yaş döndürülmüyor** | Hesap silinene kadar | Yok | `20260902000500_age_and_guardian.sql:23` |
-| **Veli e-posta adresi** (`guardian_email`) | `public.profiles` + `guardian_requests` | Veli onayı bağlantısının gönderilmesi | Kullanıcı ve sunucu | Hesap silinene kadar (**onay tamamlansa da silinmiyor**) | **Evet** — e-posta sağlayıcısı (kurulumda Resend) | `age_and_guardian.sql:24, 121-129` |
+| **Doğum yılı** (`birth_year`) | `public.profiles` | **13 yaş alt sınırının uygulanması** ve yaş derecelendirmesi. Başka hiçbir özelliği etkilemiyor | Yalnızca sunucu fonksiyonları; **kullanıcıya bile yaş döndürülmüyor** | Hesap silinene kadar | Yok | `20260905000200_guardian_removal.sql` (`set_birth_year`) |
 | Sınav yılı ve müfredat (`exam_year`, `curriculum`) | Supabase Auth kullanıcı metadata'sı | Konuların doğru müfredata eşlenmesi, tekrar takviminin sınav tarihine göre kesilmesi | Kullanıcı | Hesap silinene kadar | `curriculum` sabiti (`eski`/`maarif`) OpenAI istem metnine giriyor | `lib/state/user_profile.dart:152-160` |
 | Arkadaş kodu (`friend_code`) | `public.profiles` | Arkadaş eklemenin tek yolu | Kullanıcı; kodu bilen herkes | Hesap silinene kadar; kullanıcı günde 1 kez yenileyebilir | Yok | `20260902000700_friend_code.sql:27-31` |
 | Anonim hesap işareti (`is_anonymous`) | `public.profiles` | Kayıt olmadan denemeye izin vermek | Sunucu | 7 gün (bkz. §1.9) | Yok | `20260902000800_anonymous.sql:31` |
@@ -45,6 +61,12 @@ okunmasıyla çıkarıldı. **Emin olunamayan yerler açıkça işaretlendi.**
 **Toplanmayan kimlik verileri (doğrulandı):** ad-soyad, telefon numarası, T.C.
 kimlik numarası, okul adı, sınıf, adres, konum, kişi listesi. Doğum **tarihi**
 de toplanmıyor — yalnızca yıl (`age_and_guardian.sql:14-15`).
+
+> **Task 07 — veli e-posta adresi ARTIK TOPLANMIYOR.** `profiles.guardian_email`
+> sütunu ve `guardian_requests` tablosu düşürüldü, e-posta sağlayıcısının
+> `app_config` anahtarları silindi. Üçüncü bir kişinin (velinin) adresini ölü
+> bir akış için saklamanın savunulabilir bir gerekçesi kalmamıştı (KVKK
+> Md. 4/2-ç, veri minimizasyonu). Aktarım listesinden de düştü (§1.10).
 
 > ⚠️ `profiles` tablosunda `exam_track` ve `grade` kolonları duruyor ama hiçbir
 > kod bunları yazmıyor veya okumuyor. **Ölü kolon oldukları kuvvetle muhtemel;
@@ -195,18 +217,30 @@ verilmemiş; geri alma da yeni bir kayıt olarak yazılıyor, geçmiş silinmiyo
 |---|---|---|---|
 | `ai_upload` | Fotoğrafın OpenAI'a gönderilmesi | İlk analizden önce, çekim ekranında | `capture_screen.dart:96-104`; `photo_scan.sql:212-216` |
 | `share` | Sorunun ortak havuzda paylaşılması | Ayarlar | `lib/state/user_profile.dart:111-118` |
-| `guardian` | Veli onayı | Velinin e-postadaki bağlantıya tıklamasıyla | `age_and_guardian.sql:311-312` |
+| `terms` | **Kullanım Koşulları'nın kabulü** | Kayıt adımında, onay kutusuyla | `20260905000200_guardian_removal.sql` (`accept_legal_terms`) |
+| `privacy` | **Gizlilik Politikası'nın kabulü** | Kayıt adımında, aynı kutuyla | aynı |
+| `guardian` | Veli onayı — **ARTIK KULLANILMIYOR** | Yazma yolu 0063'te kapatıldı; tür yalnızca geçmiş kayıtlar geçerli kalsın diye CHECK'te duruyor | `20260905000200_guardian_removal.sql` |
 
-**Kayıtlanan alanlar:** `user_id`, `kind`, `granted`, `recorded_at`, `source`.
+**Kayıtlanan alanlar:** `user_id`, `kind`, `granted`, `recorded_at`, `source`,
+**`text_version`**.
 
-> ⚠️ **Kayıtlanmayanlar:** IP adresi, cihaz/tarayıcı bilgisi ve **onaylanan
-> metnin sürüm numarası**. Sürüm numarasının olmaması, ileride metin
-> değiştiğinde "kullanıcı hangi metni onayladı" sorusunu cevapsız bırakır
-> (bkz. §7, soru 4).
+**Metin sürümü (Task 07).** `terms` ve `privacy` kayıtları hangi metin sürümünün
+onaylandığını taşıyor. Sürümü **sunucu** belirliyor (`app_config.legal_version`),
+istemci bildiremiyor: onayın ispat değeri, sürümü kullanıcının beyan etmesine
+bağlı olamaz. Sürüm değiştiğinde bir sonraki onay YENİ bir satır yazıyor; aynı
+sürüm ikinci kez yazılmıyor. Eski kayıtlarda alan boş — o gün bir sürüm
+tutulmuyordu ve geriye dönük bir değer uydurmak defterin tek işi olan doğruluğu
+bozardı.
+
+> ⚠️ **Kayıtlanmayanlar:** IP adresi ve cihaz/tarayıcı bilgisi. Bu bilinçli:
+> onayın kime ve ne zaman ait olduğu `user_id` + `recorded_at` ile zaten
+> belirli, IP toplamak gereksiz bir kişisel veri olurdu.
 >
-> ⚠️ **Kullanım Koşulları ve KVKK aydınlatması için onay kaydı hiç yok.**
-> `user_consents.kind` yalnızca yukarıdaki üç türü kabul ediyor; `terms` veya
-> `privacy` türü tanımlı değil (`photo_scan.sql:201-205`).
+> **KVKK aydınlatma metni için ayrı bir onay kaydı YOK** ve olmamalı:
+> aydınlatma bir bilgilendirme yükümlülüğüdür, onaya tabi değildir. Kayıt
+> adımındaki kutu Kullanım Koşulları ve Gizlilik Politikası'nı kapsıyor;
+> aydınlatma metni bağlantısı uygulama içinde (Ayarlar → Veri ve Gizlilik)
+> kalıcı olarak erişilebilir.
 
 ## 1.8 Yönetici ve moderatör erişimi
 
@@ -270,8 +304,8 @@ dalı bulunmuyor (`20260901000700_avatar_access.sql:35-62`).
 | Durum | Ne oluyor | Dayanak |
 |---|---|---|
 | **Kalıcı hesaplar** | **Hiçbir otomatik saklama süresi veya silme yok.** Veri, kullanıcı hesabını silene kadar süresiz duruyor | Tüm göçler tarandı; `mistakes`, `study_attempts`, `question_sends`, `user_consents` için TTL/cron yok |
-| **Anonim hesaplar** | 7 gün sonra otomatik siliniyor (fotoğraflar dahil). E-posta doğrulaması askıdaysa 30 güne kadar esirgeniyor | `20260902000800_anonymous.sql:292-300`; `supabase/functions/cleanup-anonymous/index.ts:108-121`; `20260903000600_anonymous_email_pending.sql` |
-| **Veli onayı bağlantısı** | 7 gün sonra geçersiz — ama **satır silinmiyor**, yalnızca reddediliyor | `age_and_guardian.sql:257, 303-305` |
+| **Anonim hesaplar** | 7 gün sonra otomatik siliniyor (fotoğraflar dahil) | `20260902000800_anonymous.sql:292-300`; `supabase/functions/cleanup-anonymous/index.ts:108-121` |
+| **Yaptırım ve ihlal defterleri** | Silinmiyor; yanlış pozitifler `voided_at` ile geçersiz kılınıyor. Otomatik eşik yalnızca son **180 güne** bakıyor, defterin kendisi ömür boyu duruyor | `20260905000100_sanctions.sql` |
 | **İmzalı fotoğraf adresleri** | 600 saniye (10 dakika) sonra geçersiz | `mistake_repository.dart:175` |
 | **Kota ve jeton satırları** | Kodda "periyodik silinebilir" yazıyor ama **böyle bir iş kurulu değil** | `ai_quota.sql:47-50`; `progress_rpcs.sql:68-71` |
 | **Geçmiş lig haftaları** | Silinmiyor; yalnızca `settled_at` işaretleniyor | `20260902000100_league_six_tiers.sql:176-177` |
@@ -294,8 +328,8 @@ Sunucu sırayla (`supabase/functions/delete-account/index.ts:111-128`):
 **Cascade ile silinen tablolar (doğrulanmış tam liste):** `profiles`, `mistakes`,
 `user_consents`, `friendships`, `question_sends`, `question_attempts`,
 `study_attempts`, `league_members`, `device_tokens`, `submission_tokens`,
-`question_reports`, `rate_limits`, `guardian_requests`, `user_blocks`, `admins`,
-`push_cursors`. Bu kapsamı bir göç kapısı zorluyor: `auth.users`'a bakan her
+`question_reports`, `rate_limits`, `user_blocks`, `admins`, `push_cursors`,
+`user_sanctions`, `photo_violations`. Bu kapsamı bir göç kapısı zorluyor: `auth.users`'a bakan her
 yabancı anahtar `on delete cascade` olmak zorunda, değilse göç hata veriyor
 (`20260902001000_cascade_audit.sql:20-56`).
 
@@ -323,7 +357,12 @@ yabancı anahtar `on delete cascade` olmak zorunda, değilse göç hata veriyor
 | 3 | **Supabase** (bölge [doğrulanmalı]) | Uygulamanın tüm verisi: hesap, profil, fotoğraflar, sosyal veriler, onay defteri | Evet | `lib/services/supabase_config.dart:8-10` |
 | 4 | **Google / Firebase** (ABD) | Cihaz bildirim jetonu, bildirim başlığı ve gövdesi (**gönderenin takma adı dahil**) | Cihaz jetonu evet; kişi adı yalnızca takma ad | `send-push/index.ts:126, 208-231`; `push_service.dart:78-102` |
 | 5 | **Sentry** (bölge [doğrulanmalı]) | Hata olayları, yığın izleri, akış etiketi | **Hayır** (temizleniyor) | `main.dart:29-39`; `crash_service.dart:48-74` |
-| 6 | **E-posta sağlayıcısı** (kurulumda Resend, ABD) | **Velinin e-posta adresi**, çocuğun takma adı, onay bağlantısı | Evet (veli adresi) | `age_and_guardian.sql:149, 182-202` |
+
+**Task 07'de düşen altıncı alıcı:** e-posta sağlayıcısı (kurulumda Resend).
+Tek işi veli onayı postasını göndermekti; veli onayı rejimi kaldırılınca
+`send_guardian_email` fonksiyonu ve `app_config` anahtarları da silindi.
+Uygulama artık hiçbir e-posta sağlayıcısına veri göndermiyor — parola
+sıfırlama postası Supabase'in kendi altyapısından gidiyor.
 
 > ⚠️ **Supabase'in barındırma bölgesi bu depodan tespit edilemiyor.** Üretim
 > `SUPABASE_URL` derleme zamanı verildiği için depoda yok. Supabase Türkiye'de
@@ -378,7 +417,14 @@ doğru beyan ister; C grubu depo dışından doğrulanmalıdır.**
 
 ## A · Redde yol açabilecekler (kod değişikliği gerektirir)
 
-### A-1 · Veli onayı bağlantısı çalışmıyor 🔴 Kritik
+### A-1 · Veli onayı bağlantısı çalışmıyor 🔴 Kritik — ✅ **KAPANDI (Task 07)**
+
+> **Nasıl kapandı:** düzeltilerek değil, **kaldırılarak**. 13-17 yaş için veli
+> onayı hukuken zorunlu değil (COPPA 13 altı, Apple Kids Category, Play
+> Families 13 altı). Mekanizmanın tamamı düştü: dört RPC, `guardian-confirm`
+> edge fonksiyonu, `guardian_requests` tablosu, `profiles.guardian_email`
+> sütunu. `130_age_gate.sql` bu nesnelerin GERİ GELMEDİĞİNİ katalogda
+> doğruluyor. Aşağıdaki bulgu, kararın gerekçesi olarak korunuyor.
 
 **Ne:** Veliye gönderilen onay bağlantısı `?t=<token>` biçiminde kuruluyor
 (`20260902000500_age_and_guardian.sql:180`), ama bağlantıyı karşılayan edge
@@ -429,7 +475,16 @@ Seçim ürün kararı; (b) hem akışı korur hem aktarımı yaş bilgisinin ark
 
 ---
 
-### A-3 · Kötüye kullanan kullanıcıyı çıkarma yeteneği yok 🔴 Kritik
+### A-3 · Kötüye kullanan kullanıcıyı çıkarma yeteneği yok 🔴 Kritik — ✅ **KAPANDI (Task 07)**
+
+> **Nasıl kapandı:** `20260905000100_sanctions.sql`. İki politikasız defter
+> (`user_sanctions`, `photo_violations`) + `is_suspended()`. Yönetici askıya
+> alabiliyor, kalıcı yasaklayabiliyor ve kaldırabiliyor (`admin_suspend_user`);
+> uygunsuz içerikte üç ihlalde (180 günlük kayan pencere) 7 günlük otomatik
+> askı, askıdan sonraki ihlalde kalıcı yasak. Yasak DÖRT politikada zorlanıyor:
+> `mistakes` INSERT, `storage.objects` INSERT, `question_sends` INSERT,
+> `friendships` INSERT. `270_sanctions.sql` (44 iddia) aynı yazmanın askıdan
+> önce geçtiğini, sonra 42501 aldığını kanıtlıyor.
 
 **Ne:** Yönetici yalnızca **içerik** kaldırabiliyor (`admin_question_action`).
 Bir kullanıcıyı yasaklayan, askıya alan veya devre dışı bırakan hiçbir tablo,
@@ -451,7 +506,13 @@ yetkiyi zaten tanımlıyor (§6, Md. 9) — kodda karşılığı olmalı.
 
 ---
 
-### A-4 · Kullanım koşulları onayı hiç alınmıyor 🔴 Kritik
+### A-4 · Kullanım koşulları onayı hiç alınmıyor 🔴 Kritik — ✅ **KAPANDI (Task 07)**
+
+> **Nasıl kapandı:** kayıt adımına onay kutusu geldi (ön seçili DEĞİL; iki
+> metin ayrı ayrı tıklanabilir), `user_consents.kind` CHECK'i `terms` ve
+> `privacy` türlerini kabul ediyor, `text_version` sütunu eklendi ve
+> `accept_legal_terms()` sürümü SUNUCUDAN damgalıyor. Onay yazılmadan
+> `convertToPermanent` çağrılmıyor.
 
 **Ne:** Onboarding akışında kullanım koşullarını kabul adımı yok. `user_consents`
 defteri `terms` veya `privacy` türünü kabul etmiyor
@@ -471,7 +532,12 @@ okudum, kabul ediyorum" onayı; (2) `user_consents.kind` CHECK'ine `terms` ve
 
 ---
 
-### A-5 · Uygulama içinde gerçeğe uymayan iki cümle 🔴 Kritik
+### A-5 · Uygulama içinde gerçeğe uymayan iki cümle 🔴 Kritik — ✅ **KAPANDI (Task 07)**
+
+> **Nasıl kapandı:** aşağıda önerilen iki karşılık `lib/l10n/app_tr.arb`'ye
+> birebir yazıldı (`aiConsentBody`, `privacyAiBody`) ve her ikisine gerekçeyi
+> taşıyan `@` açıklama bloğu eklendi. Bu belgedeki 4.5 ve 5.3 bölümleri de
+> aynı cümleyle hizalandı.
 
 **Ne:**
 
@@ -499,7 +565,14 @@ gerçek davranış arasındaki uyumsuzluk. Mağazalar bunu doğrudan karşılaş
 
 ---
 
-### A-6 · Gizlilik politikası yer tutucusu yayında görünüyor 🟠 Yüksek
+### A-6 · Gizlilik politikası yer tutucusu yayında görünüyor 🟠 Yüksek — ✅ **KAPANDI (Task 07)**
+
+> **Nasıl kapandı:** `privacyLegalPlaceholder` silindi; ekranda dört gerçek
+> bağlantı var (koşullar, gizlilik, KVKK, hesap silme). Adresler derleme
+> zamanında `--dart-define` ile geliyor (`LegalLinks`, `SupabaseConfig`
+> deseni). Adres verilmemişse satır HİÇ ÇİZİLMİYOR — yer tutucu geri gelmiyor.
+> **Kalan iş sizde:** metinleri bir URL'de yayınlamak ve dört anahtarı
+> `supabase.json`'a girmek (bkz. §7.4 kontrol listesi).
 
 **Ne:** Ayarlar → Veri ve Gizlilik ekranı "KVKK aydınlatma metni, kullanım
 koşulları ve gizlilik politikası hazırlanıyor; yayınlandığında burada yer
@@ -517,7 +590,14 @@ girmek.
 
 ---
 
-### A-7 · İlan edilen asgari yaş (13) kodda zorlanmıyor 🟠 Yüksek
+### A-7 · İlan edilen asgari yaş (13) kodda zorlanmıyor 🟠 Yüksek — ✅ **KAPANDI (Task 07)**
+
+> **Nasıl kapandı:** `set_birth_year` üst sınırı 5 → 13 yaş. Ret AYRI bir
+> SQLSTATE ile (`KM013`) geliyor ve arayüz nazik bir açıklama gösteriyor.
+> Çark aralığı BİLEREK daraltılmadı: yalnızca geçerli yılları göstermek kapıyı
+> ortadan kaldırırdı — kullanıcı reddedilmez, sadece yalan söylerdi. Reddedilen
+> deneme bir yazma olmadığı için hesap kilitlenmiyor. Yaş adımı artık
+> atlanamıyor (`_canContinue` yılın yazılmasını şart koşuyor).
 
 **Ne:** `set_birth_year` doğrulaması 5–100 yaş aralığını kabul ediyor
 (`20260902000500_age_and_guardian.sql:71`); doğum yılı çarkı 1990'dan bugüne
@@ -598,7 +678,17 @@ Gizlilik Politikası havuzu "şu an kullanımda değil" olarak anlatıyor.
 
 ---
 
-### A-11 · Play'in web tabanlı hesap silme bağlantısı yok 🟠 Yüksek
+### A-11 · Play'in web tabanlı hesap silme bağlantısı yok 🟠 Yüksek — 🟡 **METİN HAZIR, YAYIN SİZDE**
+
+> **Task 07'de yapılan:** sayfanın metni yazıldı
+> (`docs/hesap-silme-sayfasi.md`) ve uygulama içindeki Ayarlar → Veri ve
+> Gizlilik ekranına bağlantı yuvası eklendi (`LEGAL_DELETE_URL`).
+> **Kalan iş sizde:** sayfayı yayınlamak ve adresi hem `supabase.json`'a hem
+> Play Console formuna girmek.
+>
+> ⚠️ `delete-account` edge fonksiyonunda **CORS bilinçli olarak yok**, yani
+> sayfa tarayıcıdan silme çağrısı YAPAMAZ. Metin bu yüzden bir açıklama +
+> e-posta talebi olarak yazıldı.
 
 **Ne:** Uygulama içinde hesap silme akışı var ve iyi çalışıyor
 (`lib/features/settings/delete_account_screen.dart`). Ancak Google Play, hesap
@@ -624,10 +714,10 @@ uyumsuzluğuna dönüşür. Hepsi aşağıdaki metinlerde karşılandı.
 |---|---|---|
 | B-1 | Yöneticiler paylaşıma kapalı fotoğrafları görebiliyor; denetim kaydı tutulmuyor | KVKK §4.4 ve §4.6; Gizlilik Politikası §5 |
 | B-2 | Bildirim gövdesinde **gönderenin takma adı** Google/FCM'e gidiyor | KVKK §4.5; Gizlilik Politikası §6 |
-| B-3 | Veli e-posta adresi üçüncü taraf e-posta sağlayıcısına gidiyor ve onay sonrası da saklanıyor | KVKK §4.5 ve §7 |
+| ~~B-3~~ | ~~Veli e-posta adresi üçüncü taraf e-posta sağlayıcısına gidiyor~~ | **Düştü (Task 07):** veli onayı rejimi kaldırıldı, adres artık toplanmıyor |
 | B-4 | Sentry'ye hata raporu gidiyor (kimlik temizlenmiş) | KVKK §4.5; Gizlilik Politikası §6 |
 | B-5 | `profiles_public` toplu okunabilir — takma ad, XP, seri, lig herkese görünür | Gizlilik Politikası §5 |
-| B-6 | Anonim hesaplar 7 gün sonra siliniyor (e-posta askıdaysa 30 gün) | KVKK §7; Gizlilik Politikası §8 |
+| B-6 | Anonim hesaplar 7 gün sonra siliniyor. (30 günlük "e-posta askıda" dalı Task 06'dan beri hiç tetiklenmiyor; metinlerden çıkarıldı) | KVKK §7; Gizlilik Politikası §8 |
 | B-7 | Moderasyon taraması zorunlu, ayrı onay alınmıyor | KVKK §4.2 ve §5 |
 | B-8 | Kalıcı hesaplarda otomatik saklama süresi yok | KVKK §7 |
 | B-9 | Moderasyon için bir süre taahhüdü (SLA) verilmiyor — bu bilinçli bir karar (`20260902000600_blocks_and_reports.sql:15-18`) | Kullanım Koşulları §9 "makul süre" ifadesiyle |
@@ -645,8 +735,8 @@ olarak bırakıldı. Yayından önce doldurulmalı.
 | C-1 | **Supabase barındırma bölgesi/ülkesi** | Supabase Dashboard → Project Settings → General → Region | KVKK Md. 9 aktarım beyanı |
 | C-2 | **OpenAI hesabının veri işleme koşulları** (DPA imzalı mı, sıfır-saklama açık mı) | OpenAI hesap ayarları / kurumsal sözleşme | §4 ve §5'teki saklama cümlesi buna göre kesinleşir |
 | C-3 | **Sentry projesinin bölgesi ve olay saklama süresi** | Sentry → Settings | KVKK §4.5 ve §7 |
-| C-4 | **E-posta sağlayıcısının kimliği ve bölgesi** (kurulumda Resend) | `app_config` tablosundaki `email_api_url` değeri | Veli e-postası aktarımı |
-| C-5 | **Üretim Auth ayarları** — e-posta doğrulaması açık mı, captcha var mı | Supabase Dashboard → Authentication | Hesap güvenliği beyanı |
+| ~~C-4~~ | ~~E-posta sağlayıcısının kimliği ve bölgesi~~ | — | **Düştü (Task 07):** uygulama artık hiçbir e-posta sağlayıcısına veri göndermiyor |
+| C-5 | **Üretim Auth ayarları** — `enable_confirmations` gerçekten kapalı mı, captcha var mı, `[auth.rate_limit]` değerleri ne | Supabase Dashboard → Authentication | Hesap güvenliği beyanı. `config.toml` **yalnızca yerel geliştirmeyi** yapılandırır; üretimdeki değer teyit edilmeden "e-posta doğrulanmıyor" beyanı kesinleşmez |
 | C-6 | **Birleşmiş Android manifesti** | `flutter build apk` sonrası `build/app/outputs/logs/manifest-merger-*.txt` | Play izin beyanı; özellikle `AD_ID`'nin gerçekten olmadığının teyidi |
 | C-7 | **Şirket bilgileri** — unvan, adres, VERBİS kaydı, KEP adresi | Sizde | Veri sorumlusu kimliği |
 | C-8 | **iOS Firebase yapılandırması** — `GoogleService-Info.plist` depoda yok; eklenirse iOS'ta da FCM aktarımı başlar | Firebase Console | Aktarım listesi |
@@ -683,7 +773,7 @@ Her satır için: **Toplanıyor mu · Kimlikle ilişkili mi (Linked to You) ·
 
 | Apple kategorisi | Alt tür | Toplanıyor | Kimlikle ilişkili | Amaç | Kaynak |
 |---|---|---|---|---|---|
-| **Contact Info** | Email Address | ✅ Evet | Evet | App Functionality | Hesap e-postası + veli e-postası (§1.1) |
+| **Contact Info** | Email Address | ✅ Evet | Evet | App Functionality | Hesap e-postası (§1.1) |
 | **Contact Info** | Name / Phone / Address | ❌ Hayır | — | — | Toplanmıyor (§1.1) |
 | **Identifiers** | User ID | ✅ Evet | Evet | App Functionality | Hesap kimliği, takma ad, arkadaş kodu |
 | **Identifiers** | Device ID | ✅ Evet | Evet | App Functionality | FCM bildirim jetonu (§1.5) |
@@ -695,7 +785,7 @@ Her satır için: **Toplanıyor mu · Kimlikle ilişkili mi (Linked to You) ·
 | **Diagnostics** | Crash Data | ✅ Evet | **Hayır** | App Functionality | Sentry; kullanıcı kimliği aktif olarak temizleniyor (§1.5) |
 | **Diagnostics** | Performance Data | ❌ Hayır | — | — | `tracesSampleRate = 0.0` |
 | **Diagnostics** | Other Diagnostic Data | ✅ Evet | **Hayır** | App Functionality | Yakalanmış hatalar + `app.context` akış etiketi |
-| **Other Data** | Other Data Types | ✅ Evet | Evet | App Functionality | **Doğum yılı** (yalnızca yıl) ve veli onayı durumu (§1.1, §1.7) |
+| **Other Data** | Other Data Types | ✅ Evet | Evet | App Functionality | **Doğum yılı** (yalnızca yıl) ve onay kayıtları (§1.1, §1.7) |
 | **Sensitive Info** | — | ❌ Hayır | — | — | Irk, din, sağlık, cinsel yönelim, siyasi görüş toplanmıyor |
 | **Location / Financial / Health / Contacts / Browsing History / Search History / Purchases** | — | ❌ Hayır | — | — | §1.11 |
 
@@ -712,7 +802,7 @@ Her satır için: **Toplanıyor mu · Kimlikle ilişkili mi (Linked to You) ·
 | Privacy Choices URL | Gerekmiyor (izleme ve reklam yok) |
 | Account deletion | Uygulama içinde mevcut; App Review'a not olarak akış yazılmalı |
 | Yaş derecelendirme anketi | **Kullanıcı içeriği: EVET** (moderasyonlu). Uygulama içi kullanıcılar arası iletişim var (birebir soru gönderimi + not). Sınırsız web erişimi yok, kumar yok, şiddet yok |
-| App Review notu | Test hesabı, veli onayı akışının nasıl denetleneceği ve moderasyon panelinin nasıl çalıştığı yazılmalı (1.2 sorularını baştan karşılar) |
+| App Review notu | Test hesabı; **1.2'nin dört şartının nerede karşılandığı**: içerik filtreleme (her fotoğraf `omni-moderation-latest` ile taranır, temiz olmayan paylaşıma çıkamaz), şikâyet (her içeriğin yanında), engelleme (kullanıcı bazında), **kötüye kullananı çıkarma** (yönetici askıya alma/kalıcı yasak + üç ihlalde otomatik askı). Ayrıca kayıt adımındaki koşul onayının ekran görüntüsü |
 
 ## 3.3 Google Play — Veri Güvenliği formu
 
@@ -724,7 +814,7 @@ gerekçesi).
 |---|---|---|---|---|
 | **Kişisel bilgiler** | E-posta adresi | ✅ | Zorunlu (kalıcı hesap için) | Hesap yönetimi, Uygulama işlevi |
 | **Kişisel bilgiler** | Kullanıcı kimlikleri | ✅ | Zorunlu | Hesap yönetimi, Uygulama işlevi |
-| **Kişisel bilgiler** | Diğer bilgiler | ✅ | İsteğe bağlı | **Doğum yılı, veli e-postası** — Uygulama işlevi, çocuk güvenliği |
+| **Kişisel bilgiler** | Diğer bilgiler | ✅ | İsteğe bağlı | **Doğum yılı** (yalnızca yıl) — Uygulama işlevi, çocuk güvenliği |
 | **Kişisel bilgiler** | Ad, adres, telefon, ırk/etnik köken, siyasi/dini görüş, cinsel yönelim | ❌ | — | — |
 | **Fotoğraflar ve videolar** | Fotoğraflar | ✅ | İsteğe bağlı (elle giriş mümkün) | Uygulama işlevi |
 | **Mesajlar** | Diğer uygulama içi mesajlar | ✅ | İsteğe bağlı | **Arkadaşa soru gönderirken yazılan not** — Uygulama işlevi |
@@ -767,7 +857,7 @@ tutarsızlık sayılmaz.**
 
 ## [uygulama adı] — Kişisel Verilerin Korunması Hakkında Aydınlatma Metni
 
-**Son güncelleme:** [tarih] · **Sürüm:** 1.0
+**Son güncelleme:** [tarih] · **Sürüm:** 1.1
 
 Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu'nun ("KVKK") 10.
 maddesi uyarınca hazırlanmıştır. Amacı, uygulamayı kullandığınızda hangi
@@ -797,9 +887,8 @@ hem velisinin okuyabileceği bir dille yazdık. Anlamadığınız bir yer olursa
 - Size özel arkadaş kodunuz
 - Gireceğiniz sınav yılı ve müfredat tercihiniz
 
-**b) Yaş ve veli bilgisi**
+**b) Yaş bilgisi**
 - **Doğum yılınız.** Yalnızca yıl; gün ve ay sorulmuyor.
-- 18 yaşından küçükseniz **velinizin e-posta adresi**
 
 **c) Yüklediğiniz içerik**
 - Çektiğiniz **soru fotoğrafları.** Bu fotoğraflarda el yazınız, defteriniz ve
@@ -825,6 +914,14 @@ hem velisinin okuyabileceği bir dille yazdık. Anlamadığınız bir yer olursa
 
 **g) Onay kayıtlarınız**
 - Hangi onayı ne zaman verdiğiniz veya geri aldığınız
+- Kullanım Koşulları ve Gizlilik Politikası'nı kabul ettiğinizde, **kabul
+  ettiğiniz metnin sürüm numarası**
+
+**h) Uygulama kurallarına uyum kayıtları**
+- Yüklediğiniz bir fotoğraf otomatik tarama tarafından uygunsuz bulunduysa
+  bunun kaydı
+- Hesabınıza bir kısıtlama uygulandıysa (askıya alma, kapatma) bunun kaydı,
+  tarihi ve gerekçe kodu
 
 **Toplamadığımız bilgiler:** adınız ve soyadınız, T.C. kimlik numaranız,
 telefon numaranız, adresiniz, okulunuz, sınıfınız, konumunuz, rehberiniz.
@@ -842,7 +939,8 @@ Reklam kimliğinizi kullanmıyoruz ve sizi uygulama dışında takip etmiyoruz.
 | Arkadaşlarınızla soru paylaşmanız | Sosyal bilgiler, yüklediğiniz içerik |
 | Size bildirim göndermek | Bildirim jetonu, takma adınız |
 | **Uygulamayı güvenli tutmak:** uygunsuz içeriği engellemek, şikâyetleri incelemek, taciz ve kötüye kullanımı önlemek | Soru fotoğrafları, şikâyetler, engellemeler, kullanım sayaçları |
-| **18 yaşından küçük kullanıcıları korumak:** veli onayı alınana kadar arkadaş eklemeyi kapalı tutmak | Doğum yılı, veli e-postası |
+| **13 yaş sınırını uygulamak** ve yaş derecelendirmesini doğru yapmak | Doğum yılı |
+| **Kurallara uymayan kullanıcıyı durdurmak:** uygunsuz içerik tekrarlanırsa hesabı geçici olarak kısıtlamak veya kapatmak | Tarama sonuçları, ihlal ve kısıtlama kayıtları |
 | Uygulamanın hatalarını bulup düzeltmek | Hata kayıtları |
 | Yasal yükümlülüklerimizi yerine getirmek ve bir uyuşmazlık hâlinde hakkımızı savunmak | Duruma göre ilgili kayıtlar |
 
@@ -856,7 +954,8 @@ KVKK'nın 5. maddesindeki şu sebeplere dayanıyoruz:
 |---|---|
 | Hesap açma, uygulamayı kullandırma, sorularınızı saklama, arkadaş özellikleri, bildirim gönderme | **Md. 5/2-c** — sözleşmenin kurulması ve ifası için gerekli olması |
 | İçerik moderasyonu, şikâyet incelemesi, taciz ve kötüye kullanımın önlenmesi, hata kayıtları, kullanım sayaçları | **Md. 5/2-f** — temel hak ve özgürlüklerinize zarar vermemek kaydıyla meşru menfaatimiz |
-| Doğum yılının sorulması ve veli onayı süreci | **Md. 5/2-f** — çocuğun korunmasına yönelik meşru menfaat; ayrıca ilgili mevzuattan doğan yükümlülüklerimiz kapsamında **Md. 5/2-ç** |
+| Doğum yılının sorulması ve 13 yaş sınırının uygulanması | **Md. 5/2-f** — çocuğun korunmasına yönelik meşru menfaat; ayrıca ilgili mevzuattan doğan yükümlülüklerimiz kapsamında **Md. 5/2-ç** |
+| İhlal kayıtlarının tutulması ve hesap kısıtlamaları | **Md. 5/2-f** — hizmetin ve diğer kullanıcıların güvenliğine yönelik meşru menfaat; ayrıca **Md. 5/2-e** (bir hakkın tesisi ve korunması) |
 | Yasal saklama ve bildirim yükümlülükleri, yetkili makam talepleri | **Md. 5/2-ç** — hukuki yükümlülüğün yerine getirilmesi |
 | Bir hakkın tesisi, kullanılması veya korunması (uyuşmazlık hâli) | **Md. 5/2-e** |
 | **Soru fotoğrafınızın yurt dışındaki yapay zekâ servisine gönderilmesi** | **Açık rızanız** (aşağıda 5. bölüm) |
@@ -930,24 +1029,22 @@ Hizmeti sunabilmek için aşağıdaki hizmet sağlayıcılarla çalışıyoruz:
 | **OpenAI** | Soru fotoğrafları (kimliksiz) | Sorunun okunması ve içerik güvenliği taraması | ABD |
 | **Google (Firebase Cloud Messaging)** | Cihaz bildirim jetonu ve bildirim metni. **Bildirim metninde size soru gönderen kişinin takma adı yer alır** (ör. "Ayşe sana bir soru yolladı"). Sorunun kendisi veya fotoğraf gönderilmez | Bildirimlerin cihazınıza ulaştırılması | ABD |
 | **Sentry** (hata izleme) | Uygulama hata kayıtları ve teknik ayrıntılar. **Kullanıcı kimliğiniz ve e-postanız gönderilmeden önce silinir**; ekran görüntüsü hiç alınmaz | Hataların bulunup düzeltilmesi | [Sentry bölge/ülke] |
-| **[e-posta sağlayıcısı]** | 18 yaşından küçükseniz **velinizin e-posta adresi** ve takma adınız | Veli onayı e-postasının gönderilmesi | [ülke] |
 
 Ayrıca yasal olarak zorunlu olduğumuz hâllerde yetkili kamu kurum ve
 kuruluşlarına, talepleri kapsamında bilgi verebiliriz.
 
 Bu sağlayıcıların tamamı bizim adımıza ve talimatımızla çalışan **veri
 işleyenlerdir**; verilerinizi kendi amaçları için kullanamazlar.
-Supabase, OpenAI, Google, Sentry ve e-posta sağlayıcısına yapılan aktarımlar
-yurt dışına aktarım niteliğindedir ve 5. bölümde anlatılan hukuki dayanaklara
-tabidir.
+Supabase, OpenAI, Google ve Sentry'ye yapılan aktarımlar yurt dışına aktarım
+niteliğindedir ve 5. bölümde anlatılan hukuki dayanaklara tabidir.
 
 ### 7. Verilerinizi ne kadar süre saklıyoruz?
 
 | Veri | Süre |
 |---|---|
 | Hesabınız ve içeriğiniz (fotoğraflar dahil) | **Hesabınızı silene kadar.** Otomatik bir süre sınırı yoktur |
-| Kayıt olmadan denediyseniz (anonim hesap) | **7 gün** sonra otomatik olarak silinir. E-posta doğrulamanız beklemedeyse bu süre 30 güne kadar uzar |
-| Veli onayı bağlantısı | 7 gün sonra geçersiz olur |
+| Kayıt olmadan denediyseniz (anonim hesap) | **7 gün** sonra otomatik olarak silinir |
+| Uygulama kurallarına uyum kayıtları (ihlal ve kısıtlama kayıtları) | Hesabınızı silene kadar. Otomatik kısıtlama kararında yalnızca **son 180 gün** dikkate alınır |
 | Fotoğrafınıza verilen geçici erişim adresleri | 10 dakika |
 | Hata kayıtları (Sentry) | [Sentry saklama süresi] |
 | Yasal saklama yükümlülüğüne tabi kayıtlar | İlgili mevzuatın öngördüğü süre |
@@ -966,29 +1063,35 @@ bildirimler ve arkadaşınıza gönderdiğiniz bir sorunun onun tarafında kalan
 kaydı geri çağrılamaz. Kimliğinizle ilişkilendirilmemiş teknik hata kayıtları
 da Sentry'deki saklama süresi boyunca kalabilir.
 
-### 8. 18 yaşından küçükseniz
+### 8. Yaşınız 18'den küçükse
 
-Uygulamayı **13 yaşından küçükler kullanamaz.**
-
-13–18 yaş arasındaysanız uygulamayı kullanabilirsiniz, ancak:
+**Uygulama 13 yaş ve üzeri içindir. 13 yaşından küçükler kullanamaz.**
 
 - Kayıt sırasında **doğum yılınızı** soruyoruz. Yalnızca yıl; gün ve ay değil.
-  Doğum yılı bir kez yazılır, sonradan değiştirilemez.
-- 18 yaşından küçükseniz **arkadaş ekleme özelliği kapalı başlar.** Açılması
-  için velinizin e-posta adresini girmeniz ve velinizin size gönderilen
-  bağlantıya tıklayarak onay vermesi gerekir.
-- Onay gelene kadar uygulamanın **geri kalan her özelliği açıktır**: soru
-  çekebilir, hata bankanızı kurabilir, tekrar yapabilir, lig ve XP
-  kazanabilirsiniz. Sizi uygulamanın dışında bırakmıyoruz.
-- Veli onayı **istendiği zaman geri alınabilir.** Onay geri alındığında
-  arkadaş ekleme yeniden kapanır.
-- Doğum yılını girmezseniz sizi **18 yaşından küçük kabul ederiz** — yani
-  arkadaş ekleme kapalı kalır. Bu bilinçli bir tercihtir: emin olmadığımızda
-  koruyucu olanı seçiyoruz.
+- **Bu sınır teknik olarak uygulanıyor:** 13 yaşından küçük bir doğum yılı
+  girildiğinde kayıt tamamlanmaz ve bunun nedeni size açıkça söylenir.
+- Doğum yılı **bir kez yazılır**, sonradan değiştirilemez. Yanlış girdiyseniz
+  [iletişim e-postası] adresine yazın, düzeltelim.
+- 13–18 yaş arasındaysanız uygulamanın **tüm özelliklerini** kullanabilirsiniz.
+  Arkadaş eklemenin tek yolu, karşı tarafın size verdiği **6 haneli arkadaş
+  kodudur** — kimse sizi takma adınızla arayıp bulamaz, size kodunuzu
+  vermediğiniz biri arkadaşlık isteği gönderemez. İstemediğiniz biri olursa
+  onu engelleyebilir ve kodunuzu yenileyebilirsiniz.
+
+**Veli onayı hakkında.** Daha önceki sürümlerde 18 yaşından küçük
+kullanıcılarda arkadaş ekleme veli onayına bağlanmıştı. **Bu uygulamadan
+vazgeçildi.** Nedeni: 13–17 yaş için veli onayı yürürlükteki mevzuatta zorunlu
+tutulmuyor, mekanizmanın kendisi velinin kimliğini doğrulayamıyordu ve
+uygulamanın sosyal yüzeyi zaten kod tabanlı (yabancıyla temas kurma yolu yok).
+Bunun yerine korumayı, herkes için çalışan üç mekanizmaya dayandırıyoruz:
+zorunlu içerik taraması, engelleme/şikâyet ve kurallara uymayan hesabın
+kısıtlanması.
 
 **Velilere:** Çocuğunuzun uygulamada hangi verilerinin işlendiğini öğrenmek,
-onayınızı geri almak veya hesabın silinmesini istemek için
-[iletişim e-postası] adresine yazabilirsiniz.
+bir içeriğin kaldırılmasını ya da hesabın silinmesini istemek için
+[iletişim e-postası] adresine yazabilirsiniz. Yasal temsilci sıfatıyla
+başvurduğunuzda, çocuğunuzun KVKK Md. 11 haklarını onun adına
+kullanabilirsiniz.
 
 ### 9. İçeriğinizi kimler görebilir?
 
@@ -1075,7 +1178,7 @@ ayrıca bilgilendiririz.
 
 ## [uygulama adı] Gizlilik Politikası
 
-**Son güncelleme:** [tarih] · **Sürüm:** 1.0
+**Son güncelleme:** [tarih] · **Sürüm:** 1.1
 
 [uygulama adı], YKS'ye hazırlanan öğrenciler için bir çalışma uygulamasıdır.
 Kullanıcılarımızın çoğu lise öğrencisi olduğu için bu metni kısa ve anlaşılır
@@ -1093,14 +1196,15 @@ Uygulamayı [şirket unvanı] işletiyor. Sorularınız için: [iletişim e-post
 | 🤖 **Fotoğraflar yapay zekâya gidiyor** | Sorunun okunması ve içerik güvenliği için, **kim olduğunuz belirtilmeden** |
 | 🧑‍⚖️ **Moderatörümüz görebilir** | Şikâyet veya güvenlik incelemesinde, paylaşmadığınız fotoğraflar dahil |
 | 🗑️ **İstediğiniz zaman silebilirsiniz** | Uygulama içinden, tek adımda, kalıcı olarak |
-| 👦 **13 yaş altı kullanamaz** | 18 altı için arkadaş ekleme veli onayına bağlı |
+| 👦 **13 yaş altı kullanamaz** | Bu sınır kayıt sırasında teknik olarak uygulanır |
+| 🚧 **Kurallara uymayanı durdururuz** | Uygunsuz içerik tekrarlanırsa hesap geçici olarak kısıtlanır; itiraz edebilirsiniz |
 
 ### 1. Hangi bilgileri topluyoruz?
 
 **Siz verdiğiniz için:**
 - E-posta adresiniz ve şifreniz
 - Takma adınız, maskotunuz, varsa profil fotoğrafınız
-- Doğum yılınız (yalnızca yıl) ve 18 altındaysanız velinizin e-posta adresi
+- Doğum yılınız (yalnızca yıl)
 - Gireceğiniz sınav yılı ve müfredatınız
 - **Çektiğiniz soru fotoğrafları** ve bunlarla ilgili yazdıklarınız
 
@@ -1108,7 +1212,9 @@ Uygulamayı [şirket unvanı] işletiyor. Sorularınız için: [iletişim e-post
 - Hangi soruyu ne zaman çözdüğünüz, doğru/yanlış geçmişiniz, tekrar takviminiz
 - XP, seri, elmas, lig ve haftalık sıralamanız
 - Arkadaşlıklarınız, gönderdiğiniz sorular, engellemeleriniz, şikâyetleriniz
-- Verdiğiniz onayların zaman damgalı kaydı
+- Verdiğiniz onayların zaman damgalı kaydı ve kabul ettiğiniz metnin sürümü
+- Bir fotoğrafınız otomatik tarama tarafından uygunsuz bulunduysa bunun kaydı;
+  hesabınıza bir kısıtlama uygulandıysa kısıtlamanın tarihi ve gerekçe kodu
 
 **Teknik olarak oluşan:**
 - Bildirimleri açtıysanız cihazınızın bildirim kimliği
@@ -1165,7 +1271,7 @@ gönderimleri durdurur ama gönderilmiş bir fotoğrafı geri getirmez.
 | Profil fotoğrafınız | Siz, arkadaşlarınız ve o haftaki lig grubunuz |
 | Soru fotoğraflarınız ve notlarınız | **Yalnızca siz** — ta ki bir arkadaşınıza gönderene kadar |
 | Bir arkadaşınıza gönderdiğiniz soru | O arkadaşınız |
-| Doğum yılınız, e-postanız, veli e-postası | **Hiçbir kullanıcı** |
+| Doğum yılınız ve e-postanız | **Hiçbir kullanıcı** |
 | Engellediğiniz kişiler | **Yalnızca siz.** Engellenen kişi bunu öğrenmez |
 
 Arkadaş eklemenin tek yolu 6 haneli arkadaş kodudur; kimse sizi takma adınızla
@@ -1193,7 +1299,6 @@ talimatımızla çalışır:
 | **OpenAI** (ABD) | Soru okuma + içerik güvenliği | Soru fotoğrafları, kimliksiz |
 | **Google / Firebase** (ABD) | Bildirim iletimi | Cihaz bildirim kimliği ve bildirim metni. Bildirimde **size soru gönderen kişinin takma adı** yer alır; sorunun kendisi veya fotoğraf gitmez |
 | **Sentry** | Hata izleme | Hata kayıtları. Kullanıcı kimliğiniz ve e-postanız **gönderilmeden önce silinir**; ekran görüntüsü hiç alınmaz |
-| **[e-posta sağlayıcısı]** | Veli onayı e-postası | Velinizin e-posta adresi ve takma adınız |
 
 Ayrıca yasal olarak zorunlu olduğumuz hâllerde yetkili makamlara bilgi
 verebiliriz.
@@ -1205,9 +1310,9 @@ açıklanan hukuki dayanaklara göre yapılır: [KVKK aydınlatma metni URL'i].
 ### 7. Verileriniz ne kadar kalıyor?
 
 - **Hesabınız ve içeriğiniz:** siz silene kadar. Otomatik bir süre sınırı yok.
-- **Kayıt olmadan denediyseniz:** 7 gün sonra otomatik silinir (e-posta
-  doğrulaması beklemedeyse 30 güne kadar).
-- **Veli onayı bağlantısı:** 7 gün.
+- **Kayıt olmadan denediyseniz:** 7 gün sonra otomatik silinir.
+- **İhlal ve kısıtlama kayıtları:** hesabınızı silene kadar. Otomatik kısıtlama
+  kararı verilirken yalnızca **son 180 gün** dikkate alınır.
 - **Fotoğraflara verilen geçici erişim adresleri:** 10 dakika.
 - **Hata kayıtları:** [Sentry saklama süresi].
 
@@ -1235,16 +1340,22 @@ Böyle bir talebiniz varsa [iletişim e-postası] adresine yazın.
 
 ### 9. Çocuklar
 
-Uygulamayı **13 yaşından küçükler kullanamaz.**
+**Uygulama 13 yaş ve üzeri içindir. 13 yaşından küçükler kullanamaz** ve bu
+sınır kayıt sırasında teknik olarak uygulanır: 13 yaşından küçük bir doğum yılı
+girildiğinde kayıt tamamlanmaz.
 
-13–18 yaş arasındaki kullanıcılarda arkadaş ekleme özelliği, veli onayı gelene
-kadar kapalıdır. Onay için velinin e-posta adresi istenir ve veliye gönderilen
-bağlantıya tıklaması beklenir. Diğer tüm özellikler açık kalır — öğrenciyi
-uygulamanın dışında bırakmıyoruz. Doğum yılı girilmezse kullanıcıyı 18 yaşından
-küçük kabul ederiz.
+13–18 yaş arasındaki kullanıcılar uygulamanın tüm özelliklerini kullanabilir.
+Arkadaş eklemenin tek yolu 6 haneli arkadaş kodudur; kimse kimseyi takma adıyla
+arayıp bulamaz. Yüklenen her fotoğraf otomatik olarak taranır ve uygunsuz
+bulunan bir fotoğraf paylaşıma çıkamaz.
 
-**Veliler:** çocuğunuzun verileri hakkında bilgi almak, onayı geri almak veya
-hesabın silinmesini istemek için [iletişim e-postası] adresine yazın.
+**Veli onayı mekanizması yoktur.** Daha önceki sürümlerde 18 altı kullanıcılarda
+arkadaş ekleme veli onayına bağlanmıştı; bundan vazgeçildi. Ayrıntılı gerekçe
+KVKK Aydınlatma Metni §8'de: [KVKK aydınlatma metni URL'i].
+
+**Veliler:** çocuğunuzun verileri hakkında bilgi almak, bir içeriğin
+kaldırılmasını ya da hesabın silinmesini istemek için [iletişim e-postası]
+adresine yazın.
 
 ### 10. Güvenlik
 
@@ -1277,7 +1388,7 @@ Verileri Koruma Kurulu'na şikâyette bulunabilirsiniz.
 | Uluslararası aktarım | Verileriniz Türkiye'ye ve ABD'ye aktarılır. Bu aktarımlar için Avrupa Komisyonu'nun Standart Sözleşme Hükümleri'ne (SCC) ve ilgili ek önlemlere dayanıyoruz: [SCC durumu doldurulacak] |
 | Özel nitelikli veri | İşlemiyoruz (Md. 9) |
 | Otomatik karar verme | Hukuki sonuç doğuran otomatik karar verme yapmıyoruz. Yapay zekâ yalnızca sorunuzu okur ve sınıflandırır; sonucu onaylamadan kaydedilmez |
-| Çocuklar | Md. 8 kapsamında, bulunduğunuz ülkenin belirlediği yaş sınırının altındaysanız veli onayı gerekir |
+| Çocuklar | Uygulama 13 yaş altına yönelik değildir ve bu sınır teknik olarak uygulanır. Md. 8 kapsamında bulunduğunuz ülkenin belirlediği bilgi toplumu hizmeti yaş sınırı 13'ten yüksekse (bazı AB ülkelerinde 16'ya kadar çıkabilir), o sınırın altındaki kullanıcılar için veli izni gerekir; böyle bir durumda [iletişim e-postası] adresine yazın |
 | Şikâyet | Bulunduğunuz ülkedeki veri koruma otoritesine şikâyette bulunabilirsiniz |
 
 Talepleriniz için: [iletişim e-postası]
@@ -1307,7 +1418,7 @@ bilgilendiririz. Sayfanın en üstündeki tarih son güncelleme tarihidir.
 
 ## [uygulama adı] Kullanım Koşulları
 
-**Yürürlük tarihi:** [tarih] · **Sürüm:** 1.0
+**Yürürlük tarihi:** [tarih] · **Sürüm:** 1.1
 
 ### 1. Bu sözleşme kim ile kim arasında?
 
@@ -1340,20 +1451,23 @@ Kısaca:
 
 ### 3. Kimler kullanabilir?
 
-- Uygulamayı **13 yaşından küçükler kullanamaz.**
+- Uygulamayı **13 yaşından küçükler kullanamaz.** Kayıt sırasında doğum
+  yılınızı soruyoruz ve bu sınırı teknik olarak uyguluyoruz: 13 yaşından küçük
+  bir doğum yılı girildiğinde kayıt tamamlanmaz.
+- Doğum yılınız **bir kez yazılır** ve sonradan değiştirilemez. Yanlış
+  girdiyseniz [iletişim e-postası] adresine yazın.
 - **18 yaşından küçükseniz**, uygulamayı kullanmadan önce veliniz veya yasal
   temsilcinizle konuşmanızı bekliyoruz. Bu sözleşme, 18 yaşından küçük
   kullanıcılar bakımından velinin bilgisi ve izniyle kurulmuş sayılır.
-- 18 yaşından küçük kullanıcılarda **arkadaş ekleme özelliği kapalı başlar.**
-  Açılması için velinizin e-posta adresini girmeniz ve velinizin gönderilen
-  onay bağlantısına tıklaması gerekir. Onay her zaman geri alınabilir.
-- Doğum yılınızı girmezseniz sizi 18 yaşından küçük kabul ederiz.
+- Uygulamayı kullanabilmek için kayıt adımında **bu Koşulları ve Gizlilik
+  Politikası'nı kabul etmeniz gerekir.** Kabulünüz, kabul ettiğiniz metnin
+  sürümüyle birlikte kaydedilir.
 - Hesabınız daha önce bu koşulların ihlali nedeniyle kapatıldıysa yeni hesap
   açamazsınız.
 
 **Veliler için:** Çocuğunuzun hesabı, verileri veya bu sözleşme hakkındaki her
-konuda [iletişim e-postası] adresinden bize ulaşabilirsiniz. Onayınızı geri
-alma ve hesabın silinmesini isteme hakkınız her zaman saklıdır.
+konuda [iletişim e-postası] adresinden bize ulaşabilirsiniz. Hesabın silinmesini
+isteme hakkınız her zaman saklıdır.
 
 ### 4. Hesabınız
 
@@ -1393,8 +1507,9 @@ servisine gönderilir. Ayrıntılar Gizlilik Politikası'ndadır:
 ### 6. Yasak kullanımlar — sıfır tolerans
 
 **Uygunsuz içeriğe ve uygulamayı kötüye kullanan kullanıcılara sıfır tolerans
-gösteriyoruz.** Aşağıdakiler kesinlikle yasaktır ve tespit edildiğinde içerik
-kaldırılır, hesap askıya alınır veya kalıcı olarak kapatılır:
+gösteriyoruz.** Aşağıdakiler kesinlikle yasaktır. Tespit edildiğinde içerik
+kaldırılır; ağırlığına göre hesabınız **geçici olarak kısıtlanır veya kalıcı
+olarak kapatılır** (nasıl işlediği için bkz. §7):
 
 - Cinsel içerik; **çocukların cinsel istismarına ilişkin her türlü materyal**
 - Şiddet, kendine zarar verme veya intiharı özendiren içerik
@@ -1425,20 +1540,41 @@ kaldırmakla yetinmez, hesabı kapatır ve yetkili makamlara bildiririz.
 **Bizim yaptıklarımız:**
 - Yüklenen her fotoğraf, uygunsuz içeriğe karşı **otomatik olarak taranır.**
   Tarama tamamlanmamış veya şüpheli işaretlenmiş bir fotoğraf paylaşıma çıkamaz.
+  Fotoğraf sizin arşivinizde kalmaya devam eder ve siz görebilirsiniz;
+  engellenen yalnızca paylaşımdır.
 - Şikâyetleri **makul bir süre içinde** inceler; gerekirse içeriği kaldırır,
-  gizler veya hesabı askıya alırız.
+  gizler veya hesabı kısıtlarız.
 - Bir güvenlik incelemesi kapsamında, yetkili moderatörümüz içeriğinizi —
   paylaşmadığınız fotoğraflar dahil — görüntüleyebilir. Bu, uygulamayı reşit
   olmayan kullanıcılar için güvenli tutmanın karşılığıdır ve Gizlilik
   Politikası'nda açıkça anlatılmıştır.
 - Bu koşulları ihlal eden içeriği **önceden bildirimde bulunmaksızın**
-  kaldırma, gizleme veya hesabı askıya alma hakkımız saklıdır. Ciddi olmayan
+  kaldırma, gizleme veya hesabı kısıtlama hakkımız saklıdır. Ciddi olmayan
   ihlallerde önce uyarmayı tercih ederiz.
-- Bir kararın hatalı olduğunu düşünüyorsanız [iletişim e-postası] adresine
-  yazarak itiraz edebilirsiniz; itirazınızı değerlendiririz.
 
-**Tekrarlayan ihlaller:** Bu koşulları tekrar tekrar ihlal eden kullanıcıların
-hesapları kalıcı olarak kapatılır.
+**Uygunsuz içerikte kademeli yaptırım.** Otomatik tarama bir fotoğrafınızı
+uygunsuz bulursa şu sıra işler:
+
+| Tespit | Ne oluyor |
+|---|---|
+| **Birinci** | Fotoğraf paylaşıma çıkmaz; size uygulama içinde bildirilir |
+| **İkinci** | Aynı sonuç, uyarı daha açık; ihlal kaydedilir |
+| **Üçüncü** | Hesabınız **7 gün** boyunca kısıtlanır ve durum yönetici incelemesine düşer |
+| Kısıtlama bittikten sonra yeni bir ihlal | Hesabınız **kalıcı olarak kapatılır** |
+
+Bu sayım **son 180 günü** kapsar; daha eski tespitler otomatik karara dâhil
+edilmez. Bir tespitin hatalı olduğu anlaşılırsa (yanlış pozitif) kayıt geçersiz
+kılınır ve buna bağlı kısıtlama kaldırılır.
+
+**Kısıtlama neyi kapatır, neyi kapatmaz.** Kapanır: fotoğraf yükleme,
+arkadaşınıza soru gönderme, arkadaş ekleme. **Açık kalır:** arşiviniz,
+tekrarlarınız, liginiz, hesabınızı silme hakkınız ve bir kullanıcıyı engelleme
+ya da şikâyet etme hakkınız. Amaç sizi uygulamadan atmak değil, başkasına
+dokunmayı durdurmaktır.
+
+**İtiraz.** Bir kararın hatalı olduğunu düşünüyorsanız [iletişim e-postası]
+adresine yazarak itiraz edebilirsiniz; uygulama içindeki kısıtlama ekranı da
+sizi doğrudan bu adrese yönlendirir. İtirazınızı bir insan değerlendirir.
 
 Şikâyet mekanizmasını kötüye kullanmayın: dayanaksız şikâyetleri tekrarlayan
 kullanıcıların şikâyetleri dikkate alınmayabilir.
@@ -1570,9 +1706,10 @@ bunları uygulamaya almadan önce sizi ayrıca bilgilendireceğiz:
 - **[Cayma hakkı]** Mesafeli Sözleşmeler Yönetmeliği kapsamında, elektronik
   ortamda anında ifa edilen hizmetlerde cayma hakkına ilişkin istisnalar
   saklıdır; bu husus satın alma öncesi ayrıca bildirilir.
-- **[18 yaş altı]** 18 yaşından küçük kullanıcıların satın alma yapabilmesi
-  veli onayına bağlıdır. Velilere, cihaz düzeyinde satın alma kısıtlaması
-  kurmalarını öneririz.
+- **[18 yaş altı]** Uygulamada veli onayı mekanizması bulunmadığından, 18
+  yaşından küçük kullanıcıların satın alma yapması velinin bilgisi ve izniyle
+  yapılmış sayılır. Velilere, cihaz düzeyinde (App Store / Google Play) satın
+  alma kısıtlaması kurmalarını öneririz.
 - **[Ücretsiz özelliklerin korunması]** Ücretli bir katman gelmesi, o güne
   kadar ücretsiz sunduğumuz temel özellikleri kendiliğinden ücretli hâle
   getirmez; böyle bir değişiklik olursa önceden duyurulur.
@@ -1586,11 +1723,13 @@ bunları uygulamaya almadan önce sizi ayrıca bilgilendireceğiz:
 silebilirsiniz (Ayarlar → Hesabımı sil). Bekleme süresi yoktur; işlem geri
 alınamaz.
 
-**Biz:** Bu koşulları ihlal etmeniz hâlinde hesabınızı askıya alabilir veya
-kapatabiliriz. Ciddi olmayan ihlallerde önce uyarırız; ağır ihlallerde
-(çocuk istismarı içeriği, taciz, yasa dışı faaliyet, güvenlik saldırısı)
-doğrudan kapatırız. Hesabınız kapatılırsa nedenini, güvenlik veya hukuki bir
-engel yoksa size bildiririz ve itiraz edebilirsiniz.
+**Biz:** Bu koşulları ihlal etmeniz hâlinde hesabınızı **geçici olarak
+kısıtlayabilir veya kalıcı olarak kapatabiliriz** (§7'deki kademeli yaptırım).
+Ciddi olmayan ihlallerde önce uyarırız; ağır ihlallerde (çocuk istismarı
+içeriği, taciz, yasa dışı faaliyet, güvenlik saldırısı) doğrudan kapatırız.
+Hesabınız kısıtlandığında uygulamayı açtığınızda **ne olduğunu, ne zamana kadar
+sürdüğünü ve nasıl itiraz edebileceğinizi** gösteren bir ekran görürsünüz.
+Güvenlik veya hukuki bir engel yoksa gerekçeyi de bildiririz.
 
 Ayrıca hizmeti tamamen sonlandırmaya karar verirsek, verilerinizi
 indirebilmeniz veya alternatif bulabilmeniz için **makul bir süre önceden
@@ -1682,38 +1821,51 @@ belgesi hazırlanmalı mı?
 
 ---
 
-### Soru 3 — Veli onayının hukuki yeterliliği
+### Soru 3 — Veli onayı — ✅ **KONUSUZ KALDI (Task 07)**
 
-**Durum:** 18 yaşından küçük kullanıcı velisinin e-posta adresini giriyor;
-o adrese tek kullanımlık, 7 gün geçerli bir bağlantı gidiyor; veli tıklayınca
-onay değiştirilemez bir deftere yazılıyor.
+**Durum:** Bu soru, 18 yaşından küçük kullanıcılarda arkadaş eklemeyi veli
+onayına bağlayan mekanizma için sorulmuştu. **Mekanizma tümüyle kaldırıldı** ve
+uygulama 13+ olarak konumlandı; soru bu hâliyle konusuz kaldı.
 
-**Zayıf noktalar, açıkça:**
-- **Velinin kimliği hiçbir şekilde doğrulanmıyor.** Öğrenci kendi ikinci
-  e-posta adresini girip kendi kendine onay verebilir.
-- Onay yalnızca **arkadaş eklemeyi** açıyor; fotoğraf yükleme, yapay zekâya
-  aktarım ve diğer tüm işlemeler onaydan bağımsız çalışıyor.
-- Onay kaydında IP adresi, cihaz bilgisi ve **onaylanan metnin sürümü** yok.
+**Kararın gerekçesi (kayda geçsin diye):**
+- 13–17 yaş için veli onayı yürürlükteki mevzuatta zorunlu tutulmuyor. COPPA 13
+  altı için geçerli, KVKK'da çocuklara özel bir madde yok, Apple veli onayını
+  Kids Category'de arıyor, Play Families 13 altını hedefleyen uygulamalar için.
+- Sorunun kendisinde sayılan zayıflıklar giderilemezdi: **velinin kimliği
+  hiçbir şekilde doğrulanamıyordu** (öğrenci kendi ikinci adresini girip kendi
+  kendine onay verebilirdi), dolayısıyla mekanizma bir koruma değil bir
+  **görüntü** üretiyordu.
+- Mekanizma ayrıca **hiç çalışmamıştı** (bayrak A-1): bağlantıdaki parametre
+  adı uyuşmadığı için bugüne kadar tek bir onay bile tamamlanmamıştı.
 
-**Sorum:** (a) Bu mekanizma KVKK ve TMK (ayırt etme gücü, veli izni) açısından
-yeterli mi, yoksa güçlendirilmeli mi? (b) Veli onayının kapsamı yalnızca
-arkadaş eklemeyle sınırlı kalabilir mi, yoksa fotoğrafın yurt dışına
-aktarılması gibi daha ağır işlemeler de onaya bağlanmalı mı? Bu ikincisi, ürün
-akışını kökten değiştirecek bir cevap olur.
+**Yerine ne kondu:** 13 yaş sınırının kodda zorlanması, zorunlu içerik
+taraması, kod tabanlı (keşifsiz) arkadaşlık, engelleme/şikâyet ve kurallara
+uymayan hesabın kısıtlanması.
+
+**Hukukçuya kalan soru — daha dar:** 13–17 yaş grubuna veli onayı olmadan
+hizmet sunmak, TMK'daki ayırt etme gücü / sınırlı ehliyetsizlik çerçevesinde
+sözleşmenin kurulması bakımından bir sorun yaratır mı? Metinlerde
+*"18 yaşından küçük kullanıcılar bakımından velinin bilgisi ve izniyle
+kurulmuş sayılır"* ifadesi kullanıldı; bu ifade yeterli mi?
 
 ---
 
-### Soru 4 — Onay metinlerinin sürümlenmesi
+### Soru 4 — Onay metinlerinin sürümlenmesi — ✅ **TEKNİK KARŞILIĞI YAZILDI**
 
-**Durum:** Onay defteri kimin ne zaman neyi onayladığını tutuyor, ama
-**hangi metni** onayladığını tutmuyor. Metin değiştiğinde geçmiş onaylar
-hangi sürüme ait olduğunu söyleyemez.
+**Durum:** `user_consents` tablosuna `text_version` sütunu eklendi ve
+`accept_legal_terms()` sürümü **sunucudan** (`app_config.legal_version`)
+damgalıyor — istemci bildiremiyor. Sürüm değiştiğinde bir sonraki onay yeni bir
+satır yazıyor; aynı sürüm ikinci kez yazılmıyor. Kullanım Koşulları ve Gizlilik
+Politikası artık kayıt adımında ayrı ayrı deftere geçiyor (`terms`, `privacy`).
 
-**Sorum:** İspat yükü açısından onay kaydına metin sürümü eklemek zorunlu mu?
-Zorunluysa, mevcut onaylar için ne yapılmalı — yeniden onay mı alınmalı?
+**Geçmiş kayıtlar:** `text_version` alanları **boş**. O gün bir sürüm
+tutulmuyordu ve geriye dönük bir değer uydurmak, defterin tek işi olan
+doğruluğu bozardı. Ortada dört kişilik iç test dışında kullanıcı yok.
 
-*(Teknik karşılığı: `user_consents` tablosuna bir sürüm alanı eklenmesi ve
-`record_consent` fonksiyonunun bunu yazması.)*
+**Hukukçuya kalan soru:** Metin sürümü değiştiğinde mevcut kullanıcılardan
+**yeniden onay** alınması gerekir mi, yoksa "değişikliği duyurup kullanmaya
+devam etmeyi kabul saymak" (§6 Md. 15) yeterli mi? Yeniden onay gerekiyorsa,
+uygulama içinde bunu tetikleyecek bir akış yazılmalı — bugün yok.
 
 ---
 
@@ -1799,7 +1951,7 @@ Kodda karşılığı olmadığı için, istense de yazmadığım ifadeler:
 | Yazılmayan ifade | Neden |
 |---|---|
 | "Fotoğraflarınızdan konum ve cihaz bilgileri (EXIF) temizlenir" | Temizleme kodu yok; yalnızca yeniden kodlamanın yan etkisi olabilir |
-| "Fotoğrafınız yapay zekâ servisinde hiç saklanmaz" | Sıfır-saklama ayarı yok (bkz. bayrak A-5) |
+| "Fotoğrafınız yapay zekâ servisinde hiç saklanmaz" | Sıfır-saklama ayarı yok (bayrak A-5). Uygulama içindeki cümle de Task 07'de düzeltildi |
 | "Şikâyetleri 24 saat içinde inceleriz" | Kodda bir süre taahhüdü yok; bilinçli olarak "makul süre" yazıldı |
 | "Verileriniz Türkiye'de saklanır" | Supabase Türkiye'de bölge sunmuyor; barındırma ülkesi de teyit edilmedi |
 | "Hesabınızı sildiğinizde tüm verileriniz her yerden silinir" | OpenAI'a gitmiş fotoğraflar, gönderilmiş bildirimler ve arkadaşın tarafındaki kayıt geri alınamıyor — metinde bunlar tek tek sayıldı |
@@ -1812,22 +1964,34 @@ Kodda karşılığı olmadığı için, istense de yazmadığım ifadeler:
 
 Bu belge tek başına yayına yetmez. Sıra:
 
-1. **Kod düzeltmeleri** — §2/A grubundaki 11 bayrak, özellikle A-1 (veli onayı
-   bağlantısı), A-3 (kullanıcı çıkarma), A-4 (koşul kabulü) ve A-5 (yanlış
-   uygulama içi beyanlar).
-2. **Depo dışı doğrulamalar** — §2/C grubundaki 8 kalem.
-3. **Hukukçu incelemesi** — bu bölümdeki 13 soru.
+1. ~~**Kod düzeltmeleri** — A-1, A-3, A-4, A-5, A-6, A-7~~ ✅ **Task 07'de
+   yapıldı.** Kalanlar: A-2 (fotoğrafın yaş kapısından önce OpenAI'a gitmesi),
+   A-8 (engel kaldırma arayüzü), A-9 (tek soru silme), A-10 (havuz altyapısı).
+   Dördü de kapsam dışı bırakıldı; A-2 en kırılganı.
+2. **Depo dışı doğrulamalar** — §2/C grubundaki kalemler (C-4 düştü).
+   **C-2 hâlâ kritik:** OpenAI'ın veri işleme koşulları teyit edilmeden §4.5 ve
+   §5.3'teki saklama cümlesi kesinleşmez.
+3. **Hukukçu incelemesi** — bu bölümdeki sorular (3 ve 4 daraldı).
 4. **Köşeli parantezlerin doldurulması** — şirket bilgileri, URL'ler, tarihler.
-5. **Metinlerin yayınlanması** — Gizlilik Politikası ve Kullanım Koşulları bir
-   URL'de; hesap silme sayfası aynı sitede.
-6. **Uygulama içi bağlantılar** — `privacyLegalPlaceholder` yer tutucusunun
-   gerçek bağlantılarla değiştirilmesi.
-7. **Mağaza formları** — §3'teki cevapların girilmesi.
-8. **Son çapraz kontrol** — uygulama içi metinler, yayınlanan metinler ve mağaza
+5. **Metinlerin yayınlanması** — Gizlilik Politikası, Kullanım Koşulları ve
+   KVKK Aydınlatma Metni bir URL'de; **hesap silme sayfası** aynı sitede
+   (metni `docs/hesap-silme-sayfasi.md`).
+6. **Uygulama içi bağlantılar** — yer tutucu kaldırıldı; kalan iş dört adresi
+   `supabase.json`'a girip yeniden derlemek:
+   `LEGAL_TERMS_URL`, `LEGAL_PRIVACY_URL`, `LEGAL_KVKK_URL`,
+   `LEGAL_DELETE_URL`, ayrıca itiraz için `SUPPORT_EMAIL`.
+   **Adres girilmezse ilgili satır uygulamada hiç görünmez** — sessizce eksik
+   kalır, hata vermez.
+7. **`app_config.legal_version`** — yayınlanan metinlerin sürümü buraya
+   yazılmalı (bu belgede `1.1`). **Atlanırsa onay kayıtları `1.0` damgalanır**
+   ve sunucu günlüğüne uyarı yazılır; kayıt akışı durmaz.
+8. **Mağaza formları** — §3'teki cevapların girilmesi. App Review notuna 1.2'nin
+   dört şartının nerede karşılandığı yazılmalı.
+9. **Son çapraz kontrol** — uygulama içi metinler, yayınlanan metinler ve mağaza
    formu cevaplarının üçünün birbiriyle çelişmediğinin doğrulanması.
 
 ---
 
-*Bu belge kod tabanının 2026-09-07 tarihli hâline (`5bbe43c`) dayanır. Kod
-değiştiğinde, özellikle §1 envanteri ve §3 form cevapları yeniden gözden
-geçirilmelidir.*
+*Bu belgenin 1.0 sürümü kod tabanının `5bbe43c` hâline dayanıyordu; 1.1 sürümü
+Task 07 sonrası (`3f9c4ba`) hâle göre revize edildi. Kod değiştiğinde, özellikle
+§1 envanteri ve §3 form cevapları yeniden gözden geçirilmelidir.*

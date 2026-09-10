@@ -80,6 +80,15 @@ create table if not exists public.user_sanctions (
   source      text not null check (source in ('auto_photo', 'admin')),
   -- Kararı veren yönetici. Otomatik kararda null — 0012'deki "kararı veren
   -- kişi kaydedilmiyor" eksiğini bu tabloda tekrarlamıyoruz.
+  --
+  -- ⚠️ CASCADE İSTİSNASI. 0048'in kapısı "auth.users'a bakan her yabancı
+  -- anahtar `on delete cascade` olmalı" diyor. Bu sütun BİLEREK `set null`:
+  -- kaydın SAHİBİ `user_id`, `actor_id` yalnızca kararı vereni gösteriyor.
+  -- Cascade olsaydı bir yöneticinin hesabını silmesi, BAŞKALARI hakkındaki
+  -- yaptırım kayıtlarını da silerdi. Hesap silme açısından da sorun yok:
+  -- yönetici silindiğinde alan null'a düşüyor, geride kimlik kalmıyor.
+  -- 0065'in cascade kapısı bu istisnayı SÜTUN ADINA göre tanıyor; YENİ bir
+  -- cascade denetimi yazan da aynı istisnayı taşımalı.
   actor_id    uuid references auth.users(id) on delete set null,
   note        text,
   -- Yanlış pozitif anlaşıldığında satır SİLİNMİYOR, geçersiz kılınıyor:

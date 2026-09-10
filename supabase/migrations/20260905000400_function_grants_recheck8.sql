@@ -189,6 +189,72 @@ begin
 end
 $mig$;
 
+-- ----------------------------------------------------------- cascade kapısı
+-- 0048'in kapısı KENDİ çalıştığı andaki katalogla karşılaştırma yapıyor: daha
+-- sonra eklenen bir tablo o kontrolden HİÇ geçmiyor. `user_sanctions` ve
+-- `photo_violations` kullanıcıya ait veri tutuyor; hesap silmede geride satır
+-- bırakırlarsa "hesabınız ve ona bağlı tüm kayıtlar silinir" beyanı yanlış
+-- olurdu (Gizlilik Politikası §8, hesap silme sayfası).
+do $mig$
+declare
+  v_owned text[] := array['user_sanctions', 'photo_violations'];
+  v_bad   text[];
+begin
+  -- (a) auth.users'a bakan her anahtar cascade mi?
+  select array_agg(format('%s (%s)', c.relname, con.conname) order by c.relname)
+    into v_bad
+    from pg_constraint con
+    join pg_class c      on c.oid = con.conrelid
+    join pg_namespace n  on n.oid = c.relnamespace
+    join pg_class rc     on rc.oid = con.confrelid
+    join pg_namespace rn on rn.oid = rc.relnamespace
+   where con.contype = 'f'
+     and n.nspname = 'public'
+     and rn.nspname = 'auth'
+     and rc.relname = 'users'
+     and c.relname = any (v_owned)
+     -- SAHİPLİK sütunu üzerinden süzülüyor, kısıt ADINA göre değil: ad
+     -- otomatik üretiliyor ve elle değiştirilebilir.
+     --
+     -- `actor_id` BİLEREK dışarıda: o sütun kaydın sahibini değil, yaptırımı
+     -- VEREN yöneticiyi gösteriyor ve `on delete set null`. Yönetici kendi
+     -- hesabını silse bile başkası hakkındaki karar defterde kalmalı;
+     -- cascade olsaydı bir yöneticinin ayrılması sicilleri silerdi.
+     and (select a.attname from pg_attribute a
+           where a.attrelid = con.conrelid
+             and a.attnum = con.conkey[1]) = 'user_id'
+     and con.confdeltype <> 'c';
+
+  if v_bad is not null then
+    raise exception
+      'auth.users''a cascade OLMAYAN yabancı anahtar(lar): % — hesap silme '
+      'bu tablolarda satır bırakır', v_bad;
+  end if;
+
+  -- (b) bağ gerçekten var mı? (user_id sütununu FK'siz eklemek (a)'yı atlatır)
+  select array_agg(t order by t) into v_bad
+    from unnest(v_owned) t
+   where not exists (
+     select 1
+       from pg_constraint con
+       join pg_class c      on c.oid = con.conrelid
+       join pg_namespace n  on n.oid = c.relnamespace
+       join pg_class rc     on rc.oid = con.confrelid
+       join pg_namespace rn on rn.oid = rc.relnamespace
+      where con.contype = 'f'
+        and n.nspname = 'public'
+        and c.relname = t
+        and rn.nspname = 'auth'
+        and rc.relname = 'users'
+   );
+
+  if v_bad is not null then
+    raise exception
+      'auth.users''a hiç bağı olmayan kullanıcı tablosu/tabloları: %', v_bad;
+  end if;
+end
+$mig$;
+
 -- ------------------------------------------------- yalnızca-sunucu tabloları
 do $mig$
 declare
