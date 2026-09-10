@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
+import 'data/notification_lines.dart';
 import 'services/crash_service.dart';
 import 'services/notification_service.dart';
 import 'services/push_service.dart';
@@ -82,6 +85,15 @@ Future<void> _run() async {
     runApp(const ConfigErrorApp());
     return;
   }
+  // Bildirim metinleri veritabanında; önbellek diskten okunur (ucuz, ağsız).
+  // Tazeleme Supabase kurulduktan SONRA ve await EDİLMEDEN yapılır: ağ
+  // beklemek ilk kareyi geciktirirdi, eski önbellek zaten iş görüyor.
+  try {
+    await notificationLines.load();
+  } catch (e, st) {
+    await reportError(e, st, context: 'notify.linesLoad');
+  }
+  unawaited(notificationLines.refresh());
   runApp(const AiYksCoachApp());
 }
 

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../data/notification_lines.dart';
 import '../../data/social_repository.dart';
 import '../../data/submission_queue.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -122,6 +123,9 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
         nickname: userProfile.nickname ?? 'Öğrenci',
         mascot: userProfile.mascot,
       );
+      // Bildirim metinlerini tazele. Açılıştaki ilk deneme oturum geri
+      // yüklenmeden önce çalışmış olabilir; burada oturum kesin var.
+      unawaited(notificationLines.refresh());
       // Onaylar ve istatistikler birbirinden BAĞIMSIZ: paralel çekiliyor
       // (soğuk açılışta bir gidiş-dönüş tasarrufu — Task 03, 10.2 deseni).
       final List<Object?> parts = await Future.wait<Object?>(<Future<Object?>>[

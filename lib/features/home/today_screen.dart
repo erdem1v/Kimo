@@ -114,7 +114,7 @@ class _TodayScreenState extends State<TodayScreen> {
       unawaited(
         notifications.planDay(
           enabled: userProfile.notifyEnabled,
-          mascot: userProfile.mascot ?? Mascot.evHanimi,
+          mascot: userProfile.mascot ?? Mascot.fallback,
           dueCount: due.length,
           streak: gameProgress.currentStreak,
           activeToday: gameProgress.activeToday,

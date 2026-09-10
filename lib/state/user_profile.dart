@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../data/notification_lines.dart';
+import '../data/social_repository.dart';
 import '../models/mascot.dart';
 
 /// Kullanıcının profil tercihleri: takma ad, sınav yılı → müfredat ve maskot
@@ -165,10 +167,28 @@ class UserProfile extends ChangeNotifier {
     await _save(<String, dynamic>{'nickname': value, 'display_name': value});
   }
 
+  /// Personayı kaydeder — **iki yere birden**.
+  ///
+  /// Eskiden yalnızca auth metadata'sına yazılıyordu; `profiles.mascot`'a yazan
+  /// tek yol `HomeShell`'in açılıştaki `ensureProfile` çağrısıydı. Sunucu
+  /// push'ları personayı `profiles`'tan okuduğu için, ayarlardan sesini
+  /// değiştiren kullanıcı uygulamayı kapatıp açana kadar bildirimlerini ESKİ
+  /// SESLE almaya devam ediyordu.
+  ///
+  /// Metin önbelleği de tazeleniyor: yeni personanın cümleleri havuzda hazır
+  /// olmadan bir hatırlatma planlanırsa nötr yedeğe düşerdi.
   Future<void> setMascot(Mascot mascot) async {
     _mascot = mascot;
     notifyListeners();
     await _save(<String, dynamic>{'mascot': mascot.dbValue});
+    // Profil satırı takma ad ister; yoksa yazacak bir şey yok (karşılama
+    // akışında takma ad bu adımdan önce alınıyor, sonraki `ensureProfile`
+    // eksiği kapatır).
+    final String? nick = _nickname;
+    if (nick != null && nick.isNotEmpty) {
+      await socialRepository.ensureProfile(nickname: nick, mascot: mascot);
+    }
+    await notificationLines.refresh();
   }
 
   Future<void> _save(Map<String, dynamic> data) async {

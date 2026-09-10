@@ -241,7 +241,7 @@ class _SendSheetState extends State<_SendSheet> {
       },
       child: Row(
         children: <Widget>[
-          UserAvatar(size: 36, mascot: p.mascot, avatarPath: p.avatarPath),
+          UserAvatar(size: 36, name: p.nickname, avatarPath: p.avatarPath),
           const SizedBox(width: Gap.md),
           Expanded(
             child: Text(

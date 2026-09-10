@@ -114,7 +114,7 @@ class _LeagueBoardViewState extends State<LeagueBoardView> {
         unawaited(
           notifications.planLeagueReminder(
             enabled: userProfile.notifyEnabled,
-            mascot: userProfile.mascot ?? Mascot.evHanimi,
+            mascot: userProfile.mascot ?? Mascot.fallback,
             rank: rank,
             leagueLabel: board.tier.label,
             daysLeft: board.daysLeft,
@@ -288,7 +288,7 @@ class _LeagueBoardViewState extends State<LeagueBoardView> {
             child: Text('$rank', style: t.numberSmall, textAlign: TextAlign.center),
           ),
           const SizedBox(width: Gap.sm),
-          UserAvatar(mascot: e.mascot, avatarPath: e.avatarPath, size: 36),
+          UserAvatar(name: e.nickname, avatarPath: e.avatarPath, size: 36),
           const SizedBox(width: Gap.md),
           Expanded(
             child: Text(

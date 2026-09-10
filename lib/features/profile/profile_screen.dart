@@ -261,7 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               UserAvatar(
                 size: 104,
                 avatarPath: userProfile.avatarPath,
-                mascot: userProfile.mascot,
+                name: userProfile.nickname,
               ),
               Container(
                 padding: const EdgeInsets.all(6),

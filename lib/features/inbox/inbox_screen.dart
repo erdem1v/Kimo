@@ -278,7 +278,7 @@ class _InboxCardState extends State<_InboxCard> {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    UserAvatar(mascot: q.senderMascot, size: 32),
+                    UserAvatar(name: q.senderNickname, size: 32),
                     const SizedBox(width: Gap.sm),
                     Expanded(
                       child: Column(

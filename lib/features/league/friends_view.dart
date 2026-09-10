@@ -414,7 +414,7 @@ class _FriendsViewState extends State<FriendsView> {
         children: <Widget>[
           Row(
             children: <Widget>[
-              UserAvatar(mascot: p.mascot, avatarPath: p.avatarPath, size: 40),
+              UserAvatar(name: p.nickname, avatarPath: p.avatarPath, size: 40),
               const SizedBox(width: Gap.md),
               Expanded(
                 child: Column(
@@ -478,7 +478,7 @@ class _FriendsViewState extends State<FriendsView> {
       },
       child: Row(
         children: <Widget>[
-          UserAvatar(mascot: p.mascot, avatarPath: p.avatarPath, size: 40),
+          UserAvatar(name: p.nickname, avatarPath: p.avatarPath, size: 40),
           const SizedBox(width: Gap.md),
           Expanded(
             child: Text(

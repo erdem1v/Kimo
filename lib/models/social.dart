@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'mascot.dart';
 
 /// Haftalık lig kademesi.
 ///
@@ -111,7 +110,6 @@ class LeagueEntry {
     required this.nickname,
     required this.xp,
     required this.streak,
-    this.mascot,
     this.avatarPath,
   });
 
@@ -119,9 +117,8 @@ class LeagueEntry {
   final String nickname;
   final int xp;
   final int streak;
-  final Mascot? mascot;
 
-  /// Storage'daki profil fotoğrafının yolu (yoksa maskot simgesi gösterilir).
+  /// Storage'daki profil fotoğrafının yolu (yoksa takma adın baş harfi).
   final String? avatarPath;
 
   factory LeagueEntry.fromRow(Map<String, dynamic> row) => LeagueEntry(
@@ -129,7 +126,6 @@ class LeagueEntry {
     nickname: (row['nickname'] as String?) ?? 'Öğrenci',
     xp: (row['xp'] as int?) ?? 0,
     streak: (row['streak'] as int?) ?? 0,
-    mascot: Mascot.fromDb(row['mascot'] as String?),
     avatarPath: row['avatar_path'] as String?,
   );
 }
@@ -169,7 +165,6 @@ class PublicProfile {
     required this.xp,
     required this.streak,
     this.weeklyXp = 0,
-    this.mascot,
     this.league = League.bronz,
     this.avatarPath,
     this.friendCount = 0,
@@ -182,12 +177,11 @@ class PublicProfile {
 
   /// Bu haftaki XP — lig içi sıralamayı belirler.
   final int weeklyXp;
-  final Mascot? mascot;
 
   /// Ligi sunucu belirler (haftalık sıralamayla değişir).
   final League league;
 
-  /// Storage'daki profil fotoğrafının yolu (yoksa maskot simgesi gösterilir).
+  /// Storage'daki profil fotoğrafının yolu (yoksa takma adın baş harfi).
   final String? avatarPath;
 
   /// Kabul edilmiş arkadaşlık sayısı.
@@ -199,7 +193,6 @@ class PublicProfile {
     xp: (row['xp'] as int?) ?? 0,
     streak: (row['streak'] as int?) ?? 0,
     weeklyXp: (row['weekly_xp'] as int?) ?? 0,
-    mascot: Mascot.fromDb(row['mascot'] as String?),
     league: League.fromDb(row['league'] as String?),
     avatarPath: row['avatar_path'] as String?,
     friendCount: (row['friend_count'] as int?) ?? 0,

@@ -110,7 +110,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   child: UserAvatar(
                     size: 108,
                     avatarPath: p.avatarPath,
-                    mascot: p.mascot,
+                    name: p.nickname,
                   ),
                 ),
                 const SizedBox(height: Gap.md),

@@ -5,7 +5,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
-import '../data/mascot_lines.dart';
+import '../data/notification_lines.dart';
 import '../models/mascot.dart';
 import '../state/app_settings.dart';
 import 'crash_service.dart';
@@ -321,18 +321,25 @@ class NotificationService {
     if (!when.isAfter(now)) return; // geçmiş saate planlama yok
 
     try {
+      // Metin havuzu veritabanında; `pick` önbellekten okuyup son gösterilen
+      // satırı dışlıyor. Havuz hiç oluşmamışsa nötr yedeğe düşer — bildirim
+      // her hâlükârda gider.
+      final String body =
+          await notificationLines.pick(kind, mascot, n: n, sira: sira, lig: lig);
       await _plugin.zonedSchedule(
         id: id,
-        title: MascotLines.title(kind),
-        body: MascotLines.pick(kind, mascot, n: n, sira: sira, lig: lig),
+        title: notificationLines.title(kind),
+        body: body,
         scheduledDate: when,
         notificationDetails: _details,
-        payload: MascotLines.payload(kind),
+        payload: kind.payload,
         // Kesin alarm izni istemeyelim; dakikalık sapma sorun değil.
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       );
-    } catch (e) {
-      debugPrint('Bildirim planlanamadı ($kind): $e');
+    } catch (e, st) {
+      // Planlanamayan hatırlatma sessizce kaybolur ve kullanıcı bunu asla
+      // göremez; tek iz burası. (Yalnız telemetri.)
+      unawaited(reportError(e, st, context: 'notify.schedule'));
     }
   }
 }

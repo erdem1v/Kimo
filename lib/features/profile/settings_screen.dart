@@ -24,6 +24,7 @@ import '../admin/all_questions_screen.dart';
 import '../admin/moderation_screen.dart';
 import '../onboarding/exam_year_sheet.dart';
 import '../onboarding/mascot_sheet.dart';
+import '../onboarding/persona_card.dart';
 import '../settings/delete_account_screen.dart';
 import '../settings/privacy_screen.dart';
 
@@ -133,7 +134,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 context,
                 icon: KimoIcons.person,
                 label: l.settingsMascot,
-                value: userProfile.mascot?.label,
+                value: userProfile.mascot == null
+                    ? null
+                    : personaName(l, userProfile.mascot!),
                 onTap: () {
                   sound.tap();
                   showMascotSheet(context);

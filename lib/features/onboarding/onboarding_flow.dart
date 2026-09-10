@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../data/auth_repository.dart';
+import '../../data/notification_lines.dart';
 import '../../data/daily_state_repository.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/mascot.dart';
@@ -17,6 +20,7 @@ import '../../widgets/kit/kimo_progress.dart';
 import '../auth/email_verify_step.dart';
 import '../capture/capture_screen.dart';
 import 'age_gate_step.dart';
+import 'persona_card.dart';
 
 /// Karşılama akışı — **on bir adımdan beşe**.
 ///
@@ -65,7 +69,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     super.initState();
     _nickname.text = userProfile.nickname ?? '';
     _year = userProfile.examYear;
-    _mascot = userProfile.mascot;
+    // Tasarım ilk seçeneği ÖN SEÇİLİ gösteriyor ve buton "Bu sesle devam
+    // et" diyor: seçim zorunlu değil, atlayan kullanıcı da bir ses alıyor.
+    // Sunucudaki `coalesce(mascot, 'ev_hanimi')` ile aynı varsayılan.
+    _mascot = userProfile.mascot ?? Mascot.fallback;
 
     _steps = <_Step>[
       // Yalnızca "İlk yanlışını çek" yolundan gelenler için: hesabı olan biri
@@ -87,6 +94,12 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       _email.text = authRepository.pendingEmail!;
       _index = _steps.indexOf(_Step.verify);
     }
+
+    // Persona adımının kilit ekranı önizlemesi canlı havuzdan okuyor; havuz
+    // inmemişse karttaki örneğe düşer, ama denemeye değer.
+    unawaited(notificationLines.refresh().then((_) {
+      if (mounted) setState(() {});
+    }));
 
     _nickname.addListener(() => setState(() {}));
     _password.addListener(() => setState(() {}));
@@ -128,7 +141,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         // zarar verirdi — kullanıcı uygulamaya hiç giremezdi.
         _Step.age => _guardian == null || _guardian!.birthYearSet,
         _Step.profile => _nickname.text.trim().length >= 2 && _year != null,
-        _Step.mascot => _mascot != null,
+        // Ön seçili geldiği için kilitlenmez; sürtünme eklemeden geçilir.
+        _Step.mascot => true,
         _Step.notifications => _notify != null,
         _Step.signUp => _emailOk && _passwordOk,
         // Doğrulama gelene kadar ana düğme kilitli; sayfanın kendi "şimdilik
@@ -164,7 +178,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           await userProfile.setNickname(_nickname.text.trim());
           await userProfile.setExamYear(_year!);
         case _Step.mascot:
-          await userProfile.setMascot(_mascot!);
+          await userProfile.setMascot(_mascot ?? Mascot.fallback);
         case _Step.notifications:
           bool granted = false;
           if (_notify == true) {
@@ -271,13 +285,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             ),
             tooltip: l.onboardBack,
           ),
-          Expanded(
-            child: KimoProgressBar(value: (_index + 1) / _steps.length),
-          ),
-          const SizedBox(width: Gap.md),
+          const Spacer(),
           Text(
             l.onboardStep(_index + 1, _steps.length),
-            style: t.numberSmall.copyWith(color: c.inkMuted),
+            style: t.captionStrong.copyWith(color: c.inkMuted),
           ),
         ],
       ),
@@ -394,36 +405,34 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   Widget _mascotPage(BuildContext context, L10n l) {
     final KimoColors c = context.c;
     final KimoTypography t = context.t;
+    final Mascot selected = _mascot ?? Mascot.fallback;
+    // Kahraman maskot YOK. Ekranın tek işi dört tonun farkını beş saniyede
+    // duyurmak; 120px'lik bir Kimo, karşılaştırılacak dört cümleyi ekranın
+    // dışına iterdi. Maskot önizlemenin içinde, olması gereken boyutta duruyor.
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: Gap.screen),
       children: <Widget>[
-        Center(child: Kimo(size: 120, controller: _kimo)),
-        const SizedBox(height: Gap.lg),
-        Text(l.mascotStepTitle, textAlign: TextAlign.center, style: t.title),
-        const SizedBox(height: Gap.sm),
+        Text(l.mascotStepTitle, style: t.title),
+        const SizedBox(height: Gap.xs),
         Text(
           l.mascotStepBody,
-          textAlign: TextAlign.center,
           style: t.caption.copyWith(color: c.inkSecondary),
         ),
-        const SizedBox(height: Gap.xl),
-        Wrap(
-          spacing: Gap.sm,
-          runSpacing: Gap.sm,
-          alignment: WrapAlignment.center,
-          children: <Widget>[
-            for (final Mascot m in Mascot.values)
-              KimoChip(
-                label: m.label,
-                selected: _mascot == m,
-                onTap: () {
-                  sound.tap();
-                  _kimo.trigger(KimoReaction.tap);
-                  setState(() => _mascot = m);
-                },
-              ),
-          ],
-        ),
+        const SizedBox(height: Gap.md),
+        PersonaPreview(mascot: selected),
+        const SizedBox(height: Gap.md),
+        for (final Mascot m in Mascot.values) ...<Widget>[
+          PersonaCard(
+            mascot: m,
+            selected: selected == m,
+            onTap: () {
+              sound.tap();
+              _kimo.trigger(KimoReaction.tap);
+              setState(() => _mascot = m);
+            },
+          ),
+          const SizedBox(height: Gap.sm),
+        ],
       ],
     );
   }
@@ -521,15 +530,23 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
           Gap.screen, Gap.md, Gap.screen, Gap.screen),
-      child: KimoButton(
-        label: _label(l, last),
-        onPressed: (_saving || !_canContinue) ? null : _next,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          KimoButton(
+            label: _label(l, last),
+            onPressed: (_saving || !_canContinue) ? null : _next,
+          ),
+          const SizedBox(height: Gap.md),
+          StepDots(total: _steps.length, current: _index + 1),
+        ],
       ),
     );
   }
 
   String _label(L10n l, bool last) {
     if (_saving) return l.actionSave;
+    if (_current == _Step.mascot) return l.mascotContinue;
     if (_current == _Step.signUp) return l.signUpAction;
     if (last) return l.signUpDone;
     return l.actionContinue;

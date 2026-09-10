@@ -215,3 +215,48 @@ class HudPill extends StatelessWidget {
     );
   }
 }
+
+/// Karşılama akışının adım göstergesi: her adım için bir parça.
+///
+/// Tek parçalı çubuğun yerine geçti. Fark yüzdelik değil sayısal: öğrenci
+/// "yarıdan fazlası bitti" değil "beş adımın dördündeyim" bilgisini istiyor ve
+/// parçalı gösterge bunu saymadan okutuyor.
+class StepDots extends StatelessWidget {
+  const StepDots({
+    super.key,
+    required this.total,
+    required this.current,
+    this.height = 6,
+  });
+
+  /// Toplam adım sayısı.
+  final int total;
+
+  /// Kaçıncı adımdayız (1 tabanlı). Bu adım da dolu görünür.
+  final int current;
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final KimoColors c = context.c;
+    if (total <= 0) return const SizedBox.shrink();
+    return Row(
+      children: <Widget>[
+        for (int i = 0; i < total; i++) ...<Widget>[
+          if (i > 0) const SizedBox(width: Gap.sm),
+          Expanded(
+            child: AnimatedContainer(
+              duration: Motion.press,
+              height: height,
+              decoration: BoxDecoration(
+                color: i < current ? c.action : c.sunken,
+                borderRadius: BorderRadius.circular(height / 2),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}

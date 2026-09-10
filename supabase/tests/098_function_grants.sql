@@ -16,7 +16,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(21);
+select plan(22);
 
 select tests.create_supabase_user('alice');
 
@@ -58,6 +58,12 @@ select ok(has_function_privilege('authenticated',
           'is_blocked_between AÇIK (engel kontrolü politikaların içinde)');
 select ok(has_function_privilege('authenticated', 'public.is_admin()', 'EXECUTE'),
           'is_admin AÇIK (istemci rpc(''is_admin'') çağırıyor)');
+-- Yerel hatırlatmaların metinleri veritabanında (0055) ve cihaz çevrimdışıyken
+-- de planlıyor: bu kapanırsa hatırlatmalar nötr yedek cümleye düşer, yani
+-- persona sistemi sessizce devre dışı kalır.
+select ok(has_function_privilege('authenticated',
+            'public.notification_lines()', 'EXECUTE'),
+          'notification_lines AÇIK (yerel bildirim metinlerinin tek kapısı)');
 select ok(has_function_privilege('authenticated',
             'public.random_public_questions(int)', 'EXECUTE'),
           'random_public_questions AÇIK (havuz ekranı)');

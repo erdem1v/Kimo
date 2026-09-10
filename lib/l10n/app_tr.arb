@@ -476,7 +476,7 @@
   "welcomeSecondary": "Hesabım var",
   "welcomeNoAccountNote": "Hesap açmadan başlayabilirsin; kaydı sonda isteyeceğim.",
   "welcomeStartFailed": "Başlanamadı. Bağlantını kontrol edip tekrar dene.",
-  "onboardStep": "{step}/{total}",
+  "onboardStep": "Adım {step} / {total}",
   "@onboardStep": {
     "placeholders": {
       "step": {
@@ -511,10 +511,76 @@
   "profileStepTitle": "Seni nasıl çağırayım?",
   "profileNicknameHint": "Takma adın",
   "profileExamYearTitle": "Hangi yıl gireceksin?",
-  "mascotStepTitle": "Kimo'nun rengini seç",
-  "mascotStepBody": "Sesini ve rengini belirler; yüzü hep aynı kalır.",
+  "mascotStepTitle": "Kimo sana nasıl seslensin?",
+  "@mascotStepTitle": {
+    "description": "Persona ses tonudur, ayrı bir karakter değil: aynı ayı, aynı yüz. Başlık 'renk' değil 'ses' demeli."
+  },
+  "mascotStepBody": "Hatırlatmaların hep Kimo'dan gelir. Kimo'nun tarzını dilediğin zaman değiştirebilirsin.",
+  "mascotPreviewLabel": "Kilit ekranında böyle görünür",
+  "mascotPreviewNow": "şimdi",
+  "mascotPreviewFriend": "Elif",
+  "@mascotPreviewFriend": {
+    "description": "Örnek bildirimlerde geçen kurgusal arkadaş adı."
+  },
+  "mascotContinue": "Bu sesle devam et",
+  "mascotNameEvHanimi": "Anaç Kimo",
+  "mascotNameArabeskci": "Adanalı Arabeskçi Kimo",
+  "mascotNameSanayiUstasi": "Sanayi Ustası Kimo",
+  "mascotNameCeo": "CEO Kimo",
+  "mascotToneEvHanimi": "Sıcak ve sabırlı; acele ettirmez.",
+  "mascotToneArabeskci": "Duygulu ve dramatik; dert ortağın.",
+  "mascotToneSanayiUstasi": "Kısa konuşur, işe odaklanır.",
+  "mascotToneCeo": "Net ve planlı; işi sıraya koyar.",
+  "mascotSampleEvHanimi": "{ad} tam {n} gündür aksatmıyor. Ne çalışkan çocuk.",
+  "@mascotSampleEvHanimi": {
+    "description": "Persona kartındaki örnek bildirim. Havuzdaki friend_streak metninin aynısı; seçim yapılmadan önce göründüğü için arayüz metni sayılıyor.",
+    "placeholders": {
+      "ad": {
+        "type": "String"
+      },
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "mascotSampleArabeskci": "{ad} {n} gündür hiç bırakmadı. Helal olsun dostuma.",
+  "@mascotSampleArabeskci": {
+    "description": "Persona kartındaki örnek bildirim. Havuzdaki friend_streak metninin aynısı; seçim yapılmadan önce göründüğü için arayüz metni sayılıyor.",
+    "placeholders": {
+      "ad": {
+        "type": "String"
+      },
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "mascotSampleSanayiUstasi": "{ad} {n} gündür tezgâhın başında. Adam gibi iş.",
+  "@mascotSampleSanayiUstasi": {
+    "description": "Persona kartındaki örnek bildirim. Havuzdaki friend_streak metninin aynısı; seçim yapılmadan önce göründüğü için arayüz metni sayılıyor.",
+    "placeholders": {
+      "ad": {
+        "type": "String"
+      },
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "mascotSampleCeo": "{ad} {n} gün üst üste hedefini tutturdu.",
+  "@mascotSampleCeo": {
+    "description": "Persona kartındaki örnek bildirim. Havuzdaki friend_streak metninin aynısı; seçim yapılmadan önce göründüğü için arayüz metni sayılıyor.",
+    "placeholders": {
+      "ad": {
+        "type": "String"
+      },
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "notifyStepTitle": "Hatırlatayım mı?",
-  "notifyStepBody": "Günde en fazla iki kez: tekrarların hazır olduğunda ve serin tehlikeye girdiğinde. Saatlerini Ayarlar'dan değiştirebilirsin.",
+  "notifyStepBody": "Günde en fazla iki kez: tekrarların hazır olduğunda ve serini sürdürme vaktinde. Saatlerini Ayarlar'dan değiştirebilirsin.",
   "notifyYes": "Evet, hatırlat",
   "notifyNo": "Şimdilik hayır",
   "notifyDenied": "Bildirim izni verilmedi. Ayarlar'dan sonra açabilirsin.",
@@ -625,7 +691,7 @@
   "settingsNotifyOffNote": "Saatleri değiştirmek için önce bildirimleri aç.",
   "settingsNotifyEnable": "Bildirimleri aç",
   "settingsAccount": "Hesap",
-  "settingsMascot": "Kimo'nun karakteri",
+  "settingsMascot": "Kimo'nun sesi",
   "settingsExamYear": "Sınav yılı",
   "settingsBirthYear": "Doğum yılı",
   "settingsBirthYearUnset": "Belirtilmedi",
