@@ -6,5 +6,9 @@
   "LEGAL_PRIVACY_URL": "https://ornek.com/gizlilik-politikasi",
   "LEGAL_KVKK_URL": "https://ornek.com/kvkk-aydinlatma",
   "LEGAL_DELETE_URL": "https://ornek.com/hesap-silme",
-  "SUPPORT_EMAIL": "destek@ornek.com"
+  "SUPPORT_EMAIL": "destek@ornek.com",
+
+  "_reklam": "ODULLU REKLAM (Task 10). Asagidakiler Google'in ACIK TEST birim kimlikleri: gelistirme derlemesi bunlari kullanir ve gercek reklam gostermez. Gercek kimlikler YALNIZCA CI sirrinda (SUPABASE_JSON) ve yereldeki izlenmeyen supabase.json'da durur. BOS BIRAKILIRSA reklam yolu arayuzde HIC cizilmez (sessizce) — SupabaseConfig'in ayni kurali: yapilandirilmamis olmak ozelligin olmadigi anlamina gelir.",
+  "ADMOB_REWARDED_ANDROID": "ca-app-pub-3940256099942544/5224354917",
+  "ADMOB_REWARDED_IOS": "ca-app-pub-3940256099942544/1712485313"
 }

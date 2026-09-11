@@ -26,6 +26,30 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- ADMOB UYGULAMA KİMLİĞİ — EKSİKSE SDK "GADInvalidInitializationException"
+	     ile çöküyor. Varsayılan Google'ın AÇIK TEST kimliği; yayın derlemesinde
+	     xcconfig'ten gelen $(ADMOB_APP_ID) ile değiştirilmeli.
+	
+	     NSUserTrackingUsageDescription BİLEREK EKLENMEDİ: ATT hiç çağrılmıyor,
+	     IDFA istenmiyor ve yalnızca kişiselleştirilmemiş reklam gösteriliyor
+	     (ageRestrictedTreatment: teen). Bu sayede App Store Connect'teki
+	     "Used to Track: Hayır" cevabı aynen doğru kalıyor. -->
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<!-- SKAdNetwork: reklam verenin yükleme ilişkilendirmesi için; BİZDEN veri
+	     toplamıyor. Aşağıda yalnızca Google'ın kendi kimliği var.
+	
+	     YAYIN ÖNCESİ: tam liste Google'ın yayımladığı SKAdNetwork listesinden
+	     KOPYALANMALI. Eksik kimlikler zarar vermez (yalnızca o ağların
+	     ilişkilendirmesi çalışmaz), ama uydurma kimlik yazmak yanlış olurdu —
+	     o yüzden liste burada bilinçli olarak kısa. -->
+	<key>SKAdNetworkItems</key>
+	<array>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>cstr6suwn9.skadnetwork</string>
+		</dict>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Soru fotoğrafı çekmek ve profil fotoğrafı eklemek için kamera kullanılır.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

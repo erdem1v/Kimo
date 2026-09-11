@@ -1,0 +1,35 @@
+# app-ads.txt — Kimo (com.stratejico.kimo)
+#
+# NE İŞE YARIYOR: reklam alıcılarının, bu uygulamanın reklam envanterini
+# satmaya GERÇEKTEN yetkili olanın kim olduğunu doğrulamasını sağlıyor.
+# Dosya olmadan AdMob talebi "doğrulanmamış" sayabilir ve doluluk düşer.
+#
+# ================================ YAYIN ======================================
+# BU DOSYA DEPODA DURUYOR AMA YAYINLANMASI GEREKEN YER BURASI DEĞİL.
+#
+# 1. Geliştirici web sitesinin KÖKÜNE konmalı:
+#       https://<alan-adi>/app-ads.txt
+# 2. Aynı alan adı HER İKİ mağaza listelemesinde de tanımlı olmalı:
+#       Play Console  → Store listing → Website
+#       App Store Connect → App Information → Marketing URL
+#    AdMob siteyi mağaza listelemesindeki adresten buluyor; adres girilmezse
+#    dosya yayında olsa bile OKUNMUYOR.
+# 3. Yayından sonra AdMob konsolu → Apps → app-ads.txt durumunu kontrol edin
+#    (tarama birkaç gün sürebilir).
+#
+# ⚠️  ALAN ADI HENÜZ YOK. Hukuki metin adresleri de aynı durumda
+#     (`supabase.example.json` içindeki `ornek.com` yer tutucuları). Alan adı
+#     belirlendiğinde bu dosya oraya taşınmalı.
+#
+# ⚠️  AŞAĞIDAKİ YAYINCI KİMLİĞİ YER TUTUCU. Gerçek değer AdMob konsolunda
+#     Settings → Account information → Publisher ID altında duruyor ve
+#     `pub-` ile başlayan 16 haneli bir sayı. YER TUTUCUYLA YAYINLAMAK,
+#     dosyayı hiç yayınlamamaktan daha kötü: AdMob doğrulamayı BAŞARISIZ
+#     sayar.
+#
+# Biçim:  google.com, pub-<YAYINCI-KIMLIGI>, DIRECT, f08c47fec0942fa0
+#         └ reklam sistemi  └ hesap kimliği   └ doğrudan  └ TAG-ID (Google'ın
+#                                               satış       sertifikasyon
+#                                               yetkisi     kimliği, sabit)
+
+google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0

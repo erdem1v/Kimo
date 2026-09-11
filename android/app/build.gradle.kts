@@ -74,6 +74,27 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // ADMOB UYGULAMA KİMLİĞİ (Task 10). Manifest'teki `${admobAppId}`
+        // yer tutucusunu besliyor ve EKSİKSE UYGULAMA AÇILIŞTA ÇÖKER.
+        //
+        // Varsayılan Google'ın AÇIK TEST kimliği: gerçek AdMob hesabı
+        // açılmadan önce de derleme çalışıyor ve hiçbir derleme gerçek reklam
+        // göstermiyor. `google-services.json` ve `key.properties` ile aynı
+        // koşullu desen — gerçek değer ortamdan/özellikten geliyor:
+        //
+        //   flutter build apk -Padmob.appId=ca-app-pub-XXXXXXXX~YYYYYYYY
+        //
+        // ya da CI'da ADMOB_APP_ID sırrı üzerinden. Verilmezse test kimliği
+        // kalıyor ve bu durum derleme çıktısına YAZILIYOR (sessiz değil).
+        val admobAppId = (project.findProperty("admob.appId") as String?)
+            ?: System.getenv("ADMOB_APP_ID")
+            ?: "ca-app-pub-3940256099942544~3347511713"
+        if (admobAppId.startsWith("ca-app-pub-3940256099942544")) {
+            println("UYARI: AdMob TEST uygulama kimligi kullaniliyor. " +
+                    "Yayin derlemesinde -Padmob.appId=... verilmeli.")
+        }
+        manifestPlaceholders["admobAppId"] = admobAppId
     }
 
     signingConfigs {

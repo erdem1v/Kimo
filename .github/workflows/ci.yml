@@ -131,6 +131,78 @@ jobs:
             exit 1
           fi
 
+      # Task 10 — ÜÇ YENİ KAPI. Üçü de ilk koşuda YEŞİL başlıyor: sonradan
+      # yeşile getirilmesi gereken bir kapı yok.
+
+      # "Can" metaforu kalktı (kayan pencerede hak zamanla geri geliyor, yani
+      # tükenen bir yaşam değil). Kalp ikonu tarafı `check_symbols.py` ile
+      # zaten kapılı: `KimoIcons.heart` SİLİNDİĞİ için ona yapılan her başvuru
+      # "yok" diye düşüyor. Kalan risk kelimenin METNE geri sızması.
+      #
+      # KAPSAM YALNIZCA ARB, bilinçli: bildirim metinleri veritabanında
+      # yaşıyor ve orada "canım" bir SEVGİ SÖZÜ olarak 13 kez meşru biçimde
+      # geçiyor (persona satırları). Desen onu hariç tutuyor; kapı bir
+      # sınıflandırıcı değil, bir tel.
+      # ---------------------------------------------------- Task 10 kapıları
+      # DİKKAT — `git grep -E` KELİME SINIRI (`\b`) DESTEKLEMİYOR. POSIX ERE'de
+      # `\b` tanımsız ve `git grep -E "\bcan\b"` SIFIR eşleşme döndürüyor, yani
+      # kapı sessizce yeşil yanıyor. Bu tam olarak bu depoda İKİ KEZ yaşanan
+      # hata sınıfı (check_symbols.py'nin düşen `\b`'si, check_imports.py'nin
+      # 0x08 kazası) ve bu kapı yazılırken ÜÇÜNCÜ kez yaşandı.
+      #
+      # Çözüm iki parçalı: `git grep` yalnızca ALT DİZE arıyor (izlenen
+      # dosyalarla sınırlı kalmak için), kelime sınırı işini GERÇEK grep
+      # yapıyor. Sınır sınıflarında `_` da var: `can_read_mistake_photo` gibi
+      # kod tanımlayıcıları yanlış alarm üretmesin.
+      #
+      # Kapı KENDİNİ SINIYOR: uydurma bir ihlali yakalayamazsa iş kırmızı döner.
+      # Sınama GEÇİCİ BİR KOPYA üzerinde çalışıyor — gerçek dosyaya dokunup
+      # `git checkout` ile geri almak, dosyada işlenmemiş değişiklik varsa onları
+      # siler (yazarken tam bu oldu).
+      - name: Eski kalp/yaşam metaforu arayüz metinlerine geri dönmemiş mi
+        run: |
+          ARB=lib/l10n/app_tr.arb
+          BOUND='(^|[^a-zA-Z_])can(ı|ın|ınız|lar|ları|ların)?([^a-zA-Z_çğıöşüÇĞİÖŞÜ]|$)'
+          SEVGI='(^|[^a-zA-Z_])canım([^a-zA-Z_çğıöşüÇĞİÖŞÜ]|$)'
+
+          # 1) KAPININ KENDİ SINAMASI (geçici kopya, gerçek dosyaya dokunmuyor)
+          TMP="$(mktemp)"
+          cp "$ARB" "$TMP"
+          printf '\n  "uydurmaIhlal": "3 canın kaldı",\n' >> "$TMP"
+          if ! grep -inE "$BOUND" "$TMP" | grep -viE "$SEVGI" >/dev/null; then
+            rm -f "$TMP"
+            echo "::error::KAPI BOZUK — uydurma ihlali YAKALAMADI. Deseni düzeltin."
+            exit 1
+          fi
+          rm -f "$TMP"
+          echo "::notice::Kapı çalışıyor — uydurma ihlal yakalandı."
+
+          # 2) GERÇEK KONTROL. Bildirim metinleri veritabanında yaşıyor ve orada
+          #    "canım" bir SEVGİ SÖZÜ olarak 13 kez meşru biçimde geçiyor
+          #    (persona satırları); kapsam bu yüzden yalnızca ARB.
+          if git grep -n -i -e can -- "$ARB" | grep -iE "$BOUND" | grep -viE "$SEVGI"; then
+            echo "::error::Analiz hakkı eski kalp/yaşam kelimesiyle adlandırılamaz (Task 10)."
+            exit 1
+          fi
+
+      - name: "Sınırsız" vaadi kullanıcıya verilmemiş mi
+        run: |
+          if git grep -n -i "sınırsız" -- lib/l10n/app_tr.arb; then
+            echo "::error::Plus'ın da tavanı var; 'sınırsız' kullanıcıya söylenemez."
+            exit 1
+          fi
+
+      # Apple 3.1.2 ve Play abonelik politikası gösterilen fiyatın MAĞAZANIN
+      # yerelleştirilmiş fiyatı olmasını şart koşuyor. Yer tutucu fiyatlar tek
+      # bir dosyada toplanıyor ki abonelik task'ı tek yeri değiştirsin ve
+      # araya sabit bir ₺ sızmasın.
+      - name: Sabit fiyat yalnızca plus_plans.dart'ta mı
+        run: |
+          if git grep -n "₺" -- lib/ ':!lib/features/plus/plus_plans.dart'; then
+            echo "::error::Fiyat mağazadan gelmeli; tek kaynak plus_plans.dart."
+            exit 1
+          fi
+
   # ---------------------------------------------------------------------- Dart
   flutter:
     name: analyze + test

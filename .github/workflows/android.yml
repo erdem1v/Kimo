@@ -104,6 +104,12 @@ jobs:
           # Çökme raporlama (Sentry). Sır tanımlı değilse uygulama raporsuz
           # derlenir ve çalışmaya devam eder — supabase.json ile aynı desen.
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          # AdMob UYGULAMA kimliği. `--dart-define` manifest'e ULAŞAMIYOR, o
+          # yüzden Gradle özelliği olarak geçiyor. Sır yoksa Google'ın AÇIK
+          # TEST kimliği kalıyor ve Gradle bunu derleme çıktısına yazıyor —
+          # sessiz değil. Gerçek kimlik olmadan üretime çıkılırsa reklam hiç
+          # gelmez (ama uygulama ÇÖKMEZ; çökme kimliğin HİÇ olmadığı durum).
+          ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
         run: |
           BUILD_TYPE="${{ inputs.flavor || 'release' }}"
           ARGS=""
@@ -115,6 +121,12 @@ jobs:
             echo "::notice::SENTRY_DSN tanımlı — çökme raporlama etkin."
           else
             echo "::warning::SENTRY_DSN sırrı yok — APK çökme raporlaması OLMADAN derlenecek."
+          fi
+          if [ -n "$ADMOB_APP_ID" ]; then
+            ARGS="$ARGS -Padmob.appId=$ADMOB_APP_ID"
+            echo "::notice::ADMOB_APP_ID tanımlı — gerçek AdMob uygulama kimliği."
+          else
+            echo "::warning::ADMOB_APP_ID sırrı yok — APK Google'ın TEST uygulama kimliğiyle derlenecek, gerçek reklam gelmez."
           fi
           echo "flutter build apk --$BUILD_TYPE (define'lar gizli)"
           flutter build apk --"$BUILD_TYPE" $ARGS

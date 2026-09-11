@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- Ağ erişimi (Supabase). Release derlemesinde de gerekli; Flutter bunu
          yalnızca debug/profile manifest'ine koyduğu için elle ekliyoruz. -->
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -16,6 +17,24 @@
          hatırlatmalar geri kurulsun; yoksa her yeniden başlatma o günün
          hatırlatmalarını sessizce siliyordu. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
+    <!-- REKLAM KİMLİĞİ (AAID) BİLİNÇLİ OLARAK DÜŞÜRÜLÜYOR (Task 10).
+         `google_mobile_ads` bu izni kendi manifest'inden MERGE ile ekliyor;
+         burada `tools:node="remove"` ile çıkarıyoruz.
+
+         NEDEN: hedef kitle 13-18 ve kişiselleştirilmiş reklam kullanılmıyor
+         (`ageRestrictedTreatment: teen`, istekte `npa=1`). İzin düşünce
+         Play Veri Güvenliği formundaki "Reklam kimliği: HAYIR" ve App Store
+         Connect'teki "Used to Track: Hayır" cevapları AYNEN doğru kalıyor.
+
+         BEDELİ AÇIKÇA: sıklık sınırlama (frequency capping) zayıflar ve
+         doluluk bir miktar düşer. Bu bilinçli bir takas — reklamın işi gelir
+         değil, hak duvarına bir kapı açmak.
+
+         GERİ ALMAK İSTENİRSE: bu satırı silmek YETMEZ; mağaza formlarındaki
+         iki cevap ve hukuki metinlerdeki alıcı listesi de güncellenmeli. -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID"
+        tools:node="remove"/>
 
     <application
         android:label="Kimo"
@@ -59,6 +78,22 @@
         </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <!-- ADMOB UYGULAMA KİMLİĞİ — EKSİKSE UYGULAMA AÇILIŞTA ÇÖKÜYOR.
+             Belgelenmiş davranış: meta-data yoksa SDK "Missing application
+             ID" ile süreci düşürüyor. Yani bu satır bir yapılandırma
+             ayrıntısı değil, bir açılış koşulu.
+
+             Varsayılan GOOGLE'IN AÇIK TEST KİMLİĞİ: gerçek AdMob hesabı
+             açılmadan önce de derleme çalışıyor ve hiçbir sürümde gerçek
+             reklam gösterilmiyor. Sürümde `android/key.properties` deseninin
+             aynısıyla geçersiz kılınıyor:
+
+               android/app/build.gradle.kts → manifestPlaceholders
+
+             `${admobAppId}` yer tutucusu Gradle'dan geliyor. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}"/>
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
