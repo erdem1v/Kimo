@@ -4,7 +4,36 @@
 üretildi; içindeki her veri/aktarım ifadesinin arkasında bir dosya:satır dayanağı
 var. Köşeli parantezli alanlar (`[şirket unvanı]` gibi) siz doldurana kadar boş.
 
-**Sürüm:** 1.2 · **Hazırlanma tarihi:** [tarih] · **Dayanak commit:** `2aa8d4a`
+**Sürüm:** 1.3 · **Hazırlanma tarihi:** [tarih] · **Dayanak commit:** `b28f34b`+Task 10
+
+> **1.3'te ne değişti (Task 10).** Uygulamaya **ödüllü reklam** eklendi ve bu
+> ÜÇ TARAFI birden değiştirdi:
+>
+> **(a) Yeni bir veri alıcısı var: Google (AdMob).** §1.10'daki aktarım
+> tablosuna altıncı satır olarak girdi, KVKK §6 ve Gizlilik Politikası §6'daki
+> sağlayıcı listelerine eklendi. KVKK §6'da duran *"reklam amacıyla kimseyle
+> paylaşmıyoruz"* cümlesi artık olduğu gibi doğru değil ve yeniden yazıldı.
+>
+> **(b) §1.11'in bir kısmı geçersizleşti.** O bölüm "reklam SDK'sı yok
+> (`google_mobile_ads` — 0 sonuç)" diyordu; artık var. Hangi iddiaların
+> KORUNDUĞU ayrıca önemli: reklam kimliği (IDFA/AAID) **hâlâ toplanmıyor** —
+> Android'de `AD_ID` izni manifest'ten `tools:node="remove"` ile düşürüldü,
+> iOS'ta ATT hiç çağrılmıyor ve yalnızca **kişiselleştirilmemiş** reklam
+> gösteriliyor (`ageRestrictedTreatment: teen`). Bu yüzden mağaza
+> formlarındaki "Tracking: HAYIR" ve "Reklam kimliği: Hayır" cevapları AYNEN
+> kalıyor.
+>
+> **(c) Uygulama artık ücretsiz+reklamlı.** Koşullar §13 buna göre yeniden
+> yazıldı. Uygulama içi SATIN ALMA hâlâ YOK (abonelik ayrı bir iş) ama
+> uygulamada bir tanıtım ekranı var ve §13 bunu da söylüyor.
+>
+> Ayrıca **iki bayat iddia düzeltildi** (Task 08'de kapanmış ama belgeye
+> işlenmemişti): tek soru silme artık uygulama içinde MEVCUT (A-9) ve engel
+> kaldırma arayüzü VAR (A-8). Yayına hazır Gizlilik §8 ile KVKK §11 bunun
+> tersini yazıyordu.
+>
+> `app_config.legal_version` **1.3** yapılmalı: onay kayıtları o değeri
+> damgalıyor.
 
 > **1.2'de ne değişti (Task 09).** Uygulama adı kesinleşti ve metinlere
 > işlendi: mağaza listelemesi **"Kimo: AI YKS"**, uygulamanın adı **"Kimo"**.
@@ -174,6 +203,24 @@ saatte 20 ile sınırlı ve "kod yok / kendi kodun / engellisin" ayrımı yapıl
 | **Çökme ve hata raporları** | Sentry | Uygulama hatalarının teşhisi | [Sentry projesine erişimi olan ekip] | [Sentry proje ayarındaki saklama süresi — **doğrulanmalı**] | **Evet — Sentry** | `lib/main.dart:29-39` |
 | Yerel bildirim planı | Yalnızca cihazda | Günlük çalışma hatırlatmaları | Kullanıcı | Cihazda | Yok — ağa çıkmıyor | `lib/services/notification_service.dart` |
 | Kota sayaçları (`rate_limits`), gönderim jetonları (`submission_tokens`), bildirim imleçleri (`push_cursors`) | İlgili tablolar | Kötüye kullanım ve tekrar gönderim koruması | **Hiçbir uygulama rolü** — RLS açık, politika ve yetki yok | Hesap silinene kadar (**otomatik temizlik kurulu değil**) | Yok | `20260902000200_ai_quota.sql:30-45`; `20260901000900_progress_rpcs.sql:53-66` |
+| **Analiz çağrı defteri** (`ai_calls`: zaman, katman, fotoğraf özeti, ödülle mi açıldı) | `public.ai_calls` | Kayan pencere, aylık cap ve anonim deneme sınırı; maliyet kalibrasyonu | **Hiçbir uygulama rolü** — RLS açık, politika ve yetki yok; kullanıcı yalnızca SAYILARI `my_daily_state` görünümünden görüyor | 92 gün (`prune_ai_calls`); hesap silmede cascade | Yok | `20260908000100_ai_quota_v2.sql` |
+| **Reklam ödülü kayıtları** (`ad_rewards`: belirteç, durum, AdMob işlem kimliği, zamanlar) | `public.ad_rewards` | Ödülün iki kez verilmesini engellemek ve günlük tavanı uygulamak | **Hiçbir uygulama rolü** | Bekleyen 1 gün, verilmiş 92 gün (`prune_ad_rewards`); hesap silmede cascade | Yok — AdMob'a yalnızca belirteç gidiyor, kullanıcı kimliği GİTMİYOR | `20260908000200_ad_reward.sql` |
+| **Reklam gösterimi teknik verisi** | AdMob SDK'sı üzerinden Google'a | Reklamın getirilmesi, gösterilmesi ve ödülün doğrulanması | Google | Google'ın kendi saklama süresi | **Evet — Google (AdMob)**. IP adresi, kaba cihaz/uygulama bilgisi ve reklam etkileşimi. **Reklam kimliği (IDFA/AAID) GİTMİYOR** ve yalnızca kişiselleştirilmemiş reklam isteniyor | `lib/services/ads/ad_service_mobile.dart`; `android/app/src/main/AndroidManifest.xml` (AD_ID kaldırıldı) |
+
+**AdMob'a ne gidiyor, ne GİTMİYOR:**
+
+| Ayar | Değer | Anlamı |
+|---|---|---|
+| `ageRestrictedTreatment` | `teen` | Ergen muamelesi — kitle 13-18. `child` DEĞİL (uygulama 13 altını hedeflemiyor), `unspecified` de değil |
+| `maxAdContentRating` | `G` | En kısıtlı içerik derecesi |
+| İstek ek parametresi | `npa=1` | Kişiselleştirilmemiş reklam açıkça isteniyor |
+| Android `AD_ID` izni | **manifest'ten kaldırıldı** | Reklam kimliği (AAID) okunamıyor |
+| iOS ATT / `NSUserTrackingUsageDescription` | **hiç eklenmedi** | IDFA istenmiyor, izleme izni sorulmuyor |
+| AdMob `userId` alanı | **sunucunun ürettiği rastgele belirteç** | Supabase kullanıcı kimliği reklam ağına HİÇ gönderilmiyor |
+| Reklam biçimi | **yalnızca ödüllü** | Interstitial, banner ve açılış reklamı yok; kullanıcı isteyerek izliyor |
+
+> Reklam birimi kimlikleri derleme zamanı veriliyor; **verilmezse reklam yolu
+> arayüzde hiç çizilmiyor** (`lib/services/ads/ads_config.dart`).
 
 **Sentry'ye ne gidiyor, ne temizleniyor:**
 
@@ -352,9 +399,12 @@ yabancı anahtar `on delete cascade` olmak zorunda, değilse göç hata veriyor
 - **OpenAI'a daha önce gönderilmiş fotoğraflar** geri alınamaz.
 - **Gönderilmiş bildirimler** Google/FCM tarafında geri çağrılamaz.
 
-> ⚠️ **Kullanıcı tek bir soruyu veya fotoğrafı uygulama arayüzünden silemiyor.**
-> `mistakes` tablosunda silme politikası ve yetkisi var, ama hiçbir ekran bunu
-> çağırmıyor. Tek silme yolu tüm hesabı silmek (bkz. §2, bayrak A-9).
+> ✅ **DÜZELTİLDİ (1.3).** Bu uyarı bayattı: A-9 Task 08'de kapandı ama belgeye
+> işlenmemişti. Kullanıcı artık tek bir soruyu (ve fotoğrafını) uygulama
+> içinden silebiliyor — `delete-question` edge fonksiyonu satırı ve depodaki
+> nesneyi BİRLİKTE siliyor; arayüz `lib/features/mistakes/mistakes_screen.dart`
+> içinde. Engel kaldırma arayüzü de var (A-8,
+> `lib/features/settings/blocked_users_screen.dart`).
 
 ## 1.10 Yurt dışına aktarım — özet tablo
 
@@ -365,6 +415,14 @@ yabancı anahtar `on delete cascade` olmak zorunda, değilse göç hata veriyor
 | 3 | **Supabase** (bölge [doğrulanmalı]) | Uygulamanın tüm verisi: hesap, profil, fotoğraflar, sosyal veriler, onay defteri | Evet | `lib/services/supabase_config.dart:8-10` |
 | 4 | **Google / Firebase** (ABD) | Cihaz bildirim jetonu, bildirim başlığı ve gövdesi (**gönderenin takma adı dahil**) | Cihaz jetonu evet; kişi adı yalnızca takma ad | `send-push/index.ts:126, 208-231`; `push_service.dart:78-102` |
 | 5 | **Sentry** (bölge [doğrulanmalı]) | Hata olayları, yığın izleri, akış etiketi | **Hayır** (temizleniyor) | `main.dart:29-39`; `crash_service.dart:48-74` |
+| 6 | **Google / AdMob** (ABD) | Reklam isteği ve gösterimi: IP adresi, kaba cihaz/uygulama bilgisi, reklam etkileşimi. Ödül doğrulamasında sunucunun ürettiği RASTGELE BELİRTEÇ | **Hayır** — reklam kimliği (IDFA/AAID) gönderilmiyor, `userId` alanına Supabase kimliği YAZILMIYOR | `lib/services/ads/ad_service_mobile.dart`; `AndroidManifest.xml` (AD_ID kaldırıldı) |
+
+**Task 10'da EKLENEN alıcı: Google (AdMob).** (Aşağıdaki "Task 07'de düşen"
+notu e-posta sağlayıcısıyla ilgili; listedeki 6. sıra bu yüzden yeniden doldu.) Yalnızca ÖDÜLLÜ reklam
+var ve kullanıcı isteyerek izliyor. Kişiselleştirme kapalı, reklam kimliği
+toplanmıyor. Ödül, Google'ın sunucusundan gelen imzalı bir geri çağrıyla
+veriliyor (`supabase/functions/ad-reward`); o geri çağrıda kimliğimiz yok,
+yalnızca bizim ürettiğimiz tek kullanımlık bir belirteç var.
 
 **Task 07'de düşen altıncı alıcı:** e-posta sağlayıcısı (kurulumda Resend).
 Tek işi veli onayı postasını göndermekti; veli onayı rejimi kaldırılınca
@@ -382,19 +440,44 @@ sıfırlama postası Supabase'in kendi altyapısından gidiyor.
 
 Mağaza formları için önemli — hepsi kod taramasıyla doğrulandı:
 
-- **Reklam kimliği (IDFA / AAID) toplanmıyor.** Reklam SDK'sı yok
-  (`google_mobile_ads`, `admob` — 0 sonuç), `NSUserTrackingUsageDescription`
-  `Info.plist`'te yok, `AD_ID` izni hiçbir eklenti manifestinde beyan edilmiyor.
+> ⚠️ **BU BÖLÜM TASK 10'DA YENİDEN YAZILDI.** Önceki sürüm "reklam SDK'sı yok"
+> diyordu; artık var. Aşağıda hangi iddianın KORUNDUĞU, hangisinin DÜŞTÜĞÜ
+> tek tek yazılı — çünkü mağaza formlarındaki cevapların tamamı buraya
+> dayanıyor.
+
+**DÜŞEN iddialar (artık doğru DEĞİL):**
+
+- ~~Reklam SDK'sı yok~~ → **`google_mobile_ads` var** (yalnızca ÖDÜLLÜ reklam;
+  interstitial, banner ve açılış reklamı yok).
+- ~~Reklam veya izleme amaçlı hiçbir veri paylaşımı yok~~ → **AdMob reklamı
+  getirip gösterirken IP adresi ve kaba cihaz/uygulama bilgisi alıyor.**
+  *İzleme* amaçlı değil (aşağıya bakın) ama *reklam* amaçlı bir aktarım var.
+- ~~İstemciden Supabase, Firebase ve Sentry dışında hiçbir dış HTTP çıkışı
+  yok~~ → **AdMob ve onun geçişli olarak getirdiği `webview_flutter`,
+  `webview_flutter_android`, `webview_flutter_wkwebview` eklentileri var.**
+  Reklam içeriği bir WebView'de çiziliyor.
+- ~~Uygulama içi satın alma / ödeme yok~~ → **Ödeme hâlâ YOK** ama uygulamada
+  bir Plus TANITIM ekranı var ve fiyat gösteriyor. Satın alma düğmesi görünür
+  biçimde devre dışı; makbuz doğrulaması ve abonelik ayrı bir iş.
+
+**KORUNAN iddialar (kod taramasıyla doğrulandı):**
+
+- **Reklam kimliği (IDFA / AAID) HÂLÂ toplanmıyor.** Android'de
+  `com.google.android.gms.permission.AD_ID` izni, eklenti onu manifest'e merge
+  etmesine rağmen `tools:node="remove"` ile DÜŞÜRÜLDÜ. iOS'ta
+  `NSUserTrackingUsageDescription` eklenmedi ve ATT hiç çağrılmıyor. Yalnızca
+  **kişiselleştirilmemiş** reklam isteniyor (`ageRestrictedTreatment: teen` +
+  istekte `npa=1`).
+- **Kullanıcı kimliği reklam ağına gitmiyor.** AdMob'un `userId`/`customData`
+  alanlarına Supabase kimliği DEĞİL, sunucunun ürettiği tek kullanımlık
+  rastgele bir belirteç yazılıyor.
 - **Analitik SDK'sı yok** — `firebase_analytics`, `amplitude`, `mixpanel`,
   `posthog`, `segment` hiçbiri yok. Firebase yalnızca Messaging için.
 - **Attribution / A/B test SDK'sı yok** — `appsflyer`, `adjust`, `branch`,
   `onesignal` yok.
 - **Konum toplanmıyor** — konum izni ne iOS'ta ne Android'de beyan edilmiş.
 - **Mikrofon, rehber, takvim erişimi yok.**
-- **Reklam veya izleme amaçlı hiçbir veri paylaşımı yok.**
-- **Uygulama içi satın alma / ödeme yok** — hiçbir ödeme paketi veya kodu yok.
 - **Yazı tipleri uygulamaya gömülü**; çalışma anında Google Fonts'a istek yok.
-- İstemciden Supabase, Firebase ve Sentry dışında **hiçbir dış HTTP çıkışı yok**.
 
 **Beyan edilen izinler:**
 
@@ -406,11 +489,14 @@ Mağaza formları için önemli — hepsi kod taramasıyla doğrulandı:
 | Android | `INTERNET` | Sunucu erişimi |
 | Android | `POST_NOTIFICATIONS` | Android 13+ bildirim izni |
 | Android | `RECEIVE_BOOT_COMPLETED` | Yeniden başlatmada hatırlatmaların geri kurulması |
+| Android | ~~`com.google.android.gms.permission.AD_ID`~~ | **BİLEREK KALDIRILDI** — `google_mobile_ads` merge ile ekliyor, biz `tools:node="remove"` ile düşürüyoruz |
 
 Eklentilerin eklediği izinler: `firebase_messaging` → `WAKE_LOCK`,
 `ACCESS_NETWORK_STATE`; `flutter_local_notifications` → `VIBRATE`.
 `image_picker_android` hiç izin beyan etmiyor (sistem seçicisini kullanıyor,
 bu yüzden `CAMERA` ve `READ_MEDIA_IMAGES` gerekmiyor).
+`google_mobile_ads` → `AD_ID` (**kaldırıldı**, yukarıya bakın) ve
+`ACCESS_NETWORK_STATE`.
 
 > Bu liste eklenti manifestlerinden okundu. **Birleşmiş (merged) manifest bir
 > `flutter build apk` sonrası teyit edilmeli** — yerel depoda derleme çıktısı yok.
@@ -625,7 +711,11 @@ olması (`age_and_guardian.sql:75-82`) bu kontrolü güçlendiriyor.
 
 ---
 
-### A-8 · Engel kaldırma arayüzü yok 🟡 Orta
+### A-8 · Engel kaldırma arayüzü yok 🟡 Orta — ✅ **KAPANDI (Task 08)**
+
+> ✅ **1.3 NOTU:** Bu bayrak Task 08'de kapandı ama belgeye işlenmemişti.
+> `lib/features/settings/blocked_users_screen.dart` + `my_blocked_users()`
+> RPC'si var; Ayarlar → Engellenenler'den engel kaldırılabiliyor.
 
 **Ne:** Kullanıcı bir kişiyi engelleyebiliyor, ama engellediklerinin listesini
 göremiyor ve engeli kaldıramıyor. `unblock_user` RPC'si
@@ -643,7 +733,13 @@ Sunucu tarafı hazır.
 
 ---
 
-### A-9 · Kullanıcı tek bir soruyu veya fotoğrafı silemiyor 🟡 Orta
+### A-9 · Kullanıcı tek bir soruyu veya fotoğrafı silemiyor 🟡 Orta — ✅ **KAPANDI (Task 08)**
+
+> ✅ **1.3 NOTU:** Bu bayrak Task 08'de kapandı ama belgeye işlenmemişti.
+> `supabase/functions/delete-question` satırı ve depodaki nesneyi BİRLİKTE
+> siliyor; arayüz `lib/features/mistakes/mistakes_screen.dart` içinde.
+> Yayına hazır Gizlilik §8 ve KVKK §11 bunun tersini yazıyordu; ikisi de
+> 1.3'te düzeltildi.
 
 **Ne:** `mistakes` üzerinde silme politikası ve yetkisi var, ama arayüzde silme
 eylemi yok (`lib/features/mistakes/mistakes_screen.dart`). Kullanıcının tek
@@ -713,6 +809,45 @@ hesap silme gereksinimi.
 sayfası (silme talebini `[iletişim e-postası]` adresine yönlendiren basit bir
 form veya açıklama yeterli) ve bu adresin Play formuna girilmesi.
 
+### A-12 · Ödüllü reklam + 13-18 kitle 🟠 Yüksek — 🟡 **KOD HAZIR, KONSOL VE BEYAN SİZDE**
+
+**Ne.** Task 10 uygulamaya `google_mobile_ads` ile ödüllü reklam ekledi.
+Reklam SDK'sı üçüncü taraf veri toplaması demek ve hedef kitlenin çoğu reşit
+değil.
+
+**Hangi kural.** Apple App Review 1.3 ve 5.1.1 (reşit olmayan kullanıcılarda
+veri ve reklam); Google Play Ads politikası ve Families hedef kitle kuralları;
+KVKK açısından yeni bir veri alıcısı.
+
+**Kodda kapatılanlar (hepsi depoda, doğrulanabilir):**
+- `ageRestrictedTreatment: teen` ve `maxAdContentRating: G` —
+  `lib/services/ads/ad_service_mobile.dart`.
+- İstekte `npa=1`: kişiselleştirme açıkça kapalı.
+- Android `AD_ID` izni manifest'ten `tools:node="remove"` ile DÜŞÜRÜLDÜ.
+- iOS'ta ATT çağrılmıyor, `NSUserTrackingUsageDescription` eklenmedi.
+- Supabase kullanıcı kimliği reklam ağına GÖNDERİLMİYOR (AdMob'un `userId` ve
+  `customData` alanlarına sunucunun ürettiği tek kullanımlık belirteç gidiyor).
+- Ödül istemciden talep edilemiyor: Google'ın imzalı sunucu geri çağrısı
+  doğrulanıyor (`supabase/functions/ad-reward`).
+
+**Depo dışında kalanlar — BUNLAR YAPILMADAN REKLAM YA HİÇ GELMEZ YA DA
+UYUMSUZ GELİR:**
+1. AdMob hesabı ve iki platform için uygulama kaydı; **uygulama kimliği
+   manifest/plist'e girmezse uygulama açılışta ÇÖKER** (şu an Google'ın test
+   kimliği duruyor).
+2. AdMob konsolu → uygulama ayarları: çocuğa yönelik muamele ve rıza yaşı
+   altı ayarları, içerik derecesi `G`, hassas kategori engelleri.
+3. Ödüllü reklam birimi → **sunucu tarafı doğrulama (SSV) geri çağrı adresi**
+   `ad-reward` fonksiyonuna ayarlanmalı. Ayarlanmazsa kullanıcı reklamı izler
+   ama hak GELMEZ.
+4. `app-ads.txt` geliştirici web sitesinin kökünde yayınlanmalı ve alan adı
+   her iki mağaza listelemesinde tanımlı olmalı (bkz. `web/app-ads.txt`).
+5. Play Console → App content → **Ads** beyanı "reklam içerir".
+6. App Store Connect → App Privacy: `Usage Data → Advertising Data` satırı
+   (§3.2) ve Google'ın yayımladığı önerilen etiket listesiyle karşılaştırma.
+7. **Play Families reklam SDK'sı sertifikasyonu doğrulanmalı** — hedef kitleye
+   13-15 dahil. AdMob sertifikalı ama beyan bizde.
+
 ## B · Beyan edilmesi gerekenler (kod değişikliği gerektirmez)
 
 Bunlar redde yol açmaz ama **belgede doğru anlatılmazsa** beyan-gerçek
@@ -766,9 +901,10 @@ satırın dayanağı §1'de.
 
 | Soru | Cevap | Gerekçe |
 |---|---|---|
-| Uygulama kullanıcıyı **izliyor mu** (tracking)? | **HAYIR** | Reklam SDK'sı yok, IDFA/AAID kullanılmıyor, `NSUserTrackingUsageDescription` yok, `AD_ID` izni yok, veri reklam amacıyla üçüncü taraflarla paylaşılmıyor (§1.11) |
-| Veri **reklam veya pazarlama** için kullanılıyor mu? | **HAYIR** | Aynı |
-| Veri **üçüncü taraflarla paylaşılıyor** mu? | **HAYIR** (Play tanımıyla) | OpenAI, Supabase, Google/FCM, Sentry ve e-posta sağlayıcısı **hizmet sağlayıcı (veri işleyen)** sıfatıyla çalışıyor. Play, hizmet sağlayıcıya aktarımı "paylaşım" saymıyor. **Bu cevap, C-2'deki OpenAI DPA durumunun teyidine bağlıdır** |
+| Uygulama kullanıcıyı **izliyor mu** (tracking)? | **HAYIR** (Task 10'da da değişmedi) | Reklam SDK'sı VAR ama: IDFA/AAID kullanılmıyor (`AD_ID` izni manifest'ten kaldırıldı, ATT hiç çağrılmıyor), yalnızca kişiselleştirilmemiş reklam isteniyor, kullanıcı kimliği reklam ağına gönderilmiyor. Apple'ın "tracking" tanımı cihaz/kullanıcıyı uygulamalar arası ilişkilendirmeyi gerektiriyor; hiçbir ilişkilendirici göndermiyoruz (§1.11) |
+| Veri **reklam veya pazarlama** için kullanılıyor mu? | **EVET — sınırlı** | Reklamı GÖSTEREBİLMEK için AdMob IP adresi ve kaba cihaz bilgisi alıyor. Bizim topladığımız hiçbir veri (e-posta, fotoğraf, XP, konu geçmişi) reklam amacıyla kullanılmıyor ya da paylaşılmıyor. **Bu satır 1.3'te değişti** |
+| Veri **üçüncü taraflarla paylaşılıyor** mu? | **HAYIR** (Play tanımıyla) | OpenAI, Supabase, Google/FCM ve Sentry **hizmet sağlayıcı (veri işleyen)** sıfatıyla çalışıyor. Play, hizmet sağlayıcıya aktarımı "paylaşım" saymıyor. **AdMob farklı bir kategoridir** ve Play formunda reklam verisi ayrı beyan ediliyor (§3.3). **Bu cevap, C-2'deki OpenAI DPA durumunun teyidine bağlıdır** |
+| Uygulama **reklam içeriyor** mu? | **EVET** | Play Console → App content → **Ads** beyanı "reklam içerir" olarak işaretlenmeli ve listelemede "Contains ads" etiketi görünür. Yalnızca ödüllü reklam; interstitial/banner/açılış yok |
 | Veri **aktarım sırasında şifreleniyor** mu? | **EVET** | Tüm trafik HTTPS; Supabase, OpenAI, FCM ve Sentry uç noktalarının tamamı TLS |
 | Kullanıcı **verisinin silinmesini talep edebiliyor** mu? | **EVET** | Uygulama içi kalıcı hesap silme (§1.9) + web bağlantısı (bkz. bayrak A-11) |
 | Uygulamanın **bir kısmı çocuklara mı yönelik**? | Hedef kitle 13–18. Play'de "Hedef kitle ve içerik" formunda **13-15, 16-17 ve 18+** yaş grupları işaretlenmeli; "yalnızca çocuklar" **değil** | Kullanım Koşulları 13 yaş sınırı ilan ediyor (§6, Md. 3) |
@@ -789,25 +925,34 @@ Her satır için: **Toplanıyor mu · Kimlikle ilişkili mi (Linked to You) ·
 | **User Content** | Other User Content | ✅ Evet | Evet | App Functionality | Soruya düşülen not, şikâyet açıklaması, çıkarılan şıklar (§1.2, §1.4) |
 | **User Content** | Emails or Text Messages / Audio | ❌ Hayır | — | — | Yok |
 | **Usage Data** | Product Interaction | ✅ Evet | Evet | App Functionality, Product Personalization | XP, seri, çözüm geçmişi, tekrar takvimi (§1.6). *Personalization, aralıklı tekrar motorunun kullanıcıya göre plan kurmasından kaynaklanıyor* |
-| **Usage Data** | Advertising Data / Other | ❌ Hayır | — | — | Yok |
+| **Usage Data** | **Advertising Data** | ✅ **Evet** | **Hayır** | **Third-Party Advertising** | **1.3'te değişti.** AdMob'un gördüğü reklam gösterimi ve etkileşimi. "Kimlikle ilişkili" DEĞİL: reklam kimliği gönderilmiyor ve kullanıcı kimliği AdMob'a yazılmıyor. "Used to Track" DEĞİL: uygulamalar arası ilişkilendirici yok |
+| **Usage Data** | Other Usage Data | ❌ Hayır | — | — | Yok |
 | **Diagnostics** | Crash Data | ✅ Evet | **Hayır** | App Functionality | Sentry; kullanıcı kimliği aktif olarak temizleniyor (§1.5) |
 | **Diagnostics** | Performance Data | ❌ Hayır | — | — | `tracesSampleRate = 0.0` |
 | **Diagnostics** | Other Diagnostic Data | ✅ Evet | **Hayır** | App Functionality | Yakalanmış hatalar + `app.context` akış etiketi |
 | **Other Data** | Other Data Types | ✅ Evet | Evet | App Functionality | **Doğum yılı** (yalnızca yıl) ve onay kayıtları (§1.1, §1.7) |
 | **Sensitive Info** | — | ❌ Hayır | — | — | Irk, din, sağlık, cinsel yönelim, siyasi görüş toplanmıyor |
-| **Location / Financial / Health / Contacts / Browsing History / Search History / Purchases** | — | ❌ Hayır | — | — | §1.11 |
+| **Identifiers** | Device ID → reklam amacı | ❌ Hayır | — | — | AdMob'a reklam kimliği GİTMİYOR; bu satırdaki mevcut "Evet" yalnızca FCM bildirim jetonu içindir |
+| **Location / Financial / Health / Contacts / Browsing History / Search History / Purchases** | — | ❌ Hayır | — | — | §1.11. **Purchases hâlâ HAYIR**: uygulama içi satın alma yok, Plus ekranı yalnızca tanıtım |
 
 > **Not — "Photos or Videos" için amaç seçimi:** Yalnızca *App Functionality*
 > işaretlenmeli. Fotoğraf analitik, kişiselleştirme veya reklam için
 > kullanılmıyor; OpenAI'a yalnızca sorunun okunması ve içerik güvenliği
-> taraması için gidiyor.
+> taraması için gidiyor. **Reklam eklenmesi bunu DEĞİŞTİRMEDİ**: AdMob'a
+> hiçbir kullanıcı içeriği gitmiyor.
+
+> ⚠️ **DOĞRULANMASI GEREKEN (1.3).** Yukarıdaki "Advertising Data" satırı
+> benim çıkarımım. Google, AdMob için ÖNERİLEN App Privacy etiketlerini kendi
+> belgelerinde yayımlıyor; yayından önce o liste bu tabloyla KARŞILAŞTIRILMALI.
+> Sapma varsa Google'ın listesi esas alınmalı — beyan bizde olsa da veriyi
+> toplayan SDK onların.
 
 **Diğer App Store Connect alanları:**
 
 | Alan | Cevap |
 |---|---|
 | Privacy Policy URL | `[gizlilik politikası URL'i]` — **zorunlu** |
-| Privacy Choices URL | Gerekmiyor (izleme ve reklam yok) |
+| Privacy Choices URL | Gerekmiyor — izleme yok ve kişiselleştirilmiş reklam yok. **1.3'te gözden geçirildi:** kişiselleştirme açılırsa bu alan ve bir rıza akışı (UMP/CMP) gerekli hâle gelir |
 | Account deletion | Uygulama içinde mevcut; App Review'a not olarak akış yazılmalı |
 | Yaş derecelendirme anketi | **Kullanıcı içeriği: EVET** (moderasyonlu). Uygulama içi kullanıcılar arası iletişim var (birebir soru gönderimi + not). Sınırsız web erişimi yok, kumar yok, şiddet yok |
 | App Review notu | Test hesabı; **1.2'nin dört şartının nerede karşılandığı**: içerik filtreleme (her fotoğraf `omni-moderation-latest` ile taranır, temiz olmayan paylaşıma çıkamaz), şikâyet (her içeriğin yanında), engelleme (kullanıcı bazında), **kötüye kullananı çıkarma** (yönetici askıya alma/kalıcı yasak + üç ihlalde otomatik askı). Ayrıca kayıt adımındaki koşul onayının ekran görüntüsü |
@@ -832,7 +977,8 @@ gerekçesi).
 | **Uygulama etkinliği** | Uygulama içi arama geçmişi, yüklü uygulamalar | ❌ | — | — |
 | **Uygulama bilgileri ve performansı** | Kilitlenme günlükleri | ✅ | Zorunlu | Analiz (teşhis), Uygulama işlevi |
 | **Uygulama bilgileri ve performansı** | Tanılama | ✅ | Zorunlu | Analiz (teşhis) |
-| **Cihaz veya diğer kimlikler** | Cihaz/diğer kimlikler | ✅ | İsteğe bağlı (bildirimler kapatılabilir) | Uygulama işlevi (push bildirimi) |
+| **Cihaz veya diğer kimlikler** | Cihaz/diğer kimlikler | ✅ | İsteğe bağlı (bildirimler kapatılabilir) | Uygulama işlevi (push bildirimi). **Reklam kimliği DEĞİL** — AAID izni manifest'ten kaldırıldı |
+| **Uygulama etkinliği** | Diğer kullanıcı eylemleri | ✅ | İsteğe bağlı | **1.3'te eklendi.** Reklam gösterimi/etkileşimi (AdMob) — Reklamcılık veya pazarlama |
 | **Konum · Finansal bilgiler · Sağlık ve fitness · Ses dosyaları · Dosyalar ve belgeler · Takvim · Kişiler · Web tarama** | — | ❌ | — | — |
 
 **Ek Play soruları:**
@@ -843,7 +989,9 @@ gerekçesi).
 | Kullanıcılar verilerinin silinmesini isteyebiliyor mu? | **Evet** — uygulama içi hesap silme **ve** `[hesap silme URL'i]` |
 | Veriler Play'in Aile Politikası kapsamında mı toplanıyor? | Uygulama 13 yaş altına yönelik değil; hedef kitle 13+ |
 | Bağımsız bir güvenlik incelemesinden geçti mi? | Hayır (isteğe bağlı alan) |
-| Reklam kimliği kullanılıyor mu? | **Hayır** |
+| Reklam kimliği kullanılıyor mu? | **Hayır** — `AD_ID` izni manifest'ten `tools:node="remove"` ile düşürüldü; yalnızca kişiselleştirilmemiş reklam. **Bu cevap ancak izin kaldırılmış hâlde doğru**; izin geri gelirse EVET olur |
+| Uygulama reklam içeriyor mu? (App content → Ads) | **Evet** — yalnızca ödüllü reklam. Listelemede "Contains ads" etiketi görünür |
+| Hedef kitle ve içerik (Families) | 13-15, 16-17, 18+ işaretli; "yalnızca çocuklar" DEĞİL. **Doğrulanmalı:** Play, hedef kitlesinde 13 altı OLMAYAN uygulamalar için Families reklam SDK'sı sertifikasyonunu şart koşmuyor; AdMob zaten sertifikalı ama BEYAN bizde (bkz. §2 A-12) |
 
 ## 3.4 İki form arasındaki tek dikkat noktası
 
@@ -1028,8 +1176,18 @@ sonraki gönderimleri durdurur; daha önce gönderilmiş bir fotoğrafı geri
 
 ### 6. Bilgilerinizi kimlerle paylaşıyoruz?
 
-Verilerinizi **satmıyoruz** ve reklam amacıyla kimseyle paylaşmıyoruz.
-Hizmeti sunabilmek için aşağıdaki hizmet sağlayıcılarla çalışıyoruz:
+Verilerinizi **satmıyoruz**.
+
+Uygulama **ücretsiz ve reklam destekli**. Reklamları Google'ın reklam ağı
+(AdMob) gösteriyor. Reklamların size **kişiselleştirilmediğini** özellikle
+belirtmek isteriz: ilgi alanlarınıza göre reklam seçilmiyor, cihazınızın
+reklam kimliği (IDFA/AAID) okunmuyor ve **bize verdiğiniz hiçbir bilgi —
+e-postanız, soru fotoğraflarınız, çalışma geçmişiniz, puanlarınız — reklam
+için kullanılmıyor ya da reklam ağına gönderilmiyor.** Reklamı gösterebilmek
+için Google'ın gördüğü şey, internet bağlantınızın adresi (IP) ve cihazınızın
+kaba teknik bilgisi.
+
+Hizmeti sunabilmek için aşağıdaki sağlayıcılarla çalışıyoruz:
 
 | Kime | Ne aktarılıyor | Neden | Nerede |
 |---|---|---|---|
@@ -1037,14 +1195,24 @@ Hizmeti sunabilmek için aşağıdaki hizmet sağlayıcılarla çalışıyoruz:
 | **OpenAI** | Soru fotoğrafları (kimliksiz) | Sorunun okunması ve içerik güvenliği taraması | ABD |
 | **Google (Firebase Cloud Messaging)** | Cihaz bildirim jetonu ve bildirim metni. **Bildirim metninde size soru gönderen kişinin takma adı yer alır** (ör. "Ayşe sana bir soru yolladı"). Sorunun kendisi veya fotoğraf gönderilmez | Bildirimlerin cihazınıza ulaştırılması | ABD |
 | **Sentry** (hata izleme) | Uygulama hata kayıtları ve teknik ayrıntılar. **Kullanıcı kimliğiniz ve e-postanız gönderilmeden önce silinir**; ekran görüntüsü hiç alınmaz | Hataların bulunup düzeltilmesi | [Sentry bölge/ülke] |
+| **Google (AdMob)** — reklam | IP adresiniz ve cihazınızın kaba teknik bilgisi. **Kimliğiniz, e-postanız, fotoğraflarınız ve çalışma verileriniz GİTMEZ.** Reklam kimliğiniz okunmaz | Ücretsiz kullanıma reklamla destek olmak; ödüllü reklamda hakkınızın doğrulanması | ABD |
 
 Ayrıca yasal olarak zorunlu olduğumuz hâllerde yetkili kamu kurum ve
 kuruluşlarına, talepleri kapsamında bilgi verebiliriz.
 
-Bu sağlayıcıların tamamı bizim adımıza ve talimatımızla çalışan **veri
-işleyenlerdir**; verilerinizi kendi amaçları için kullanamazlar.
-Supabase, OpenAI, Google ve Sentry'ye yapılan aktarımlar yurt dışına aktarım
-niteliğindedir ve 5. bölümde anlatılan hukuki dayanaklara tabidir.
+Supabase, OpenAI, Google/FCM ve Sentry bizim adımıza ve talimatımızla çalışan
+**veri işleyenlerdir**; verilerinizi kendi amaçları için kullanamazlar.
+**AdMob bundan farklıdır:** Google, reklam gösterimi sırasında elde ettiği
+teknik veriyi kendi reklam sistemi için de işleyebilir. Bu yüzden onu ayrı bir
+satırda gösteriyoruz.
+
+Supabase, OpenAI, Google ve Sentry'ye yapılan aktarımların tamamı yurt dışına
+aktarım niteliğindedir ve 5. bölümde anlatılan hukuki dayanaklara tabidir.
+
+**Reklamları kapatmak istiyorsanız:** şu an reklamsız bir sürüm sunmuyoruz.
+Ödüllü reklamı İZLEMEK TAMAMEN SİZE BAĞLIDIR — izlemezseniz uygulamanın hiçbir
+özelliği kapanmaz; soru kaydetmeye ve tekrar yapmaya aynı şekilde devam
+edersiniz.
 
 ### 7. Verilerinizi ne kadar süre saklıyoruz?
 
@@ -1164,9 +1332,10 @@ Cevabımızı yetersiz bulursanız veya 30 gün içinde cevap alamazsanız Kişi
 Verileri Koruma Kurulu'na şikâyette bulunabilirsiniz.
 
 **Hızlı yollar:** Hesabınızı ve verilerinizi uygulama içinden
-Ayarlar → Hesabımı sil ile kendiniz silebilirsiniz. Şu an tek bir soruyu
-uygulama içinden silemiyorsunuz; böyle bir talebiniz varsa
-[iletişim e-postası] adresine yazın, silelim.
+Ayarlar → Hesabımı sil ile kendiniz silebilirsiniz. **Tek bir soruyu da
+uygulama içinden silebilirsiniz** — soru kartındaki sil eylemi, soruyu ve
+fotoğrafını birlikte kaldırır. Engellediğiniz kişileri
+Ayarlar → Engellenenler'den çıkarabilirsiniz.
 
 ### 12. Bu metin değişirse
 
@@ -1199,7 +1368,8 @@ Uygulamayı [şirket unvanı] işletiyor. Sorularınız için: [iletişim e-post
 | | |
 |---|---|
 | 🚫 **Verilerinizi satmıyoruz** | Hiçbir koşulda |
-| 🚫 **Reklam yok, takip yok** | Uygulamada reklam SDK'sı yok, reklam kimliğinizi kullanmıyoruz, sizi uygulama dışında izlemiyoruz |
+| 📺 **Reklam var ama siz istemedikçe çıkmaz** | Yalnızca "ödüllü reklam": hakkınız bittiğinde siz dokunursanız. Kendiliğinden açılan reklam yok. İzlemezseniz hiçbir şey kapanmaz |
+| 🚫 **Takip yok, kişiselleştirme yok** | Reklam kimliğinizi okumuyoruz, sizi uygulama dışında izlemiyoruz ve bize verdiğiniz bilgileri reklam için kullanmıyoruz |
 | 📷 **Soru fotoğraflarınız özeldir** | Bir arkadaşınıza göndermediğiniz sürece diğer kullanıcılar göremez |
 | 🤖 **Fotoğraflar yapay zekâya gidiyor** | Sorunun okunması ve içerik güvenliği için, **kim olduğunuz belirtilmeden** |
 | 🧑‍⚖️ **Moderatörümüz görebilir** | Şikâyet veya güvenlik incelemesinde, paylaşmadığınız fotoğraflar dahil |
@@ -1230,8 +1400,13 @@ Uygulamayı [şirket unvanı] işletiyor. Sorularınız için: [iletişim e-post
 - Kötüye kullanımı önleyen kullanım sayaçları
 
 **Toplamadıklarımız:** ad-soyad, T.C. kimlik numarası, telefon, adres, okul,
-sınıf, konum, rehber, sağlık verisi, reklam kimliği. Uygulamada çerez
-kullanılmaz.
+sınıf, konum, rehber, sağlık verisi, **reklam kimliği (IDFA/AAID)**.
+Uygulamada çerez kullanılmaz.
+
+**Reklamlar hakkında:** uygulama ücretsiz ve reklam destekli. Reklamlar
+**kişiselleştirilmiyor**: cihazınızın reklam kimliği okunmuyor, ilgi
+alanlarınıza göre reklam seçilmiyor ve bize verdiğiniz hiçbir bilgi reklam
+için kullanılmıyor. Ayrıntı için 6. bölüme bakın.
 
 ### 2. Bu bilgileri neden topluyoruz?
 
@@ -1297,9 +1472,8 @@ uygulama içinden kimseye verilemez.
 
 ### 6. Kimlerle paylaşıyoruz?
 
-Verilerinizi satmıyoruz ve reklam için kimseyle paylaşmıyoruz. Hizmeti
-sunabilmek için şu sağlayıcılarla çalışıyoruz — hepsi bizim adımıza ve
-talimatımızla çalışır:
+Verilerinizi **satmıyoruz** ve bize verdiğiniz bilgileri reklam için
+kullanmıyoruz. Hizmeti sunabilmek için şu sağlayıcılarla çalışıyoruz:
 
 | Sağlayıcı | Ne için | Ne gidiyor |
 |---|---|---|
@@ -1307,9 +1481,22 @@ talimatımızla çalışır:
 | **OpenAI** (ABD) | Soru okuma + içerik güvenliği | Soru fotoğrafları, kimliksiz |
 | **Google / Firebase** (ABD) | Bildirim iletimi | Cihaz bildirim kimliği ve bildirim metni. Bildirimde **size soru gönderen kişinin takma adı** yer alır; sorunun kendisi veya fotoğraf gitmez |
 | **Sentry** | Hata izleme | Hata kayıtları. Kullanıcı kimliğiniz ve e-postanız **gönderilmeden önce silinir**; ekran görüntüsü hiç alınmaz |
+| **Google (AdMob)** (ABD) | Reklam gösterimi | IP adresiniz ve cihazınızın kaba teknik bilgisi. **Kimliğiniz, e-postanız, fotoğraflarınız ve çalışma verileriniz GİTMEZ**; reklam kimliğiniz okunmaz ve reklamlar kişiselleştirilmez |
+
+İlk dördü bizim adımıza ve talimatımızla çalışan hizmet sağlayıcılarıdır.
+**AdMob bundan farklı:** Google, reklam gösterirken gördüğü teknik veriyi
+kendi reklam sistemi için de işleyebilir.
 
 Ayrıca yasal olarak zorunlu olduğumuz hâllerde yetkili makamlara bilgi
 verebiliriz.
+
+**Ödüllü reklam nasıl çalışıyor:** analiz hakkınız bittiğinde, isterseniz kısa
+bir reklam izleyip bir hak kazanabilirsiniz (günde en fazla 3). **İzlemek
+zorunda değilsiniz** — izlemezseniz hiçbir özellik kapanmaz: soruyu kaydedip
+şıklarını kendiniz girebilir, tekrarlarınıza aynı şekilde devam edebilirsiniz.
+Reklamı gerçekten izlediğinizi Google'ın sunucusu bize bildiriyor; bu
+bildirimde **sizi tanıtan hiçbir bilgi yok**, yalnızca o reklam için
+ürettiğimiz tek kullanımlık bir numara var.
 
 **Yurt dışı:** Bu sağlayıcıların tamamı Türkiye dışında bulunuyor, yani
 verileriniz yurt dışına aktarılıyor. Aktarımlar, KVKK Aydınlatma Metni'nde
@@ -1343,8 +1530,9 @@ hata kayıtları.
 Ayrıca gelen kutunuzda bir soruyu "sil" dediğinizde o soru sizden gizlenir ama
 gönderenin kaydı ve moderasyon izi korunur.
 
-**Tek bir soruyu silmek:** Şu an uygulama içinde tek tek silme özelliği yok.
-Böyle bir talebiniz varsa [iletişim e-postası] adresine yazın.
+**Tek bir soruyu silmek:** Uygulama içinde mevcut. Sorunun kartındaki sil
+eylemi soruyu ve fotoğrafını birlikte kaldırır — fotoğraf depodan da gerçekten
+silinir, yalnızca listeden kaybolmaz.
 
 ### 9. Çocuklar
 
@@ -1696,13 +1884,32 @@ Bu yükümlülük, **bizim kendi kusurumuzdan kaynaklanan talepleri kapsamaz.**
 18 yaşından küçük kullanıcılar bakımından bu madde, genel hükümler çerçevesinde
 veli veya yasal temsilcinin sorumluluğu saklı kalmak üzere uygulanır.
 
-### 13. Ücretli hizmetler (şu an mevcut değil)
+### 13. Reklamlar ve ücretli hizmetler
 
-**Uygulama şu anda tamamen ücretsizdir. Uygulama içi satın alma, abonelik veya
-başka bir ödeme yoktur.**
+**Uygulama ücretsizdir ve reklamla desteklenir. Uygulama içi satın alma,
+abonelik veya başka bir ödeme ŞU AN YOKTUR.**
 
-İleride ücretli özellikler sunarsak aşağıdaki kurallar geçerli olacaktır ve
-bunları uygulamaya almadan önce sizi ayrıca bilgilendireceğiz:
+**Reklamlar.** Uygulamada tek bir reklam biçimi var: **ödüllü reklam.**
+Kendiliğinden açılan tam ekran reklam, şerit (banner) reklam ya da açılış
+reklamı yok ve eklemeyi planlamıyoruz.
+
+- Reklamı **yalnızca siz istediğinizde** gösteririz: analiz hakkınız
+  bittiğinde, "reklam izle" seçeneğine dokunursanız. Günde en fazla 3.
+- Bir reklam izlemek **bir analiz hakkı** kazandırır.
+- **İzlemek zorunda değilsiniz ve izlemezseniz hiçbir özellik kapanmaz.**
+  Soruyu kaydedip şıklarını kendiniz girebilir, tekrarlarınıza aynı şekilde
+  devam edebilirsiniz. Bu, uygulamanın değişmez kuralı.
+- Reklamlar **kişiselleştirilmez**: cihazınızın reklam kimliği okunmaz ve bize
+  verdiğiniz bilgiler reklam için kullanılmaz. Ayrıntı Gizlilik Politikası §6.
+- Reklam içeriği Google'ın reklam ağından gelir; **içeriği biz seçmiyoruz.**
+  Yaş grubunuza uygun olması için ağın en kısıtlı içerik derecesini ve ergen
+  muamelesi ayarını kullanıyoruz. Yine de uygunsuz bir reklam görürseniz
+  [iletişim e-postası] adresine yazın — ağ tarafında engelleyebiliriz.
+
+**Kimo Plus.** Uygulamada daha yüksek analiz hakkı sunan bir **Plus tanıtım
+ekranı** bulunuyor. **Satın alma henüz açık değildir**; ekrandaki düğme devre
+dışıdır ve hiçbir ücret tahsil edilmez. Satın alma açıldığında aşağıdaki
+kurallar geçerli olacak ve sizi ayrıca bilgilendireceğiz:
 
 - **[Fiyatlandırma]** Ücretler, özellikler ve varsa deneme süresi satın alma
   ekranında açıkça gösterilir. Fiyatlar KDV dahil olarak belirtilir.
@@ -1720,7 +1927,10 @@ bunları uygulamaya almadan önce sizi ayrıca bilgilendireceğiz:
   alma kısıtlaması kurmalarını öneririz.
 - **[Ücretsiz özelliklerin korunması]** Ücretli bir katman gelmesi, o güne
   kadar ücretsiz sunduğumuz temel özellikleri kendiliğinden ücretli hâle
-  getirmez; böyle bir değişiklik olursa önceden duyurulur.
+  getirmez; böyle bir değişiklik olursa önceden duyurulur. **Soru kaydetme ve
+  tekrar yapma her zaman ücretsiz kalır.**
+- **[Reklamsız kullanım]** Plus, ödüllü reklam teklifini kaldırır. Ücretsiz
+  katmanda da reklam izlemek hiçbir zaman zorunlu değildir.
 - **[Fesih hâlinde]** Hesabınız bu koşulları ihlal ettiğiniz için kapatılırsa
   kullanılmamış dönem için iade yapılmayabilir; iade talepleri ilgili mağazanın
   kurallarına göre değerlendirilir.
