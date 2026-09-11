@@ -16,7 +16,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(31);
+select plan(35);
 
 select tests.create_supabase_user('alice');
 
@@ -121,6 +121,21 @@ select ok(has_function_privilege('authenticated',
 select ok(has_function_privilege('authenticated',
             'public.my_age_status()', 'EXECUTE'),
           'my_age_status AÇIK (my_guardian_status''ın yerini aldı)');
+
+-- ------------------------------------------------------------ Task 10
+-- Kota rejimi v2 ve ödüllü reklam. Bu dört satır 098'in kendi işi: "hangi
+-- fonksiyon kime açık" sorusunun kanonik yeri burası.
+select ok(has_function_privilege('authenticated', 'public.ai_state()', 'EXECUTE'),
+          'ai_state AÇIK (my_daily_state''in SELECT listesinde çağrılıyor)');
+select ok(not has_function_privilege('authenticated',
+            'public.grant_ad_reward(uuid, text, text)', 'EXECUTE'),
+          'grant_ad_reward KAPALI — istemci kendine reklam hakkı basamaz');
+select ok(has_function_privilege('anon',
+            'public.grant_ad_reward(uuid, text, text)', 'EXECUTE'),
+          'grant_ad_reward anon''a AÇIK (SSV geri çağrısında JWT yok)');
+select ok(not has_function_privilege('authenticated',
+            'public.user_tier()', 'EXECUTE'),
+          'user_tier KAPALI (katman my_daily_state''ten okunuyor)');
 
 -- ====================================================== DAVRANIŞ
 select tests.authenticate_as('alice');

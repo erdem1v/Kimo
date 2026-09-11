@@ -6,15 +6,21 @@
 // Ayrıca soruyu YKS taksonomisine göre sınıflandırır: sinav (TYT/AYT), ders,
 // konu. Müfredat (eski/maarif) istekten gelir; konu, verilen listeden seçilir.
 //
-// ---------------------------------------------------------------- CAN (Task 02)
+// ------------------------------------------------- ANALİZ HAKKI (Task 02 → 10)
 // Bu fonksiyonun kişi başı sınırı YOKTU ve OpenAI maliyeti doğrudan bize
-// yazılıyordu (Task 01 raporu, açık bulgu #7). Artık her çağrı OpenAI'ya
-// GİTMEDEN ÖNCE `consume_ai_use()` RPC'sinden geçiyor: günde 5 hak, Europe/
-// Istanbul gün dönümünde tazeleniyor.
+// yazılıyordu (Task 01 raporu, açık bulgu #7). Her çağrı OpenAI'ya GİTMEDEN
+// ÖNCE `consume_ai_use()` RPC'sinden geçiyor.
 //
-// Hak bitince HATA DÖNMÜYOR — 200 ile `{ allowed: false, resets_at }` dönüyor.
-// Hak bitmesi bir hata değil, beklenen bir ürün durumu: istemci o noktada elle
-// giriş formunu açıyor ve KAYDETME YOLU ASLA KAPANMIYOR.
+// TASK 10'DA REJİM DEĞİŞTİ: günde sabit 5 yerine katmanlı KAYAN pencere +
+// aylık cap (anonim 3 ömür boyu · ücretsiz 10/8sa + 300/ay · premium 50/8sa +
+// 1.000/ay, sayılar `app_config`'te). Yanıt artık `resets_at` değil `ai_state`
+// (`ok|low|window_full|month_full|lifetime_full|suspended`), `ai_next_at_hm`
+// ve `ai_month_resets_on` taşıyor — istemci "neden bitti"yi ve ne
+// göstereceğini hesaplamak zorunda kalmıyor.
+//
+// Hak bitince HATA DÖNMÜYOR — 200 ile `{ allowed: false, ai_state, … }`
+// dönüyor. Hak bitmesi bir hata değil, beklenen bir ürün durumu: istemci o
+// noktada hak duvarını açıyor ve KAYDETME YOLU ASLA KAPANMIYOR.
 //
 // Sayaç çağıranın KENDİ JWT'siyle tüketiliyor (servis rolüyle değil): RPC
 // `auth.uid()` okuyor ve hiçbir yerde `user_id` parametresi geçmiyor — Task
@@ -101,16 +107,67 @@ async function rpc(
   return await resp.json();
 }
 
-/** Bir yapay zekâ okutma hakkı harcar. */
+/** Kota durumu — görünümle AYNI sözlük (`public.ai_state()`). */
+interface Credit {
+  allowed: boolean;
+  /** BAĞLAYICI kalan: pencere ile ay kalanının küçüğü. Sunucu hesaplıyor. */
+  remaining: number;
+  state: string | null;
+  tier: string | null;
+  windowLeft: number;
+  windowLimit: number;
+  monthLeft: number;
+  monthLimit: number;
+  /** Sonraki hakkın Istanbul duvar saati, `HH:MM`. Ay doluysa null. */
+  nextAtHm: string | null;
+  /** Ayın yenilendiği Istanbul takvim günü, `YYYY-MM-DD`. */
+  monthResetsOn: string | null;
+  adRewardsLeft: number;
+  adOffer: boolean;
+}
+
+/**
+ * Bir analiz hakkı harcar.
+ *
+ * `p_sha_hex` çağrı defterine yinelenen-fotoğraf sinyalini taşıyor. Hash ZATEN
+ * önbellek için hesaplanmış durumda, yani bedava; maliyet kalibrasyonunda
+ * "aynı fotoğraf kaç kez ücretlendi" sorusunu yanıtlıyor.
+ */
 async function consumeCredit(
   authHeader: string,
-): Promise<{ allowed: boolean; remaining: number; resetsAt: string | null }> {
-  const rows = await rpc(authHeader, "consume_ai_use", {});
+  shaHex: string,
+): Promise<Credit> {
+  const rows = await rpc(authHeader, "consume_ai_use", { p_sha_hex: shaHex });
   const row = (Array.isArray(rows) ? rows[0] : rows) as Record<string, unknown>;
   return {
     allowed: row?.allowed === true,
     remaining: Number(row?.remaining ?? 0),
-    resetsAt: (row?.resets_at as string | null) ?? null,
+    state: (row?.ai_state as string | null) ?? null,
+    tier: (row?.ai_tier as string | null) ?? null,
+    windowLeft: Number(row?.ai_window_left ?? 0),
+    windowLimit: Number(row?.ai_window_limit ?? 0),
+    monthLeft: Number(row?.ai_month_left ?? 0),
+    monthLimit: Number(row?.ai_month_limit ?? 0),
+    nextAtHm: (row?.ai_next_at_hm as string | null) ?? null,
+    monthResetsOn: (row?.ai_month_resets_on as string | null) ?? null,
+    adRewardsLeft: Number(row?.ad_rewards_left ?? 0),
+    adOffer: row?.ad_offer === true,
+  };
+}
+
+/** Kota alanlarını yanıt gövdesine yazar — iki dal aynı sözlüğü kullanıyor. */
+function creditFields(c: Credit): Record<string, unknown> {
+  return {
+    ai_state: c.state,
+    ai_tier: c.tier,
+    ai_window_left: c.windowLeft,
+    ai_window_limit: c.windowLimit,
+    ai_month_left: c.monthLeft,
+    ai_month_limit: c.monthLimit,
+    ai_next_at_hm: c.nextAtHm,
+    ai_month_resets_on: c.monthResetsOn,
+    ad_rewards_left: c.adRewardsLeft,
+    ad_offer: c.adOffer,
   };
 }
 
@@ -228,8 +285,9 @@ Deno.serve(async (req: Request) => {
           ...(hit as Record<string, unknown>),
           allowed: true,
           taxonomy_version: taxonomy.version,
-          // İstemci `remaining` yoksa eldeki sayıyı KORUYOR; doğrusu bu,
-          // çünkü bu çağrıda hiçbir hak harcanmadı.
+          // Kota alanları BİLEREK yok: bu çağrıda hiçbir hak harcanmadı ve
+          // istemci eldeki sayıyı koruyor. `cached: true` görünce HUD'ı
+          // yenilemiyor — yenilerse de aynı sayıyı okur.
           cached: true,
         }, 200);
       }
@@ -237,23 +295,32 @@ Deno.serve(async (req: Request) => {
       console.error(`[analyze-question] önbellek okunamadı: ${e}`);
     }
 
-    // ------------------------------------------------------------------ CAN
+    // ---------------------------------------------------------- ANALİZ HAKKI
     // OpenAI'ya GİTMEDEN ÖNCE. Sıra tersine çevrilirse hak bitmiş kullanıcı
     // yine de maliyet üretirdi.
-    let credit: { allowed: boolean; remaining: number; resetsAt: string | null };
+    //
+    // ÖNBELLEK İSABETİ BURAYA HİÇ GELMİYOR (yukarıda dönüyor): isabette hak
+    // harcanmıyor VE çağrı defterine satır yazılmıyor, yani aylık cap de
+    // tüketilmiyor. Doğru olan bu — ve aylık cap üzerindeki en iyi kaldıraç
+    // da önbellek isabet oranı.
+    let credit: Credit;
     try {
-      credit = await consumeCredit(authHeader);
+      credit = await consumeCredit(authHeader, shaHex);
     } catch (e) {
       return deny(500, `hak tüketilemedi: ${e}`);
     }
 
     if (!credit.allowed) {
-      // 200 ve açık bir gövde: bu bir hata değil, ürün durumu. İstemci elle
-      // giriş formunu açıyor.
+      // 200 ve açık bir gövde: bu bir hata değil, ürün durumu. İstemci hak
+      // duvarını açıyor ve kaydetme yolu orada birincil eylem.
+      //
+      // `ai_state` ve saat/tarih alanları duvarın METNİNİ besliyor: hangi
+      // başlığın çıkacağına ve reklam satırının çizilip çizilmeyeceğine
+      // sunucu karar veriyor, istemci değil.
       return json({
         allowed: false,
         remaining: 0,
-        resets_at: credit.resetsAt,
+        ...creditFields(credit),
       }, 200);
     }
 
@@ -411,12 +478,12 @@ Deno.serve(async (req: Request) => {
     // Hak harcandı; istemci kalan sayıyı HUD'da gösteriyor.
     parsed.allowed = true;
     parsed.remaining = credit.remaining;
+    Object.assign(parsed, creditFields(credit));
     // Taksonomi sürümü HER yanıtta: istemci elindeki ağacın bayatladığını
     // böyle anlıyor ve onay ekranı açılmadan ÖNCE tazeliyor. Olmasaydı
     // kullanıcı listede olmayan bir konu seçip sebebini anlamadığı bir hata
     // alırdı — bu paketin kapatmak için var olduğu senaryo.
     parsed.taxonomy_version = taxonomy.version;
-    parsed.resets_at = credit.resetsAt;
     return json(parsed, 200);
   } catch (e) {
     return deny(500, String(e));

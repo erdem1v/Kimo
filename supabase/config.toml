@@ -455,6 +455,23 @@ verify_jwt = true
 [functions.scan-photos]
 verify_jwt = true
 
+# Odullu reklam geri cagrisi (Task 10). **BU DEPODAKI TEK verify_jwt = false
+# FONKSIYONU.**
+#
+# NEDEN KAPALI: AdMob'un sunucu tarafi dogrulama (SSV) geri cagrisi Google'in
+# sunucusundan geliyor ve kullanici JWT'si TASIMIYOR. Dogrulama JWT ile degil,
+# Google'in ECDSA-SHA256 imzasiyla yapiliyor (bkz. ad-reward/ssv.ts).
+#
+# BU FONKSIYON SERVIS ROLU ISTEMCISI KURMAZ. Odul verme yolu tek bir
+# anon-cagrilabilir RPC ve paylasilan bir sir (`grant_ad_reward`, goc 0076).
+# Korunan degismez: hicbir DOGRULAMASIZ fonksiyon servis rolu anahtarini
+# kullanmaz — orada bir hata tum veritabanina donusurdu.
+#
+# GIZLI: AD_REWARD_SECRET. Girilmezse odul HIC verilmez (fail-closed) ve
+# `app_config.ad_reward_secret` ile ayni deger olmak zorunda.
+[functions.ad-reward]
+verify_jwt = false
+
 # NOT (Task 07 / goc 0063): `guardian-confirm` KALDIRILDI. Veli onayi rejimi
 # tumuyle cikarildi (13+ konumlandirmasi); fonksiyon, `guardian_requests`
 # tablosu ve `profiles.guardian_email` sutunu dustu. Bu blok da onlarla
