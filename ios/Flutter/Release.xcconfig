@@ -1,1 +1,13 @@
 #include "Generated.xcconfig"
+
+// ADMOB UYGULAMA KİMLİĞİ — Info.plist'teki $(ADMOB_APP_ID) buradan besleniyor.
+//
+// TASK 11'DE DÜZELTİLDİ: Info.plist Google'ın TEST uygulama kimliğini SABİT
+// yazıyordu ve yanındaki yorum "yayın derlemesinde xcconfig'ten gelen
+// $(ADMOB_APP_ID) ile değiştirilmeli" diyordu — ama o değişken hiçbir yerde
+// tanımlı değildi. Yani yayın derlemesi test kimliğiyle çıkıyordu ve Android'de
+// Gradle'ın bastığı uyarının (build.gradle.kts:92-96) iOS karşılığı yoktu.
+//
+// Bu satır Profile derlemesini de kapsıyor: pbxproj'de Profile yapılandırması
+// Release.xcconfig'i kullanıyor.
+ADMOB_APP_ID=ca-app-pub-3524308481275678~8300218845

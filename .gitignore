@@ -52,6 +52,16 @@ app.*.map.json
 # Supabase yerel anahtarları (--dart-define-from-file) — ASLA commit edilmez
 supabase.json
 
+# Task 11 kurulum kimlik bilgileri. `.env.*` deseni zaten yakalıyor; bu satır
+# AÇIKÇA yazıldı çünkü dosya erişim jetonu ve service_role anahtarı taşıyor —
+# deseni ileride daraltan biri bu dosyayı kazara açmasın.
+.env.kurulum
+
+# A/B ölçüm aracının ham çıktısı (tools/ab_model_bench.mjs:341). Üretilen
+# dosya; her koşumda üzerine yazılıyor ve koşana özel. Hiç commit edilmemişti,
+# ama izlenmeyen dosya olarak `git status`u kirletiyordu.
+tools/ab-results.json
+
 # Olası servis anahtarları / imzalama dosyaları (ileride)
 **/google-services.json
 **/GoogleService-Info.plist

@@ -292,11 +292,30 @@ def build_seed(rows, version, source_sha):
     o.append("")
 
     avals, remaps = [], []
+    # `curriculum_aliases`in benzersiz indeksi (curriculum, exam, subject,
+    # alias_norm) uzerinde ve `alias_norm` uretilmis bir sutun: tr_norm(alias).
+    # Yani "olasilik" ile "Olasilik" AYNI satiri hedefliyor ve ikisini birden
+    # yazmak INSERT'i patlatiyor.
+    #
+    # Dogrulayici (yukarida) bu cakismayi yalnizca iki FARKLI konuya isaret
+    # ettiginde hata sayiyor — cunku ayni konuya giden iki yazim bir celiski
+    # degil. Ama celiski olmamasi, IKISININ DE YAZILABILECEGI anlamina
+    # gelmiyor. Yazici o zamana kadar ham listeyi geziyordu ve tohum
+    # bos bir veritabaninda 23505 ile duruyordu (Task 11).
+    #
+    # Eleme KAYIPSIZ: arama zaten alias_norm uzerinden yapiliyor
+    # (20260907000100_curriculum.sql:259), yani tek satir her iki yazimi da
+    # cozuyor. remaps ASAGIDA elenmiyor — orasi `mistakes.concept` ile HAM
+    # string karsilastiriyor, iki yazim iki ayri eski kayit kumesi demek.
+    seen_alias = set()
     for cur, exam, subj, unit, topic, als in rows:
         for kind, alias, src in als:
-            avals.append('  (%s, %s, %s, %s, %s, %s, %s)' % (
-                sqlq(cur), sqlq(exam), sqlq(subj), sqlq(alias), sqlq(topic),
-                sqlq(kind), sqlq(src) if src else 'null'))
+            akey = (cur, exam, subj, tr_norm(alias))
+            if akey not in seen_alias:
+                seen_alias.add(akey)
+                avals.append('  (%s, %s, %s, %s, %s, %s, %s)' % (
+                    sqlq(cur), sqlq(exam), sqlq(subj), sqlq(alias), sqlq(topic),
+                    sqlq(kind), sqlq(src) if src else 'null'))
             if kind == 'eski' and cur == 'eski':
                 # Remap yalnizca 'eski' mufredat icin uretiliyor: MEB ice
                 # aktarimi ve bugune kadarki tum kayitlar o agactan.
@@ -438,6 +457,29 @@ def selftest():
     # Surum icerige duyarli olmali.
     if version_of(parse(base)) == version_of(parse(base.replace('Enerji', 'Isi'))):
         fails.append('SURUM icerik degisince DEGISMIYOR')
+
+    # YAZICI KAPISI (Task 11 regresyonu).
+    #
+    # Yukaridaki "etiket iki konuya isaret ediyor" vakasi AYNI konuya giden
+    # buyuk/kucuk harf ciftini bilerek gecirir — o bir celiski degil. Ama
+    # `curriculum_aliases` benzersiz indeksi tr_norm(alias) uzerinde, yani
+    # ikisi de YAZILIRSA tohum bos bir veritabaninda 23505 ile duruyor.
+    # Bu tam olarak Task 11'de oldu: 8 cakisma, gocler 77'de durdu.
+    #
+    # Dogrulayici degil YAZICI sinaniyor: uretilen SQL'de o kapsam icin
+    # TEK alias satiri olmali. Ayrica remap satirlari ELENMEMELI — orasi
+    # mistakes.concept ile ham string karsilastiriyor.
+    # `eski:` kullaniliyor cunku remap YALNIZCA o tur icin uretiliyor
+    # (kind == 'eski' and cur == 'eski'); `ara:` ile ikinci iddia bos gecerdi.
+    dup = M + ("## eski\n### TYT\n#### Fizik\n##### Mekanik\n"
+               "- Optik | eski: mercek, Mercek\n")
+    drows = parse(dup)
+    seed = build_seed(drows, version_of(drows), 'x' * 64)
+    abody = seed.split('insert into public.curriculum_aliases')[-1].split(';')[0]
+    if abody.count("'mercek'") + abody.count("'Mercek'") != 1:
+        fails.append('YAZICI: tr_norm cakismasi elenmedi — tohum 23505 ile patlar')
+    if seed.count("concept = 'mercek'") < 1 or seed.count("concept = 'Mercek'") < 1:
+        fails.append('YAZICI: remap satirlari da elenmis — eski kayitlar sahipsiz kalir')
 
     for f in fails:
         print(f)

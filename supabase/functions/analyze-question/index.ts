@@ -327,7 +327,25 @@ Deno.serve(async (req: Request) => {
     const dataUrl = `data:${mimeType};base64,${imageBase64}`;
 
     const payload = {
-      model: "gpt-4o-mini",
+      // Task 11 olcumu sonrasi gpt-4o-mini'den gecildi. Iki sebep:
+      //
+      //   MALIYET. Ayni fotograf, onbelleksiz, gercekci 4:3 dikey, 1600px:
+      //   gpt-4o-mini $0.00452/cagri, bu yapilandirma $0.00146. Yillik planin
+      //   neti $1.35; gpt-4o-mini'de basabas cap 236 analiz/ay cikiyordu, oysa
+      //   sevk edilen premium cap 1000. Yani eski model cap tablosunu
+      //   cozmuyordu. (docs/task-11-kurulum-raporu.md)
+      //
+      //   UYDURMA. Kasten bulaniklastirilmis, gozle okunamayan bir soru
+      //   fotografinda gpt-4o-mini `is_readable: true` dondu, bes sikki da
+      //   doldurdu ve sik metinleri kaynakla SIFIR ortusuyordu. Yani
+      //   `unreadable` dali pratikte hic tetiklenmiyor, kullanici hata
+      //   gormuyor ve arsivine uydurma icerik giriyor; tekrar motoru da onu
+      //   o icerikle calistiriyor. Bu model ayni fotografta `unreadable`
+      //   donuyor.
+      //
+      // Istek sekli tools/ab_model_bench.mjs:164-181 ile BIREBIR ayni olmali;
+      // olcum o sekille yapildi ve `effortSupported: true` dondu.
+      model: "gpt-5.6-luna",
       messages: [
         {
           role: "system",
@@ -359,7 +377,12 @@ Deno.serve(async (req: Request) => {
                 "Bu fotoğrafı değerlendir; şıkları (harf + metin) çıkar ve " +
                 "soruyu sinav/ders/konu olarak sınıflandır.",
             },
-            { type: "image_url", image_url: { url: dataUrl } },
+            // `detail` GORSEL NESNESININ ICINE konur, payload kokune DEGIL.
+            //
+            // Bu model ailesinde `high`, `auto`'dan UCUZ: olcumde detail:high
+            // 6.658 istem token'i, detail:auto 7.737 uretti (ayni fotograf).
+            // Sezgiye ters ama iki kez olculdu.
+            { type: "image_url", image_url: { url: dataUrl, detail: "high" } },
           ],
         },
       ],
@@ -414,6 +437,18 @@ Deno.serve(async (req: Request) => {
           },
         },
       },
+
+      // DUZ ALAN, ic ice `reasoning: { effort }` DEGIL. Olcumde bu sekil
+      // kabul edildi (`effortSupported: true`) ve reasoning token'i 0 dondu —
+      // yani cikti, semanin kendisinden ibaret kaliyor. Reasoning token'lari
+      // CIKTI fiyatindan faturalandigi icin bu dogrudan maliyet kalemi.
+      reasoning_effort: "none",
+
+      // Bugune kadar hic token tavani yoktu. Olculen cikti ~103 token; 800
+      // sekiz kat pay birakiyor ve kacak bir cevabin faturasini sinirliyor.
+      // Ust sinira carpilirsa `finish_reason` "length" olur ve asagidaki
+      // JSON.parse patlar — o yuzden pay genis tutuldu.
+      max_completion_tokens: 800,
     };
 
     const resp = await fetch("https://api.openai.com/v1/chat/completions", {

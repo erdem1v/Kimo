@@ -52,6 +52,10 @@ class MobileAdService implements AdService {
         RequestConfiguration(
           maxAdContentRating: MaxAdContentRating.g,
           ageRestrictedTreatment: AgeRestrictedTreatment.teen,
+          // Boş liste = üretim davranışı; hiçbir şey değişmez.
+          // Doluysa o cihazlar GERÇEK birim kimliğiyle ama TEST reklamı alır —
+          // geliştirme sırasında canlı reklam istemenin tek meşru yolu bu.
+          testDeviceIds: AdsConfig.testDeviceIds,
         ),
       );
       _initialized = true;
@@ -81,7 +85,27 @@ class MobileAdService implements AdService {
           onAdFailedToLoad: (LoadAdError error) {
             // DOLULUK %100 DEĞİL ve bu normal. Kullanıcıya HİÇBİR ŞEY
             // gösterilmiyor; duvar reklam satırını çizmiyor, o kadar.
-            debugPrint('ödüllü reklam yüklenemedi: ${error.code}');
+            //
+            // AMA "doluluk yok" ile "yapılandırma bozuk" ayrı şeyler ve ikisi
+            // de kullanıcıya AYNI görünüyor: duvarda reklam satırı yok.
+            // Hepsini debugPrint'e yazmak, ekibin yanlış yerde (SSV ya da
+            // AD_REWARD_SECRET) hata aramasına yol açıyordu. Doluluk yok
+            // sessiz kalır; GERİ KALAN HER ŞEY raporlanır.
+            //
+            // code 3 = ERROR_CODE_NO_FILL (envanter yok — olağan).
+            // 0 dahili · 1 geçersiz istek (yanlış birim kimliği!) · 2 ağ.
+            const int noFill = 3;
+            if (error.code == noFill) {
+              debugPrint('ödüllü reklam: doluluk yok');
+            } else {
+              unawaited(reportError(
+                StateError('ödüllü reklam yüklenemedi: '
+                    'code=${error.code} domain=${error.domain} '
+                    '${error.message}'),
+                StackTrace.current,
+                context: 'RewardedAd.load',
+              ));
+            }
             _ad = null;
             _loading = false;
           },

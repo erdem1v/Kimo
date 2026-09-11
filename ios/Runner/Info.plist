@@ -35,7 +35,7 @@
 	     (ageRestrictedTreatment: teen). Bu sayede App Store Connect'teki
 	     "Used to Track: Hayır" cevabı aynen doğru kalıyor. -->
 	<key>GADApplicationIdentifier</key>
-	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<string>$(ADMOB_APP_ID)</string>
 	<!-- SKAdNetwork: reklam verenin yükleme ilişkilendirmesi için; BİZDEN veri
 	     toplamıyor. Aşağıda yalnızca Google'ın kendi kimliği var.
 	

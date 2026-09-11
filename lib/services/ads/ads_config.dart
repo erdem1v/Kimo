@@ -41,4 +41,29 @@ class AdsConfig {
 
   /// Birim kimliği verilmemişse reklam yolu HİÇ çizilmiyor (sessizce).
   static bool get isConfigured => rewardedUnitId.isNotEmpty;
+
+  /// AdMob TEST CİHAZI kimlikleri, virgülle ayrılmış.
+  ///
+  /// Yukarıdaki "test BİRİMİ yedeği yok" kuralıyla karıştırılmamalı — bu ondan
+  /// farklı bir şey ve onun yarattığı boşluğu kapatıyor:
+  ///
+  ///   test BİRİMİ  = sahte reklam birimi kimliği (sürümde ASLA istemiyoruz)
+  ///   test CİHAZI  = GERÇEK birim kimliğiyle, ama sahte reklam dolduran cihaz
+  ///
+  /// Gerçek birim kimlikleri girildiği anda, kayıtlı olmayan bir cihazda
+  /// uygulamayı çalıştırmak CANLI reklam isteği demek ve Google bunu geçersiz
+  /// trafik sayabiliyor. Test cihazı kaydı bunun tek meşru yolu.
+  ///
+  /// Cihaz kimliği uygulamayı bir kez çalıştırınca cihaz günlüğüne yazılıyor:
+  ///   "Use RequestConfiguration.Builder.setTestDeviceIds(Arrays.asList(...))"
+  ///
+  /// Boş bırakılırsa hiçbir şey değişmez (üretim davranışı).
+  static const String _testDeviceIdsRaw =
+      String.fromEnvironment('ADMOB_TEST_DEVICE_IDS');
+
+  static List<String> get testDeviceIds => _testDeviceIdsRaw
+      .split(',')
+      .map((String s) => s.trim())
+      .where((String s) => s.isNotEmpty)
+      .toList(growable: false);
 }

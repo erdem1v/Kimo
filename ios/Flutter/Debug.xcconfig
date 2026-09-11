@@ -1,1 +1,11 @@
 #include "Generated.xcconfig"
+
+// ADMOB UYGULAMA KİMLİĞİ — Info.plist'teki $(ADMOB_APP_ID) buradan besleniyor.
+//
+// TANIMSIZ BIRAKILAMAZ: $(ADMOB_APP_ID) boşa genişlerse AdMob SDK'sı açılışta
+// GADInvalidInitializationException ile ÇÖKÜYOR. O yüzden Debug/Profile/Release
+// üçünde de bir değer olmak zorunda (Profile, Release.xcconfig'i kullanıyor).
+//
+// Burada Google'ın AÇIK TEST kimliği duruyor: geliştirme derlemesi canlı reklam
+// İSTEMEZ. Gerçek kimlik yalnızca Release.xcconfig'te.
+ADMOB_APP_ID=ca-app-pub-3940256099942544~1458002511

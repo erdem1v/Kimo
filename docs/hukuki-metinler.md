@@ -145,14 +145,14 @@ onay durumu farklı.**
 | Soru | Cevap | Dayanak |
 |---|---|---|
 | Nereden çağrılıyor | İstemciden **doğrudan değil**; Supabase Edge Function üzerinden | `mistake_repository.dart:296-304` |
-| Hedef adres | `https://api.openai.com/v1/chat/completions` | `supabase/functions/analyze-question/index.ts:243` |
-| Model | **`gpt-4o-mini`** | `analyze-question/index.ts:154` |
+| Hedef adres | `https://api.openai.com/v1/chat/completions` | `supabase/functions/analyze-question/index.ts:454` |
+| Model | **`gpt-5.6-luna`** (`detail: "high"`, `reasoning_effort: "none"`) | `analyze-question/index.ts:348, 385, 445` |
 | Ne gönderiliyor | (a) Fotoğrafın **ham byte'ları**, base64 data-URL olarak; (b) sabit Türkçe sistem istemi + YKS konu ağacı; (c) sabit kullanıcı cümlesi; (d) katı JSON şeması | `index.ts:151, 157-188, 190-240` |
 | **Kullanıcı kimliği gidiyor mu** | **HAYIR.** İstek gövdesinde OpenAI'ın `user` parametresi **set edilmiyor**; uid, takma ad, e-posta gönderilmiyor. Giden tek değişken veri, `eski`/`maarif` müfredat sabiti | `index.ts:153-241`, `:117-119` |
-| Hangi başlıklar gidiyor | Yalnızca `Authorization` ve `Content-Type` | `index.ts:245-248` |
-| API anahtarı nerede | **Sunucuda** (`OPENAI_API_KEY`, Supabase secret). İstemcide OpenAI anahtarı yok | `index.ts:104` |
+| Hangi başlıklar gidiyor | Yalnızca `Authorization` ve `Content-Type` | `index.ts:455-460` |
+| API anahtarı nerede | **Sunucuda** (`OPENAI_API_KEY`, Supabase secret). İstemcide OpenAI anahtarı yok | `index.ts:198` |
 | Yanıt nereye | Sunucuda hiçbir tabloya yazılmıyor; istemciye dönüyor. Kullanıcı onaylarsa çıkarılan alanlar `mistakes` tablosuna yazılıyor | `index.ts:290`; `mistake_repository.dart:204-218` |
-| Sınırlar | Günde 5 analiz hakkı; hak bittiyse istek OpenAI'a **hiç gitmiyor**. En büyük görsel ~8 MB base64 | `index.ts:136-149, 41` |
+| Sınırlar | Kayan pencere + aylık tavan: ücretsiz **8 saatte 10 / ayda 300**, Plus **8 saatte 50 / ayda 1.000**, anonim **ömür boyu 3**. Hak bittiyse istek OpenAI'a **hiç gitmiyor**. En büyük görsel ~8 MB base64 | `20260908000100_ai_quota_v2.sql:90-100`; `index.ts:306-325` |
 | Onay | **Var.** İlk analizden önce bağlam içinde onay sayfası; onay `user_consents` defterine `ai_upload` türüyle yazılıyor. "Fotoğrafsız devam" seçeneği analizi atlıyor | `capture_screen.dart:96-104, 168-206`; `photo_scan.sql:212-216` |
 
 ### Akış 2 — İçerik moderasyonu (`scan-photos`)
@@ -412,9 +412,9 @@ yabancı anahtar `on delete cascade` olmak zorunda, değilse göç hata veriyor
 |---|---|---|---|---|
 | 1 | **OpenAI** (ABD) | Soru fotoğrafı, sabit istem, müfredat sabiti | **Hayır** | `analyze-question/index.ts:151-248` |
 | 2 | **OpenAI** (ABD) | Kaydedilmiş soru fotoğrafı (moderasyon) | **Hayır** | `scan-photos/index.ts:85-97` |
-| 3 | **Supabase** (bölge [doğrulanmalı]) | Uygulamanın tüm verisi: hesap, profil, fotoğraflar, sosyal veriler, onay defteri | Evet | `lib/services/supabase_config.dart:8-10` |
+| 3 | **Supabase** (bölge **Almanya / Frankfurt, `eu-central-1`**) | Uygulamanın tüm verisi: hesap, profil, fotoğraflar, sosyal veriler, onay defteri | Evet | `lib/services/supabase_config.dart:8-10` |
 | 4 | **Google / Firebase** (ABD) | Cihaz bildirim jetonu, bildirim başlığı ve gövdesi (**gönderenin takma adı dahil**) | Cihaz jetonu evet; kişi adı yalnızca takma ad | `send-push/index.ts:126, 208-231`; `push_service.dart:78-102` |
-| 5 | **Sentry** (bölge [doğrulanmalı]) | Hata olayları, yığın izleri, akış etiketi | **Hayır** (temizleniyor) | `main.dart:29-39`; `crash_service.dart:48-74` |
+| 5 | **Sentry** (bölge **Almanya / AB**) | Hata olayları, yığın izleri, akış etiketi | **Hayır** (temizleniyor) | `main.dart:29-39`; `crash_service.dart:63-138` |
 | 6 | **Google / AdMob** (ABD) | Reklam isteği ve gösterimi: IP adresi, kaba cihaz/uygulama bilgisi, reklam etkileşimi. Ödül doğrulamasında sunucunun ürettiği RASTGELE BELİRTEÇ | **Hayır** — reklam kimliği (IDFA/AAID) gönderilmiyor, `userId` alanına Supabase kimliği YAZILMIYOR | `lib/services/ads/ad_service_mobile.dart`; `AndroidManifest.xml` (AD_ID kaldırıldı) |
 
 **Task 10'da EKLENEN alıcı: Google (AdMob).** (Aşağıdaki "Task 07'de düşen"
@@ -1013,7 +1013,7 @@ tutarsızlık sayılmaz.**
 
 ## Kimo — Kişisel Verilerin Korunması Hakkında Aydınlatma Metni
 
-**Son güncelleme:** [tarih] · **Sürüm:** 1.2
+**Son güncelleme:** [tarih] · **Sürüm:** 1.3
 
 Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu'nun ("KVKK") 10.
 maddesi uyarınca hazırlanmıştır. Amacı, uygulamayı kullandığınızda hangi
@@ -1194,7 +1194,7 @@ Hizmeti sunabilmek için aşağıdaki sağlayıcılarla çalışıyoruz:
 | **Supabase** (barındırma ve veritabanı) | Uygulamadaki tüm verileriniz | Hesabınızın ve içeriğinizin saklanması | [Supabase bölge/ülke] |
 | **OpenAI** | Soru fotoğrafları (kimliksiz) | Sorunun okunması ve içerik güvenliği taraması | ABD |
 | **Google (Firebase Cloud Messaging)** | Cihaz bildirim jetonu ve bildirim metni. **Bildirim metninde size soru gönderen kişinin takma adı yer alır** (ör. "Ayşe sana bir soru yolladı"). Sorunun kendisi veya fotoğraf gönderilmez | Bildirimlerin cihazınıza ulaştırılması | ABD |
-| **Sentry** (hata izleme) | Uygulama hata kayıtları ve teknik ayrıntılar. **Kullanıcı kimliğiniz ve e-postanız gönderilmeden önce silinir**; ekran görüntüsü hiç alınmaz | Hataların bulunup düzeltilmesi | [Sentry bölge/ülke] |
+| **Sentry** (hata izleme) | Uygulama hata kayıtları ve teknik ayrıntılar. **Kullanıcı kimliğiniz, e-postanız, oturum jetonunuz ve fotoğraf adresleriniz gönderilmeden önce silinir**; ekran görüntüsü hiç alınmaz | Hataların bulunup düzeltilmesi | Almanya |
 | **Google (AdMob)** — reklam | IP adresiniz ve cihazınızın kaba teknik bilgisi. **Kimliğiniz, e-postanız, fotoğraflarınız ve çalışma verileriniz GİTMEZ.** Reklam kimliğiniz okunmaz | Ücretsiz kullanıma reklamla destek olmak; ödüllü reklamda hakkınızın doğrulanması | ABD |
 
 Ayrıca yasal olarak zorunlu olduğumuz hâllerde yetkili kamu kurum ve
@@ -1355,7 +1355,7 @@ ayrıca bilgilendiririz.
 
 ## Kimo Gizlilik Politikası
 
-**Son güncelleme:** [tarih] · **Sürüm:** 1.2
+**Son güncelleme:** [tarih] · **Sürüm:** 1.3
 
 Kimo, YKS'ye hazırlanan öğrenciler için bir çalışma uygulamasıdır.
 Kullanıcılarımızın çoğu lise öğrencisi olduğu için bu metni kısa ve anlaşılır
@@ -1614,7 +1614,7 @@ bilgilendiririz. Sayfanın en üstündeki tarih son güncelleme tarihidir.
 
 ## Kimo Kullanım Koşulları
 
-**Yürürlük tarihi:** [tarih] · **Sürüm:** 1.2
+**Yürürlük tarihi:** [tarih] · **Sürüm:** 1.3
 
 ### 1. Bu sözleşme kim ile kim arasında?
 
