@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Cihaza ait tercihler. Sunucuda karşılığı yok ve olmamalı: tema, ses ve
 /// bildirim saatleri kullanıcının **bu telefondaki** tercihi.
 ///
-/// Hesap verisi (XP, seri, can, onay) buraya yazılmaz — o taraf sunucu
+/// Hesap verisi (XP, seri, analiz hakkı, onay) buraya yazılmaz — o taraf sunucu
 /// otoritesinde (bkz. Task 01).
 class AppSettings extends ChangeNotifier {
   AppSettings._();

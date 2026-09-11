@@ -138,6 +138,17 @@ CATALOGUE = {
                     'models/models.dart'),
     'League': (enum_values('lib/models/social.dart', 'League'),
                'models/social.dart'),
+    # Task 10 — analiz hakkı, duvar ve reklam servisi enum'ları.
+    'AiState': (enum_values('lib/models/ai_credit.dart', 'AiState'),
+                'models/ai_credit.dart'),
+    'AiTier': (enum_values('lib/models/ai_credit.dart', 'AiTier'),
+               'models/ai_credit.dart'),
+    'CreditWallOutcome': (
+        enum_values('lib/features/credit/credit_wall_screen.dart',
+                    'CreditWallOutcome'),
+        'features/credit/credit_wall_screen.dart'),
+    'AdOutcome': (enum_values('lib/services/ads/ad_service.dart', 'AdOutcome'),
+                  'services/ads/ad_service.dart'),
 }
 
 # `context.c` (KimoColors) ve `context.t` (KimoTypography) üyeleri.
@@ -154,6 +165,10 @@ EXTRA = {
     'BadgeTone': {'values'},
     'KimoButtonKind': {'values'},
     'Radii': {'all'},
+    'AiState': {'values'},
+    'AiTier': {'values'},
+    'CreditWallOutcome': {'values'},
+    'AdOutcome': {'values'},
 }
 
 

@@ -72,21 +72,50 @@
   "photoBrokenNote": "Fotoğraf gösterilemiyor",
   "captureManualEntry": "Fotoğrafsız devam et",
   "@captureManualEntry": {
-    "description": "AI hakkı yokken/çevrimdışıyken elle giriş yolu"
+    "description": "Analiz hakkı yokken/çevrimdışıyken elle giriş yolu"
   },
-  "creditLeft": "{count, plural, =0{Bugünlük okutma hakkın bitti} =1{1 okutma hakkın kaldı} other{{count} okutma hakkın kaldı}}",
-  "@creditLeft": {
-    "description": "Kalan günlük yapay zekâ hakkı",
+  "creditStateOk": "{count, plural, =1{1 hakkın kaldı} other{{count} hakkın kaldı}}",
+  "@creditStateOk": {
+    "description": "Hak bol. Eski kalp/yaşam metaforu DEĞİL: kayan pencerede hak zamanla geri geliyor, tükenen bir şey değil (Task 10). NOT: bu açıklama o eski kelimeyi LİTERAL yazmıyor — yazsaydı CI kapısı kendi satırını yakalardı; eski-ad kapısının aynı kuralı.",
     "placeholders": {
       "count": {
         "type": "int"
       }
     }
   },
-  "creditExhaustedTitle": "Bugünlük okutma hakkın bitti",
-  "creditExhaustedBody": "Fotoğrafın duruyor. Şıkları ve konuyu elle gir, soru yine arşivine düşsün. Hakların yarın yenilenecek.",
-  "@creditExhaustedBody": {
-    "description": "Hak bitti — kaydetme yolu asla kapanmaz. Geri sayım GÖSTERİLMEZ."
+  "creditStateLow": "{count, plural, =1{1 hakkın kaldı · sonraki {timeAt}} other{{count} hakkın kaldı · sonraki {timeAt}}}",
+  "@creditStateLow": {
+    "description": "Az kaldı: sayı VE sonraki hakkın saati. Eşiği sunucu belirliyor (app_config.ai_low_threshold).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "timeAt": {
+        "type": "String"
+      }
+    }
+  },
+  "creditStateWindowFull": "Hakların doldu · sonraki {timeAt}",
+  "@creditStateWindowFull": {
+    "description": "Pencere doldu. Sayı gösterilmiyor (sıfır), saat gösteriliyor.",
+    "placeholders": {
+      "timeAt": {
+        "type": "String"
+      }
+    }
+  },
+  "creditStateMonthFull": "Bu ay hakkın doldu · {dateAt} yenilenir",
+  "@creditStateMonthFull": {
+    "description": "Aylık sınır. PENCERE SAATİ BURADA GÖSTERİLMEZ — o saat artık bir şey vaat etmiyor, çünkü pencere açılsa da aylık cap kapalı. Sunucu bu durumda ai_next_at_hm'i null gönderiyor.",
+    "placeholders": {
+      "dateAt": {
+        "type": "String"
+      }
+    }
+  },
+  "creditStateLifetimeFull": "Deneme hakkın doldu",
+  "@creditStateLifetimeFull": {
+    "description": "Anonim kullanıcı 3 hakkını bitirdi. Gösterilecek saat yok; yol hesap açmaktan geçiyor."
   },
   "confirmTitle": "Onayla ve kaydet",
   "confirmIntro": "Şunları çıkardım — yanlış olan varsa dokun, düzelt.",
@@ -302,15 +331,224 @@
       }
     }
   },
-  "creditExplain": "Fotoğraf okutma hakkın günde {quota}. Soru kaydetmek her zaman serbest; hak yalnızca yapay zekânın soruyu okuması için harcanıyor.",
-  "@creditExplain": {
-    "description": "Can nedir. Geri sayım GÖSTERİLMİYOR; yalnızca kalan sayı ve kural.",
+  "creditExplainBody": "Okutma hakkın dolan bir havuz gibi: harcadığın her hak bir süre sonra geri geliyor. Soru kaydetmek her zaman serbest — hak yalnızca Kimo'nun fotoğraftaki soruyu okuması için harcanıyor.",
+  "@creditExplainBody": {
+    "description": "Hak nedir. KOTA SAYISI TAŞIMIYOR, bilinçli: eski creditExplain 'günde {quota}' diyordu ve kayan pencere o cümleyi yanlış hâle getirdi. Geri sayım GÖSTERİLMİYOR (değişmeyen tasarım kararı).",
+    "placeholders": {}
+  },
+  "creditWallTitleWindow": "Analiz hakkın doldu",
+  "creditWallTitleMonth": "Bu ay analiz hakkın doldu",
+  "creditWallTitleLifetime": "Deneme hakkın doldu",
+  "creditWallBodyWindow": "{hours} saatte {quota} soru okuyabiliyorum. Sonraki hakkın {timeAt} açılır — ama soruyu şimdi de kaydedebilirsin.",
+  "@creditWallBodyWindow": {
+    "description": "Duvar w1. Sayılar YER TUTUCU: tasarım '8 saatte 10 soru' yazıyor ama rakamlar app_config'te ve katmana göre değişiyor — koda gömmek creditExplain'in hatasını tekrarlardı.",
     "placeholders": {
+      "hours": {
+        "type": "int"
+      },
       "quota": {
+        "type": "int"
+      },
+      "timeAt": {
+        "type": "String"
+      }
+    }
+  },
+  "creditWallBodyMonth": "{dateAt} yenilenir.",
+  "@creditWallBodyMonth": {
+    "description": "Duvar w2, aylık sınır. Pencere saati YOK.",
+    "placeholders": {
+      "dateAt": {
+        "type": "String"
+      }
+    }
+  },
+  "creditWallBodyLifetime": "Hesabını oluşturursan analiz hakkın çok daha fazla olur. Soruyu şimdi de kaydedebilirsin.",
+  "@creditWallBodyLifetime": {
+    "description": "Anonim dalı. Reklam ve Plus YOK: anonim oturum bedava açıldığı için reklam hakkı vermek sıfırlama yolu olurdu. SAYI YAZMIYOR, bilinçli: anonim kullanıcı için görünüm ai_window_limit'i ömür cap'i (3) olarak veriyor, ücretsiz katmanın pencere sınırını değil — oraya bir rakam koymak uydurmak olurdu."
+  },
+  "creditWallRepeat": "Bu hafta {ordinal} kez karşılaştık",
+  "@creditWallRepeat": {
+    "description": "Tekrar çarpma cümlesi; yalnızca 2+ çarpmada gövdeye eklenir. Sayaç istemcide (shared_preferences) ve hafta anahtarı SUNUCUNUN week_start'ı. Sıra sayısı ICU çoğuluyla YAZILAMIYOR (ICU yalnızca =0/=1/=2 kabul ediyor, '=3' sözdizimi hatası); kelime trOrdinal() ile geliyor — tr_suffix.dart'takiyle aynı 'kapalı küme, tabloyla çöz' yaklaşımı.",
+    "placeholders": {
+      "ordinal": {
+        "type": "String"
+      }
+    }
+  },
+  "creditWallRepeatTail": "Plus'ta ayda {monthly} analiz var.",
+  "@creditWallRepeatTail": {
+    "description": "Tekrar cümlesinin devamı. Ayrı anahtar: sayı yer tutucu olmalı ve çoğul biçimle karışmasın.",
+    "placeholders": {
+      "monthly": {
         "type": "int"
       }
     }
   },
+  "creditWallAdTitle": "Reklam izle, 1 hak kazan",
+  "creditWallAdSubtitle": "{count, plural, =1{Bugün 1 hakkın var · 30 saniye} other{Bugün {count} hakkın var · 30 saniye}}",
+  "@creditWallAdSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creditWallAdAction": "İzle",
+  "creditWallAdVerifying": "Ödülün işleniyor",
+  "@creditWallAdVerifying": {
+    "description": "Reklam bitti, sunucu doğrulaması bekleniyor. Kaydetme düğmesi bu sırada ETKİN kalıyor."
+  },
+  "creditWallAdPending": "Ödülün birazdan hesabına geçecek. Bu arada soruyu elle kaydedebilirsin.",
+  "@creditWallAdPending": {
+    "description": "Yoklama zaman aşımı. 'Başarısız' DEMİYOR: istemci 'SSV gelmedi' ile 'SSV geldi ve reddedildi'yi ayırt edemiyor, o yüzden suçlayıcı ya da kesin bir dil kullanılmıyor."
+  },
+  "creditWallAdCapTitle": "Bugünlük reklam hakkın doldu",
+  "creditWallAdCapSubtitle": "{count, plural, other{Yarın {count} reklam hakkın yeniden açılır}}",
+  "@creditWallAdCapSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creditWallPlusTitle": "Plus'a geç",
+  "creditWallPlusSubtitle": "{hours} saatte {quota} analiz · {days} gün ücretsiz",
+  "@creditWallPlusSubtitle": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "quota": {
+        "type": "int"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "creditWallSignUpTitle": "Hesabını oluştur",
+  "creditWallSignUpSubtitle": "Haklarını ve arşivini kalıcı hâle getir",
+  "creditWallSaveInfo": "Hakkın olmasa da soruyu kaydedebilirsin. Fotoğraf arşivine girer, şıkları sen yazarsın — tekrar planı aynı şekilde çalışır.",
+  "creditWallSaveAction": "Kaydet, şıkları elle gir",
+  "@creditWallSaveAction": {
+    "description": "ÜRÜNÜN DEĞİŞMEZ KURALI: bu eylem hiçbir koşulda kapanmaz ve bir kapatma düğmesi gibi durmaz. w1'de birincil, w2'de tam genişlik ikincil — ikisinde de aynı boyut."
+  },
+  "plusTitle": "Kimo Plus",
+  "plusLede": "Bir oturumda {multiplier} kat daha fazla analiz. Deneme bittiğinde kesintisiz devam eder.",
+  "@plusLede": {
+    "placeholders": {
+      "multiplier": {
+        "type": "int"
+      }
+    }
+  },
+  "plusLedeEmphasis": "{multiplier} kat daha fazla analiz",
+  "@plusLedeEmphasis": {
+    "description": "plusLede içinde kalınlaşan parça. Ayrı anahtar olması iki metnin birbirinden ayrışmasını engelliyor (bkz. widgets/kit/kimo_rich.dart).",
+    "placeholders": {
+      "multiplier": {
+        "type": "int"
+      }
+    }
+  },
+  "plusColFree": "Ücretsiz",
+  "plusColPlus": "Plus",
+  "plusRowWindow": "{hours} saatte",
+  "@plusRowWindow": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "plusRowMonth": "Ayda",
+  "plusRowExtra": "Ekstra hak",
+  "plusAnalyses": "{count} analiz",
+  "@plusAnalyses": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "plusExtraFree": "reklam izleyerek",
+  "plusExtraPlus": "reklam yok",
+  "plusPlanYearly": "Yıllık",
+  "plusPlanMonthly": "Aylık",
+  "plusPerMonth": "{price}/ay",
+  "@plusPerMonth": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "plusYearlyNote": "yılda {price}",
+  "@plusYearlyNote": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "plusMonthlyNote": "aylık yenilenir",
+  "plusSaveBadge": "%{percent} AVANTAJ",
+  "@plusSaveBadge": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "plusCta": "{days} gün ücretsiz dene",
+  "@plusCta": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "plusTerms": "Seçili plan {plan}. {days} günlük deneme sonunda {price} tahsil edilir ve otomatik yenilenir; dönem bitiminden 24 saat öncesine kadar iptal edebilirsin.",
+  "@plusTerms": {
+    "description": "Mağaza şartı: fiyat + süre + otomatik yenileme aynı yerde. Metin ne OLACAĞINI anlatıyor ve görünür biçimde devre dışı bir düğmenin altında duruyor.",
+    "placeholders": {
+      "plan": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "plusAutoRenew": "otomatik yenilenir",
+  "@plusAutoRenew": {
+    "description": "plusTerms ve plusTrialNote içinde kalınlaşan parça."
+  },
+  "plusTrialNote": "Deneme sonunda yıllık {yearly} (ayda {monthly}) tahsil edilir ve otomatik yenilenir. Tüm planlar ve koşullar için dokun.",
+  "@plusTrialNote": {
+    "description": "Duvardaki (w2) Plus kartının künyesi.",
+    "placeholders": {
+      "yearly": {
+        "type": "String"
+      },
+      "monthly": {
+        "type": "String"
+      }
+    }
+  },
+  "plusLegalTermsLabel": "Kullanım Koşulları",
+  "plusLegalPrivacyLabel": "Gizlilik Politikası",
+  "plusRestore": "Satın alımları geri yükle",
+  "plusManage": "Aboneliği yönet",
+  "plusNotAvailableYet": "Plus henüz açılmadı. Hazır olduğunda bu düğmeden başlatabileceksin.",
+  "@plusNotAvailableYet": {
+    "description": "Abonelik satın alma AYRI BİR TASK. Düğme görünür biçimde devre dışı ve bu satır nedenini söylüyor. Hiçbir şey yapmayan bir düğme, kullanıcının dokunarak keşfettiği bir yalan olurdu. 'Satın alımları geri yükle' ve 'Aboneliği yönet' satırları ise HİÇ çizilmiyor — hiçbir şeyi geri yüklemeyen bir geri-yükle satırı kanonik bir App Store reddi (bkz. services/legal_links.dart)."
+  },
+  "settingsPlus": "Kimo Plus",
   "mistakesTitle": "Hatalarım",
   "mistakesTotal": "{count, plural, =0{Henüz kayıt yok} =1{1 soru} other{{count} soru}}",
   "@mistakesTotal": {
@@ -680,7 +918,10 @@
   "deleteWarning": "Bu işlem geri alınamaz. Bekleme süresi yok; hesabın ve verin gerçekten silinir.",
   "deleteWhatGoes": "Silinecekler",
   "deleteItemMistakes": "Arşivindeki tüm sorular ve fotoğrafları",
-  "deleteItemProgress": "XP, seri, lig geçmişin ve elmasların",
+  "deleteItemProgress": "XP, seri ve lig geçmişin",
+  "@deleteItemProgress": {
+    "description": "Task 10: \"ve elmasların\" çıkarıldı çünkü elmas v1'de kullanıcıya GÖRÜNMÜYOR — görünmeyen bir para biriminin adını silme listesinde saymak kafa karıştırır. Elmas sunucuda hâlâ siliniyor; cümle örnek sayıyor, şema saymıyor."
+  },
   "deleteItemSocial": "Arkadaşlıkların ve gönderdiğin sorular",
   "deleteItemAccount": "E-postan ve hesabın",
   "deleteConfirmPrompt": "Onaylamak için takma adını yaz: {nickname}",

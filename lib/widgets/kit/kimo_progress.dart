@@ -143,11 +143,17 @@ class KimoProgressBar extends StatelessWidget {
   }
 }
 
-/// HUD hapı: ikon + sayı. Seri, can ve elmas göstergeleri bunu kullanır.
+/// HUD hapı: (isteğe bağlı) ikon + metin. Seri, analiz hakkı ve elmas
+/// göstergeleri bunu kullanır.
+///
+/// [icon] NULLABLE (Task 10): hak göstergesinin ikonu yok. Kalp silindi çünkü
+/// kayan pencerede hak zamanla geri geliyor ve "2 hakkın kaldı · sonraki
+/// 14:30'da" bir ikonla anlatılamıyor. İkon verilmediğinde boşluk da
+/// çizilmiyor.
 class HudPill extends StatelessWidget {
   const HudPill({
     super.key,
-    required this.icon,
+    this.icon,
     required this.background,
     required this.foreground,
     this.value,
@@ -156,14 +162,14 @@ class HudPill extends StatelessWidget {
     this.semanticLabel,
   });
 
-  final Widget icon;
+  final Widget? icon;
   final Color background;
   final Color foreground;
 
   /// Sağda görünen sayı. [child] verilirse yok sayılır.
   final String? value;
 
-  /// Sayı yerine özel içerik (ör. can kalpleri + "yarın yenilenir").
+  /// Sayı yerine özel içerik.
   final Widget? child;
 
   final VoidCallback? onTap;
@@ -183,11 +189,13 @@ class HudPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          IconTheme(
-            data: IconThemeData(color: foreground, size: 16),
-            child: icon,
-          ),
-          const SizedBox(width: 6),
+          if (icon != null) ...<Widget>[
+            IconTheme(
+              data: IconThemeData(color: foreground, size: 16),
+              child: icon!,
+            ),
+            const SizedBox(width: 6),
+          ],
           Flexible(
             child: child ??
                 Text(

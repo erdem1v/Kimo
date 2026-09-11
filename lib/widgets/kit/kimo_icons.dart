@@ -3,8 +3,14 @@ import 'package:flutter/widgets.dart';
 import 'svg_path.dart';
 
 /// Tek stilli ikon seti: 24 birimlik ızgara, yuvarlak uç, dolgusuz kontur.
-/// Dolgulu olanlar yalnızca kaynak göstergeleri (alev, kalp, elmas) ve
-/// oynat/onay işaretleri — tasarımda böyle tanımlı.
+/// Dolgulu olanlar yalnızca kaynak göstergeleri (alev, elmas, Plus yıldızı)
+/// ve oynat/onay işaretleri — tasarımda böyle tanımlı.
+///
+/// TASK 10: `heart` SİLİNDİ. Kalp, günde tükenen bir can metaforuydu; kayan
+/// pencere modelinde hak zamanla geri geliyor ve sayıyı ikon olarak
+/// göstermek mümkün değil. Silinmiş olması bir KAPI: `tools/check_symbols.py`
+/// `KimoIcons.heart`a yapılan her başvuruyu "yok" diye düşürüyor, yani
+/// metaforun geri sızması sessizce olamıyor.
 ///
 /// Yol verileri onaylanan tasarım dosyasından birebir alındı. Emoji arayüzden
 /// tamamen kaldırıldığı için maskot dışındaki her simge buradan gelir.
@@ -69,14 +75,6 @@ class KimoIcons {
     filled: true,
   );
 
-  /// Can (kalp) — dolgulu. Kalan hak sayısı kadar tekrarlanır.
-  static const KimoIconData heart = KimoIconData(
-    <String>[
-      'M12 21C7 17.5 3.5 14.6 3.5 10.8 3.5 8 5.6 6 8.2 6c1.6 0 3 .8 3.8 2 .8-1.2 2.2-2 3.8-2 2.6 0 4.7 2 4.7 4.8 0 3.8-3.5 6.7-8.5 10.2z',
-    ],
-    filled: true,
-  );
-
   /// Elmas — dolgulu.
   static const KimoIconData gem = KimoIconData(
     <String>['M12 2l6 6-6 14L6 8z'],
@@ -129,6 +127,23 @@ class KimoIcons {
   ]);
 
   /// Katalogdaki her ikon. Test bu listeyi gezerek her yolun ayrıştığını ve
+  /// Plus / öne çıkan — dolgulu dört uçlu yıldız.
+  static const KimoIconData spark = KimoIconData(
+    <String>['M12 2.5l2.1 5.9 5.9 2.1-5.9 2.1-2.1 5.9-2.1-5.9-5.9-2.1 5.9-2.1z'],
+    filled: true,
+  );
+
+  /// Kalkan — "kaydetme yolu her zaman açık" bilgi kartı.
+  static const KimoIconData shield = KimoIconData(<String>[
+    'M12 3.2l6.5 2.6v5.4c0 4-2.7 7.3-6.5 8.6-3.8-1.3-6.5-4.6-6.5-8.6V5.8z',
+  ]);
+
+  /// İleri — `back`in aynası. Satır sonu chevron'u bugüne kadar `back`
+  /// kullanıyordu, yani SOLA bakıyordu.
+  static const KimoIconData forward = KimoIconData(<String>[
+    'M9.5 5.5L16 12l-6.5 6.5',
+  ], strokeWidth: 2.4);
+
   /// 24 birimlik ızgaranın dışına taşmadığını doğruluyor; yeni ikon eklendiğinde
   /// buraya da eklenmezse testte görünmez kalır.
   static const List<KimoIconData> all = <KimoIconData>[
@@ -138,7 +153,6 @@ class KimoIcons {
     person,
     camera,
     flame,
-    heart,
     gem,
     play,
     check,
@@ -147,6 +161,9 @@ class KimoIcons {
     settings,
     flag,
     lock,
+    spark,
+    shield,
+    forward,
   ];
 }
 

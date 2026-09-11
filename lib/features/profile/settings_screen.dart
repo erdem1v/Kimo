@@ -27,6 +27,7 @@ import '../onboarding/mascot_sheet.dart';
 import '../onboarding/persona_card.dart';
 import '../settings/delete_account_screen.dart';
 import '../settings/blocked_users_screen.dart';
+import '../plus/plus_screen.dart';
 import '../settings/privacy_screen.dart';
 
 /// Tek ayarlar ekranı. Profilden sağ üstteki tek girişten açılıyor.
@@ -164,6 +165,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 icon: KimoIcons.close,
                 label: l.settingsBlocked,
                 onTap: () => _push(const BlockedUsersScreen()),
+              ),
+              const SizedBox(height: Gap.sm),
+              // Kimo Plus tanıtımı. Satın alma AYRI BİR TASK: ekran açılıyor,
+              // birincil düğme görünür biçimde devre dışı ve nedeni yazıyor.
+              _row(
+                context,
+                icon: KimoIcons.spark,
+                label: l.settingsPlus,
+                onTap: () => _push(const PlusScreen()),
               ),
               const SizedBox(height: Gap.sm),
               // Veri aktarımı bildirimi ve hukuki metinlerin yuvası (Task 03).

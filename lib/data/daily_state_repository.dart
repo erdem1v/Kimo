@@ -1,74 +1,148 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/ai_credit.dart';
 import '../models/social.dart';
 
-/// Kullanıcının günlük durumu — HUD'un tek kaynağı.
+/// Kullanıcının günlük durumu — HUD'un ve hak duvarının tek kaynağı.
 ///
-/// Kalan can (AI okutma hakkı) SAKLANMIYOR, sunucuda türetiliyor: gün
-/// anahtarı Europe/Istanbul takviminden geliyor, sayaç o günün satırından
-/// okunuyor. Cihaz saatini değiştiren kullanıcı ek hak alamıyor ve istemcide
-/// hiçbir zamanlayıcı yok.
+/// ANALİZ HAKKININ HİÇBİR DEĞERİ İSTEMCİDE HESAPLANMIYOR. Durum (`aiState`),
+/// kalan sayı, sonraki hakkın saati, ayın yenilenme günü ve reklam yolunun
+/// görünüp görünmeyeceği hepsi sunucudan tek sorguda geliyor
+/// (`public.my_daily_state` → `public.ai_state()`, göç 0075). Kayan pencere,
+/// aylık cap ve katman mantığı orada; burada yalnızca gösterim var.
+///
+/// İKİ AYRI `null` VAR VE İKİSİ DE "HİÇBİR ŞEY GÖSTER" DEMEK:
+///   * `DailyState == null`  → görünüm okunamadı (ağ, oturum, izin).
+///   * `aiState == null`     → satır geldi ama durum tanınmadı/eksik.
+/// Hiçbiri "sıfır hak" değil. Sıfır göstermek gerçekten sıfır olmasıyla
+/// ayırt edilemezdi — eski `?? 5` / `?? 0` yedeklerinin ürettiği hata tam
+/// buydu ve o yüzden bu sınıfta uydurma varsayılan YOK.
 @immutable
 class DailyState {
   const DailyState({
+    required this.aiState,
     required this.aiLeft,
-    required this.aiQuota,
-    required this.aiResetsAt,
+    required this.aiTier,
     required this.gems,
     required this.xp,
     required this.streak,
     required this.weeklyXp,
     required this.league,
+    this.aiWindowLeft = 0,
+    this.aiWindowLimit = 0,
+    this.aiMonthLeft = 0,
+    this.aiMonthLimit = 0,
+    this.aiWindowHours = 0,
+    this.aiNextAtHm,
+    this.aiMonthResetsOn,
+    this.adRewardsLeft,
+    this.adRewardsPerDay = 0,
+    this.adOffer = false,
+    this.plusWindowLimit = 0,
+    this.plusMonthLimit = 0,
+    this.premiumUntil,
     this.lastActivityDate,
     this.serverToday,
+    this.weekStart,
     this.reviewedTodayCount = 0,
     this.dueCount = 0,
     this.unsolvedReceivedCount = 0,
   });
 
-  /// Bugün kalan yapay zekâ okutma hakkı.
-  final int aiLeft;
+  /// Hakkın durumu. `null` = sunucunun söylediği değer tanınmadı → arayüz
+  /// hiçbir şey çizmiyor.
+  final AiState? aiState;
 
-  /// Günlük hak sayısı (sunucudaki `daily_ai_quota`).
-  final int aiQuota;
+  /// BAĞLAYICI kalan hak: pencere ile ay kalanının küçüğü (anonimde ömür
+  /// kalanı). Hangi sınırın bağladığını sunucu hesaplıyor. `null` = okunamadı.
+  final int? aiLeft;
 
-  /// Hakların tazeleneceği an. Arayüzde geri sayım GÖSTERİLMİYOR; yalnızca
-  /// "yarın yenilenecek" bilgisi için (tasarım kararı).
-  final DateTime? aiResetsAt;
+  /// Katman. Duvarın anonim dalı ve Plus satırının çizilip çizilmeyeceği buna
+  /// bağlı.
+  final AiTier? aiTier;
+
+  /// Kayan penceredeki kalan ve o katmanın taban pencere sınırı.
+  final int aiWindowLeft;
+  final int aiWindowLimit;
+
+  /// Aylık cap'te kalan ve cap'in kendisi.
+  final int aiMonthLeft;
+  final int aiMonthLimit;
+
+  /// Pencerenin saat cinsinden uzunluğu — "8 saatte 10 soru" metni için.
+  final int aiWindowHours;
+
+  /// Sonraki hakkın Istanbul duvar saati, `HH:MM` biçiminde ve SUNUCUDAN
+  /// hazır geliyor.
+  ///
+  /// Neden istemci üretmiyor: cihaz saatini değiştiren bir öğrenciye yanlış
+  /// saat gösterilmesin. Deponun `today`/`week_start` kararının aynısı.
+  /// Aylık cap dolduğunda sunucu bunu `null` yapıyor — o saat artık bir şey
+  /// vaat etmiyor.
+  ///
+  /// GERİ SAYIM GÖSTERİLMİYOR, yalnızca saat (tasarım kararı, değişmedi).
+  final String? aiNextAtHm;
+
+  /// Ayın yenilendiği Istanbul takvim günü. Ay ADI istemcide konuyor
+  /// (`trLocativeMonthDay`): Postgres'in `TM` ay adları `lc_time`'a bağlı ve
+  /// Supabase'de `tr_TR` olduğu varsayılamaz.
+  final DateTime? aiMonthResetsOn;
+
+  /// Bugün kalan ödüllü reklam hakkı. `null` = okunamadı.
+  final int? adRewardsLeft;
+
+  /// Günlük reklam tavanı — "Yarın 3 reklam hakkın yeniden açılır" için.
+  final int adRewardsPerDay;
+
+  /// Reklam yolu SUNULUYOR mu. Kararı sunucu veriyor: katman ücretsiz,
+  /// askı yok, günlük tavan dolmamış, aylık cap dolmamış ve pencere dolmuş.
+  /// İstemci bu koşulları yeniden türetmiyor.
+  final bool adOffer;
+
+  /// Kıyas tablosundaki Plus rakamları — sunucudan, koda gömülü değil.
+  final int plusWindowLimit;
+  final int plusMonthLimit;
+
+  /// Premium aboneliğin bitişi (varsa). Bu sürümde dolduran bir yol yok.
+  final DateTime? premiumUntil;
 
   final int gems;
   final int xp;
 
-  /// ETKİN seri — sunucu kapıladı (Task 03): kopmuş seri artık 0 gelir.
+  /// ETKİN seri — sunucu kapıladı (Task 03): kopmuş seri 0 gelir.
   final int streak;
   final int weeklyXp;
   final League league;
 
-  /// Sunucudaki son aktivite günü; "bugün aktif miyim" artık cihaz saatinden
-  /// değil bundan türetiliyor.
+  /// Sunucudaki son aktivite günü.
   final DateTime? lastActivityDate;
 
   /// Sunucunun (Europe/Istanbul) bugünü. Günün tek tanımı bu.
   final DateTime? serverToday;
 
-  /// Istanbul gününe göre bugün cevaplanmış tekrar sayısı (sunucu sayıyor;
-  /// eski istemci sayımı gün sınırını 03:00'a kaydırıyordu).
+  /// Sunucunun ISO hafta başı. Duvar sayacının hafta anahtarı bu — cihaz
+  /// saatinden hafta üretmek saatini ileri alan kullanıcıya sayacı
+  /// sıfırlatırdı.
+  final DateTime? weekStart;
+
+  /// Istanbul gününe göre bugün cevaplanmış tekrar sayısı.
   final int reviewedTodayCount;
 
   /// Vadesi gelmiş tekrar sayısı.
   final int dueCount;
 
-  /// Arkadaşlardan gelen, çözülmemiş soru sayısı (gelen kutusu süzgeçleriyle).
+  /// Arkadaşlardan gelen, çözülmemiş soru sayısı.
   final int unsolvedReceivedCount;
-
-  bool get hasAi => aiLeft > 0;
 
   /// Sunucuya göre bugün aktif miyim (seri bugün işlendi mi).
   bool get activeToday =>
       lastActivityDate != null &&
       serverToday != null &&
       !lastActivityDate!.isBefore(serverToday!);
+
+  /// Gösterge çizilebilir mi: durum VE sayı birlikte okunabildi mi.
+  bool get creditReadable => aiState != null && aiLeft != null;
 
   /// Seviye XP'den TÜRETİLİR; sunucuda ayrı bir sütun yok.
   ///
@@ -81,28 +155,42 @@ class DailyState {
 
   static const int xpPerLevel = 1000;
 
+  static int? _int(Object? v) => (v as num?)?.toInt();
+
+  static DateTime? _date(Object? v) =>
+      v is String ? DateTime.tryParse(v) : null;
+
   factory DailyState.fromRow(Map<String, dynamic> row) {
     return DailyState(
-      aiLeft: (row['ai_left'] as num?)?.toInt() ?? 0,
-      aiQuota: (row['ai_quota'] as num?)?.toInt() ?? 5,
-      aiResetsAt: row['ai_resets_at'] is String
-          ? DateTime.tryParse(row['ai_resets_at'] as String)
-          : null,
-      gems: (row['gems'] as num?)?.toInt() ?? 0,
-      xp: (row['xp'] as num?)?.toInt() ?? 0,
-      streak: (row['streak'] as num?)?.toInt() ?? 0,
-      weeklyXp: (row['weekly_xp'] as num?)?.toInt() ?? 0,
+      // UYDURMA VARSAYILAN YOK: sütun yoksa ya da tanınmıyorsa `null` kalıyor
+      // ve arayüz hiçbir şey çizmiyor.
+      aiState: AiState.fromDb(row['ai_state'] as String?),
+      aiLeft: _int(row['ai_left']),
+      aiTier: AiTier.fromDb(row['ai_tier'] as String?),
+      aiWindowLeft: _int(row['ai_window_left']) ?? 0,
+      aiWindowLimit: _int(row['ai_window_limit']) ?? 0,
+      aiMonthLeft: _int(row['ai_month_left']) ?? 0,
+      aiMonthLimit: _int(row['ai_month_limit']) ?? 0,
+      aiWindowHours: _int(row['ai_window_hours']) ?? 0,
+      aiNextAtHm: row['ai_next_at_hm'] as String?,
+      aiMonthResetsOn: _date(row['ai_month_resets_on']),
+      adRewardsLeft: _int(row['ad_rewards_left']),
+      adRewardsPerDay: _int(row['ad_rewards_per_day']) ?? 0,
+      adOffer: row['ad_offer'] == true,
+      plusWindowLimit: _int(row['plus_window_limit']) ?? 0,
+      plusMonthLimit: _int(row['plus_month_limit']) ?? 0,
+      premiumUntil: _date(row['premium_until']),
+      gems: _int(row['gems']) ?? 0,
+      xp: _int(row['xp']) ?? 0,
+      streak: _int(row['streak']) ?? 0,
+      weeklyXp: _int(row['weekly_xp']) ?? 0,
       league: League.fromDb(row['league'] as String?),
-      lastActivityDate: row['last_activity_date'] is String
-          ? DateTime.tryParse(row['last_activity_date'] as String)
-          : null,
-      serverToday: row['today'] is String
-          ? DateTime.tryParse(row['today'] as String)
-          : null,
-      reviewedTodayCount: (row['reviewed_today_count'] as num?)?.toInt() ?? 0,
-      dueCount: (row['due_count'] as num?)?.toInt() ?? 0,
-      unsolvedReceivedCount:
-          (row['unsolved_received_count'] as num?)?.toInt() ?? 0,
+      lastActivityDate: _date(row['last_activity_date']),
+      serverToday: _date(row['today']),
+      weekStart: _date(row['week_start']),
+      reviewedTodayCount: _int(row['reviewed_today_count']) ?? 0,
+      dueCount: _int(row['due_count']) ?? 0,
+      unsolvedReceivedCount: _int(row['unsolved_received_count']) ?? 0,
     );
   }
 }
@@ -159,6 +247,42 @@ class DailyStateRepository {
   // YOK ve olmayacak — sınırı sunucu uyguluyor, `analyze-question` OpenAI'ya
   // gitmeden önce. İstemcinin önden dallanması, kotanın iki yerde yaşadığı
   // yanılsamasını üretirdi.
+  //
+  // `hasAi` getter'ı da SİLİNDİ (Task 10): tek çağıranı `today_screen`in
+  // açıklama sayfasıydı ve artık sayıya değil `aiState`e dallanıyor. Bir
+  // sayıya bakıp "hak var mı" diye karar vermek, durumun tek kaynağının
+  // sunucu olduğu kuralını yeniden deliyordu.
+
+  /// Ödüllü reklam için sunucudan bir nonce alır (AdMob `customData`).
+  ///
+  /// Dönüş `null` ise reklam yolu AÇILMIYOR — ve bu bir hata değil: sunucu
+  /// "işe yaramaz" demiş olabilir (ay dolu, premium, anonim, zaten hak var,
+  /// günlük tavan dolu). Çağıran sessizce vazgeçiyor, kullanıcıya hata
+  /// göstermiyor.
+  ///
+  /// ÖDÜL BU ÇAĞRIYLA VERİLMİYOR. Nonce yalnızca AdMob'a gidecek bir
+  /// belirteç; hakkı Google'ın imzalı sunucu geri çağrısı veriyor
+  /// (`supabase/functions/ad-reward`). İstemci "izledim" diyemiyor.
+  Future<String?> startAdReward() async {
+    try {
+      final dynamic res = await _client.rpc<dynamic>('start_ad_reward');
+      final Map<String, dynamic>? row = switch (res) {
+        final List<dynamic> l when l.isNotEmpty =>
+          (l.first as Map<dynamic, dynamic>).cast<String, dynamic>(),
+        final Map<dynamic, dynamic> m => m.cast<String, dynamic>(),
+        _ => null,
+      };
+      if (row == null || row['ok'] != true) {
+        debugPrint('reklam ödülü başlatılmadı: ${row?['reason']}');
+        return null;
+      }
+      final String? nonce = row['ad_nonce'] as String?;
+      return (nonce == null || nonce.isEmpty) ? null : nonce;
+    } catch (e) {
+      debugPrint('reklam ödülü başlatılamadı: $e');
+      return null;
+    }
+  }
 
   Future<AgeStatus?> ageStatus() async {
     try {

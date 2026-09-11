@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/social.dart';
 
-/// Oyunlaştırma durumu: XP, seviye, can, seri, elmas ve günlük tekrar
+/// Oyunlaştırma durumu: XP, seviye, seri ve günlük tekrar
 /// ilerlemesi. Ekranlar arasında paylaşılır (tekil [ChangeNotifier]).
 ///
 /// XP / seri / haftalık XP artık SUNUCUDA hesaplanıyor: cevaplar `submit_*`
@@ -17,10 +17,14 @@ class GameProgress extends ChangeNotifier {
   int streak = 0;
 
   // `hearts` ve `gems` buradan KALDIRILDI. İkisi de hiçbir yolla
-  // değişmiyordu: can hep 5, elmas hep 0 görünüyordu ve arayüzde bunları
-  // göstermek çalışmayan bir mekaniği varmış gibi sunmaktı. Günlük AI hakkı
-  // (can) ve elmas ödülü sunucuda kurulduğunda `my_daily_state` üzerinden
-  // gelecekler — istemcide tutulan bir sayaç olarak değil.
+  // değişmiyordu: hak hep 5, elmas hep 0 görünüyordu ve arayüzde bunları
+  // göstermek çalışmayan bir mekaniği varmış gibi sunmaktı. Analiz hakkı ve
+  // elmas ödülü `my_daily_state` üzerinden geliyor — istemcide tutulan bir
+  // sayaç olarak değil.
+  //
+  // Task 10: `profiles.hearts` sütunu 0047'de düşürüldü ve kalp metaforu
+  // arayüzden tümüyle kalktı (kayan pencere modeli ona uymuyor). Elmas v1'de
+  // GİZLİ ama silinmedi — bkz. `lib/state/features.dart`.
 
   /// Ligi sunucu belirler: her hafta grubunda ilk 5'e girersen yükselirsin.
   /// XP eşiğiyle lig atlama YOK.
@@ -32,8 +36,11 @@ class GameProgress extends ChangeNotifier {
   static const int dailyReviewCap = 20;
   static const int dailyGoalBonus = 50;
 
-  // Seviye sistemi kaldırıldı: ilerlemeyi toplam XP ve lig gösteriyor,
-  // ayrıca bir "seviye" sayısı aynı şeyi üçüncü kez söylüyordu.
+  // SEVİYE BURADA TUTULMUYOR ama sistem VAR: `DailyState.level` ve
+  // `SessionResult.level` XP'den saf fonksiyonla türetiyor (1000 XP = 1
+  // seviye) ve oturum sonu ekranı ile HUD onu gösteriyor. Bir sayaç sütunu
+  // açmaya gerek yok; bu yorum eskiden "seviye sistemi kaldırıldı" diyordu
+  // ve bayattı (Task 10'da düzeltildi).
 
   // ------------------------------------------------------------------ seri
   // Seri, soru çözülen gün sayısıdır. Art arda günlerde çözülürse büyür,

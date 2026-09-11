@@ -21,7 +21,7 @@ class AppColors {
   static const Color blueDark = Color(0xFF1899D6);
   static const Color blueBg = Color(0xFFDDF4FF);
 
-  // Kırmızı — can / yanlış
+  // Kırmızı — yanlış / uyarı
   static const Color red = Color(0xFFFF4B4B);
   static const Color redDark = Color(0xFFEA2B2B);
   static const Color redBg = Color(0xFFFFDFE0);

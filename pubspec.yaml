@@ -46,6 +46,24 @@ dependencies:
   # yalnızca pubspec.lock'taki `dependency` alanı `transitive` -> `direct main`
   # oluyor. O satır da güncellendi.
   url_launcher: ^6.3.2
+  # Odullu reklam (Task 10). Tek reklam bicimi var: kullanici ISTEYEREK izliyor
+  # ve karsiliginda bir analiz hakki kazaniyor. Interstitial, banner ve acilis
+  # reklami YOK ve eklenmeyecek.
+  #
+  # NEDEN AdMob: tek entegrasyonla iki platform, ve sunucu tarafi dogrulama
+  # (SSV) yerlesik. SSV bu ozelligin kilit sarti — odul istemcinin "izledim"
+  # demesiyle degil, Google'in sunucusundan gelen ECDSA imzali bir geri
+  # cagriyla veriliyor (bkz. supabase/functions/ad-reward). Diger aglarda S2S
+  # geri cagri ya yok ya mediation katmanina bagli.
+  #
+  # GECISLI OLARAK UC YERLI EKLENTI GETIRIYOR: webview_flutter,
+  # webview_flutter_android, webview_flutter_wkwebview. docs/hukuki-metinler.md
+  # §1.11'deki "istemciden Supabase, Firebase ve Sentry disinda hicbir dis HTTP
+  # cikisi yok" iddiasi bu yuzden de yeniden yazildi.
+  #
+  # WEB DESTEGI YOK. Bu depoda `web/` var; reklam servisi kIsWeb'de hicbir sey
+  # yapmadan "reklam yok" donuyor (bkz. lib/services/ads/ad_service.dart).
+  google_mobile_ads: ^9.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

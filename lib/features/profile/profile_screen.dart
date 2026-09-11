@@ -12,6 +12,7 @@ import '../../state/app_settings.dart';
 import '../../state/game_progress.dart';
 import '../../state/refresh_bus.dart';
 import '../../state/user_profile.dart';
+import '../../state/features.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/kit/kimo_button.dart';
@@ -374,13 +375,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(width: Gap.md),
           Expanded(child: Text(league.label, style: t.bodyStrong)),
-          if (_state != null)
-            StatusBadge(
-              label: '${_state!.gems}',
-              tone: BadgeTone.mastered,
-            )
-          else
-            KimoIcon(KimoIcons.gem, size: 18, color: c.inkMuted),
+          // ELMAS v1'DE GİZLİ (Task 10). HER İKİ DAL kapılanıyor: yalnızca
+          // rozeti gizleseydik, durum okunamadığında `else` dalındaki çıplak
+          // elmas ikonu lig satırında kalırdı — kaldırdığımız şeyin yerinde
+          // bir boşluk değil, anlamsız bir simge dururdu.
+          if (Features.gemsVisible)
+            if (_state != null)
+              StatusBadge(
+                label: '${_state!.gems}',
+                tone: BadgeTone.mastered,
+              )
+            else
+              KimoIcon(KimoIcons.gem, size: 18, color: c.inkMuted),
         ],
       ),
     );

@@ -151,7 +151,6 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
     super.dispose();
   }
 
-  bool get _outOfCredit => widget.analysis?.outOfCredit ?? false;
 
   /// Ağaç artık sunucudan geliyor ve tazelenince değişebiliyor; bu yüzden
   /// her okuma repository'den (bkz. `CurriculumRepository`).
@@ -333,10 +332,6 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
                     Gap.screen, 0, Gap.screen, Gap.screen),
                 children: <Widget>[
                   if (widget.imageBytes != null) _photo(context, l),
-                  if (_outOfCredit) ...<Widget>[
-                    const SizedBox(height: Gap.md),
-                    _creditNotice(context, l),
-                  ],
                   const SizedBox(height: Gap.md),
                   _kimoLine(context, l),
                   const SizedBox(height: Gap.md),
@@ -457,26 +452,6 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
 
   /// Hak bittiğinde gösterilen bilgi. Geri sayım YOK — tasarım kararı:
   /// "Arayüzde geri sayım yok, kalan hak gösterilir."
-  Widget _creditNotice(BuildContext context, L10n l) {
-    final KimoColors c = context.c;
-    final KimoTypography t = context.t;
-    return KimoCard(
-      color: c.honeyTint,
-      elevated: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            l.creditExhaustedTitle,
-            style: t.bodyStrong.copyWith(color: c.honeyText),
-          ),
-          const SizedBox(height: Gap.xs),
-          Text(l.creditExhaustedBody, style: t.caption),
-        ],
-      ),
-    );
-  }
-
   Widget _kimoLine(BuildContext context, L10n l) {
     final KimoTypography t = context.t;
     return Row(

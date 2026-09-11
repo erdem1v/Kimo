@@ -16,8 +16,10 @@ import '../../state/user_profile.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/kimo/kimo.dart';
+import '../credit/credit_indicator.dart';
+import '../credit/credit_wall_screen.dart';
+import '../../services/ads/ad_service.dart';
 import '../../widgets/kit/kimo_button.dart';
-import '../../widgets/kit/kimo_chips.dart';
 import '../../widgets/kit/kimo_icons.dart';
 import '../../widgets/kit/kimo_surfaces.dart';
 import 'confirm_screen.dart';
@@ -62,10 +64,14 @@ class _CaptureScreenState extends State<CaptureScreen> {
   double? _aspect;
   bool _analyzing = false;
 
-  /// Bugün kalan yapay zekâ okutma hakkı. `null` = henüz okunmadı ya da
-  /// okunamadı; o durumda rozet GÖSTERİLMİYOR (yanlış bir sayı göstermektense
-  /// hiç göstermemek doğru).
-  int? _creditLeft;
+  /// Sunucudan gelen hak durumu. `null` = henüz okunmadı ya da okunamadı; o
+  /// durumda gösterge HİÇ ÇİZİLMİYOR (yanlış bir sayı göstermektense hiç
+  /// göstermemek doğru).
+  ///
+  /// İstemci bu sayıyı KENDİ ARTIRIP AZALTMIYOR: analiz yanıtından sonra
+  /// görünüm yeniden okunuyor. Yerel bir sayacı yamalamak, kotanın iki yerde
+  /// yaşadığı yanılsamasını üretirdi.
+  DailyState? _state;
 
   /// Analizden vazgeçildi mi. Yanıt geldiğinde bakılıyor: kullanıcı
   /// beklemekten vazgeçtiyse sonucu ONA RAĞMEN açmıyoruz.
@@ -85,6 +91,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
   void initState() {
     super.initState();
     _loadCredit();
+    // Reklamı ERKEN ısıt: kullanıcı fotoğrafı çekip analiz bitene kadar
+    // doluluk için bol zaman kalıyor, yani duvar genelde hazır reklamla
+    // açılıyor. Ateşle-unut; başarısızlık sessiz.
+    unawaited(AdService.instance.preload());
   }
 
   @override
@@ -93,12 +103,12 @@ class _CaptureScreenState extends State<CaptureScreen> {
     super.dispose();
   }
 
-  /// Kalan hakkı okur. Geri sayım YOK — tasarım kararı: yalnızca kalan sayı,
-  /// tükenince "yarın yenilenecek".
+  /// Hak durumunu okur. Geri sayım YOK — yalnızca durum ve (varsa) sonraki
+  /// hakkın saati; ikisini de sunucu söylüyor.
   Future<void> _loadCredit() async {
     final DailyState? state = await dailyStateRepository.read();
     if (!mounted || state == null) return;
-    setState(() => _creditLeft = state.aiLeft);
+    setState(() => _state = state);
   }
 
   Future<void> _pick(ImageSource source) async {
@@ -219,11 +229,18 @@ class _CaptureScreenState extends State<CaptureScreen> {
       // geri dönülürse aynı fotoğrafla devam etmek ikinci bir çağrı
       // gerektirmesin (hak çoktan harcandı).
       _pendingAnalysis = result;
-      // Sunucu her yanıtta kalan hakkı bildiriyor; istemcide ayrıca saymıyoruz.
-      if (result.creditRemaining != null) _creditLeft = result.creditRemaining;
-      if (result.outOfCredit) _creditLeft = 0;
     });
+    // Sunucu durumu yeniden okunuyor; istemcide sayı yamalanmıyor.
+    unawaited(_loadCredit());
     if (_cancelled) return;
+    // HAK BİTTİYSE ÖNCE DUVAR. Eskiden doğrudan onay ekranı açılıyordu ve
+    // "hak bitti" orada bir uyarı kartıydı; üç yolu (reklam / Plus / elle
+    // giriş) eşit okunurlukta göstermek için tasarım onu ayrı bir ekrana
+    // çıkardı. Kaydetme yolu duvarda BİRİNCİL eylem, yani kapanmıyor.
+    if (result.outOfCredit) {
+      unawaited(_openWallThen(bytes, result));
+      return;
+    }
     // Bilinçli ateşle-unut: onay ekranının kapanışını bu fonksiyon beklemiyor;
     // dönüş değeri `_openConfirm` içinde işleniyor.
     unawaited(_openConfirm(bytes, result));
@@ -288,6 +305,45 @@ class _CaptureScreenState extends State<CaptureScreen> {
     });
     _kimo.scanning = false;
   }
+
+  /// Duvarı açar; kullanıcı elle girişi seçerse AYNI fotoğrafla forma geçer.
+  ///
+  /// `dismissed` dalında hiçbir şey kapanmıyor: fotoğraf ekranda kalıyor ve
+  /// `_photoArea` "Devam et" düğmesini çizmeye devam ediyor (bkz. oradaki
+  /// yorum — o satır bu değişmez için TAŞIYICI).
+  Future<void> _openWallThen(
+      Uint8List? bytes, QuestionAnalysis? analysis) async {
+    final DailyState? state = _state ?? await dailyStateRepository.read();
+    if (!mounted) return;
+    if (state == null) {
+      // Durum okunamadıysa duvarı çizemeyiz — ama kaydetme yolu kapanmamalı,
+      // o yüzden doğrudan forma geçiyoruz.
+      unawaited(_openConfirm(bytes, analysis));
+      return;
+    }
+    final CreditWallOutcome? out =
+        await Navigator.of(context).push<CreditWallOutcome>(
+      MaterialPageRoute<CreditWallOutcome>(
+        builder: (_) => CreditWallScreen(state: state),
+      ),
+    );
+    if (!mounted) return;
+    switch (out) {
+      case CreditWallOutcome.manualEntry:
+        unawaited(_openConfirm(bytes, analysis));
+      case CreditWallOutcome.creditGranted:
+        // Hak geldi: aynı fotoğrafla yeniden analiz.
+        unawaited(_loadCredit());
+        if (bytes != null) unawaited(_analyze(bytes));
+      case CreditWallOutcome.dismissed:
+      case null:
+        unawaited(_loadCredit());
+        setState(() {});
+    }
+  }
+
+  /// Fotoğrafsız duvar (henüz kare çekilmemişken hak bitmişse).
+  Future<void> _openWall() => _openWallThen(null, null);
 
   Future<void> _openConfirm(Uint8List? bytes, QuestionAnalysis? analysis) async {
     final bool? saved = await Navigator.of(context).push<bool>(
@@ -394,11 +450,13 @@ class _CaptureScreenState extends State<CaptureScreen> {
               style: t.caption,
               textAlign: TextAlign.center,
             ),
-            if (_creditLeft != null) ...<Widget>[
+            if (creditIndicatorText(l, _state) != null) ...<Widget>[
               const SizedBox(height: Gap.lg),
-              StatusBadge(
-                label: l.creditLeft(_creditLeft!),
-                tone: _creditLeft! > 0 ? BadgeTone.neutral : BadgeTone.pending,
+              CreditIndicator(
+                state: _state,
+                onTap: (_state?.aiState?.isWall ?? false)
+                    ? () => unawaited(_openWall())
+                    : null,
               ),
             ],
           ],
@@ -474,7 +532,12 @@ class _CaptureScreenState extends State<CaptureScreen> {
           // edilince (ya da onay ekranından geri dönülünce) fotoğraf ekranda
           // kalıyor ama `_pickActions` artık çizilmediği için kaydetmeye/elle
           // girişe götüren HİÇBİR düğme kalmıyordu; tek çıkış "Yeniden çek"
-          // yani ikinci bir can harcamaktı.
+          // yani ikinci bir hak harcamaktı.
+          //
+          // TASK 10'DA BU SATIR AYRICA TAŞIYICI HÂLE GELDİ: hak bitince artık
+          // tam ekran bir duvar açılıyor ve kullanıcı onu KAPATABİLİYOR
+          // (`CreditWallOutcome.dismissed`). O dalda forma giden tek yol bu
+          // düğme. Kaldırılırsa duvarı kapatan kullanıcı çıkmazda kalır.
           KimoButton(
             label: l.actionContinue,
             onPressed: () => _openConfirm(_bytes, _pendingAnalysis),

@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'data/curriculum_repository.dart';
 import 'data/notification_lines.dart';
+import 'services/ads/ad_service.dart';
 import 'services/crash_service.dart';
 import 'services/notification_service.dart';
 import 'services/push_service.dart';
@@ -87,6 +88,16 @@ Future<void> _run() async {
     runApp(const ConfigErrorApp());
     return;
   }
+  // Ödüllü reklam SDK'sı (Task 10). Diğer hazırlık adımlarıyla aynı kural:
+  // `runApp`'i BLOKLAYAMAZ. Kendi içinde try/catch'li ve desteklenmeyen
+  // platformda (web, masaüstü, testler) hiçbir şey yapmadan dönüyor —
+  // `AdService` orada stub uygulamayı seçiyor.
+  //
+  // Reklam yolu açılmazsa hak duvarı reklam satırını hiç çizmiyor: hata yok,
+  // diyalog yok. Üç sessiz neden (doluluk, platform, yapılandırma) tek bir
+  // görünmeyen satıra düşüyor.
+  unawaited(AdService.instance.init());
+
   // Bildirim metinleri veritabanında; önbellek diskten okunur (ucuz, ağsız).
   // Tazeleme Supabase kurulduktan SONRA ve await EDİLMEDEN yapılır: ağ
   // beklemek ilk kareyi geciktirirdi, eski önbellek zaten iş görüyor.

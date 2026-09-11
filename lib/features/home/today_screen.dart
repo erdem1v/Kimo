@@ -11,6 +11,7 @@ import '../../models/mascot.dart';
 import '../../models/models.dart';
 import '../../services/notification_service.dart';
 import '../../services/sound_service.dart';
+import '../../state/features.dart';
 import '../../state/game_progress.dart';
 import '../../state/refresh_bus.dart';
 import '../../state/user_profile.dart';
@@ -24,6 +25,9 @@ import '../../widgets/kit/kimo_progress.dart';
 import '../../widgets/kit/kimo_surfaces.dart';
 import '../../widgets/mistake_style.dart';
 import '../capture/capture_screen.dart';
+import '../capture/confirm_screen.dart';
+import '../credit/credit_indicator.dart';
+import '../credit/credit_wall_screen.dart';
 import '../capture/pending_photos_screen.dart';
 import '../inbox/inbox_screen.dart';
 import '../practice/practice_screen.dart';
@@ -55,7 +59,7 @@ class _TodayScreenState extends State<TodayScreen> {
   /// Arkadaşlarından gelen, henüz çözülmemiş soru sayısı.
   int _incoming = 0;
 
-  /// Sunucudaki günlük durum (can, elmas, XP, seri). `null` = okunamadı;
+  /// Sunucudaki günlük durum (hak, elmas, XP, seri). `null` = okunamadı;
   /// o zaman ilgili HUD hapı GÖSTERİLMİYOR.
   DailyState? _state;
 
@@ -337,10 +341,17 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-  /// Üst şerit: seri · can · elmas.
+  /// Üst şerit: seri · analiz hakkı · (elmas) · seviye.
   ///
-  /// Can ve elmas yalnızca sunucudan OKUNABİLDİYSE görünüyor. Okunamadığında
+  /// Hak ve elmas yalnızca sunucudan OKUNABİLDİYSE görünüyor. Okunamadığında
   /// sıfır göstermek, gerçekten sıfır olmasıyla ayırt edilemezdi.
+  ///
+  /// KALP YOK (Task 10): hak göstergesi metin. Kayan pencerede hak zamanla
+  /// geri geliyor ve "2 hakkın kaldı · sonraki 14:30'da" bir ikonla
+  /// anlatılamıyor. `KimoIcons.heart` silindi.
+  ///
+  /// ELMAS v1'DE GİZLİ (`Features.gemsVisible`) — silinmedi, bkz.
+  /// `lib/state/features.dart`.
   Widget _hud(BuildContext context, L10n l) {
     final KimoColors c = context.c;
     final KimoTypography t = context.t;
@@ -359,22 +370,25 @@ class _TodayScreenState extends State<TodayScreen> {
         ),
         if (s != null) ...<Widget>[
           const SizedBox(width: Gap.sm),
-          HudPill(
-            icon: const KimoIcon(KimoIcons.heart),
-            background: c.honeyTint,
-            foreground: c.honeyText,
-            value: '${s.aiLeft}',
-            onTap: () => _showCreditSheet(context, l, s),
-            semanticLabel: l.creditLeft(s.aiLeft),
+          // `Flexible` + kırpma taşıyıcı: "Bu ay hakkın doldu · 1 Ekim'de
+          // yenilenir" 360dp'de sığmıyor ve `HudPill` bilerek `Expanded`
+          // döndürmüyor. Dokununca tam cümle sayfada açılıyor.
+          Flexible(
+            child: CreditIndicator(
+              state: s,
+              onTap: () => _showCreditSheet(context, l, s),
+            ),
           ),
-          const SizedBox(width: Gap.sm),
-          HudPill(
-            icon: const KimoIcon(KimoIcons.gem),
-            background: c.mintTint,
-            foreground: c.mintText,
-            value: '${s.gems}',
-            semanticLabel: l.hudGemsLabel(s.gems),
-          ),
+          if (Features.gemsVisible) ...<Widget>[
+            const SizedBox(width: Gap.sm),
+            HudPill(
+              icon: const KimoIcon(KimoIcons.gem),
+              background: c.mintTint,
+              foreground: c.mintText,
+              value: '${s.gems}',
+              semanticLabel: l.hudGemsLabel(s.gems),
+            ),
+          ],
         ],
         const Spacer(),
         if (s != null)
@@ -383,7 +397,38 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-  /// Can hapına dokununca açılan açıklama. Geri sayım YOK.
+  /// Hak duvarını açar ve sonucuna göre yol seçer.
+  ///
+  /// KAYDETME YOLU: `manualEntry` doğrudan elle giriş formuna götürüyor.
+  /// `dismissed` dalında bile bir şey kapanmıyor — kullanıcı Bugün ekranına
+  /// dönüyor ve alt çubuktaki kamera düğmesi yerinde duruyor.
+  Future<void> _openWall(DailyState s) async {
+    final CreditWallOutcome? out = await Navigator.of(context).push<CreditWallOutcome>(
+      MaterialPageRoute<CreditWallOutcome>(
+        builder: (_) => CreditWallScreen(state: s),
+      ),
+    );
+    if (!mounted) return;
+    switch (out) {
+      case CreditWallOutcome.manualEntry:
+        await Navigator.of(context).push<bool>(
+          MaterialPageRoute<bool>(
+            builder: (_) => const ConfirmMistakeScreen(),
+          ),
+        );
+        refreshBus.ping();
+      case CreditWallOutcome.creditGranted:
+        refreshBus.ping();
+      case CreditWallOutcome.dismissed:
+      case null:
+        break;
+    }
+  }
+
+  /// Hak göstergesine dokununca açılan açıklama. Geri sayım YOK.
+  ///
+  /// Hak bittiyse açıklamak yerine DUVARI açıyor: kullanıcı zaten "neden
+  /// bitti"yi değil "şimdi ne yapayım"ı soruyor.
   void _showCreditSheet(BuildContext context, L10n l, DailyState s) {
     sound.tap();
     final KimoTypography t = context.t;
@@ -404,12 +449,19 @@ class _TodayScreenState extends State<TodayScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(l.creditLeft(s.aiLeft), style: t.section),
+            Text(creditIndicatorText(l, s) ?? '', style: t.section),
             const SizedBox(height: Gap.sm),
-            Text(
-              s.hasAi ? l.creditExplain(s.aiQuota) : l.creditExhaustedBody,
-              style: t.body,
-            ),
+            Text(l.creditExplainBody, style: t.body),
+            if (s.aiState?.isWall ?? false) ...<Widget>[
+              const SizedBox(height: Gap.lg),
+              KimoButton(
+                label: l.creditWallSaveAction,
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  unawaited(_openWall(s));
+                },
+              ),
+            ],
           ],
         ),
       ),

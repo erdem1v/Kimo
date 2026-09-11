@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../../services/sound_service.dart';
+import '../../state/features.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/kimo/kimo.dart';
@@ -106,7 +107,21 @@ class _SessionEndScreenState extends State<SessionEndScreen> {
                   ],
                   const SizedBox(height: Gap.xl),
                   _stats(context, l, r),
-                  if (r.gemsAwarded > 0) ...<Widget>[
+                  // ELMAS v1'DE GİZLİ (Task 10). Kartın İÇERİĞİNİN TAMAMI
+                  // elmas (ikon + "+N elmas" + "sandığı aç"), o yüzden kart
+                  // BÜTÜN OLARAK çizilmiyor — kullanıcı boş bir sandık
+                  // açmıyor, açacak bir sandık görmüyor.
+                  //
+                  // GÜNLÜK HEDEFİN ÖDÜLÜ KAYBOLMUYOR: üstteki
+                  // `sessionGoalReached` satırı hedefin tamamlandığını
+                  // sandıktan bağımsız duyuruyor ve `_stats`in "+{xpGained}"
+                  // karosu günlük hedef XP'sini zaten içeriyor
+                  // (claim_daily_goal hem xp_awarded hem gems_awarded veriyor).
+                  //
+                  // `_openChest`/`_chest`/`_chestOpen` DOKUNULMADI: kapılı
+                  // daldan hâlâ referanslanıyorlar, yani ölü sembol yok ve
+                  // v2'de geri açmak tek satır.
+                  if (Features.gemsVisible && r.gemsAwarded > 0) ...<Widget>[
                     const SizedBox(height: Gap.md),
                     _chest(context, l, r),
                   ],
