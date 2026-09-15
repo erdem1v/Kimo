@@ -238,6 +238,13 @@ Bu turda çıkan üç hata sınıfı kalıcı kapıya bağlandı:
   ama dökümü ekranda yok.
 * **K6 · Dört persona görseli birbirine çok yakın.** Metinler net ayrışıyor;
   çizimler gösterim boyutunda yalnız küçük aksesuarlarla ayrılıyor.
+* **K8 · CI'da sürüm sabitlenmemiş bir eylem var.**
+  `supabase/setup-cli@v1` `version: latest` ile çağrılıyor ve en son sürümü
+  **GitHub API'sinden** çözüyor. Bu turda bir koşu tam da bu yüzden
+  `Failed to resolve latest Supabase CLI release: rate limit exceeded` ile
+  **5 saniyede** düştü; yeniden çalıştırınca geçti. Yani depo kodu doğruyken
+  CI kırmızı görünebiliyor. Sürümü sabitlemek hem bu takılmayı hem de CLI'ın
+  altımızdan sessizce değişmesini kapatır.
 * **K7 · Hata ayıklama derlemesinde `!semantics.parentDataDirty` iddiası
   akıyor.** Erişilebilirlik ağacı okunurken onlarca kez düşüyor. Yalnızca
   debug'da; ürün davranışını etkilemiyor, ama semantics ağacının bir yerde
