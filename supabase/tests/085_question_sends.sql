@@ -13,7 +13,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(12);
+select plan(27);
 
 select tests.create_supabase_user('alice');    -- gönderen
 select tests.create_supabase_user('bob');      -- alıcı
@@ -89,6 +89,181 @@ select is(
   (select count(*)::int from public.question_sends),
   0,
   'ilgisiz kullanıcı gönderileri göremiyor (mevcut RLS korundu)'
+);
+
+-- ==========================================================================
+-- Task 12 · P4 — NOT SINIRI, HIZ SINIRI, TEK ÇAĞRIDA GÖNDERİM (0081)
+-- ==========================================================================
+
+select tests.reset_role();
+
+-- ------------------------------------------------------------- katalog
+select has_column('public'::name, 'received_questions'::name,
+                  'sender_avatar_path'::name,
+                  'gelen kutusu görünümü gönderen avatarını taşıyor (n5)');
+select ok(has_function_privilege(
+            'authenticated',
+            'public.send_question_to_friends(uuid, uuid[], text)', 'EXECUTE'),
+          'toplu gönderim RPC''si istemciye açık');
+-- İstemci sayacı KENDİSİ artıramamalı; sarmalayıcının var olma sebebi bu.
+select ok(not has_function_privilege(
+            'authenticated', 'public.bump_rate_limit(text, int, text)', 'EXECUTE'),
+          'bump_rate_limit hâlâ istemciye KAPALI');
+
+-- --------------------------------------------------- not uzunluğu (VERİ KATMANI)
+-- Bu iddianın konusu sayı değil SINIRIN YERİ: eskiden sınır yalnızca
+-- istemcideki `maxLength` idi ve PostgREST'e doğrudan istek atan yol
+-- SINIRSIZDI.
+select throws_ok(
+  format($q$insert into public.question_sends (sender_id, receiver_id, mistake_id, note)
+             select %L, %L, m.id, repeat('x', 251)
+               from public.mistakes m where m.user_id = %L limit 1$q$,
+         tests.get_supabase_uid('alice'), tests.get_supabase_uid('mallory'),
+         tests.get_supabase_uid('alice')),
+  '23514', null,
+  '251 karakterlik not VERİTABANINDA reddediliyor'
+);
+
+-- ------------------------------------------------------------- fikstür
+-- İki yeni soru: biri tekrar yasağını, biri arkadaş başına tavanı sınamak için.
+insert into public.mistakes (user_id, subject, concept, mistake_type, photo_path)
+values (tests.get_supabase_uid('alice'), 'Fizik', 'Basınç', 'islem_hatasi',
+        tests.get_supabase_uid('alice')::text || '/q2.jpg'),
+       (tests.get_supabase_uid('alice'), 'Fizik', 'Isı', 'islem_hatasi',
+        tests.get_supabase_uid('alice')::text || '/q3.jpg');
+
+-- Sınırları DÜŞÜRÜP sınıyoruz, 3 çağrı yapıp değil (100_ai_quota deseni).
+insert into public.app_config (key, value) values ('qsend_daily', '2')
+on conflict (key) do update set value = excluded.value;
+
+-- ------------------------------------------------------------- davranış
+select tests.authenticate_as('alice');
+
+select is(
+  (select sent from public.send_question_to_friends(
+     (select id from public.mistakes
+       where user_id = tests.get_supabase_uid('alice')
+         and concept = 'Basınç' limit 1),
+     array[tests.get_supabase_uid('bob')], 'kolay gelsin')),
+  1,
+  'arkadaşa gönderim TEK çağrıda yazılıyor'
+);
+
+select is(
+  (select sent from public.send_question_to_friends(
+     (select id from public.mistakes
+       where user_id = tests.get_supabase_uid('alice')
+         and concept = 'Basınç' limit 1),
+     array[tests.get_supabase_uid('bob')], null)),
+  0,
+  'AYNI soru aynı kişiye 30 gün içinde TEKRAR gitmiyor'
+);
+
+select is(
+  (select blocked from public.send_question_to_friends(
+     (select id from public.mistakes
+       where user_id = tests.get_supabase_uid('alice')
+         and concept = 'Isı' limit 1),
+     array[tests.get_supabase_uid('bob')], null)),
+  1,
+  'arkadaş başına GÜNLÜK tavan: aynı kişiye ikinci soru gitmiyor'
+);
+
+select is(
+  (select sent from public.send_question_to_friends(
+     (select id from public.mistakes
+       where user_id = tests.get_supabase_uid('alice')
+         and concept = 'Isı' limit 1),
+     array[tests.get_supabase_uid('mallory')], null)),
+  0,
+  'ARKADAŞ OLMAYANA gitmiyor — kontrol RPC gövdesinde (definer RLS''i atlıyor)'
+);
+
+-- ==================================================== SAHİPLİK (definer/RLS)
+-- `send_question_to_friends` SECURITY DEFINER, yani `question_sends` ve
+-- `mistakes` üzerindeki RLS DEĞERLENDİRİLMİYOR (depo bunu 0062:517 ve
+-- 0063:79-81'de zaten yazıyor; hiçbir yerde `force row level security` yok).
+-- İlk yazımda politikanın altı koşulu "tek doğruluk kaynağı" sayılıp gövdede
+-- TEKRARLANMAMIŞTI: `p_mistake` keyfi bir uuid olduğu için kullanıcı
+-- BAŞKASININ sorusunu arkadaşlarına gönderebiliyordu.
+--
+-- BU DOSYANIN EN ÖNEMLİ İDDİASI BU: başkasının satırı gönderilemiyor.
+select tests.reset_role();
+insert into public.friendships (requester_id, addressee_id, status)
+values (tests.get_supabase_uid('bob'), tests.get_supabase_uid('mallory'), 'accepted')
+on conflict do nothing;
+select tests.authenticate_as('bob');
+select is(
+  (select sent from public.send_question_to_friends(
+     (select id from public.mistakes
+       where user_id = tests.get_supabase_uid('alice') limit 1),
+     array[tests.get_supabase_uid('mallory')], null)),
+  0,
+  'BAŞKASININ sorusu gönderilemiyor — sahiplik gövdede zorlanıyor'
+);
+select is(
+  (select reason from public.send_question_to_friends(
+     (select id from public.mistakes
+       where user_id = tests.get_supabase_uid('alice') limit 1),
+     array[tests.get_supabase_uid('mallory')], null)),
+  'not_sendable',
+  'red sebebi ayrımlanmadan "not_sendable" dönüyor'
+);
+select tests.reset_role();
+select tests.authenticate_as('alice');
+
+select is(
+  (select reason from public.send_question_to_friends(
+     (select id from public.mistakes
+       where user_id = tests.get_supabase_uid('alice')
+         and concept = 'Isı' limit 1),
+     array[tests.get_supabase_uid('alice')], null)),
+  'none',
+  'kendine gönderim sayılmıyor'
+);
+
+select throws_ok(
+  format($q$select * from public.send_question_to_friends(
+              (select id from public.mistakes where user_id = %L limit 1),
+              array[%L]::uuid[], repeat('y', 251))$q$,
+         tests.get_supabase_uid('alice'), tests.get_supabase_uid('bob')),
+  '22023', null,
+  'RPC 250 karakteri aşan notu reddediyor (istemciden ÖNCE sunucu)'
+);
+
+select throws_ok(
+  format($q$select * from public.send_question_to_friends(
+              (select id from public.mistakes where user_id = %L limit 1),
+              (select array_agg(gen_random_uuid()) from generate_series(1, 21)))$q$,
+         tests.get_supabase_uid('alice')),
+  '22023', null,
+  'tek çağrıda 20''den fazla alıcı reddediliyor'
+);
+
+-- Günlük tavan gerçekten bağlıyor mu: tavan 2, iki gönderim yapıldı.
+select tests.reset_role();
+insert into public.friendships (requester_id, addressee_id, status)
+values (tests.get_supabase_uid('alice'), tests.get_supabase_uid('mallory'), 'accepted');
+select tests.authenticate_as('alice');
+
+select is(
+  (select reason from public.send_question_to_friends(
+     (select id from public.mistakes
+       where user_id = tests.get_supabase_uid('alice')
+         and concept = 'Isı' limit 1),
+     array[tests.get_supabase_uid('mallory')], null)),
+  'daily_limit',
+  'GÜNLÜK tavan dolunca kalan alıcılar denenmiyor'
+);
+
+-- Başarısızlık İSTİSNA DEĞİL: sayaç geri alınmadı, yani sınır gerçekten
+-- bağlıyor (istisna olsaydı işlem geri alınır ve sayaç sıfırlanırdı).
+select tests.reset_role();
+select ok(
+  (select n from public.rate_limits
+    where user_id = tests.get_supabase_uid('alice')
+      and bucket = 'qsend') >= 2,
+  'sayaç işlemişti — başarısızlık istisna atmadığı için geri alınmadı'
 );
 
 select * from finish();

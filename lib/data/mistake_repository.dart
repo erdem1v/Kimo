@@ -200,7 +200,16 @@ class MistakeRepository {
   static const int signedUrlTtlSeconds = 600;
 
   /// Yeni hata ekler; fotoğraf varsa önce Storage'a yükler.
-  Future<void> add({
+  /// Yeni hata kaydı ekler ve **satırın kimliğini** döndürür.
+  ///
+  /// KİMLİK NEDEN DÖNÜYOR (Task 12 · P4): Tur 7 · n5'in "yeni soru çek →
+  /// doğrudan gönder" yolu kaydedilen sorunun kimliğine ihtiyaç duyuyor.
+  /// Alternatif "kaydettikten sonra en yeniyi yeniden çek" olurdu ve o, iki
+  /// eşzamanlı kayıtta yanlış soruyu gönderebilirdi.
+  ///
+  /// `insert(...).select('id').single()` ek bir tur atmıyor: PostgREST aynı
+  /// istekte `Prefer: return=representation` ile satırı döndürüyor.
+  Future<String?> add({
     required String subject,
     required String concept,
     MistakeType? type,
@@ -226,7 +235,8 @@ class MistakeRepository {
           );
     }
 
-    await _client.from('mistakes').insert(<String, dynamic>{
+    final Map<String, dynamic> inserted =
+        await _client.from('mistakes').insert(<String, dynamic>{
       'subject': subject,
       'concept': concept,
       // İsteğe bağlı: kullanıcı sebep seçmediyse null gider.
@@ -240,7 +250,8 @@ class MistakeRepository {
       'exam': (exam == null || exam.isEmpty) ? null : exam,
       'is_public': isPublic,
       'extra_concepts': extraConcepts.isEmpty ? null : extraConcepts,
-    });
+    }).select('id').single();
+    final String? newId = inserted['id'] as String?;
     // İlk vadeyi (aynı gün +3 saat) ve tarih gölgesini DB tetikleyicisi atar
     // (0049); photo_scan da tetikleyiciyle 'pending' başlar (0050).
 
@@ -258,6 +269,7 @@ class MistakeRepository {
         }),
       );
     }
+    return newId;
   }
 
   /// Bir tekrar sonucunu ([correct]) uygular: planı (adım/tarih/leech/mastered)
@@ -396,11 +408,15 @@ class MistakeRepository {
             .toList()
         : <QuestionOption>[];
 
-    // Kalan hak HER YANITTA geliyor ve HER YANITTA harcanmış oluyor —
-    // okunamayan bir fotoğrafta da. Eskiden yalnızca `ok` dalında parse
+    // Kalan hak HER YANITTA geliyor. Eskiden yalnızca `ok` dalında parse
     // ediliyordu, yani başarısız analizden sonra arayüzdeki sayı eski kalıyor
     // ve kullanıcı harcadığı hakkı göremiyordu.
+    //
+    // TASK 12: okunamayan fotoğrafta hak artık HARCANMIYOR — sunucu iade
+    // ediyor (0083) ve `refunded` ile söylüyor. `remaining` de iade
+    // SONRASININ değeri, yani ikisi tutarlı.
     final int? remaining = (data['remaining'] as num?)?.toInt();
+    final bool refunded = data['refunded'] == true;
 
     final bool ok =
         readable && hasQuestion && hasOptions && options.isNotEmpty;
@@ -416,6 +432,7 @@ class MistakeRepository {
         concept: konu.isEmpty ? null : konu,
         conceptValid: data['konu_valid'] == true,
         creditRemaining: remaining,
+        refunded: refunded,
       );
     }
 
@@ -435,7 +452,8 @@ class MistakeRepository {
         ok: false,
         options: <QuestionOption>[],
         failure: failure,
-        creditRemaining: remaining);
+        creditRemaining: remaining,
+        refunded: refunded);
   }
 
   /// Sunucunun "konu ağaçta yok" hatası (göç 0071).

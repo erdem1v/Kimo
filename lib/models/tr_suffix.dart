@@ -110,6 +110,18 @@ String? trLocativeMonthDay(DateTime? date) {
   return "${date.day} ${m[0]}'${m[1]}";
 }
 
+/// Istanbul takvim günü → `1 Ekim` (EKSİZ).
+///
+/// [trLocativeMonthDay]'in kardeşi. Hap dar olduğu için ekli biçim orada
+/// taşınmıyor (Tur 7 · n1: hapta `1 Ekim`, sayfada `1 Ekim'de yenilenir`).
+/// Ay adı listesi ikisinde de aynı yerden okunuyor; ayrı bir listeye
+/// kopyalamak sessiz bir uyuşmazlık riski olurdu.
+String? trMonthDay(DateTime? date) {
+  if (date == null) return null;
+  if (date.month < 1 || date.month > 12) return null;
+  return '${date.day} ${_months[date.month - 1][0]}';
+}
+
 /// Sıra sayısının Türkçe kelimesi — "ikinci", "üçüncü"…
 ///
 /// Tasarım "Bu hafta **üçüncü** kez karşılaştık" yazıyor. ICU çoğul biçimi bunu

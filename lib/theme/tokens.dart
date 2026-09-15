@@ -355,6 +355,13 @@ class Sizes {
 
   /// Sekme çubuğu içerik yüksekliği.
   static const double navBar = 56;
+
+  /// HUD hapı yüksekliği (seri · analiz hakkı · seviye).
+  ///
+  /// Tur 7 · n1: ÜÇÜ DE aynı yükseklikte olmalı. Eskiden yükseklik içeriğe
+  /// bağlıydı ve hak hapı metin uzunluğuna göre komşularından farklı
+  /// ölçülebiliyordu.
+  static const double hudPill = 36;
 }
 
 /// Hareket süreleri. Maskot süreleri `KimoTiming` içinde ayrı durur.
@@ -375,6 +382,13 @@ class Motion {
 
   /// Oturum sonu satırlarının arası.
   static const Duration stagger = Duration(milliseconds: 120);
+
+  /// Hak hapındaki kalbin nabzı (Tur 7 · n1). Tek yön; `reverse: true` ile
+  /// tam döngü 2 sn'ye çıkıyor — tasarımın `beat 2s` değeri.
+  static const Duration pulse = Duration(milliseconds: 1000);
+
+  /// Sayı ARTTIĞINDA oynayan tek seferlik büyüme (Tur 7 · n1).
+  static const Duration pop = Duration(milliseconds: 400);
 
   static const Curve enterCurve = Cubic(0.34, 1.4, 0.64, 1);
   static const Curve fillCurve = Cubic(0.32, 0.72, 0, 1);

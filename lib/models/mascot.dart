@@ -1,5 +1,13 @@
-/// Kimo'nun **ses tonu**. Persona ayrı bir karakter değil: maskot her zaman
-/// aynı ayı, aynı yüz. Değişen yalnızca bildirimlerin nasıl yazıldığı.
+import '../widgets/kimo/kimo_pose.dart';
+
+/// Kimo'nun **ses tonu ve aksesuarı**. Persona ayrı bir karakter DEĞİL: maskot
+/// her zaman aynı ayı, **aynı yüz**.
+///
+/// TASK 12: yüz aynı kaldı ama persona artık görünür — her personanın bir
+/// aksesuarı var (Tur 7 · n2). Task 04 `Mascot.emoji` ve `Mascot.color`u
+/// silerek personayı görünmez kılmıştı; o karar YÜZ düzeyinde korunuyor
+/// (kafa/kulak/göz/burun/ağız geometrisi dört varyantta birebir aynı),
+/// aksesuar düzeyinde tersine çevrildi.
 ///
 /// Bu dosya bilerek çıplak: görünen ad, tarif ve örnek cümle arayüz metnidir ve
 /// `app_tr.arb`'de durur (bkz. `features/onboarding/persona_card.dart`); bildirim
@@ -32,6 +40,18 @@ enum Mascot {
         'sanayi_ustasi' => Mascot.sanayiUstasi,
         'ceo' => Mascot.ceo,
         _ => null,
+      };
+
+  /// Personanın görsel aksesuarı.
+  ///
+  /// Eşleme burada duruyor çünkü `Mascot` personanın KİMLİĞİ, `KimoAccessory`
+  /// ise çizim katmanının adı; ikisini tek enum yapmak maskot widget'ını
+  /// veri katmanına bağlardı.
+  KimoAccessory get accessory => switch (this) {
+        Mascot.evHanimi => KimoAccessory.anac,
+        Mascot.arabeskci => KimoAccessory.arabeskci,
+        Mascot.sanayiUstasi => KimoAccessory.usta,
+        Mascot.ceo => KimoAccessory.ceo,
       };
 
   /// Seçim yapılmamışsa kullanılan ton. Sunucudaki `send_push`'un

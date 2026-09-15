@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../data/daily_state_repository.dart';
+import '../../data/friend_repository.dart';
 import '../../data/mistake_repository.dart';
 import '../../data/photo_queue.dart';
 import '../../data/curriculum_repository.dart';
@@ -131,6 +132,16 @@ class _TodayScreenState extends State<TodayScreen> {
         );
       }
 
+      // ORTAK SERİ AKŞAM HATIRLATMASINA KATILIYOR (Tur 7 · n6): ayrı bir
+      // bildirim açılmıyor. Bayrak kapalıysa çağrı da yapılmıyor.
+      int pairStreak = 0;
+      if (state?.pairStreakEnabled ?? false) {
+        final List<PairStreak> pairs = await pairStreakRepository.mine();
+        for (final PairStreak p in pairs) {
+          if (p.streak > pairStreak) pairStreak = p.streak;
+        }
+      }
+
       unawaited(
         notifications.planDay(
           enabled: userProfile.notifyEnabled,
@@ -138,6 +149,7 @@ class _TodayScreenState extends State<TodayScreen> {
           dueCount: dueTotal,
           streak: gameProgress.currentStreak,
           activeToday: gameProgress.activeToday,
+          pairStreak: pairStreak,
         ),
       );
 
@@ -343,12 +355,20 @@ class _TodayScreenState extends State<TodayScreen> {
 
   /// Üst şerit: seri · analiz hakkı · (elmas) · seviye.
   ///
+  /// Üç hap da [Sizes.hudPill] yüksekliğinde (Tur 7 · n1): eskiden yükseklik
+  /// içeriğe bağlıydı ve hak hapı metin uzunluğuna göre komşularından farklı
+  /// ölçülebiliyordu.
+  ///
   /// Hak ve elmas yalnızca sunucudan OKUNABİLDİYSE görünüyor. Okunamadığında
   /// sıfır göstermek, gerçekten sıfır olmasıyla ayırt edilemezdi.
   ///
-  /// KALP YOK (Task 10): hak göstergesi metin. Kayan pencerede hak zamanla
-  /// geri geliyor ve "2 hakkın kaldı · sonraki 14:30'da" bir ikonla
-  /// anlatılamıyor. `KimoIcons.heart` silindi.
+  /// KALP GERİ GELDİ (Task 12 · Tur 7 · n1): TEK kalp, yanında rakam. Task 10
+  /// on iki kalp çizmeyi reddetmişti ("kalan hak sayısı kadar tekrarlanır");
+  /// tekrar kalktığı için o itirazın konusu da kalktı. Cümle artık hapta
+  /// değil, dokununca açılan sayfada ve ekran okuyucuda.
+  ///
+  /// Task 10'un İKİNCİ yarısı yürürlükte: eski kelime arayüz metinlerine
+  /// dönmedi ve onu koruyan CI kapısı sökülmedi.
   ///
   /// ELMAS v1'DE GİZLİ (`Features.gemsVisible`) — silinmedi, bkz.
   /// `lib/state/features.dart`.

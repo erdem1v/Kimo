@@ -124,6 +124,13 @@ interface Credit {
   monthResetsOn: string | null;
   adRewardsLeft: number;
   adOffer: boolean;
+  /**
+   * Çağrı defteri satırının kimliği — iade için (0083).
+   *
+   * `null` yalnızca hak verilmediğinde: o durumda zaten satır yazılmadı,
+   * yani iade edilecek bir şey de yok.
+   */
+  callId: number | null;
 }
 
 /**
@@ -152,7 +159,68 @@ async function consumeCredit(
     monthResetsOn: (row?.ai_month_resets_on as string | null) ?? null,
     adRewardsLeft: Number(row?.ad_rewards_left ?? 0),
     adOffer: row?.ad_offer === true,
+    callId: row?.call_id == null ? null : Number(row.call_id),
   };
+}
+
+/**
+ * Harcanan hakkı geri verir (0083).
+ *
+ * ÜRÜN KURALI (Tur 7 · n4): "Hak sayımı YALNIZCA OKUNABİLEN fotoğraflar için
+ * düşer." `consume_ai_use` OpenAI'ya gitmeden ÖNCE koştuğu için okunamayan
+ * fotoğrafın hakkı ancak İADEYLE geri gelebiliyor.
+ *
+ * `capped = false` ALTYAPI hataları için: 5xx ya da ayrıştırma hatası
+ * kullanıcının hatası değil, bu yüzden günlük iade sınırına yazılmıyor.
+ *
+ * İKİ AYRI RPC, BİLEREK. Tavansız iade `authenticated`'a AÇILAMAZ: ilk
+ * yazımda `refund_ai_use(p_call_id, p_capped)` istemciye açıktı ve `p_capped`
+ * tamamen istemcinin elindeydi — PostgREST'e `{"p_capped": false}` gönderen
+ * bir istemci günlük tavanı atlayıp kendi bütün çağrılarını iade edebiliyor,
+ * yani aylık cap'i (sert maliyet tavanı) geçersiz kılıyordu.
+ *   * tavanlı  → `refund_ai_use(bigint)`, KULLANICININ JWT'siyle.
+ *   * tavansız → `refund_ai_use_infra(text, bigint)`, `anon` + paylaşılan sır.
+ * "Bu bizim hatamızdı" diyebilecek tek taraf sunucu; sır onu kanıtlıyor.
+ *
+ * DÖNÜŞ DEĞERİ YUTULMUYOR: RPC `false` dönebilir (tavan dolu, satır zaten
+ * iade edilmiş, sır yok) ve o durumda kullanıcıya "iade edildi" demek yalan
+ * olurdu. `false` dönüyoruz, çağıran `refunded` bayrağını ona göre kuruyor.
+ *
+ * SESSİZ BAŞARISIZLIK BİLİNÇLİ: iade edilemezse kullanıcı hakkını kaybediyor
+ * ama analizi de almış olmuyor — yanıtı bir iade hatası yüzünden 500'e
+ * çevirmek daha kötü olurdu. Günlüğe yazılıyor.
+ */
+async function refundCredit(
+  authHeader: string,
+  callId: number | null,
+  capped: boolean,
+): Promise<boolean> {
+  if (callId == null) return false;
+  try {
+    let out: unknown;
+    if (capped) {
+      out = await rpc(authHeader, "refund_ai_use", { p_call_id: callId });
+    } else {
+      const secret = Deno.env.get("AI_REFUND_SECRET");
+      if (!secret) {
+        // Sır girilmemişse tavansız yol YOK. Tavanlıya düşmek, altyapı
+        // hatasını kullanıcının bütçesine yazmak olurdu; iade etmemek daha
+        // dürüst ve günlüğe yazılıyor.
+        console.error("[analyze-question] AI_REFUND_SECRET yok — altyapı iadesi atlandı");
+        return false;
+      }
+      const anon = Deno.env.get("SUPABASE_ANON_KEY");
+      if (!anon) throw new Error("SUPABASE_ANON_KEY tanımlı değil");
+      out = await rpc(`Bearer ${anon}`, "refund_ai_use_infra", {
+        p_secret: secret,
+        p_call_id: callId,
+      });
+    }
+    return out === true;
+  } catch (e) {
+    console.error(`[analyze-question] hak iade edilemedi (${callId}): ${e}`);
+    return false;
+  }
 }
 
 /** Kota alanlarını yanıt gövdesine yazar — iki dal aynı sözlüğü kullanıyor. */
@@ -194,6 +262,11 @@ async function sha256Hex(text: string): Promise<string> {
 }
 
 Deno.serve(async (req: Request) => {
+  // DIŞ KAPSAMDA, bilinçli: beklenmedik bir hatada hakkı iade edebilmek için
+  // `catch` bloğunun bunlara erişmesi gerekiyor. `try` içinde tanımlanırsa
+  // kapsam dışında kalır ve iade yolu sessizce ölür.
+  let refundAuth: string | null = null;
+  let refundCallId: number | null = null;
   try {
     const apiKey = Deno.env.get("OPENAI_API_KEY");
     if (!apiKey) return deny(500, "OPENAI_API_KEY tanımlı değil");
@@ -202,6 +275,7 @@ Deno.serve(async (req: Request) => {
     // yalnızca kullanıcıyı RPC'ye taşımak için okunuyor.
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return deny(401, "Authorization başlığı yok");
+    refundAuth = authHeader;
 
     const body = await req.json().catch(() => ({}));
     const imageBase64 = body.imageBase64;
@@ -309,6 +383,7 @@ Deno.serve(async (req: Request) => {
     } catch (e) {
       return deny(500, `hak tüketilemedi: ${e}`);
     }
+    refundCallId = credit.callId;
 
     if (!credit.allowed) {
       // 200 ve açık bir gövde: bu bir hata değil, ürün durumu. İstemci hak
@@ -461,6 +536,10 @@ Deno.serve(async (req: Request) => {
     });
 
     if (!resp.ok) {
+      // ALTYAPI HATASI → HAK İADE EDİLİYOR ve sınıra yazılmıyor: OpenAI'ın
+      // 5xx'i kullanıcının hatası değil. İade olmadan 10'luk bir parti
+      // "10 hak verip 6 sonuç almak" anlamına gelirdi.
+      await refundCredit(authHeader, credit.callId, false);
       // Gövde İSTEMCİYE YANSITILMIYOR: model adı, kota durumu ve istek kimliği
       // taşıyabiliyor. Ayrıntı yalnızca sunucu günlüğüne.
       return deny(502, `openai ${resp.status}: ${await resp.text()}`);
@@ -510,9 +589,54 @@ Deno.serve(async (req: Request) => {
       console.error(`[analyze-question] önbelleğe yazılamadı: ${e}`);
     }
 
+    // OKUNAMAYAN FOTOĞRAF → HAK İADE EDİLİYOR (Tur 7 · n4 kuralı).
+    //
+    // `reason_code` yukarıda SUNUCUDA türetildi, yani modelin çelişkili bir
+    // kod seçmesi bu dalı yanıltamıyor. İade `capped = true`: dürüst kullanım
+    // (birkaç bulanık kare) hiç cezalanmıyor ama okunamayan fotoğraf
+    // göndermek BEDAVA da olmuyor — çağrı yapıldı, para harcandı.
+    //
+    // ÖNBELLEK YAZIMI YUKARIDA VE KALIYOR: aynı bulanık kare ikinci kez
+    // OpenAI'a hiç gitmiyor. İade + önbellek birlikte "aynı hatayı iki kez
+    // ödemiyorsun" sözünü tutuyor.
+    // `refunded` ARTIK RPC'NİN CEVABI. Koşulsuz `true` yazmak, günlük iade
+    // tavanı dolan bir kullanıcıda "hakkın harcanmadı" demek olurdu — sunucu
+    // `false` dönerken istemciye yalan.
+    let refunded = false;
+    if (parsed.reason_code !== "ok") {
+      refunded = await refundCredit(authHeader, credit.callId, true);
+    }
+
     // Hak harcandı; istemci kalan sayıyı HUD'da gösteriyor.
+    //
+    // İADE EDİLDİYSE SAYILAR TAZELENİYOR: `credit` iade ÖNCESİNİN anlık
+    // görüntüsü ve onu göndermek kullanıcıya bir eksik hak gösterirdi. Bu
+    // yanlış, HUD'un tamamının önermesi "sunucu hesaplıyor, sayı güvenilir".
+    if (refunded) {
+      try {
+        const fresh = await rpc(authHeader, "ai_state", {});
+        const row = (Array.isArray(fresh) ? fresh[0] : fresh) as
+          | Record<string, unknown>
+          | undefined;
+        if (row) {
+          credit = {
+            ...credit,
+            remaining: Number(row.ai_left ?? credit.remaining),
+            state: (row.ai_state as string | null) ?? credit.state,
+            windowLeft: Number(row.ai_window_left ?? credit.windowLeft),
+            monthLeft: Number(row.ai_month_left ?? credit.monthLeft),
+            nextAtHm: (row.ai_next_at_hm as string | null) ?? null,
+            adRewardsLeft: Number(row.ad_rewards_left ?? credit.adRewardsLeft),
+            adOffer: row.ad_offer === true,
+          };
+        }
+      } catch (e) {
+        console.error(`[analyze-question] iade sonrası durum okunamadı: ${e}`);
+      }
+    }
     parsed.allowed = true;
     parsed.remaining = credit.remaining;
+    parsed.refunded = refunded;
     Object.assign(parsed, creditFields(credit));
     // Taksonomi sürümü HER yanıtta: istemci elindeki ağacın bayatladığını
     // böyle anlıyor ve onay ekranı açılmadan ÖNCE tazeliyor. Olmasaydı
@@ -521,6 +645,12 @@ Deno.serve(async (req: Request) => {
     parsed.taxonomy_version = taxonomy.version;
     return json(parsed, 200);
   } catch (e) {
+    // AYRIŞTIRMA / BEKLENMEDİK HATA → HAK İADE EDİLİYOR, sınıra yazılmadan.
+    // `credit` burada tanımlı olmayabilir (hata tüketimden önce oluştuysa);
+    // `callId` null ise `refundCredit` hiçbir şey yapmıyor.
+    if (refundAuth != null) {
+      await refundCredit(refundAuth, refundCallId, false);
+    }
     return deny(500, String(e));
   }
 });

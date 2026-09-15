@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../data/daily_state_repository.dart';
 import '../../data/friend_repository.dart';
 import '../../data/social_repository.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -14,6 +17,7 @@ import '../../widgets/kit/kimo_chips.dart';
 import '../../widgets/kit/kimo_icons.dart';
 import '../../widgets/kit/kimo_surfaces.dart';
 import '../../widgets/user_avatar.dart';
+import '../inbox/send_flow.dart';
 import '../social/public_profile_screen.dart';
 
 /// 3m — Arkadaşlar.
@@ -40,6 +44,18 @@ class _FriendsViewState extends State<FriendsView> {
   Map<String, PublicProfile> _people = <String, PublicProfile>{};
   Map<String, int> _mutual = <String, int>{};
   String? _myCode;
+
+  /// Ortak seriler — arkadaş kimliğine göre (Tur 7 · n6).
+  ///
+  /// ORTAK SERİ YALNIZCA BU SATIRDA YAŞIYOR: ayrı bir sayfa ya da ana ekran
+  /// kartı YOK. Tasarımın gerekçesi açık — "ikinci bir seri sayacı kaygıyı
+  /// ikiye katlar". Ortak seri yoksa satırda hiçbir şey görünmüyor; boş durum
+  /// GÖSTERİLMİYOR.
+  Map<String, PairStreak> _pairs = <String, PairStreak>{};
+
+  /// Sunucu bayrağı (0079). Kapalıysa ortak seri yüzeyi HİÇ çizilmiyor ve
+  /// çağrısı da yapılmıyor.
+  bool _pairEnabled = false;
 
   bool _loading = true;
   bool _failed = false;
@@ -82,6 +98,13 @@ class _FriendsViewState extends State<FriendsView> {
           await socialRepository.profilesByIds(ids);
       final String? code = await codeFuture;
 
+      // Bayrak KAPALIYSA ortak seri çağrısı HİÇ yapılmıyor: kapatılmış bir
+      // özelliğin ağ trafiği de olmamalı.
+      final DailyState? daily = await dailyStateRepository.read();
+      final bool pairOn = daily?.pairStreakEnabled ?? false;
+      final List<PairStreak> pairs =
+          pairOn ? await pairStreakRepository.mine() : <PairStreak>[];
+
       // Ortak arkadaş sayısı YALNIZCA gelen istekler için isteniyor: kabul
       // edilmiş arkadaşlarda anlamı yok ve her satır için bir RPC çağrısı
       // listeyi gereksizce yavaşlatırdı.
@@ -104,6 +127,10 @@ class _FriendsViewState extends State<FriendsView> {
           for (int i = 0; i < pendingIds.length; i++) pendingIds[i]: counts[i],
         };
         _myCode = code;
+        _pairEnabled = pairOn;
+        _pairs = <String, PairStreak>{
+          for (final PairStreak p in pairs) p.friendId: p,
+        };
         _loading = false;
       });
     } catch (e) {
@@ -276,6 +303,9 @@ class _FriendsViewState extends State<FriendsView> {
         children: <Widget>[
           _myCodeCard(context, l),
           const SizedBox(height: Gap.md),
+          // 4. AN — RİSK ve KIRILMA (Tur 7 · n6). İkisi de arkadaş listesinde
+          // yaşıyor; ayrı bir sayfa ya da ana ekran kartı YOK.
+          ..._pairNotices(context, l),
           _addCard(context, l),
           if (incoming.isNotEmpty) ...<Widget>[
             const SizedBox(height: Gap.xl),
@@ -487,6 +517,17 @@ class _FriendsViewState extends State<FriendsView> {
               style: t.label,
             ),
           ),
+          // ORTAK SERİ ROZETİ (Tur 7 · n6). Kişisel seriyle AYNI alev, farklı
+          // renk: mercan senin serin, NANE ortak seri. `mintTint`/`mintText`
+          // elmas hapı için tanımlıydı ve elmas v1'de gizli olduğu için
+          // kullanılmıyordu — yeniden kullanılıyor.
+          //
+          // Seri YOKSA HİÇBİR ŞEY çizilmiyor: boş durum göstermek, olmayan
+          // bir mekaniği varmış gibi sunmak olurdu.
+          if (_pairEnabled && (_pairs[p.id]?.streak ?? 0) > 0) ...<Widget>[
+            const SizedBox(width: Gap.sm),
+            _pairBadge(context, l, _pairs[p.id]!),
+          ],
           if (busy)
             const SizedBox(
               width: 20,
@@ -497,13 +538,37 @@ class _FriendsViewState extends State<FriendsView> {
             PopupMenuButton<String>(
               icon: KimoIcon(KimoIcons.settings, size: 20, color: c.inkMuted),
               onSelected: (String v) {
-                if (v == 'remove') {
+                if (v == 'leavePair') {
+                  // ÇIKIŞ KARŞI TARAFA BİLDİRİLMİYOR: bildirilirse ayrılmak
+                  // sosyal olarak cezalandırılırdı.
+                  unawaited(_act(p.id, () async {
+                    await pairStreakRepository.leave(p.id);
+                  }));
+                } else if (v == 'send') {
+                  unawaited(showSendEntrySheet(
+                    context,
+                    friendId: p.id,
+                    friendName: p.nickname,
+                  ));
+                } else if (v == 'remove') {
                   _removeFlow(l, p);
                 } else if (v == 'block') {
                   _blockFlow(l, p);
                 }
               },
               itemBuilder: (BuildContext ctx) => <PopupMenuEntry<String>>[
+                // Tur 7 · n5: gönderme akışının ARKADAŞ-ÖNCE girişi. Bugüne
+                // kadar tek giriş Hatalarım satırındaki ikondu, yani akış
+                // zorunlu olarak soru-önceydi.
+                PopupMenuItem<String>(
+                  value: 'send',
+                  child: Text(l.mistakesSend),
+                ),
+                if (_pairEnabled && _pairs.containsKey(p.id))
+                  PopupMenuItem<String>(
+                    value: 'leavePair',
+                    child: Text(l.pairStreakLeave),
+                  ),
                 PopupMenuItem<String>(
                   value: 'remove',
                   child: Text(l.friendsRemove),
@@ -515,6 +580,104 @@ class _FriendsViewState extends State<FriendsView> {
               ],
             ),
         ],
+      ),
+    );
+  }
+
+  /// Risk ve kırılma satırları.
+  ///
+  /// İKİSİNDE DE KİMİN ÇÖZMEDİĞİ YAZMIYOR. Risk satırı yalnızca KULLANICININ
+  /// KENDİ PAYI eksikken çıkıyor ("bir soru çözersen … devam eder") — arkadaşın
+  /// eksiği bir uyarıya dönüşmüyor, çünkü "arkadaşın seni bekliyor" arkadaşı
+  /// baskı aracına çevirirdi.
+  ///
+  /// KIRILMA BİLDİRİMİ HİÇ GÖNDERİLMİYOR: kullanıcı uygulamayı açtığında
+  /// burada görüyor. Metin suçlamıyor ve DAVETLE bitiyor.
+  List<Widget> _pairNotices(BuildContext context, L10n l) {
+    if (!_pairEnabled || _pairs.isEmpty) return const <Widget>[];
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    final List<Widget> out = <Widget>[];
+
+    // RİSK: seri açık, benim payım eksik.
+    final Iterable<PairStreak> atRisk =
+        _pairs.values.where((PairStreak p) => p.streak > 0 && p.myTurn);
+    if (atRisk.isNotEmpty) {
+      final PairStreak p = atRisk.first;
+      out.add(KimoCard(
+        radius: Radii.tile,
+        color: c.mintTint,
+        padding: const EdgeInsets.all(Gap.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(l.pairStreakRiskTitle,
+                style: t.bodyStrong.copyWith(color: c.mintText)),
+            const SizedBox(height: Gap.xxs),
+            Text(l.pairStreakRiskBody(p.streak),
+                style: t.caption.copyWith(color: c.mintText)),
+          ],
+        ),
+      ));
+      out.add(const SizedBox(height: Gap.md));
+    }
+
+    // KIRILMA: satır var ama sayı sıfırlandı.
+    final Iterable<PairStreak> broken =
+        _pairs.values.where((PairStreak p) => p.streak == 0);
+    if (broken.isNotEmpty) {
+      final PairStreak p = broken.first;
+      out.add(KimoCard(
+        radius: Radii.tile,
+        padding: const EdgeInsets.all(Gap.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(l.pairStreakBrokenTitle, style: t.bodyStrong),
+            const SizedBox(height: Gap.xxs),
+            Text(l.pairStreakBrokenBody, style: t.caption),
+            const SizedBox(height: Gap.md),
+            KimoButton(
+              label: l.pairStreakBrokenAction,
+              kind: KimoButtonKind.secondary,
+              minHeight: Sizes.rowMin,
+              expand: false,
+              onPressed: () => unawaited(showSendEntrySheet(
+                context,
+                friendId: p.friendId,
+                friendName: p.nickname,
+              )),
+            ),
+          ],
+        ),
+      ));
+      out.add(const SizedBox(height: Gap.md));
+    }
+    return out;
+  }
+
+  /// Nane renkli ortak seri rozeti.
+  Widget _pairBadge(BuildContext context, L10n l, PairStreak s) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return Semantics(
+      label: '${s.streak} ${l.pairStreakLabel}',
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+            horizontal: Gap.sm, vertical: Gap.xxs),
+        decoration: BoxDecoration(
+          color: c.mintTint,
+          borderRadius: Radii.all(Radii.pill),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            KimoIcon(KimoIcons.flame, size: 14, color: c.mintText),
+            const SizedBox(width: Gap.xxs),
+            Text('${s.streak}',
+                style: t.numberSmall.copyWith(color: c.mintText)),
+          ],
+        ),
       ),
     );
   }

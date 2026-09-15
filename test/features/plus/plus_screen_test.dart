@@ -62,8 +62,27 @@ void main() {
   testWidgets('yıllık plan varsayılan seçili ve avantaj rozeti onda',
       (WidgetTester tester) async {
     await pumpPlus(tester);
+    // Sayfa Task 12'de çoklu çekim bölümüyle uzadı (Tur 7 · n4) ve planlar
+    // katlamanın altına indi; `ListView` tembel kurduğu için rozet ancak
+    // kaydırıldıktan sonra ağaçta oluyor.
+    await tester.scrollUntilVisible(
+      find.text(l.plusSaveBadge(33)),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text(l.plusSaveBadge(33)), findsOneWidget);
     expect(PlusPlans.defaultPlan.savingPercent, 33);
+  });
+
+  testWidgets('çoklu çekim bölümü rakam söylüyor, abartı söylemiyor',
+      (WidgetTester tester) async {
+    await pumpPlus(tester);
+    expect(find.text(l.plusBatchTitle), findsOneWidget);
+    // Üç madde de RAKAM taşıyor: kaç fotoğraf, hangi giriş, kaç analiz.
+    expect(find.text(l.plusBatchPhotos(10)), findsOneWidget);
+    expect(find.text(l.plusBatchGallery), findsOneWidget);
+    // TAAHHÜT: tekli çekim ücretsizde tam çalışmaya devam ediyor.
+    expect(find.text(l.plusBatchSingleFree), findsOneWidget);
   });
 
   testWidgets('"sınırsız" HİÇBİR YERDE geçmiyor', (WidgetTester tester) async {

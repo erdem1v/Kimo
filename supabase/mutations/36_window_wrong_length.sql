@@ -1,23 +1,33 @@
 -- test: supabase/tests/100_ai_quota.sql
 --
--- MUTASYON: kayan pencere `app_config`'teki uzunluğu yok sayıp 24 saat sayıyor.
--- BEKLENEN: 100'ün "9 saat önceki çağrı PENCEREDE sayılmıyor" iddiası kırmızı.
+-- MUTASYON: kayan pencere `app_config`'teki uzunlugu yok sayip 24 saat sayiyor.
+-- BEKLENEN: 100'un "9 saat onceki cagri PENCEREDE sayilmiyor" iddiasi kirmizi.
 --
--- BU MUTASYON NİYE DEĞERLİ: sayıya dayalı bütün iddiaları GEÇİYOR — tüketim
--- yine sınırda duruyor, `allowed=false` yine dönüyor, `ai_state` yine
--- `window_full` oluyor. Yalnızca YAŞLANMA iddiası düşüyor. Yani "doğru
--- görünüyor ama değil" sınıfından bir hatayı yakalıyor; o sınıf bu depoda
--- `27_age_gate_drops_suspension.sql` ile bir kez yaşandı.
+-- BU MUTASYON NIYE DEGERLI: sayiya dayali butun iddialari GECIYOR — tuketim
+-- yine sinirda duruyor, `allowed=false` yine donuyor, `ai_state` yine
+-- `window_full` oluyor. Yalnizca YASLANMA iddiasi dusuyor. Yani "dogru
+-- gorunuyor ama degil" sinifindan bir hatayi yakaliyor; o sinif bu depoda
+-- `27_age_gate_drops_suspension.sql` ile bir kez yasandi.
 --
--- SABİT KOVA (ör. `c.at >= istanbul_day()`) yerine 24 saat seçildi, BİLEREK:
--- sabit kova mutasyonu GÜNÜN SAATİNE bağlı olurdu — süit sabah 09:00'dan önce
--- koşarsa 9 saat önceki satır sabit kovada da dışarıda kalır, mutasyon
--- yakalanmaz ve `mutation_check.sh` "FAZ 2: HÂLÂ YEŞİL" diye kırmızıya döner.
--- 24 saat her saatte aynı sonucu veriyor.
+-- SABIT KOVA (or. `c.at >= istanbul_day()`) yerine 24 saat secildi, BILEREK:
+-- sabit kova mutasyonu GUNUN SAATINE bagli olurdu — suit sabah 09:00'dan once
+-- kosarsa 9 saat onceki satir sabit kovada da disarida kalir, mutasyon
+-- yakalanmaz ve `mutation_check.sh` "FAZ 2: HALA YESIL" diye kirmiziya doner.
+-- 24 saat her saatte ayni sonucu veriyor.
 --
--- NOT: iki gövde de göç dosyasından ÜRETİLDİ, elle kopyalanmadı.
+-- NOT: iki govde de goc dosyasindan URETILDI, elle kopyalanmadi. Kaynak:
+-- supabase/migrations/20260912000500_ai_refund.sql (0083). ILK YAZIMDA bu
+-- uretim BAYATLAMISTI: dosya 0075'in govdesini tasiyordu, yani `refunded_at
+-- is null` suzgecleri YOKTU ve @UNDO iade oncesi surumu geri kuruyordu —
+-- 100'un uc yeni iade iddiasi FAZ 3'te kirmizi kaliyor, mutation_check.sh
+-- `exit 1` ile TUM kosuyu durduruyordu.
 create or replace function public.ai_state()
 returns table (
+  -- SIRA 0075'TEKININ AYNISI OLMAK ZORUNDA. `create or replace`, OUT
+  -- parametrelerinin tanimladigi satir tipini (ad + SIRA dahil) degistirmeye
+  -- izin vermiyor: "cannot change return type of existing function /
+  -- Row type defined by OUT parameters is different". Bu dosya ayni kurali
+  -- `consume_ai_use` icin zaten biliyor (asagida drop + create yapiyor).
   ai_tier            text,
   ai_state           text,
   ai_left            int,
@@ -41,50 +51,44 @@ as $fn$
 declare
   v_uid       uuid := auth.uid();
   v_hours     int;
-  v_low       int;
   v_used      int;
   v_month     int;
-  v_reward    int  := 0;
+  v_reward    int := 0;
   v_effective int;
-  v_ad_daily  int;
   v_suspended boolean;
 begin
-  -- Oturum yoksa SATIR DÖNMÜYOR. Görünüm bununla birlikte boş kalıyor ve
-  -- istemci "okunamadı" dalına düşüyor — sıfır göstermekten farklı.
   if v_uid is null then
     return;
   end if;
 
-  ai_tier := public.user_tier();
+  v_hours         := public.config_int('ai_window_hours', 8);
+  ai_window_hours := v_hours;
+  ai_tier         := public.user_tier();
   if ai_tier is null then
-    return;                       -- profil satırı yok (yarı kurulmuş hesap)
+    return;
   end if;
 
-  v_hours           := public.config_int('ai_window_hours', 8);
-  v_low             := public.config_int('ai_low_threshold', 2);
-  v_ad_daily        := public.config_int('ad_reward_daily', 3);
-  v_suspended       := public.is_suspended(v_uid);
-  ai_window_hours   := v_hours;
-  plus_window_limit := public.config_int('ai_window_premium', 50);
-  plus_month_limit  := public.config_int('ai_month_premium', 1000);
+  v_suspended        := public.is_suspended(v_uid);
+  ad_rewards_per_day := public.config_int('ad_reward_daily', 3);
+  plus_window_limit  := public.config_int('ai_window_premium', 50);
+  plus_month_limit   := public.config_int('ai_month_premium', 1000);
 
   ai_month_resets_at := public.istanbul_month_reset();
   ai_month_resets_on := (ai_month_resets_at at time zone 'Europe/Istanbul')::date;
 
   if ai_tier = 'anonymous' then
-    -- ÖMÜR BOYU cap: pencere ve ay kavramı yok. Denemenin tamamı 3 analiz.
     ai_window_limit := public.config_int('ai_lifetime_anon', 3);
     ai_month_limit  := ai_window_limit;
     select count(*)::int into v_used
-      from public.ai_calls c where c.user_id = v_uid;
+      from public.ai_calls c
+     where c.user_id = v_uid
+       and c.refunded_at is null;
     ai_window_left := greatest(ai_window_limit - v_used, 0);
     ai_month_left  := ai_window_left;
     ai_left        := ai_window_left;
-    -- Gösterilecek bir saat YOK: hak geri gelmiyor, yol hesap açmaktan
-    -- geçiyor. Pencere saati göstermek yanıltıcı olurdu.
     ai_next_at      := null;
     ai_next_at_hm   := null;
-    ad_rewards_left := 0;         -- anonim reklam izleyemez (aşağıdaki not)
+    ad_rewards_left := 0;
   else
     ai_window_limit := public.config_int(
       case when ai_tier = 'premium' then 'ai_window_premium'
@@ -95,28 +99,19 @@ begin
            else 'ai_month_free' end,
       case when ai_tier = 'premium' then 1000 else 300 end);
 
-    -- KAYAN pencere: sabit kova değil.
-    -- MUTASYON: pencere yapılandırmayı yok sayıyor ve 24 saat sayıyor.
     select count(*)::int into v_used
       from public.ai_calls c
      where c.user_id = v_uid
+       and c.refunded_at is null
        and c.at > now() - interval '24 hours';
 
-    -- Istanbul TAKVİM ayı.
     select count(*)::int into v_month
       from public.ai_calls c
      where c.user_id = v_uid
+       and c.refunded_at is null
        and c.at >= date_trunc('month', now() at time zone 'Europe/Istanbul')
                    at time zone 'Europe/Istanbul';
 
-    -- BUGÜN kazanılmış ve henüz harcanmamış reklam hakkı.
-    --
-    -- NEDEN "BUGÜN" VE PENCERE-GÖRELİ DEĞİL: pencereye göreli bir ödül
-    -- (verildiği andan 8 saat sonra buharlaşan) kullanıcı ekrana bakarken
-    -- sayının KENDİ KENDİNE düşmesine yol açardı. Tüm önermesi "sunucu
-    -- hesaplıyor, sayı güvenilir" olan bir ekran için en kötü özellik.
-    -- Istanbul günü, 3/gün tavanının zaten kullandığı saat — yeni bir zaman
-    -- ekseni girmiyor ve ödül günler arası biriktirilemiyor.
     if ai_tier = 'free' then
       select count(*)::int into v_reward
         from public.ad_rewards r
@@ -132,33 +127,30 @@ begin
     ai_month_left  := greatest(ai_month_limit - v_month, 0);
     ai_left        := least(ai_window_left, ai_month_left);
 
-    -- SONRAKİ HAKKIN ANI — `min(at) + 8sa` DEĞİL.
-    --
-    -- O formül yalnızca `kullanılan == etkin sınır` tam tutuyorsa doğru.
-    -- Genel biçim pencerenin k'ıncı en eski çağrısı (k = kullanılan − etkin + 1).
-    -- Yapılandırma sınırı daralttığında ve harcanmamış bir ödül gece yarısı
-    -- süresi dolup etkin sınır düştüğünde de doğru kalıyor; naif `min()`
-    -- ikisinde de SESSİZCE eksik bildirir.
-    select c.at + make_interval(hours => v_hours) into ai_next_at
+    -- SONRAKİ HAKKIN ANI — `min(at) + 8sa` DEĞİL; pencerenin k'ıncı en eski
+    -- çağrısı (k = kullanılan − etkin + 1). İade edilmiş satırlar sıraya da
+    -- girmiyor, yoksa geri verilmiş bir yuva "dolu" gibi saat üretirdi.
+    select c.at + interval '24 hours' into ai_next_at
       from public.ai_calls c
      where c.user_id = v_uid
-       and c.at > now() - make_interval(hours => v_hours)
+       and c.refunded_at is null
+       and c.at > now() - interval '24 hours'
      order by c.at
     offset greatest(v_used - v_effective, 0)
        limit 1;
 
-    -- Duvar saati SUNUCUDA biçimlendiriliyor: cihaz saatini değiştiren bir
-    -- öğrenciye yanlış saat gösterilmesin. Ay ADI burada üretilmiyor —
-    -- Postgres'in `TM` ay adları `lc_time`'a bağlı ve Supabase'de `tr_TR`
-    -- olduğu varsayılamaz; istemci ay adını kendi tablosundan koyuyor.
     ai_next_at_hm := to_char(ai_next_at at time zone 'Europe/Istanbul',
                              'HH24:MI');
 
+    -- 0075:367-378'DEN GERI GETIRILDI. Bu blok dusmustu ve sonucu sessizdi:
+    -- `ad_rewards_left` NULL kaliyor, `ad_offer` NULL'a dusuyor, istemcideki
+    -- `ad_offer == true` hicbir zaman tutmuyordu — yani odullu reklam yolu
+    -- arayuzde TAMAMEN oludu.
     if ai_tier = 'premium' then
-      ad_rewards_left := 0;       -- premium reklam görmemek için ödedi
+      ad_rewards_left := 0;       -- premium reklam gormemek icin odedi
     else
       ad_rewards_left := greatest(
-        v_ad_daily - (
+        ad_rewards_per_day - (
           select count(*)::int from public.ad_rewards r
            where r.user_id = v_uid
              and r.status = 'granted'
@@ -168,43 +160,33 @@ begin
     end if;
   end if;
 
-  ad_rewards_per_day := v_ad_daily;
-
-  -- DURUM SIRASI ÖNEMLİ: ay pencereyi yeniyor.
-  -- İkisi de doluysa reklam yolu GİZLENMELİ ve gizleyen şey `ai_state`;
-  -- "pencere doldu" deyip saat göstermek, o saatte bir şey olacağını vaat
-  -- etmek olurdu — aylık cap kapalıyken olmayacak.
+  -- Durum sırası: askı > ömür > ay > pencere > az > bol.
   ai_state := case
     when v_suspended                       then 'suspended'
     when ai_tier = 'anonymous'
-     and ai_left <= 0                      then 'lifetime_full'
+     and ai_window_left <= 0               then 'lifetime_full'
     when ai_month_left <= 0                then 'month_full'
     when ai_window_left <= 0               then 'window_full'
-    when ai_left <= v_low                  then 'low'
-    else                                        'ok'
+    when ai_left <= public.config_int('ai_low_threshold', 2) then 'low'
+    else 'ok'
   end;
 
-  -- Aylık sınır dolduğunda pencere saati GÖSTERİLMEZ (ürün kuralı). Kararı
-  -- burada veriyoruz ki istemci bir şey seçmek zorunda kalmasın.
+  -- 0075:398-403'TEN GERI GETIRILDI. Aylik sinir doldugunda pencere saati
+  -- GOSTERILMEZ (urun kurali). Karari burada veriyoruz ki istemci bir sey
+  -- secmek zorunda kalmasin; `my_daily_state` yorumu ve
+  -- `DailyState.aiNextAtHm` dokumani zaten "sunucu bunu null yapiyor" diyor.
   if ai_state in ('month_full', 'lifetime_full', 'suspended') then
     ai_next_at    := null;
     ai_next_at_hm := null;
   end if;
 
-  -- REKLAM GÖRÜNÜRLÜĞÜ SUNUCUNUN.
-  --   * `ai_window_left <= 0` — elinde 7 hak olan kullanıcıya reklam
-  --     göstermek reklam hasadı olurdu, duvara kapı açmak değil.
-  --   * `ai_month_left > 0`   — kullanılamayacak bir ödül için reklam
-  --     göstermek kullanıcıya düşmanca ve ödüllü reklam politikası açısından
-  --     riskli. İKİ KATMAN: `start_ad_reward` da reddediyor (0076).
-  --   * `ai_tier = 'free'`    — premium reklam görmemek için ödedi; anonim
-  --     bir para kazanma yüzeyi değil, oradaki adım kayıt. Anonim oturum
-  --     bedava açıldığı için reklam hakkı vermek sıfırlama yolu olurdu.
+  -- Kullanılamayacak bir ödül karşılığında reklam gösterilmez (karanlık desen
+  -- koruması): ay doluyken teklif YOK.
   ad_offer := ai_tier = 'free'
           and not v_suspended
-          and ad_rewards_left > 0
           and ai_month_left > 0
-          and ai_window_left <= 0;
+          and ai_window_left <= 0
+          and ad_rewards_left > 0;
 
   return next;
 end
@@ -212,6 +194,11 @@ $fn$;
 -- @UNDO
 create or replace function public.ai_state()
 returns table (
+  -- SIRA 0075'TEKININ AYNISI OLMAK ZORUNDA. `create or replace`, OUT
+  -- parametrelerinin tanimladigi satir tipini (ad + SIRA dahil) degistirmeye
+  -- izin vermiyor: "cannot change return type of existing function /
+  -- Row type defined by OUT parameters is different". Bu dosya ayni kurali
+  -- `consume_ai_use` icin zaten biliyor (asagida drop + create yapiyor).
   ai_tier            text,
   ai_state           text,
   ai_left            int,
@@ -235,50 +222,44 @@ as $fn$
 declare
   v_uid       uuid := auth.uid();
   v_hours     int;
-  v_low       int;
   v_used      int;
   v_month     int;
-  v_reward    int  := 0;
+  v_reward    int := 0;
   v_effective int;
-  v_ad_daily  int;
   v_suspended boolean;
 begin
-  -- Oturum yoksa SATIR DÖNMÜYOR. Görünüm bununla birlikte boş kalıyor ve
-  -- istemci "okunamadı" dalına düşüyor — sıfır göstermekten farklı.
   if v_uid is null then
     return;
   end if;
 
-  ai_tier := public.user_tier();
+  v_hours         := public.config_int('ai_window_hours', 8);
+  ai_window_hours := v_hours;
+  ai_tier         := public.user_tier();
   if ai_tier is null then
-    return;                       -- profil satırı yok (yarı kurulmuş hesap)
+    return;
   end if;
 
-  v_hours           := public.config_int('ai_window_hours', 8);
-  v_low             := public.config_int('ai_low_threshold', 2);
-  v_ad_daily        := public.config_int('ad_reward_daily', 3);
-  v_suspended       := public.is_suspended(v_uid);
-  ai_window_hours   := v_hours;
-  plus_window_limit := public.config_int('ai_window_premium', 50);
-  plus_month_limit  := public.config_int('ai_month_premium', 1000);
+  v_suspended        := public.is_suspended(v_uid);
+  ad_rewards_per_day := public.config_int('ad_reward_daily', 3);
+  plus_window_limit  := public.config_int('ai_window_premium', 50);
+  plus_month_limit   := public.config_int('ai_month_premium', 1000);
 
   ai_month_resets_at := public.istanbul_month_reset();
   ai_month_resets_on := (ai_month_resets_at at time zone 'Europe/Istanbul')::date;
 
   if ai_tier = 'anonymous' then
-    -- ÖMÜR BOYU cap: pencere ve ay kavramı yok. Denemenin tamamı 3 analiz.
     ai_window_limit := public.config_int('ai_lifetime_anon', 3);
     ai_month_limit  := ai_window_limit;
     select count(*)::int into v_used
-      from public.ai_calls c where c.user_id = v_uid;
+      from public.ai_calls c
+     where c.user_id = v_uid
+       and c.refunded_at is null;
     ai_window_left := greatest(ai_window_limit - v_used, 0);
     ai_month_left  := ai_window_left;
     ai_left        := ai_window_left;
-    -- Gösterilecek bir saat YOK: hak geri gelmiyor, yol hesap açmaktan
-    -- geçiyor. Pencere saati göstermek yanıltıcı olurdu.
     ai_next_at      := null;
     ai_next_at_hm   := null;
-    ad_rewards_left := 0;         -- anonim reklam izleyemez (aşağıdaki not)
+    ad_rewards_left := 0;
   else
     ai_window_limit := public.config_int(
       case when ai_tier = 'premium' then 'ai_window_premium'
@@ -289,27 +270,19 @@ begin
            else 'ai_month_free' end,
       case when ai_tier = 'premium' then 1000 else 300 end);
 
-    -- KAYAN pencere: sabit kova değil.
     select count(*)::int into v_used
       from public.ai_calls c
      where c.user_id = v_uid
+       and c.refunded_at is null
        and c.at > now() - make_interval(hours => v_hours);
 
-    -- Istanbul TAKVİM ayı.
     select count(*)::int into v_month
       from public.ai_calls c
      where c.user_id = v_uid
+       and c.refunded_at is null
        and c.at >= date_trunc('month', now() at time zone 'Europe/Istanbul')
                    at time zone 'Europe/Istanbul';
 
-    -- BUGÜN kazanılmış ve henüz harcanmamış reklam hakkı.
-    --
-    -- NEDEN "BUGÜN" VE PENCERE-GÖRELİ DEĞİL: pencereye göreli bir ödül
-    -- (verildiği andan 8 saat sonra buharlaşan) kullanıcı ekrana bakarken
-    -- sayının KENDİ KENDİNE düşmesine yol açardı. Tüm önermesi "sunucu
-    -- hesaplıyor, sayı güvenilir" olan bir ekran için en kötü özellik.
-    -- Istanbul günü, 3/gün tavanının zaten kullandığı saat — yeni bir zaman
-    -- ekseni girmiyor ve ödül günler arası biriktirilemiyor.
     if ai_tier = 'free' then
       select count(*)::int into v_reward
         from public.ad_rewards r
@@ -325,33 +298,30 @@ begin
     ai_month_left  := greatest(ai_month_limit - v_month, 0);
     ai_left        := least(ai_window_left, ai_month_left);
 
-    -- SONRAKİ HAKKIN ANI — `min(at) + 8sa` DEĞİL.
-    --
-    -- O formül yalnızca `kullanılan == etkin sınır` tam tutuyorsa doğru.
-    -- Genel biçim pencerenin k'ıncı en eski çağrısı (k = kullanılan − etkin + 1).
-    -- Yapılandırma sınırı daralttığında ve harcanmamış bir ödül gece yarısı
-    -- süresi dolup etkin sınır düştüğünde de doğru kalıyor; naif `min()`
-    -- ikisinde de SESSİZCE eksik bildirir.
+    -- SONRAKİ HAKKIN ANI — `min(at) + 8sa` DEĞİL; pencerenin k'ıncı en eski
+    -- çağrısı (k = kullanılan − etkin + 1). İade edilmiş satırlar sıraya da
+    -- girmiyor, yoksa geri verilmiş bir yuva "dolu" gibi saat üretirdi.
     select c.at + make_interval(hours => v_hours) into ai_next_at
       from public.ai_calls c
      where c.user_id = v_uid
+       and c.refunded_at is null
        and c.at > now() - make_interval(hours => v_hours)
      order by c.at
     offset greatest(v_used - v_effective, 0)
        limit 1;
 
-    -- Duvar saati SUNUCUDA biçimlendiriliyor: cihaz saatini değiştiren bir
-    -- öğrenciye yanlış saat gösterilmesin. Ay ADI burada üretilmiyor —
-    -- Postgres'in `TM` ay adları `lc_time`'a bağlı ve Supabase'de `tr_TR`
-    -- olduğu varsayılamaz; istemci ay adını kendi tablosundan koyuyor.
     ai_next_at_hm := to_char(ai_next_at at time zone 'Europe/Istanbul',
                              'HH24:MI');
 
+    -- 0075:367-378'DEN GERI GETIRILDI. Bu blok dusmustu ve sonucu sessizdi:
+    -- `ad_rewards_left` NULL kaliyor, `ad_offer` NULL'a dusuyor, istemcideki
+    -- `ad_offer == true` hicbir zaman tutmuyordu — yani odullu reklam yolu
+    -- arayuzde TAMAMEN oludu.
     if ai_tier = 'premium' then
-      ad_rewards_left := 0;       -- premium reklam görmemek için ödedi
+      ad_rewards_left := 0;       -- premium reklam gormemek icin odedi
     else
       ad_rewards_left := greatest(
-        v_ad_daily - (
+        ad_rewards_per_day - (
           select count(*)::int from public.ad_rewards r
            where r.user_id = v_uid
              and r.status = 'granted'
@@ -361,43 +331,33 @@ begin
     end if;
   end if;
 
-  ad_rewards_per_day := v_ad_daily;
-
-  -- DURUM SIRASI ÖNEMLİ: ay pencereyi yeniyor.
-  -- İkisi de doluysa reklam yolu GİZLENMELİ ve gizleyen şey `ai_state`;
-  -- "pencere doldu" deyip saat göstermek, o saatte bir şey olacağını vaat
-  -- etmek olurdu — aylık cap kapalıyken olmayacak.
+  -- Durum sırası: askı > ömür > ay > pencere > az > bol.
   ai_state := case
     when v_suspended                       then 'suspended'
     when ai_tier = 'anonymous'
-     and ai_left <= 0                      then 'lifetime_full'
+     and ai_window_left <= 0               then 'lifetime_full'
     when ai_month_left <= 0                then 'month_full'
     when ai_window_left <= 0               then 'window_full'
-    when ai_left <= v_low                  then 'low'
-    else                                        'ok'
+    when ai_left <= public.config_int('ai_low_threshold', 2) then 'low'
+    else 'ok'
   end;
 
-  -- Aylık sınır dolduğunda pencere saati GÖSTERİLMEZ (ürün kuralı). Kararı
-  -- burada veriyoruz ki istemci bir şey seçmek zorunda kalmasın.
+  -- 0075:398-403'TEN GERI GETIRILDI. Aylik sinir doldugunda pencere saati
+  -- GOSTERILMEZ (urun kurali). Karari burada veriyoruz ki istemci bir sey
+  -- secmek zorunda kalmasin; `my_daily_state` yorumu ve
+  -- `DailyState.aiNextAtHm` dokumani zaten "sunucu bunu null yapiyor" diyor.
   if ai_state in ('month_full', 'lifetime_full', 'suspended') then
     ai_next_at    := null;
     ai_next_at_hm := null;
   end if;
 
-  -- REKLAM GÖRÜNÜRLÜĞÜ SUNUCUNUN.
-  --   * `ai_window_left <= 0` — elinde 7 hak olan kullanıcıya reklam
-  --     göstermek reklam hasadı olurdu, duvara kapı açmak değil.
-  --   * `ai_month_left > 0`   — kullanılamayacak bir ödül için reklam
-  --     göstermek kullanıcıya düşmanca ve ödüllü reklam politikası açısından
-  --     riskli. İKİ KATMAN: `start_ad_reward` da reddediyor (0076).
-  --   * `ai_tier = 'free'`    — premium reklam görmemek için ödedi; anonim
-  --     bir para kazanma yüzeyi değil, oradaki adım kayıt. Anonim oturum
-  --     bedava açıldığı için reklam hakkı vermek sıfırlama yolu olurdu.
+  -- Kullanılamayacak bir ödül karşılığında reklam gösterilmez (karanlık desen
+  -- koruması): ay doluyken teklif YOK.
   ad_offer := ai_tier = 'free'
           and not v_suspended
-          and ad_rewards_left > 0
           and ai_month_left > 0
-          and ai_window_left <= 0;
+          and ai_window_left <= 0
+          and ad_rewards_left > 0;
 
   return next;
 end

@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/ai_credit.dart';
 import '../models/social.dart';
+import '../state/features.dart';
 
 /// Kullanıcının günlük durumu — HUD'un ve hak duvarının tek kaynağı.
 ///
@@ -48,6 +49,9 @@ class DailyState {
     this.reviewedTodayCount = 0,
     this.dueCount = 0,
     this.unsolvedReceivedCount = 0,
+    this.ffPairStreak,
+    this.ffMultiCapture,
+    this.ffAdReward,
   });
 
   /// Hakkın durumu. `null` = sunucunun söylediği değer tanınmadı → arayüz
@@ -135,6 +139,31 @@ class DailyState {
   /// Arkadaşlardan gelen, çözülmemiş soru sayısı.
   final int unsolvedReceivedCount;
 
+  // ------------------------------------------------------- özellik bayrakları
+  //
+  // Sunucudan gelen uzaktan kapatma anahtarları (`app_config` → `feature_flags()`
+  // → `my_daily_state`, göç 0079). Riskli bir yüzey ölçüm kötü çıkarsa MAĞAZA
+  // GÜNCELLEMESİ BEKLENMEDEN kapatılabilsin diye var.
+  //
+  // `null` = SÜTUN OKUNAMADI, "kapalı" DEĞİL. Bu sınıfın değişmezi burada da
+  // geçerli: uydurma varsayılan yok. `null` durumunda karar derleme zamanındaki
+  // [Features] sabitine düşüyor — aşağıdaki üç getter tek karar noktası.
+  final bool? ffPairStreak;
+  final bool? ffMultiCapture;
+  final bool? ffAdReward;
+
+  /// Ortak seri yüzeyi çizilsin mi.
+  bool get pairStreakEnabled => ffPairStreak ?? Features.pairStreakFallback;
+
+  /// Çoklu çekim modu (premium kapısından BAĞIMSIZ: bu bayrak özelliğin
+  /// tamamını kapatıyor, ücretsiz/premium ayrımını yapmıyor).
+  bool get multiCaptureEnabled =>
+      ffMultiCapture ?? Features.multiCaptureFallback;
+
+  /// Ödüllü reklam yüzeyi. Sunucu ayrıca `ad_offer` ile "şu an teklif edilir
+  /// mi" diyor; bu bayrak ondan ÖNCE gelen bir kill switch.
+  bool get adRewardEnabled => ffAdReward ?? Features.adRewardFallback;
+
   /// Sunucuya göre bugün aktif miyim (seri bugün işlendi mi).
   bool get activeToday =>
       lastActivityDate != null &&
@@ -159,6 +188,14 @@ class DailyState {
 
   static DateTime? _date(Object? v) =>
       v is String ? DateTime.tryParse(v) : null;
+
+  /// ÜÇ DURUMLU bayrak okuyucu: `true`, `false` ya da **okunamadı**.
+  ///
+  /// `v == true` yazmak yeterli DEĞİL — o, eksik sütunu ve `null`'ı "kapalı"ya
+  /// çevirir ve bu sınıfın yasakladığı uydurma varsayılanın ta kendisidir.
+  /// Sunucu bayrağı taşımıyorsa karar derleme zamanındaki [Features] sabitine
+  /// düşmeli, sessizce "kapalı"ya değil.
+  static bool? _flag(Object? v) => v is bool ? v : null;
 
   factory DailyState.fromRow(Map<String, dynamic> row) {
     return DailyState(
@@ -191,6 +228,9 @@ class DailyState {
       reviewedTodayCount: _int(row['reviewed_today_count']) ?? 0,
       dueCount: _int(row['due_count']) ?? 0,
       unsolvedReceivedCount: _int(row['unsolved_received_count']) ?? 0,
+      ffPairStreak: _flag(row['ff_pair_streak']),
+      ffMultiCapture: _flag(row['ff_multi_capture']),
+      ffAdReward: _flag(row['ff_ad_reward']),
     );
   }
 }

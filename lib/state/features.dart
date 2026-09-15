@@ -36,4 +36,38 @@ class Features {
   /// (`sessionGoalReached`) ve ödülün XP kısmı (`+{xpGained}` karosu) yerinde
   /// kalıyor, yani ödül hâlâ görünür.
   static const bool gemsVisible = bool.fromEnvironment('SHOW_GEMS');
+
+  // ==================================================== sunucu bayrağı YEDEKLERİ
+  //
+  // Task 12 (0079) uzaktan açılıp kapanan bayrakları getirdi: `app_config` →
+  // `feature_flags()` → `my_daily_state`. YÜRÜRLÜKTEKİ KARAR SUNUCUDA; aşağıdaki
+  // üç sabit yalnızca **sütun okunamadığında** devreye giriyor
+  // (`DailyState.pairStreakEnabled` ve kardeşleri).
+  //
+  // NEDEN HÂLÂ BURADA BİR DEĞER VAR: `DailyState == null` (ağ yok, oturum yok)
+  // ile "bayrak false" ayrı iki şey. Görünüm okunamadığında riskli bir yüzeyi
+  // çizmek ya da çizmemek bir karardır ve o karar derleme zamanında verilmiş
+  // olmalı — çalışma zamanında tahmin edilmemeli.
+  //
+  // NEDEN `bool.fromEnvironment` DEĞİL: bunlar bir geliştirici anahtarı değil,
+  // sunucu okunamadığındaki ÜRÜN varsayılanı. `--dart-define` ile
+  // değiştirilebilir olmaları, iki ayrı kapatma yolu (sunucu + derleme)
+  // olduğu yanılsamasını üretirdi; yürürlükteki tek yol sunucu.
+
+  /// Ortak seri okunamadığında ÇİZİLMİYOR.
+  ///
+  /// Sunucu varsayılanıyla aynı (`ff_pair_streak = false`, göç 0079): AB
+  /// Komisyonu'nun DSA Md. 28(1) Kılavuzu (14 Temmuz 2025, par. 57(b)(viii))
+  /// "streaks"i küçükler için varsayılan kapalı istiyor. Kapalı tarafta hata
+  /// yapmak burada doğru taraf.
+  static const bool pairStreakFallback = false;
+
+  /// Çoklu çekim okunamadığında çiziliyor: premium kapısı ayrıca var, yani
+  /// yanlış tarafa düşmenin bedeli yalnızca bir paywall görmek.
+  static const bool multiCaptureFallback = true;
+
+  /// Ödüllü reklam okunamadığında çiziliyor: `ad_offer` zaten sunucudan geliyor
+  /// ve o okunamadıysa reklam satırı da çizilmiyor — bu bayrak ondan önceki
+  /// kaba anahtar.
+  static const bool adRewardFallback = true;
 }

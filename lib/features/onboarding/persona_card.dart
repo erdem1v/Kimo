@@ -89,6 +89,19 @@ class PersonaCard extends StatelessWidget {
           children: <Widget>[
             _Radio(selected: selected),
             const SizedBox(width: Gap.md),
+            // Tur 7 · n3: her satırda O PERSONANIN Kimo'su duruyor — ad ve
+            // cümleyle birlikte üç sinyal. `accessory` AÇIKÇA geçiliyor:
+            // varsayılan seçili personayı kullanır ve o, dört kartın dördünü
+            // aynı gösterirdi.
+            Padding(
+              padding: const EdgeInsets.only(top: Gap.xxs),
+              child: Kimo(
+                size: 44,
+                accessory: mascot.accessory,
+                semanticLabel: personaName(l, mascot),
+              ),
+            ),
+            const SizedBox(width: Gap.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,8 +211,13 @@ class PersonaPreview extends StatelessWidget {
                     color: c.actionTint,
                     borderRadius: Radii.all(Radii.chip),
                   ),
-                  // Tek maskot: persona değişince yüz değişmiyor.
-                  child: const Kimo(size: 30),
+                  // YÜZ persona ile değişmiyor (Task 04 kararı korunuyor);
+                  // değişen tek şey AKSESUAR (Tur 7 · n2). Önizleme seçili
+                  // tonun bildirimini gösterdiği için aksesuar da seçili
+                  // personanın olmalı — varsayılan bunu zaten yapıyor ama
+                  // `preview` seçim yapılmadan da çizildiği için açıkça
+                  // geçiliyor.
+                  child: Kimo(size: 30, accessory: mascot.accessory),
                 ),
                 const SizedBox(width: Gap.md),
                 Expanded(

@@ -3,10 +3,11 @@ import 'dart:async';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
+import '../../state/user_profile.dart';
 import 'kimo_painter.dart';
 import 'kimo_pose.dart';
 
-export 'kimo_pose.dart' show KimoMood, KimoReaction;
+export 'kimo_pose.dart' show KimoAccessory, KimoMood, KimoReaction;
 
 /// Maskotun dışarıdan sürülen durumu.
 ///
@@ -77,6 +78,7 @@ class Kimo extends StatefulWidget {
     this.scanning,
     this.onTap,
     this.semanticLabel,
+    this.accessory,
   });
 
   final double size;
@@ -94,6 +96,18 @@ class Kimo extends StatefulWidget {
   final VoidCallback? onTap;
 
   final String? semanticLabel;
+
+  /// Persona aksesuarı. VERİLMEZSE seçili persona
+  /// (`userProfile.mascot`) kullanılıyor.
+  ///
+  /// NEDEN VARSAYILAN İÇERDE: maskotun 16 çağrı yeri var ve hepsine persona
+  /// geçirmek, bir yerde atlamanın sessizce aksesuarsız bir Kimo çizmesi
+  /// demekti. Açık parametre yalnızca persona SEÇİM ekranı için gerekiyor —
+  /// orada dördü yan yana, seçili olandan bağımsız çiziliyor.
+  ///
+  /// `KimoAccessory.none` GEÇMEK ile parametreyi VERMEMEK farklı: ilki
+  /// "aksesuarsız çiz" demek, ikincisi "seçili personayı kullan".
+  final KimoAccessory? accessory;
 
   @override
   State<Kimo> createState() => _KimoState();
@@ -117,6 +131,13 @@ class _KimoState extends State<Kimo> with SingleTickerProviderStateMixin {
   bool _reduceMotion = false;
 
   KimoController get _controller => widget.controller ?? _internal!;
+
+  /// Çizilecek aksesuar.
+  ///
+  /// `widget.accessory` verilmemişse seçili persona kullanılıyor; persona
+  /// okunamamışsa aksesuarsız taban ayı.
+  KimoAccessory get _accessory =>
+      widget.accessory ?? userProfile.mascot?.accessory ?? KimoAccessory.none;
 
   @override
   void initState() {
@@ -271,14 +292,22 @@ class _KimoState extends State<Kimo> with SingleTickerProviderStateMixin {
         child: SizedBox(
           width: widget.size,
           height: widget.size,
-          child: ValueListenableBuilder<KimoPose>(
-            valueListenable: _pose,
-            builder: (BuildContext context, KimoPose pose, Widget? child) {
-              return CustomPaint(
-                size: Size.square(widget.size),
-                painter: KimoPainter(pose: pose),
-              );
-            },
+          // İKİ DİNLEYİCİ: poz her karede değişiyor, persona ise seyrek ama
+          // ANINDA görünmeli. Yalnızca poza bakmak yetmezdi — `reduceMotion`
+          // açıkken ticker durduğu için persona değişimi bir sonraki tepkiye
+          // kadar ekrana gelmezdi.
+          child: ListenableBuilder(
+            listenable: userProfile,
+            builder: (BuildContext context, Widget? _) =>
+                ValueListenableBuilder<KimoPose>(
+              valueListenable: _pose,
+              builder: (BuildContext context, KimoPose pose, Widget? child) {
+                return CustomPaint(
+                  size: Size.square(widget.size),
+                  painter: KimoPainter(pose: pose, accessory: _accessory),
+                );
+              },
+            ),
           ),
         ),
       ),

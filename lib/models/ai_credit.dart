@@ -6,9 +6,15 @@
 /// durumda olduğunu sunucu söylüyor (bkz. göç 0075 ve
 /// `docs/task-10-reklam-raporu.md`).
 ///
-/// NEDEN "can" DEĞİL: kayan pencere modeli kalp metaforuna uymuyor — hak
-/// zamanla geri geliyor, tükenen bir yaşam değil. Kalp ikonu ve "can" kelimesi
-/// arayüzden tamamen kaldırıldı (Task 10).
+/// ADI NEDEN "hak": kayan pencerede hak zamanla geri geliyor, tükenen bir
+/// yaşam değil. Task 10 bu gerekçeyle hem kalp ikonunu hem eski kelimeyi
+/// kaldırmıştı.
+///
+/// TASK 12'DE İKONUN TARAFI DEĞİŞTİ, ADIN TARAFI DEĞİŞMEDİ: onaylanan tasarım
+/// (Tur 7 · n1) tek kalp + rakam kullanıyor — Task 10'un reddettiği şey
+/// kalbin hak sayısı kadar TEKRARLANMASIYDI ve o tekrar yok. Arayüz metinleri
+/// ve bu enum "hak" demeye devam ediyor; eski kelimeyi yasaklayan CI kapısı
+/// yerinde.
 enum AiState {
   /// Hak bol.
   ok,

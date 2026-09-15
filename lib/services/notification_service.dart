@@ -174,6 +174,7 @@ class NotificationService {
     required int dueCount,
     required int streak,
     required bool activeToday,
+    int pairStreak = 0,
   }) async {
     await init();
     if (!_ready) return;
@@ -184,6 +185,7 @@ class NotificationService {
       dueCount: dueCount,
       streak: streak,
       activeToday: activeToday,
+      pairStreak: pairStreak,
     );
     // YALNIZCA kendi kimliklerini iptal et. Eskiden cancelAll() çağrılıyordu
     // ve iki yarış üretiyordu: (a) LeagueScreen'in az önce kurduğu lig
@@ -216,26 +218,41 @@ class NotificationService {
     }
 
     // 2) Seri tehlikede — serisi olan ve bugün çözmemiş kullanıcı.
-    if (streak > 0 && !activeToday) {
+    //
+    // ORTAK SERİ BURAYA KATILIYOR, AYRI BİR BİLDİRİM AÇMIYOR (Tur 7 · n6:
+    // "uyarı yalnızca bir kez, AKŞAM HATIRLATMASIYLA BİRLİKTE gelir; ayrı
+    // bildirim gönderilmez").
+    //
+    // NEDEN ÖNEMLİ: yeni bir bildirim türü BEŞ YERİ birden değiştirmek
+    // (NotifyKind + payload + push_kinds + send-push beyaz listesi +
+    // NotificationRouter) artı 4 persona × 5 varyant = 20 yeni cümle demekti.
+    // Ve ikinci bir akşam bildirimi kullanıcının günlük bütçesini ikiye
+    // katlardı — hedef kitle sınav kaygısı olan 14-18 yaş.
+    //
+    // SAYI OLARAK BÜYÜĞÜ GEÇİYOR: iki seriden hangisi daha uzunsa o yazılıyor.
+    // İki ayrı sayı tek cümleye sığmıyor ve ikisini birden söylemek
+    // "kaybedecek iki şeyin var" demek olurdu.
+    final int riskN = riskReminderCount(streak, pairStreak);
+    if (riskN > 0 && !activeToday) {
       await _at(
         id: _idStreak,
         hour: appSettings.streakHour,
         kind: NotifyKind.streakRisk,
         mascot: mascot,
-        n: streak,
+        n: riskN,
       );
     }
 
     // 3) Yarın için emniyet kemeri: kullanıcı uygulamayı hiç açmazsa da
     //    seri hatırlatması çıksın (açtığında bu plan yenilenir).
-    if (streak > 0) {
+    if (riskN > 0) {
       await _at(
         id: _idStreakTomorrow,
         hour: appSettings.streakHour,
         dayOffset: 1,
         kind: NotifyKind.streakRisk,
         mascot: mascot,
-        n: activeToday ? streak + 1 : streak,
+        n: activeToday ? riskN + 1 : riskN,
       );
     }
 
@@ -265,6 +282,7 @@ class NotificationService {
       dueCount: p.dueCount,
       streak: p.streak,
       activeToday: p.activeToday,
+      pairStreak: p.pairStreak,
     );
   }
 
@@ -370,12 +388,34 @@ class _PlanInputs {
     required this.dueCount,
     required this.streak,
     required this.activeToday,
+    this.pairStreak = 0,
   });
 
   final Mascot mascot;
   final int dueCount;
   final int streak;
   final bool activeToday;
+
+  /// En uzun ortak seri (Tur 7 · n6). Akşam hatırlatması iki seriden
+  /// büyüğünü yazıyor — ayrı bir bildirim açılmıyor.
+  final int pairStreak;
 }
+
+/// Akşam hatırlatmasında yazılacak seri sayısı.
+///
+/// TUR 7 · n6 KURALI: ortak seri AYRI BİR BİLDİRİM AÇMIYOR, akşam
+/// hatırlatmasına katılıyor. İki seri tek cümleye sığmadığı için BÜYÜĞÜ
+/// yazılıyor.
+///
+/// NEDEN İKİSİ BİRDEN SÖYLENMİYOR: "12 günlük serin ve 6 günlük ortak serin
+/// tehlikede" cümlesi kullanıcıya KAYBEDECEK İKİ ŞEYİ olduğunu söyler. Hedef
+/// kitle sınav kaygısı olan 14-18 yaş ve DSA Md. 28(1) Kılavuzu (par. 61(b))
+/// kıtlık/aciliyet sinyallerini ismen persuasive design sayıyor. Tek sayı, tek
+/// hatırlatma.
+///
+/// SAF FONKSİYON: kural bildirim eklentisinden bağımsız sınanabilsin diye
+/// ayrı duruyor.
+int riskReminderCount(int streak, int pairStreak) =>
+    pairStreak > streak ? pairStreak : streak;
 
 final NotificationService notifications = NotificationService.instance;

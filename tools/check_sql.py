@@ -13,6 +13,15 @@ sonra en sik cikan ve en ucuz yakalanan hatalari gorunur kilar:
   4. `revoke execute` / `grant execute` yazilmamis yeni fonksiyonlar. Postgres
      yeni fonksiyonda EXECUTE'u PUBLIC'e verir; unutulan bir revoke sessiz bir
      acik birakir.
+  5. `create or replace function` ile OUT sutun listesini (returns table)
+     DEGISTIREN gocler. Postgres yalnizca SONA sutun eklemeye izin verir; ad ya
+     da SIRA degisirse "cannot change return type of existing function" ile
+     PATLAR ve `db reset` o gocte durur. Bu depoda dort kez yasandi
+     (0014/0015, 0016/0024, 0083'te `consume_ai_use` DOGRU cozuldu ama
+     `ai_state` atlandi).
+  6. `create or replace view` ile sutun listesinin ORTASINA sutun ekleyen
+     gocler. Ayni kural: yalnizca SONA ekleme serbest, aksi halde
+     "cannot change name of view column" ile patlar (0081'de `received_questions`).
 
 Kullanim:  python tools/check_sql.py
 Cikis kodu 1 ise sorun bulunmustur.
@@ -103,6 +112,84 @@ def dollar_tags(src):
     for t in tags:
         counts[t] = counts.get(t, 0) + 1
     return {t: c for t, c in counts.items() if c % 2 != 0}
+
+
+def _balanced(src, i):
+    """`i` acilis parantezinden SONRAKI indeks; kapanisa kadar icerigi dondur."""
+    depth, buf = 1, []
+    while depth and i < len(src):
+        c = src[i]
+        if c == '(':
+            depth += 1
+        elif c == ')':
+            depth -= 1
+            if depth == 0:
+                break
+        buf.append(c)
+        i += 1
+    return ''.join(buf)
+
+
+def _cols(body):
+    """Virgulle ayrilmis bildirim listesinden ilk sozcukleri (ad) cikar."""
+    body = re.sub(r'--[^\n]*', '', body)
+    return [p.strip().split()[0] for p in body.split(',') if p.strip()]
+
+
+def out_columns(src):
+    """(fonksiyon adi, OUT sutunlari) — YALNIZCA arg listesinden hemen sonra
+    `returns table` geliyorsa. Ileri arama yapilmiyor: yapilsaydi `returns
+    boolean` olan bir fonksiyon bir SONRAKININ listesini kapardi."""
+    found = []
+    for m in re.finditer(
+            r'create\s+(?:or\s+replace\s+)?function\s+public\.(\w+)\s*\(',
+            src, re.I):
+        i = m.end()
+        depth = 1
+        while depth and i < len(src):
+            if src[i] == '(':
+                depth += 1
+            elif src[i] == ')':
+                depth -= 1
+            i += 1
+        head = re.match(r'\s*returns\s+table\s*\(', src[i:i + 400], re.I)
+        if not head:
+            continue
+        found.append((m.group(1), _cols(_balanced(src, i + head.end()))))
+    return found
+
+
+def view_columns(src):
+    """(gorunum adi, `or replace` mi, sutun adlari)."""
+    found = []
+    for m in re.finditer(r'create\s+(or\s+replace\s+)?view\s+public\.(\w+)',
+                         src, re.I):
+        seg = src[m.end():]
+        sel = seg.lower().find('select')
+        frm = seg.lower().find('\nfrom ')
+        if sel < 0 or frm < 0 or sel > frm:
+            continue
+        body = re.sub(r'--[^\n]*', '', seg[sel + 6:frm])
+        cols, depth, cur = [], 0, ''
+        for ch in body:
+            if ch in '([':
+                depth += 1
+            elif ch in ')]':
+                depth -= 1
+            if ch == ',' and depth == 0:
+                cols.append(cur.strip())
+                cur = ''
+            else:
+                cur += ch
+        if cur.strip():
+            cols.append(cur.strip())
+        names = []
+        for c in cols:
+            c = ' '.join(c.split())
+            alias = re.search(r'\bas\s+(\w+)$', c, re.I)
+            names.append(alias.group(1) if alias else c.split('.')[-1])
+        found.append((m.group(2), bool(m.group(1)), names))
+    return found
 
 
 def plan_problems():
@@ -202,6 +289,34 @@ def main():
                 ('KAPIDAN SONRA YARATILAN FONKSIYON: %s '
                  '(kapiyi gecmiyor; gocu kapidan ONCEYE alin ya da yeni bir '
                  'kapi yazin)' % late, gate))
+
+    # 5) OUT sutun listesini degistiren `create or replace function`
+    # 6) sutun listesinin ORTASINA ekleyen `create or replace view`
+    #
+    # Ikisi de ayni Postgres kuralindan: yalnizca SONA ekleme serbest.
+    # `drop function/view if exists` yazilmissa sorun yok.
+    fn_hist, view_hist = {}, {}
+    for path in files:
+        src = io.open(path, encoding='utf-8').read()
+        for name, cols in out_columns(src):
+            prev = fn_hist.get(name)
+            if prev is not None and cols != prev:
+                if cols[:len(prev)] != prev and not re.search(
+                        r'drop\s+function\s+if\s+exists\s+public\.%s\b' % name,
+                        src, re.I):
+                    problems.append(
+                        ('OUT SUTUN SIRASI/ADI DEGISTI, DROP YOK: %s '
+                         '(create or replace bunu reddeder; drop + create yazin)'
+                         % name, path))
+            fn_hist[name] = cols
+        for name, replace, cols in view_columns(src):
+            prev = view_hist.get(name)
+            if prev is not None and replace and cols[:len(prev)] != prev:
+                problems.append(
+                    ('GORUNUM SUTUNU ORTAYA EKLENDI: %s '
+                     '(create or replace yalnizca SONA ekler; drop + create yazin)'
+                     % name, path))
+            view_hist[name] = cols
 
     # 4) yetkisi hic yonetilmemis fonksiyonlar
     unmanaged = sorted(created - execute_managed)

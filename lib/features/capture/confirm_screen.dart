@@ -32,6 +32,14 @@ import 'pending_photos_screen.dart';
 /// çevrimdışıyken ve "fotoğrafsız devam et" yolunda da bu ekran açılıyor;
 /// yalnızca alanlar boş geliyor. Task'ın istediği bu: "Elle giriş yolu zaten
 /// çevrimdışı kayıt için de gerekiyor — aynı formu iki durum da kullansın."
+/// Kaydedildi ama GÖNDERİLEBİLİR BİR KİMLİK YOK.
+///
+/// Çevrimdışı yollarda satır henüz oluşmuyor (kuyruğa giriyor), yani "yeni soru
+/// çek → doğrudan gönder" akışı o soruyu gönderemez. Ekran `null` DÖNMÜYOR
+/// çünkü `null` "vazgeçildi" demek; iki durumu birleştirmek kullanıcıya
+/// "kaydedilmedi" demek olurdu.
+const String kQueuedSentinel = 'queued';
+
 class ConfirmMistakeScreen extends StatefulWidget {
   const ConfirmMistakeScreen({
     super.key,
@@ -191,7 +199,7 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
           QuestionOption(label: label, text: ''),
       ];
 
-      await mistakeRepository.add(
+      final String? newId = await mistakeRepository.add(
         subject: _subject!,
         concept: _concept!,
         type: _type,
@@ -208,7 +216,11 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
       final String? queueId = widget.queueEntryId;
       if (queueId != null) await photoQueue.remove(queueId);
       sound.correct();
-      if (mounted) nav.pop(true);
+      // KİMLİK GERİ DÖNÜYOR (Task 12 · P4): "yeni soru çek → doğrudan gönder"
+      // yolu buna ihtiyaç duyuyor. `true` yerine kimlik dönmek geriye dönük
+      // uyumu bozmuyor çünkü çağıranlar `== true` yerine `!= null` kontrol
+      // ediyor — ikisi de aynı "kaydedildi" anlamını taşıyor.
+      if (mounted) nav.pop(newId ?? kQueuedSentinel);
     } on PostgrestException catch (e) {
       // SUNUCU REDDETTİ: tekrar denemek aynı sonucu verir, kuyruğa almak
       // kaydı sonsuza dek bekletirdi (SubmissionQueue'nun kalıcı-ret dersi).
@@ -238,7 +250,9 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
       if (ok) {
         sound.correct();
         messenger.showSnackBar(SnackBar(content: Text(l.confirmSavedQueued)));
-        nav.pop(true);
+        // KUYRUĞA ALINDI: satır henüz YOK, yani gönderilecek bir kimlik de
+        // yok. [kQueuedSentinel] "kaydedildi ama gönderilemez" demek.
+        nav.pop(kQueuedSentinel);
       } else {
         setState(() => _saving = false);
       }
@@ -293,7 +307,7 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
     if (!mounted) return;
     if (ok) {
       messenger.showSnackBar(SnackBar(content: Text(l.captureQueuedOffline)));
-      nav.pop(true);
+      nav.pop(kQueuedSentinel);
     } else {
       setState(() => _saving = false);
     }

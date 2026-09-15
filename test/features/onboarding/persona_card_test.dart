@@ -4,6 +4,7 @@ import 'package:kimo/l10n/generated/app_localizations.dart';
 import 'package:kimo/models/mascot.dart';
 import 'package:kimo/theme/app_theme.dart';
 import 'package:kimo/theme/tokens.dart';
+import 'package:kimo/widgets/kimo/kimo.dart';
 import 'package:kimo/widgets/kit/kimo_progress.dart';
 import 'package:kimo/widgets/kit/kimo_surfaces.dart';
 import 'package:flutter/material.dart';
@@ -67,6 +68,33 @@ void main() {
       await tester.tap(find.byType(PersonaCard).last);
       await tester.pump(const Duration(milliseconds: 32));
       expect(tapped, Mascot.ceo);
+    });
+
+    testWidgets('dört kart DÖRT FARKLI aksesuar çiziyor (Tur 7 · n3)',
+        (WidgetTester tester) async {
+      // n3'ün bütün noktası bu: eskiden dördü de AYNI görünüyordu ve kart
+      // yalnızca ad + cümleyle ayrışıyordu. Aksesuar üçüncü sinyal.
+      await pumpIn(
+        tester,
+        Column(
+          children: <Widget>[
+            for (final Mascot m in Mascot.values)
+              PersonaCard(mascot: m, selected: false, onTap: () {}),
+          ],
+        ),
+      );
+      final List<KimoAccessory?> seen = tester
+          .widgetList<Kimo>(find.descendant(
+            of: find.byType(PersonaCard),
+            matching: find.byType(Kimo),
+          ))
+          .map((Kimo k) => k.accessory)
+          .toList();
+      expect(seen.length, 4);
+      expect(seen.toSet().length, 4, reason: 'iki kart aynı aksesuarı gösteriyor');
+      expect(seen, isNot(contains(null)),
+          reason: 'varsayılana düşen kart seçili personayı gösterirdi');
+      expect(seen, isNot(contains(KimoAccessory.none)));
     });
 
     testWidgets('seçili kart aksan zeminiyle ayrışır', (WidgetTester tester) async {

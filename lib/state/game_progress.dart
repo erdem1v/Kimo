@@ -22,9 +22,12 @@ class GameProgress extends ChangeNotifier {
   // elmas ödülü `my_daily_state` üzerinden geliyor — istemcide tutulan bir
   // sayaç olarak değil.
   //
-  // Task 10: `profiles.hearts` sütunu 0047'de düşürüldü ve kalp metaforu
-  // arayüzden tümüyle kalktı (kayan pencere modeli ona uymuyor). Elmas v1'de
-  // GİZLİ ama silinmedi — bkz. `lib/state/features.dart`.
+  // Task 10: `profiles.hearts` sütunu 0047'de düşürüldü. Task 12 kalp
+  // İKONUNU geri getirdi ama SÜTUNU getirmedi — ve bu ayrım önemli: gösterge
+  // sunucudaki `ai_state()`ten besleniyor, istemcide sayılan bir "hearts"
+  // yok. Eski kelime de arayüz metinlerine dönmedi.
+  //
+  // Elmas v1'de GİZLİ ama silinmedi — bkz. `lib/state/features.dart`.
 
   /// Ligi sunucu belirler: her hafta grubunda ilk 5'e girersen yükselirsin.
   /// XP eşiğiyle lig atlama YOK.

@@ -6,11 +6,17 @@ import 'svg_path.dart';
 /// Dolgulu olanlar yalnızca kaynak göstergeleri (alev, elmas, Plus yıldızı)
 /// ve oynat/onay işaretleri — tasarımda böyle tanımlı.
 ///
-/// TASK 10: `heart` SİLİNDİ. Kalp, günde tükenen bir can metaforuydu; kayan
-/// pencere modelinde hak zamanla geri geliyor ve sayıyı ikon olarak
-/// göstermek mümkün değil. Silinmiş olması bir KAPI: `tools/check_symbols.py`
-/// `KimoIcons.heart`a yapılan her başvuruyu "yok" diye düşürüyor, yani
-/// metaforun geri sızması sessizce olamıyor.
+/// TASK 12: `heart` GERİ GELDİ — ama Task 10'un gerekçesi çürütülerek değil,
+/// KAPSAMI DARALTILARAK.
+///
+/// Task 10 kalbi silmişti çünkü özgün tasarım "kalan hak sayısı kadar
+/// TEKRARLANIR" diyordu: kayan pencerede on iki kalp çizmek hem sığmıyor hem
+/// yanlış. Onaylanan yeni tasarım (Tur 7 · n1) tekrarı kaldırıyor — TEK kalp,
+/// yanında RAKAM — yani eski itirazın konusu olan şey artık yok.
+///
+/// Task 10'un İKİNCİ yarısı YÜRÜRLÜKTE: "can" kelimesi arayüz metinlerine
+/// dönmüyor ve onu koruyan CI kapısı (`app_tr.arb` üzerinde kelime sınırlı
+/// desen, kendini sınıyor) SÖKÜLMEDİ. İkon "hangi kaynak" der, ad "hak"tır.
 ///
 /// Yol verileri onaylanan tasarım dosyasından birebir alındı. Emoji arayüzden
 /// tamamen kaldırıldığı için maskot dışındaki her simge buradan gelir.
@@ -74,6 +80,30 @@ class KimoIcons {
     ],
     filled: true,
   );
+
+  /// Analiz hakkı (kalp) — dolgulu. Hak VARKEN çizilen hâl.
+  ///
+  /// Yol, Task 10'da silinen tanımın BİREBİR aynısı
+  /// (`git show 22f0072^:lib/widgets/kit/kimo_icons.dart`) ve onaylanan
+  /// tasarımın SVG'siyle de birebir eşleşiyor — yeniden çizilmedi.
+  static const KimoIconData heart = KimoIconData(
+    <String>[
+      'M12 21C7 17.5 3.5 14.6 3.5 10.8 3.5 8 5.6 6 8.2 6c1.6 0 3 .8 3.8 2 '
+          '.8-1.2 2.2-2 3.8-2 2.6 0 4.7 2 4.7 4.8 0 3.8-3.5 6.7-8.5 10.2z',
+    ],
+    filled: true,
+  );
+
+  /// Analiz hakkı (kalp) — KONTUR. Pencere ya da ay dolduğunda çizilen hâl.
+  ///
+  /// NEDEN AYRI BİR YOL: dolgulu yolu `filled: false` ile çizmek yeterli
+  /// DEĞİL — 2px'lik kontur 24 birimlik ızgaradan taşardı. Tasarım bu yüzden
+  /// içe kaçırılmış ayrı bir yol veriyor ve buradaki değer o.
+  static const KimoIconData heartOutline = KimoIconData(<String>[
+    'M12 20.5C7.4 17.2 4.2 14.4 4.2 10.9 4.2 8.3 6.1 6.5 8.4 6.5c1.5 0 '
+        '2.8.8 3.6 1.9.8-1.1 2.1-1.9 3.6-1.9 2.3 0 4.2 1.8 4.2 4.4 0 '
+        '3.5-3.2 6.3-7.8 9.6z',
+  ]);
 
   /// Elmas — dolgulu.
   static const KimoIconData gem = KimoIconData(
@@ -153,6 +183,8 @@ class KimoIcons {
     person,
     camera,
     flame,
+    heart,
+    heartOutline,
     gem,
     play,
     check,

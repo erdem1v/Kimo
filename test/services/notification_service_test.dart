@@ -54,4 +54,37 @@ void main() {
       expect(r!.hour, 17);
     });
   });
+
+
+  // ==========================================================================
+  // Task 12 · P6 — ortak seri AKŞAM HATIRLATMASINA katılıyor
+  // ==========================================================================
+  group('riskReminderCount', () {
+    test('ortak seri yoksa kişisel seri yazılıyor', () {
+      expect(riskReminderCount(12, 0), 12);
+    });
+
+    test('ortak seri daha uzunsa O yazılıyor', () {
+      expect(riskReminderCount(3, 9), 9);
+    });
+
+    test('kişisel seri daha uzunsa o yazılıyor', () {
+      expect(riskReminderCount(20, 6), 20);
+    });
+
+    test('ikisi de yoksa hatırlatma HİÇ kurulmuyor (0)', () {
+      // `planDay` 0'da bildirimi hiç planlamıyor: "serin tehlikede" demek
+      // için bir seri gerekiyor.
+      expect(riskReminderCount(0, 0), 0);
+    });
+
+    test('İKİ SAYI BİRDEN söylenmiyor — tek sayı dönüyor', () {
+      // "12 günlük serin VE 6 günlük ortak serin tehlikede" cümlesi
+      // kullanıcıya kaybedecek iki şeyi olduğunu söylerdi. DSA Md. 28(1)
+      // Kılavuzu (par. 61(b)) kıtlık/aciliyet sinyallerini ismen sayıyor.
+      final int n = riskReminderCount(12, 6);
+      expect(n, 12);
+      expect(n, isNot(18), reason: 'toplanmıyor');
+    });
+  });
 }

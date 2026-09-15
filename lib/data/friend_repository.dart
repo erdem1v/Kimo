@@ -190,3 +190,120 @@ class AddFriendResult {
 }
 
 final FriendRepository friendRepository = FriendRepository.instance;
+
+/// Bir arkadaşla paylaşılan ortak seri (Tur 7 · n6).
+///
+/// GÖNDERİM SERİYİ BAŞLATIYOR, SÜRDÜRMÜYOR: bir gün sayılıyor çünkü İKİSİ DE
+/// o gün en az bir soru çözdü. Bu ayrım "her gün soru göndermeliyim" baskısını
+/// ve onunla gelen çöp gönderim güdüsünü YAPISAL OLARAK yok ediyor.
+@immutable
+class PairStreak {
+  const PairStreak({
+    required this.friendId,
+    required this.nickname,
+    required this.streak,
+    required this.best,
+    required this.meToday,
+    required this.friendToday,
+    this.avatarPath,
+  });
+
+  final String friendId;
+  final String nickname;
+
+  /// ETKİN seri: sunucu tembel maskeden geçirip veriyor (kişisel serinin
+  /// kuralının aynısı). Cron düşse bile bayat sayı gelmiyor.
+  final int streak;
+  final int best;
+
+  /// Bugün BEN çalıştım mı. Risk satırı bundan üretiliyor.
+  final bool meToday;
+
+  /// Bugün ARKADAŞ çalıştı mı.
+  ///
+  /// ARAYÜZDE "arkadaşın çözmedi" DİYE GÖSTERİLMİYOR: tasarımın katı dil
+  /// kuralı — kimin çözmediği yazmaz. Alan yalnızca "seri bugün tamam mı"
+  /// sorusunu yanıtlamak için var.
+  final bool friendToday;
+
+  final String? avatarPath;
+
+  /// Seri bugün güvende mi.
+  bool get safeToday => meToday && friendToday;
+
+  /// Kullanıcının KENDİ payı eksik mi — risk satırı yalnızca bunda çıkıyor.
+  bool get myTurn => !meToday;
+
+  factory PairStreak.fromRow(Map<String, dynamic> row) => PairStreak(
+        friendId: row['friend_id'] as String,
+        nickname: (row['nickname'] as String?) ?? '',
+        streak: (row['streak'] as num?)?.toInt() ?? 0,
+        best: (row['best'] as num?)?.toInt() ?? 0,
+        meToday: row['me_today'] == true,
+        friendToday: row['friend_today'] == true,
+        avatarPath: row['avatar_path'] as String?,
+      );
+}
+
+/// Ortak seri okuma ve yönetimi.
+///
+/// AYRI BİR TEKİL, `FriendRepository`ın içine gömülmedi: ortak seri
+/// `ff_pair_streak` bayrağıyla tümden kapatılabilir bir yüzey ve onun
+/// çağrılarını arkadaş listesinin çağrılarından ayrı tutmak, bayrak kapalıyken
+/// hiç çağrı yapılmadığını okunur kılıyor.
+class PairStreakRepository {
+  PairStreakRepository._();
+  static final PairStreakRepository instance = PairStreakRepository._();
+
+  SupabaseClient get _client => Supabase.instance.client;
+
+  /// Ortak serilerim. Hata durumunda BOŞ liste — rozet çizilmiyor, ekran
+  /// çökmüyor.
+  Future<List<PairStreak>> mine() async {
+    try {
+      final List<dynamic> rows =
+          await _client.rpc<List<dynamic>>('my_pair_streaks');
+      return rows
+          .map((dynamic r) =>
+              PairStreak.fromRow((r as Map).cast<String, dynamic>()))
+          .toList();
+    } catch (e) {
+      debugPrint('ortak seriler okunamadı: $e');
+      return <PairStreak>[];
+    }
+  }
+
+  /// Ortak seriyi başlatır.
+  ///
+  /// Sunucu İKİ YÖNDE DE çözülmüş gönderim şartını ve üst sınırı kendi
+  /// içinde uyguluyor; `false` "başlamadı" demek ve sebebi AYRIMLAMIYOR —
+  /// deponun `add_friend_by_code`'daki tek-mesaj ilkesi.
+  Future<bool> start(String friendId) async {
+    try {
+      final dynamic res = await _client.rpc<dynamic>(
+        'start_pair_streak',
+        params: <String, dynamic>{'p_friend': friendId},
+      );
+      return res == true;
+    } catch (e) {
+      debugPrint('ortak seri başlatılamadı: $e');
+      return false;
+    }
+  }
+
+  /// Ortak seriden çıkar. Karşı tarafa BİLDİRİLMİYOR.
+  Future<bool> leave(String friendId) async {
+    try {
+      final dynamic res = await _client.rpc<dynamic>(
+        'leave_pair_streak',
+        params: <String, dynamic>{'p_friend': friendId},
+      );
+      return res == true;
+    } catch (e) {
+      debugPrint('ortak seriden çıkılamadı: $e');
+      return false;
+    }
+  }
+}
+
+final PairStreakRepository pairStreakRepository = PairStreakRepository.instance;

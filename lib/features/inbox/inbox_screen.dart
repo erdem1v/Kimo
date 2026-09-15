@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../data/daily_state_repository.dart';
 import '../../data/friend_repository.dart';
 import '../../data/question_send_repository.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -17,6 +20,7 @@ import '../../widgets/kit/kimo_icons.dart';
 import '../../widgets/kit/kimo_surfaces.dart';
 import '../../widgets/mistake_photo.dart';
 import '../../widgets/user_avatar.dart';
+import 'pair_streak_flow.dart';
 
 /// 3n — Gelen kutusu.
 ///
@@ -39,6 +43,10 @@ class _InboxScreenState extends State<InboxScreen> {
   /// İşlem sürerken kilitlenen gönderimler.
   final Set<String> _busy = <String>{};
 
+  /// Ortak seri yüzeyi açık mı (0079 bayrağı). Sunucudan geliyor; okunamazsa
+  /// derleme zamanı yedeğine düşülüyor ve o KAPALI.
+  bool _pairStreakEnabled = false;
+
   @override
   void initState() {
     super.initState();
@@ -56,8 +64,15 @@ class _InboxScreenState extends State<InboxScreen> {
     if (mounted && !_loading) _load();
   }
 
+  Future<void> _loadFlag() async {
+    final DailyState? s = await dailyStateRepository.read();
+    if (!mounted || s == null) return;
+    setState(() => _pairStreakEnabled = s.pairStreakEnabled);
+  }
+
   Future<void> _load() async {
     setState(() => _failed = false);
+    unawaited(_loadFlag());
     try {
       final List<ReceivedQuestion> items =
           await questionSendRepository.received();
@@ -155,6 +170,7 @@ class _InboxScreenState extends State<InboxScreen> {
         children: <Widget>[
           for (final ReceivedQuestion q in _items) ...<Widget>[
             _InboxCard(
+              pairStreakEnabled: _pairStreakEnabled,
               question: q,
               busy: _busy.contains(q.sendId),
               onSolved: _load,
@@ -172,6 +188,7 @@ class _InboxScreenState extends State<InboxScreen> {
 /// Tek gelen soru kartı: fotoğraf, gönderen, üç eylem ve çözüm şıkları.
 class _InboxCard extends StatefulWidget {
   const _InboxCard({
+    required this.pairStreakEnabled,
     required this.question,
     required this.busy,
     required this.onSolved,
@@ -182,6 +199,10 @@ class _InboxCard extends StatefulWidget {
   final ReceivedQuestion question;
   final bool busy;
   final Future<void> Function() onSolved;
+
+  /// Ortak seri yüzeyi açık mı (0079 bayrağı). Kapalıysa çözümden sonra
+  /// hiçbir çağrı çıkmıyor.
+  final bool pairStreakEnabled;
   final VoidCallback onDismiss;
   final Future<void> Function() onReported;
 
@@ -232,6 +253,16 @@ class _InboxCardState extends State<_InboxCard> {
         _answering = false;
       });
       await widget.onSolved();
+      if (!mounted) return;
+      // ORTAK SERİ (Tur 7 · n6, 2. ve 3. an). YALNIZCA DOĞRU cevapta değil,
+      // her çözümde: seri "çözdü mü" ile ilerliyor, "doğru bildi mi" ile
+      // değil — kişisel serinin kuralının aynısı.
+      await afterSolvingFriendQuestion(
+        context,
+        friendId: widget.question.senderId,
+        friendName: widget.question.senderNickname,
+        enabled: widget.pairStreakEnabled,
+      );
     } catch (e) {
       debugPrint('cevap gönderilemedi: $e');
       if (!mounted) return;
@@ -278,7 +309,13 @@ class _InboxCardState extends State<_InboxCard> {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    UserAvatar(name: q.senderNickname, size: 32),
+                    // Tur 7 · n5: gönderenin avatarı. Görünüm bunu
+                    // döndürmüyordu ve kart baş harfe düşüyordu (0081 ekledi).
+                    UserAvatar(
+                      name: q.senderNickname,
+                      avatarPath: q.senderAvatarPath,
+                      size: 32,
+                    ),
                     const SizedBox(width: Gap.sm),
                     Expanded(
                       child: Column(

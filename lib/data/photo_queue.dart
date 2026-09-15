@@ -59,6 +59,7 @@ class PendingPhoto {
     required this.gatedByAge,
     this.subject,
     this.concept,
+    this.batchId,
   });
 
   final String id;
@@ -70,6 +71,10 @@ class PendingPhoto {
 
   final String? subject;
   final String? concept;
+
+  /// Aynı partide çekilen kareler aynı damgayı taşıyor; parti sonuç ekranı
+  /// bunu kullanıyor. `null` = tek kare (bugünkü yol).
+  final String? batchId;
 }
 
 /// Soru fotoğrafları için KALICI kuyruk.
@@ -125,6 +130,44 @@ class PhotoQueue {
   /// Kuyruğun diskte kaplayabileceği en fazla yer.
   static const int maxTotalBytes = 30 * 1024 * 1024;
 
+  /// Tek partide en fazla kaç fotoğraf (Tur 7 · n4: "Tek seferde 10 fotoğraf").
+  static const int batchMax = 10;
+
+  /// Düşük bellekli cihazlarda inilen sınır.
+  static const int batchMaxLowMemory = 3;
+
+  /// Cihazın belleğine göre parti sınırı.
+  ///
+  /// EMSAL: Microsoft Lens tek taramada 100 görsele izin veriyor ama Android'de
+  /// bunu "3 GB'dan fazla RAM" koşuluna bağlıyor — RAM'e bağlı kademeli limit
+  /// yerleşik bir desen.
+  ///
+  /// AMA ASIL KORUMA BU DEĞİL: baytlar hiçbir zaman bellekte TUTULMUYOR
+  /// (diske yazılıyor, bellekte yalnızca ~160px küçük resim kalıyor), yani
+  /// 10 kare ≈ 1 MB küçük resim demek — tam boyutlu dekodun ürettiği ~190 MB
+  /// değil. Kademe ikinci savunma.
+  ///
+  /// [memoryMb] `null` iken TAM SINIR dönüyor ve bu bilinçli: bellek sinyali
+  /// henüz bağlanmadı (`device_info_plus` bağımlılığı gerekiyor). Sinyalsiz
+  /// durumda sınırı düşürmek, cihazların büyük bölümünü sebepsiz
+  /// cezalandırırdı — disk deseni zaten devrede.
+  static int batchLimitFor(int? memoryMb) {
+    if (memoryMb == null) return batchMax;
+    return memoryMb <= 3072 ? batchMaxLowMemory : batchMax;
+  }
+
+  /// Partiden ÖNCE sorulan soru: kuyrukta [count] kayıt için yer var mı?
+  ///
+  /// NEDEN ÖNDEN: kuyruk 20 kayıt / 30 MB ve iki parti onu TAM DOLDURUYOR.
+  /// Önden sormayınca kullanıcı 10 kare çekiyor, sonra [enqueue] bir kısmını
+  /// [PhotoQueueAdd.full] ile reddediyor ve hangi karenin kaybolduğunu
+  /// anlamıyor. Şimdi akış hiç başlamıyor ve bekleyenler ekranına çıkış
+  /// gösteriliyor.
+  Future<int> freeSlots() async {
+    final List<Map<String, dynamic>> items = await _load();
+    return (maxEntries - items.length).clamp(0, maxEntries);
+  }
+
   SupabaseClient get _client => Supabase.instance.client;
 
   List<Map<String, dynamic>>? _cache;
@@ -133,6 +176,46 @@ class PhotoQueue {
   /// Testlerde `path_provider` eklentisi yok; dizin buradan verilebiliyor.
   @visibleForTesting
   static Directory? directoryOverride;
+
+  // --------------------------------------------------------- test dikişleri
+  //
+  // NEDEN SAHTE SUPABASE İSTEMCİSİ DEĞİL: `flush()`in sınanması gereken yanı
+  // ağ katmanı değil, KARAR AĞACI — sıranın korunması, `needsUser`ın
+  // atlanması, hangi hatada kaydın düşürülüp hangisinde beklendiği. Bunun için
+  // ağın kendisini taklit etmek gerekmiyor; ağa giden ÜÇ çağrıyı dışarıdan
+  // vermek yetiyor. `directoryOverride` deseninin aynısı ve yeni bağımlılık
+  // getirmiyor (`mocktail` hâlâ eklenmedi).
+  //
+  // Üretimde hepsi `null` ve gerçek tekiller çağrılıyor; bir sızıntı olsaydı
+  // `debugResetSeams` çağrılmadığı için testler arasında da görünürdü.
+
+  @visibleForTesting
+  static Future<QuestionAnalysis> Function(Uint8List bytes)? analyzeOverride;
+
+  @visibleForTesting
+  static Future<void> Function(Map<String, dynamic> entry, Uint8List bytes)?
+      uploadOverride;
+
+  @visibleForTesting
+  static bool Function()? aiConsentOverride;
+
+  /// Oturum kimliği. Test ortamında `Supabase.instance` kurulu DEĞİL ve ona
+  /// dokunmak fırlatıyor; bu dikiş olmadan `flush()` hiç sınanamıyordu.
+  @visibleForTesting
+  static String? uidOverride;
+
+  /// Testler arası sızıntıyı kapatır. Üretimde çağıran yok.
+  @visibleForTesting
+  static void debugResetSeams() {
+    analyzeOverride = null;
+    uploadOverride = null;
+    aiConsentOverride = null;
+    uidOverride = null;
+  }
+
+  /// Oturumdaki kullanıcı. Dikiş verilmişse `Supabase.instance`e HİÇ
+  /// dokunmuyor — test ortamında o erişimin kendisi fırlatıyor.
+  String? _uid() => uidOverride ?? _client.auth.currentUser?.id;
 
   /// Testlerde bellek önbelleğini boşaltır.
   ///
@@ -170,9 +253,13 @@ class PhotoQueue {
       ];
     } catch (e) {
       // Bozuk kayıt kuyruğu kalıcı olarak kilitlemesin ([SubmissionQueue] ile
-      // aynı gerekçe). Dosyalar diskte kalır; `_pruneOrphans` toplar.
+      // aynı gerekçe). Üstveri kaybolduğu için diskteki dosyaların artık
+      // sahibi yok; [_pruneOrphans] onları topluyor — yoksa 30 MB kapısına
+      // SAYILMAYAN, sonsuza dek büyüyen bir sızıntı kalıyordu.
       debugPrint('fotoğraf kuyruğu okunamadı: $e');
-      return _cache = <Map<String, dynamic>>[];
+      _cache = <Map<String, dynamic>>[];
+      unawaited(_pruneOrphans());
+      return _cache!;
     }
   }
 
@@ -183,6 +270,47 @@ class PhotoQueue {
       await prefs.setString(_storageKey, jsonEncode(items));
     } catch (e) {
       debugPrint('fotoğraf kuyruğu yazılamadı: $e');
+    }
+  }
+
+  /// Üstverisi olmayan `.jpg` dosyalarını siler.
+  ///
+  /// NEDEN VAR: `photo_queue.dart` bu fonksiyonu AYLARDIR çağırıyormuş gibi
+  /// yazıyordu ama depoda TANIMI YOKTU (tek geçiş bir yorum satırıydı). Sonucu
+  /// şuydu: bozuk bir prefs JSON'u ya da kaybolan bir üstveri, diskteki
+  /// fotoğrafları sahipsiz bırakıyordu ve toplam boyut prefs'teki `bytes`
+  /// alanlarından hesaplandığı için o dosyalar [maxTotalBytes] kapısına
+  /// DAHİL BİLE OLMUYORDU — yani sınırsız bir disk sızıntısı.
+  ///
+  /// [_graceMs] NEDEN VAR: [enqueue] önce dosyayı yazıyor, SONRA üstveriyi
+  /// kalıcılaştırıyor. Bu iki adımın arasında koşan bir budama, geçerli bir
+  /// fotoğrafı siler. Taze dosyalara dokunmamak o yarışı kapatıyor; yetim
+  /// gerçekten yetimse bir sonraki turda toplanıyor.
+  Future<void> _pruneOrphans() async {
+    const int graceMs = 60 * 1000;
+    try {
+      final Directory base = await _dir();
+      if (!base.existsSync()) return;
+      final Set<String> known = <String>{
+        for (final Map<String, dynamic> e in await _load())
+          if (e['id'] is String) '${e['id']}.jpg',
+      };
+      final DateTime now = DateTime.now();
+      int removed = 0;
+      for (final FileSystemEntity f in base.listSync()) {
+        if (f is! File) continue;
+        final String name = f.path.split(Platform.pathSeparator).last;
+        if (!name.endsWith('.jpg') || known.contains(name)) continue;
+        if (now.difference(f.statSync().modified).inMilliseconds < graceMs) {
+          continue;
+        }
+        f.deleteSync();
+        removed++;
+      }
+      if (removed > 0) debugPrint('kuyruk: $removed yetim dosya silindi');
+    } catch (e) {
+      // Budama bir KOLAYLIK; başarısız olması kuyruğu durdurmamalı.
+      debugPrint('yetim dosyalar budanamadı: $e');
     }
   }
 
@@ -215,8 +343,9 @@ class PhotoQueue {
     required PhotoQueueState state,
     bool gatedByAge = false,
     Map<String, dynamic> fields = const <String, dynamic>{},
+    String? batchId,
   }) async {
-    final String? uid = _client.auth.currentUser?.id;
+    final String? uid = _uid();
     if (uid == null) {
       debugPrint('oturum yok: fotoğraf kuyruğa ALINAMADI');
       return PhotoQueueAdd.noSession;
@@ -245,6 +374,11 @@ class PhotoQueue {
       'created_at': DateTime.now().toUtc().toIso8601String(),
       'state': state.dbValue,
       'gate': gatedByAge ? 'age' : null,
+      // PARTİ DAMGASI ÜSTVERİDE, ŞEMADA DEĞİL (Tur 7 · n4). Parti bir
+      // istemci kavramı: sunucu tarafında 10 kare, 10 bağımsız `mistakes`
+      // satırı — "bir soruya çok fotoğraf" DEĞİL, "arka arkaya çok soru".
+      // Bu yüzden yeni tablo, yeni sütun ve yeni lockdown göçü gerekmiyor.
+      'batch': batchId,
     });
     await _persist(items);
     return PhotoQueueAdd.ok;
@@ -343,6 +477,7 @@ class PhotoQueue {
           gatedByAge: e['gate'] == 'age',
           subject: e['subject'] as String?,
           concept: e['concept'] as String?,
+          batchId: e['batch'] as String?,
         ),
     ];
   }
@@ -377,12 +512,15 @@ class PhotoQueue {
   /// Dönen değer: durumu DEĞİŞEN kayıt sayısı (arayüz şeridi bunu yeniliyor).
   Future<int> flush() async {
     if (_flushing) return 0;
-    final String? uid = _client.auth.currentUser?.id;
+    final String? uid = _uid();
     if (uid == null) return 0;
 
     _flushing = true;
     int touched = 0;
     try {
+      // Boşaltma turu, budamanın doğal yeri: kuyruk zaten okunuyor ve tur
+      // seyrek (öne gelme / soğuk açılış / gönderim öncesi).
+      await _pruneOrphans();
       final List<Map<String, dynamic>> items = await _load();
 
       // Başka hesaba ait kayıtları AT: fotoğrafı yanlış kullanıcının arşivine
@@ -429,7 +567,7 @@ class PhotoQueue {
         }
 
         if (state == PhotoQueueState.needsAnalysis) {
-          if (!userProfile.aiConsent) {
+          if (!(aiConsentOverride?.call() ?? userProfile.aiConsent)) {
             // AKTARIM ONAYI YOK (Task 03, 4.2). Onay çekim ekranında bir kez
             // isteniyor ve reddedilirse analiz hiç çağrılmıyor; bu ikinci
             // kapı, kuyruğun onayı ATLAYAN bir yol açmasını engelliyor.
@@ -443,7 +581,8 @@ class PhotoQueue {
           }
           final QuestionAnalysis result;
           try {
-            result = await mistakeRepository.analyzeQuestion(bytes);
+            result = await (analyzeOverride?.call(bytes) ??
+                mistakeRepository.analyzeQuestion(bytes));
           } catch (err) {
             // Ağ katmanı: sıra korunsun, sonraya bırak.
             debugPrint('kuyrukta analiz başarısız, sonraya bırakıldı: $err');
@@ -468,21 +607,27 @@ class PhotoQueue {
 
         // ready → yükle + insert
         try {
-          await submissionQueue.drainIfPending();
-          await mistakeRepository.add(
-            subject: e['subject'] as String,
-            concept: e['concept'] as String,
-            type: MistakeType.fromDb(e['type'] as String?),
-            note: (e['note'] as String?) ?? '',
-            imageBytes: bytes,
-            options: _optionsOf(e),
-            correctIndex: (e['correct_index'] as num?)?.toInt(),
-            exam: e['exam'] as String?,
-            extraConcepts: <String>[
-              for (final dynamic x in (e['extras'] as List<dynamic>? ?? const <dynamic>[]))
-                x as String,
-            ],
-          );
+          final Future<void> Function(Map<String, dynamic>, Uint8List)? hook =
+              uploadOverride;
+          if (hook != null) {
+            await hook(e, bytes);
+          } else {
+            await submissionQueue.drainIfPending();
+            await mistakeRepository.add(
+              subject: e['subject'] as String,
+              concept: e['concept'] as String,
+              type: MistakeType.fromDb(e['type'] as String?),
+              note: (e['note'] as String?) ?? '',
+              imageBytes: bytes,
+              options: _optionsOf(e),
+              correctIndex: (e['correct_index'] as num?)?.toInt(),
+              exam: e['exam'] as String?,
+              extraConcepts: <String>[
+                for (final dynamic x in (e['extras'] as List<dynamic>? ?? const <dynamic>[]))
+                  x as String,
+              ],
+            );
+          }
         } on PostgrestException catch (err) {
           // SUNUCU REDDETTİ — tekrar denemek aynı sonucu verir. Kaydı düşür,
           // ama SESSİZCE DEĞİL: kullanıcının fotoğrafı kayboluyor.
@@ -494,7 +639,42 @@ class PhotoQueue {
           await _deleteFile(id);
           touched++;
           continue;
+        } on StorageException catch (err) {
+          // DEPOLAMA KALICI OLARAK REDDETTİ (413 boyut, 400 mime). 0066 aynı
+          // sorunu MIME için sunucuda çözdü, YÜKLEME için çözmemişti: bu dal
+          // yoktu ve aşağıdaki genel `catch`e düşüyordu, yani KUYRUĞUN BAŞI
+          // sonsuza dek tıkanıyordu — tekrar denemek aynı reddi üretiyor.
+          debugPrint('depolama reddetti, düşürüldü: ${err.statusCode} ${err.message}');
+          unawaited(reportError(err, StackTrace.current,
+              context: 'photoQueue.storageRejected'));
+          items.removeAt(i);
+          await _persist(items);
+          await _deleteFile(id);
+          touched++;
+          continue;
         } catch (err) {
+          // BURASI İKİ HATA SINIFINI BİRDEN TAŞIYORDU ve ikisine de "sonraya
+          // bırak" diyordu. Ağ hatasında bu doğru; KALICI bir istemci
+          // hatasında (`e['subject'] as String` cast hatası, bozuk kayıt,
+          // biçim uyumsuzluğu) tekrar denemek aynı sonucu veriyor ve kayıt
+          // düşmediği için kuyruğun BAŞI SONSUZA DEK TIKANIYOR — arkasındaki
+          // bütün fotoğraflar rehin kalıyor.
+          //
+          // Ayrım tipten: `TypeError` / `FormatException` verinin kendisinden
+          // geliyor ve zamanla düzelmiyor. Geri kalan her şey (SocketException,
+          // TimeoutException, FunctionException, tanınmayan) ağ sayılıyor —
+          // KALICI OLDUĞUNU KANITLAYAMADIĞIMIZ hatada kullanıcının fotoğrafını
+          // silmemek, kuyruğun var olma gerekçesi.
+          if (err is TypeError || err is FormatException) {
+            debugPrint('kuyruk kaydı bozuk, düşürüldü: $err');
+            unawaited(reportError(err, StackTrace.current,
+                context: 'photoQueue.corruptEntry'));
+            items.removeAt(i);
+            await _persist(items);
+            await _deleteFile(id);
+            touched++;
+            continue;
+          }
           debugPrint('kuyruk yüklemesi başarısız, sonraya bırakıldı: $err');
           break;
         }

@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../data/daily_state_repository.dart';
 import '../../data/mistake_repository.dart';
+import '../../data/question_send_repository.dart';
+import '../../models/ai_credit.dart';
 import '../../data/photo_queue.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/models.dart';
@@ -20,8 +22,11 @@ import '../credit/credit_indicator.dart';
 import '../credit/credit_wall_screen.dart';
 import '../../services/ads/ad_service.dart';
 import '../../widgets/kit/kimo_button.dart';
+import '../../widgets/kit/kimo_chips.dart';
 import '../../widgets/kit/kimo_icons.dart';
 import '../../widgets/kit/kimo_surfaces.dart';
+import '../plus/plus_screen.dart';
+import 'batch_capture_screen.dart';
 import 'confirm_screen.dart';
 import 'pending_photos_screen.dart';
 
@@ -37,7 +42,20 @@ import 'pending_photos_screen.dart';
 /// olurdu — task'ın açıkça yasakladığı şey. Onun yerine tek ve dürüst bir
 /// "okuyorum" durumu var; sonuçlar geldiklerinde görünüyor.
 class CaptureScreen extends StatefulWidget {
-  const CaptureScreen({super.key, this.deferAnalysis = false});
+  const CaptureScreen({
+    super.key,
+    this.deferAnalysis = false,
+    this.sendToFriendId,
+    this.sendToFriendName,
+  });
+
+  /// GÖNDERME NİYETİ (Tur 7 · n5). Verildiğinde akış "kaydet"te bitmiyor:
+  /// kaydedilen soru doğrudan bu arkadaşa gönderiliyor.
+  ///
+  /// Yeni bir ekran EKLEMİYOR — çekim akışı zaten onay → kaydet ile bitiyor;
+  /// tek eklenen şey, kaydetmeden sonra nereye dönüleceği.
+  final String? sendToFriendId;
+  final String? sendToFriendName;
 
   /// Analiz ERTELENSİN mi (onboarding'in ilk çekimi — A-2).
   ///
@@ -346,8 +364,8 @@ class _CaptureScreenState extends State<CaptureScreen> {
   Future<void> _openWall() => _openWallThen(null, null);
 
   Future<void> _openConfirm(Uint8List? bytes, QuestionAnalysis? analysis) async {
-    final bool? saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
+    final String? saved = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(
         builder: (_) => ConfirmMistakeScreen(
           imageBytes: bytes,
           analysis: analysis,
@@ -355,12 +373,43 @@ class _CaptureScreenState extends State<CaptureScreen> {
       ),
     );
     if (!mounted) return;
-    if (saved == true) {
+    if (saved != null) {
+      // GÖNDERME NİYETİ (Tur 7 · n5): çekim bu akıştan başlatıldıysa
+      // kaydedilen soru doğrudan o arkadaşa gidiyor.
+      //
+      // `kQueuedSentinel` ise gönderemiyoruz: satır henüz yok (çevrimdışı).
+      // Kullanıcıya "kaydedildi" demek doğru, "gönderildi" demek yanlış
+      // olurdu — bu yüzden iki durum ayrı.
+      final String? friendId = widget.sendToFriendId;
+      if (friendId != null && saved != kQueuedSentinel) {
+        await _sendAfterSave(saved, friendId);
+        if (!mounted) return;
+      }
       Navigator.of(context).pop(true);
     } else {
       // Kullanıcı vazgeçti: fotoğrafı koruyup çekim ekranında bırakıyoruz ki
       // yeniden çekmek zorunda kalmasın.
       setState(() {});
+    }
+  }
+
+  /// Kaydedilen soruyu gönderme niyetiyle gelen arkadaşa gönderir.
+  ///
+  /// Sınırlar sunucuda (`send_question_to_friends`, 0081): günlük tavan,
+  /// arkadaş başına tavan, tekrar yasağı. İstemci hiçbirini tekrarlamıyor,
+  /// yalnızca sonucu gösteriyor.
+  Future<void> _sendAfterSave(String mistakeId, String friendId) async {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    try {
+      final SendResult res = await questionSendRepository.sendToFriends(
+        mistakeId: mistakeId,
+        receiverIds: <String>[friendId],
+      );
+      messenger.showSnackBar(SnackBar(content: Text(res.message)));
+    } catch (e) {
+      debugPrint('çekim sonrası gönderim başarısız: $e');
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(L10n.of(context).sendFailed)));
     }
   }
 
@@ -380,6 +429,11 @@ class _CaptureScreenState extends State<CaptureScreen> {
         child: Column(
           children: <Widget>[
             _topBar(context, l),
+            // ÇOKLU ÇEKİM ANAHTARI (Tur 7 · n4). Yalnızca henüz kare
+            // çekilmemişken ve gönderme niyeti yokken görünüyor: yarım bir
+            // akışın ortasında mod değiştirmek çekilen kareyi çöpe atardı.
+            if (_bytes == null && widget.sendToFriendId == null)
+              _modeSwitch(context, l),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: Gap.screen),
@@ -391,6 +445,60 @@ class _CaptureScreenState extends State<CaptureScreen> {
             if (_bytes == null) _pickActions(context, l),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Tekli | Çoklu anahtarı.
+  ///
+  /// ÜCRETSİZ KULLANICI MODU GÖRÜYOR, kilitli (deponun deseni: gizlemek
+  /// değil kilitlemek). Dokununca paywall açılıyor ve TEKLİ ÇEKİM her zaman
+  /// çalışmaya devam ediyor — tasarımın dipnotu tam bunu söylüyor.
+  ///
+  /// Bayrak KAPALIYSA anahtar hiç çizilmiyor (0079 kill switch'i): özellik
+  /// mağaza güncellemesi beklemeden kapatılabilsin.
+  Widget _modeSwitch(BuildContext context, L10n l) {
+    final DailyState? s = _state;
+    if (s == null || !s.multiCaptureEnabled) return const SizedBox.shrink();
+    final bool premium = s.aiTier == AiTier.premium;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Gap.md),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          SegmentedTabs(
+            labels: <String>[l.captureModeSingle, l.captureModeBatch],
+            selectedIndex: 0,
+            onChanged: (int i) {
+              if (i == 0) return;
+              sound.tap();
+              if (!premium) {
+                unawaited(Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => PlusScreen(
+                      // Rakamlar sunucudan: paywall "8 saatte 50 analiz"
+                      // vaadini yazıyor ve yanlış sayı göstermemeli.
+                      freeWindowLimit: s.aiWindowLimit,
+                      freeMonthLimit: s.aiMonthLimit,
+                      plusWindowLimit: s.plusWindowLimit,
+                      plusMonthLimit: s.plusMonthLimit,
+                      windowHours: s.aiWindowHours,
+                    ),
+                  ),
+                ));
+                return;
+              }
+              unawaited(Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                    builder: (_) => const BatchCaptureScreen()),
+              ));
+            },
+          ),
+          if (!premium) ...<Widget>[
+            const SizedBox(width: Gap.sm),
+            KimoIcon(KimoIcons.lock, size: 16, color: context.c.inkMuted),
+          ],
+        ],
       ),
     );
   }

@@ -540,8 +540,21 @@ class _CreditWallScreenState extends State<CreditWallScreen> {
 
   void _openPlus(BuildContext context) {
     sound.tap();
+    // RAKAMLAR SUNUCUDAN GEÇİYOR (Task 12). Eskiden `const PlusScreen()` ile
+    // parametresiz açılıyordu, yani `app_config` sınırları değişse bile ekran
+    // sabit 10/300/50/1000 yedeğini gösteriyordu — bilinen ve düzeltilmemiş
+    // kusur. Paywall artık "8 saatte 50 analiz" gibi bir RAKAM VAADİ
+    // taşıdığı için yanlış sayı göstermek kabul edilemez.
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const PlusScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => PlusScreen(
+          freeWindowLimit: _s.aiWindowLimit,
+          freeMonthLimit: _s.aiMonthLimit,
+          plusWindowLimit: _s.plusWindowLimit,
+          plusMonthLimit: _s.plusMonthLimit,
+          windowHours: _s.aiWindowHours,
+        ),
+      ),
     );
   }
 

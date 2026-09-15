@@ -20,6 +20,36 @@ enum KimoMood {
   night,
 }
 
+/// Persona aksesuarı — maskotun tek görsel varyant ekseni (Tur 7 · n2).
+///
+/// TABAN AYI DEĞİŞMİYOR: kafa, kulak, göz, burun ve ağız geometrisi dört
+/// varyantta birebir aynı. Task 04 personayı "yalnızca ses tonu" yapmıştı ve
+/// `Mascot.emoji`/`Mascot.color`u bilinçli olarak silmişti; Task 12 o kararı
+/// YÜZ düzeyinde değil AKSESUAR düzeyinde geri alıyor — yüz gerçekten aynı
+/// kalıyor.
+///
+/// NEDEN POZDAN AYRI BİR EKSEN: pozlar parametrik (`KimoPose`), aksesuarlar
+/// ayrık. Aksesuarı poza gömmek `poz × varyant` çarpımı üretirdi; ayrı tutmak
+/// "4 poz + 4 aksesuar = 8 şey" bırakıyor. Rive'a geçildiğinde aksesuar tek bir
+/// enum girdisine bağlanacak.
+enum KimoAccessory {
+  /// Aksesuarsız taban ayı. Persona seçilmemiş ekranlarda (giriş, karşılama)
+  /// ve persona okunamadığında kullanılıyor.
+  none,
+
+  /// Anaç — kulakta çiçek + örgü.
+  anac,
+
+  /// Sanayi Ustası — kasket.
+  usta,
+
+  /// CEO — gözlük + papyon.
+  ceo,
+
+  /// Adanalı Arabeskçi — deri ceket yakası + zincir.
+  arabeskci,
+}
+
 /// Tek seferlik tepkiler. Tetiklenir, bir kez oynar, boşta katmanına döner.
 enum KimoReaction {
   /// Doğru cevap — 700 ms zıplama.

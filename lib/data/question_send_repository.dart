@@ -7,11 +7,26 @@ import 'submission_queue.dart';
 /// Soru gönderiminin sonucu. "Zaten göndermiştin" ile gerçek hatayı ayırır;
 /// aksi halde kullanıcıya sebebi tahmin ettiren bir mesaj gösteriliyordu.
 class SendResult {
-  const SendResult({this.sent = 0, this.duplicate = 0, this.error});
+  const SendResult({
+    this.sent = 0,
+    this.duplicate = 0,
+    this.error,
+    this.dailyLimit = false,
+  });
 
   final int sent;
+
+  /// Gönderilemeyen alıcı sayısı: tekrar yasağı, arkadaş başına tavan,
+  /// arkadaş olmama ya da engel. SUNUCU AYRIM YAPMIYOR ve bu bilinçli —
+  /// "arkadaş değil" ile "engellendin" ayrımını sızdırmak, deponun
+  /// `add_friend_by_code`'daki tek-mesaj ilkesini bozardı.
   final int duplicate;
+
   final String? error;
+
+  /// Günlük gönderim tavanına çarpıldı (0081). Ayrı tutuluyor çünkü kullanıcıya
+  /// söylenecek şey farklı: "yarın tekrar" demek gerekiyor.
+  final bool dailyLimit;
 
   bool get ok => sent > 0;
 
@@ -19,12 +34,15 @@ class SendResult {
   String get message {
     if (sent > 0) {
       final String base = '$sent arkadaşına gönderildi 🚀';
-      return duplicate > 0 ? '$base ($duplicate kişide zaten vardı)' : base;
+      return duplicate > 0 ? '$base ($duplicate kişiye gitmedi)' : base;
+    }
+    if (dailyLimit) {
+      return 'Bugünün gönderim hakkın doldu. Yarın devam edebilirsin.';
     }
     if (duplicate > 0 && error == null) {
       return duplicate == 1
-          ? 'Bu soruyu ona zaten göndermiştin.'
-          : 'Bu soruyu onlara zaten göndermiştin.';
+          ? 'Bu soru ona gitmedi — yakında göndermiş olabilirsin.'
+          : 'Bu soru onlara gitmedi — yakında göndermiş olabilirsin.';
     }
     return 'Gönderilemedi: ${error ?? 'bilinmeyen hata'}';
   }
@@ -42,52 +60,64 @@ class QuestionSendRepository {
 
   SupabaseClient get _client => Supabase.instance.client;
 
-  /// Bir soruyu arkadaşlara gönderir. Arkadaşlık kontrolü RLS'te zorunludur.
-  /// Aynı soru aynı kişiye tekrar gönderilebilir (bkz. 0022 göçü).
+  /// Bir soruyu arkadaşlara gönderir — TEK RPC çağrısı (0081).
+  ///
+  /// ESKİDEN alıcı başına ayrı INSERT atılıyordu: ortada bir hata olursa
+  /// kısmi gönderim kalıyordu ve geri alma yoktu. Ayrıca hiç hız sınırı
+  /// yoktu — 0022 unique kısıtı düşürdüğünden beri aynı soru aynı kişiye
+  /// sınırsız tekrar gidiyordu ve her INSERT bir push tetikliyordu.
+  ///
+  /// Sınırlar SUNUCUDA: günlük tavan, arkadaş başına tavan ve "aynı soruyu
+  /// 30 gün tekrar gönderme" yasağı `send_question_to_friends` içinde.
+  /// Arkadaşlık/engel/askı kontrolü RLS politikasında KALIYOR — istemci
+  /// hiçbirini tekrarlamıyor.
   Future<SendResult> sendToFriends({
     required String mistakeId,
     required List<String> receiverIds,
     String? note,
   }) async {
-    final String? uid = _client.auth.currentUser?.id;
-    if (uid == null) {
-      return const SendResult(error: 'Oturum yok');
-    }
     if (receiverIds.isEmpty) return const SendResult();
-    int sent = 0;
-    int duplicate = 0;
-    String? error;
-    for (final String receiver in receiverIds) {
-      try {
-        await _client.from('question_sends').insert(<String, dynamic>{
-          'sender_id': uid,
-          'receiver_id': receiver,
-          'mistake_id': mistakeId,
-          'note': (note == null || note.trim().isEmpty) ? null : note.trim(),
-        });
-        sent++;
-      } on PostgrestException catch (e) {
-        if (e.code == '23505') {
-          // 0022 göçü çalıştırılmamış eski veritabanlarında hâlâ olabilir.
-          duplicate++;
-        } else if (e.code == '42501') {
-          error ??= 'Arkadaşlık onaylı değil';
-        } else {
-          error ??= e.message;
-        }
-      } catch (_) {
-        error ??= 'Bağlantı hatası';
-      }
+    try {
+      final List<dynamic> rows = await _client.rpc<List<dynamic>>(
+        'send_question_to_friends',
+        params: <String, dynamic>{
+          'p_mistake': mistakeId,
+          'p_receivers': receiverIds,
+          'p_note': (note == null || note.trim().isEmpty) ? null : note.trim(),
+        },
+      );
+      if (rows.isEmpty) return const SendResult(error: 'Boş yanıt');
+      final Map<String, dynamic> row = rows.first as Map<String, dynamic>;
+      final String reason = (row['reason'] as String?) ?? '';
+      return SendResult(
+        sent: (row['sent'] as num?)?.toInt() ?? 0,
+        duplicate: (row['blocked'] as num?)?.toInt() ?? 0,
+        dailyLimit: reason == 'daily_limit',
+      );
+    } on PostgrestException catch (e) {
+      // 22023 = not çok uzun ya da 20'den fazla alıcı; ikisi de istemcinin
+      // zaten engellemesi gereken durumlar, yani buraya düşmesi bir hata.
+      return SendResult(error: e.message);
+    } catch (_) {
+      return const SendResult(error: 'Bağlantı hatası');
     }
-    return SendResult(sent: sent, duplicate: duplicate, error: error);
   }
+
+  /// Gelen kutusunun tek seferde indirdiği en fazla satır.
+  ///
+  /// LİMİT AÇIKÇA YAZILIYOR (Task 12). Sorgu limitsizdi ama sınırsız değildi:
+  /// PostgREST'in `max-rows` ayarı (varsayılan 1000) listeyi SESSİZCE kesiyordu
+  /// ve istemci kesildiğini fark edemiyordu. `mistake_repository.dart`
+  /// arşivde aynı sorunu Task 08'de çözmüştü; burası atlanmıştı.
+  static const int inboxLimit = 200;
 
   /// Bana gelen sorular (en yeni önce).
   Future<List<ReceivedQuestion>> received({bool onlyUnsolved = false}) async {
     final List<Map<String, dynamic>> rows = await _client
         .from('received_questions')
         .select()
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false)
+        .limit(inboxLimit);
     final List<ReceivedQuestion> items = rows
         .map(ReceivedQuestion.fromRow)
         .toList();

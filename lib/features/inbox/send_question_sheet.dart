@@ -158,7 +158,10 @@ class _SendSheetState extends State<_SendSheet> {
               const SizedBox(height: Gap.md),
               TextField(
                 controller: _note,
-                maxLength: 200,
+                // 250 ve SUNUCUDA DA sınırlı (0081 CHECK'i). Eskiden sınır
+                // YALNIZCA burada duruyordu; PostgREST'e doğrudan istek atan
+                // yol sınırsız uzunlukta metin yazabiliyordu.
+                maxLength: 250,
                 style: t.body,
                 decoration: InputDecoration(
                   hintText: l.sendNoteHint,

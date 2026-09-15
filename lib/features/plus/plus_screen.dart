@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/photo_queue.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../services/legal_links.dart';
 import '../../theme/tokens.dart';
@@ -87,6 +88,8 @@ class _PlusScreenState extends State<PlusScreen> {
                     ),
                   ),
                   const SizedBox(height: Gap.lg),
+                  _batchSection(context, l),
+                  const SizedBox(height: Gap.lg),
                   _compare(context, l),
                   const SizedBox(height: Gap.lg),
                   _plans(context, l),
@@ -97,6 +100,57 @@ class _PlusScreenState extends State<PlusScreen> {
             _cta(context, l),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Çoklu çekim bölümü (Tur 7 · n4 paywall'ı).
+  ///
+  /// ÜÇ MADDE VE ÜÇÜ DE RAKAM SÖYLÜYOR, abartı söylemiyor: kaç fotoğraf, hangi
+  /// giriş, kaç analiz. Rakamlar sunucudan geliyor (`my_daily_state`), yani
+  /// `app_config` sınırları gevşetilirse metin kendiliğinden doğru kalıyor.
+  ///
+  /// DİPNOT BİR TAAHHÜT: "Tekli çekim ücretsiz sürümde tam olarak çalışmaya
+  /// devam eder." Deponun değişmezi — kaydetme yolu hiçbir koşulda kapanmıyor —
+  /// burada kullanıcıya açıkça söyleniyor.
+  Widget _batchSection(BuildContext context, L10n l) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return KimoCard(
+      radius: Radii.card,
+      padding: const EdgeInsets.all(Gap.screen),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(l.plusBatchTitle, style: t.section),
+          const SizedBox(height: Gap.xs),
+          Text(l.plusBatchBody,
+              style: t.caption.copyWith(color: c.inkSecondary)),
+          const SizedBox(height: Gap.md),
+          _bullet(context, KimoIcons.camera,
+              l.plusBatchPhotos(PhotoQueue.batchMax)),
+          _bullet(context, KimoIcons.notebook, l.plusBatchGallery),
+          _bullet(context, KimoIcons.spark,
+              l.plusBatchQuota(_hours, _plusWindow, _multiplier)),
+          const SizedBox(height: Gap.sm),
+          Text(l.plusBatchSingleFree,
+              style: t.caption.copyWith(color: c.inkMuted)),
+        ],
+      ),
+    );
+  }
+
+  Widget _bullet(BuildContext context, KimoIconData icon, String text) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Gap.sm),
+      child: Row(
+        children: <Widget>[
+          KimoIcon(icon, size: 18, color: c.actionText),
+          const SizedBox(width: Gap.sm),
+          Expanded(child: Text(text, style: t.body)),
+        ],
       ),
     );
   }

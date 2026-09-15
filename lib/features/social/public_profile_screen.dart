@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../data/friend_repository.dart';
@@ -11,6 +13,7 @@ import '../../widgets/kit/kimo_chips.dart';
 import '../../widgets/kit/kimo_icons.dart';
 import '../../widgets/kit/kimo_surfaces.dart';
 import '../../widgets/user_avatar.dart';
+import '../inbox/send_flow.dart';
 
 /// Başka bir kullanıcının profili: ligden ya da arkadaş listesinden açılır.
 ///
@@ -132,6 +135,18 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 ),
                 const SizedBox(height: Gap.md),
                 LeagueBanner(league: p.league),
+                const SizedBox(height: Gap.xl),
+                // Tur 7 · n5: gönderme akışının ikinci ARKADAŞ-ÖNCE girişi.
+                // Profil ekranı bugüne kadar yalnızca okunuyordu; gönderme
+                // eylemi hiç yoktu.
+                KimoButton(
+                  label: l.mistakesSend,
+                  onPressed: () => unawaited(showSendEntrySheet(
+                    context,
+                    friendId: p.id,
+                    friendName: p.nickname,
+                  )),
+                ),
               ],
             ),
     );

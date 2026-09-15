@@ -146,10 +146,16 @@ class KimoProgressBar extends StatelessWidget {
 /// HUD hapı: (isteğe bağlı) ikon + metin. Seri, analiz hakkı ve elmas
 /// göstergeleri bunu kullanır.
 ///
-/// [icon] NULLABLE (Task 10): hak göstergesinin ikonu yok. Kalp silindi çünkü
-/// kayan pencerede hak zamanla geri geliyor ve "2 hakkın kaldı · sonraki
-/// 14:30'da" bir ikonla anlatılamıyor. İkon verilmediğinde boşluk da
-/// çizilmiyor.
+/// [icon] NULLABLE: ikon verilmediğinde boşluk da çizilmiyor.
+///
+/// Task 10 hak göstergesinin ikonunu kaldırmıştı ("kayan pencerede hak zamanla
+/// geri geliyor ve '2 hakkın kaldı · sonraki 14:30'da' bir ikonla
+/// anlatılamıyor"). Tur 7 · n1 bunu METNİ KISALTARAK çözdü: ikon "hangi
+/// kaynak"ı söylüyor, cümle hapta değil dokununca açılan sayfada duruyor. Üç
+/// hap (seri · hak · seviye) artık [Sizes.hudPill] yüksekliğinde.
+///
+/// [child] verildiğinde satır içi ayırıcı gibi bileşik içerikler de
+/// çizilebiliyor — hak hapının "2 │ 14:30" hâli bunu kullanıyor.
 class HudPill extends StatelessWidget {
   const HudPill({
     super.key,
@@ -181,7 +187,8 @@ class HudPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final KimoTypography t = context.t;
     final Widget body = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: Gap.sm),
+      constraints: const BoxConstraints(minHeight: Sizes.hudPill),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: Gap.sm),
       decoration: BoxDecoration(
         color: background,
         borderRadius: Radii.all(Radii.pill),
@@ -191,10 +198,10 @@ class HudPill extends StatelessWidget {
         children: <Widget>[
           if (icon != null) ...<Widget>[
             IconTheme(
-              data: IconThemeData(color: foreground, size: 16),
+              data: IconThemeData(color: foreground, size: 17),
               child: icon!,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: Gap.sm),
           ],
           Flexible(
             child: child ??

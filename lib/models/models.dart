@@ -133,6 +133,7 @@ class QuestionAnalysis {
     this.outOfCredit = false,
     this.creditResetsAt,
     this.creditRemaining,
+    this.refunded = false,
   });
 
   /// Günlük yapay zekâ hakkı bittiği için analiz HİÇ YAPILMADI.
@@ -148,12 +149,22 @@ class QuestionAnalysis {
         concept = null,
         conceptValid = false,
         outOfCredit = true,
+        // HAK HİÇ HARCANMADI, iade de yok: analiz baştan yapılmadı.
+        refunded = false,
         creditRemaining = 0;
 
   final bool ok;
   final List<QuestionOption> options;
   /// Analiz neden başarısız oldu (`ok == false` iken); `null` = bilinmiyor.
   final AnalysisFailure? failure;
+
+  /// Harcanan hak GERİ VERİLDİ mi (0083).
+  ///
+  /// ÜRÜN KURALI (Tur 7 · n4): "Hak sayımı yalnızca okunabilen fotoğraflar
+  /// için düşer." Okunamayan bir karede sunucu hakkı iade ediyor ve bunu
+  /// yanıtta söylüyor — arayüz "hakkın harcanmadı" diyebilsin diye. Bilgi
+  /// olmadan kullanıcı bir hak kaybettiğini sanırdı.
+  final bool refunded;
 
   /// 'TYT' | 'AYT' | null.
   final String? exam;

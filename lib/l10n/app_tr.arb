@@ -71,12 +71,133 @@
   "aiConsentDecline": "Fotoğrafsız devam et",
   "photoBrokenNote": "Fotoğraf gösterilemiyor",
   "captureManualEntry": "Fotoğrafsız devam et",
+  "captureModeSingle": "Tekli",
+  "captureModeBatch": "Çoklu",
+  "batchCounter": "{count}/{max}",
+  "@batchCounter": {
+    "description": "Tur 7 · n4: çekilen kare sayacı.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "batchHint": "sıradaki soru · çerçeveye al",
+  "batchRemaining": "{count, plural, =0{Sınıra ulaştın} =1{1 fotoğraf daha ekleyebilirsin} other{{count} fotoğraf daha ekleyebilirsin}}",
+  "@batchRemaining": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchAnalyze": "Analiz et",
+  "batchCost": "{count, plural, =1{Bu analiz 1 hak kullanacak} other{Bu toplu analiz {count} hak kullanacak}}",
+  "@batchCost": {
+    "description": "Maliyet ÖNDEN söyleniyor: kota foto başına sayılıyor ve kullanıcı onaylamadan harcanmıyor.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchQueueFull": "Kuyrukta yer yok. Bekleyen fotoğrafları tamamla, sonra devam et.",
+  "batchTitle": "{count, plural, =1{1 soru} other{{count} soru}}",
+  "@batchTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchReading": "Hepsini okuyorum",
+  "batchProgress": "{done} tamam · {queued} sırada · {failed} okunamadı",
+  "@batchProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "queued": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "batchExtracted": "Çıkarılan konular",
+  "batchRowReading": "Okunuyor…",
+  "batchRowIndex": "{index}. fotoğraf",
+  "@batchRowIndex": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "batchRowNoTopic": "Konu bulunamadı",
+  "batchRowNoTopicHint": "Sen seç, kaydedelim",
+  "batchRowFix": "Düzelt",
+  "batchSafeNote": "Okunamayan fotoğraf yine de kaydedilir; konusunu ve şıklarını sen yazarsın. Hiçbiri kaybolmaz.",
+  "batchApproveAll": "{count, plural, =1{Onayla · 1 soru} other{Hepsini onayla · {count} soru}}",
+  "@batchApproveAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchTapRowHint": "Tek tek düzeltmek istersen satıra dokun",
+  "batchCreditPaused": "{count, plural, other{Kalan {count} fotoğraf hakkın dönünce okunacak}}",
+  "@batchCreditPaused": {
+    "description": "Kota parti ortasında bitti. Kayıtlar needsAnalysis KALIYOR — sessizce elle girişe düşmüyor.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchRefunded": "Okunamadı — hakkın harcanmadı",
+  "@batchRefunded": {
+    "description": "Tur 7 · n4 kuralı: hak sayımı yalnızca okunabilen fotoğraflar için düşer (0083 iade)."
+  },
+  "plusBatchTitle": "Çoklu çekim Plus''ta",
+  "plusBatchBody": "Denemenin bütün yanlışlarını arka arkaya çek, hepsi tek seferde okunsun. Tek tek çekmek zorunda kalma.",
+  "plusBatchPhotos": "Tek seferde {count} fotoğraf",
+  "@plusBatchPhotos": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "plusBatchGallery": "Galeriden çoklu seçim",
+  "plusBatchQuota": "{hours} saatte {count} analiz — bir oturumda {times} kat daha fazla",
+  "@plusBatchQuota": {
+    "description": "Rakamlar SUNUCUDAN (my_daily_state); paywall sabit sayı yazmıyor. NOT: bu açıklama abartı vaadi anlatan o kelimeyi LİTERAL yazmıyor — yazsaydı CI kapısı kendi satırını yakalardı (eski-ad ve metafor kapılarının aynı kuralı). Plus''ın da tavanı var ve metin yalnızca rakam söylüyor.",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      },
+      "times": {
+        "type": "int"
+      }
+    }
+  },
+  "plusBatchSingleFree": "Tekli çekim ücretsiz sürümde tam olarak çalışmaya devam eder.",
+  "plusBatchKeepSingle": "Tekli çekimle devam et",
   "@captureManualEntry": {
     "description": "Analiz hakkı yokken/çevrimdışıyken elle giriş yolu"
   },
   "creditStateOk": "{count, plural, =1{1 hakkın kaldı} other{{count} hakkın kaldı}}",
   "@creditStateOk": {
-    "description": "Hak bol. Eski kalp/yaşam metaforu DEĞİL: kayan pencerede hak zamanla geri geliyor, tükenen bir şey değil (Task 10). NOT: bu açıklama o eski kelimeyi LİTERAL yazmıyor — yazsaydı CI kapısı kendi satırını yakalardı; eski-ad kapısının aynı kuralı.",
+    "description": "TAM CÜMLE — artık yalnızca ekran okuyucu etiketi ve dokununca açılan sayfa için. Hapta rakam tek başına duruyor (Tur 7 · n1), çünkü kalp ikonu 'hangi kaynak' sorusunu zaten yanıtlıyor. Eski kalp/yaşam metaforunun KELİMESİ hâlâ yasak: ikon geri geldi, ad 'hak' kaldı. NOT: bu açıklama o eski kelimeyi LİTERAL yazmıyor — yazsaydı CI kapısı kendi satırını yakalardı.",
     "placeholders": {
       "count": {
         "type": "int"
@@ -116,6 +237,33 @@
   "creditStateLifetimeFull": "Deneme hakkın doldu",
   "@creditStateLifetimeFull": {
     "description": "Anonim kullanıcı 3 hakkını bitirdi. Gösterilecek saat yok; yol hesap açmaktan geçiyor."
+  },
+  "creditPillNext": "Sonraki {timeAt}",
+  "@creditPillNext": {
+    "description": "HAPTAKİ kısa metin, pencere dolduğunda. Tur 7 · n1: rakam YOK (sıfır), yalnızca saat. Tam cümle (creditStateWindowFull) ekran okuyucuda ve sayfada duruyor. Saat EKSİZ yazılıyor — hap dar, ek sayfada.",
+    "placeholders": {
+      "timeAt": {
+        "type": "String"
+      }
+    }
+  },
+  "creditPillMonth": "{dateAt}",
+  "@creditPillMonth": {
+    "description": "HAPTAKİ kısa metin, aylık sınır dolduğunda: yalnızca yenilenme tarihi. PENCERE SAATİ BURADA DA GÖSTERİLMEZ — o saat artık bir şey vaat etmiyor. 'Bu ay hakkın doldu · 1 Ekim'de yenilenir' cümlesi 360dp'de sığmıyordu ve kırpılıyordu; kısaltma o kırpmayı bitiriyor.",
+    "placeholders": {
+      "dateAt": {
+        "type": "String"
+      }
+    }
+  },
+  "creditPillCount": "{count}",
+  "@creditPillCount": {
+    "description": "HAPTAKİ rakam. Ayrı bir anahtar olarak duruyor ki rakamın biçimlendirmesi (ör. binlik ayırıcı) tek yerden değişsin.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "confirmTitle": "Onayla ve kaydet",
   "confirmIntro": "Şunları çıkardım — yanlış olan varsa dokun, düzelt.",
@@ -582,6 +730,62 @@
     }
   },
   "mistakesSend": "Arkadaşına gönder",
+  "sendEntryTitle": "{name}''e soru gönder",
+  "@sendEntryTitle": {
+    "description": "Tur 7 · n5: arkadaş satırından açılan sayfanın başlığı. Akış ARKADAŞ-ÖNCE: alıcı zaten belli, seçilecek olan soru.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sendEntryBody": "Takıldığın bir soruyu paylaş",
+  "sendEntryFromArchive": "Arşivinden seç",
+  "sendEntryFromArchiveHint": "{count, plural, =0{Arşivin boş} =1{1 soru arasından} other{{count} soru arasından}}",
+  "@sendEntryFromArchiveHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sendEntryNewPhoto": "Yeni soru çek",
+  "sendEntryNewPhotoHint": "Fotoğrafla, doğrudan gönder",
+  "sendArchiveTitle": "{name}''e gönderiliyor",
+  "@sendArchiveTitle": {
+    "description": "Arşivden seçme ekranının başlığı; alıcı sabit olduğu için adı başlıkta.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sendArchiveSearchHint": "Konu veya ders ara",
+  "sendArchiveRecent": "Son eklenenler",
+  "sendArchiveAction": "Gönder",
+  "sendArchiveNote": "{name} soruyu görecek; senin notların gönderilmez",
+  "@sendArchiveNote": {
+    "description": "Öğrencinin KENDİ notu (mistakes.note) gönderime hiç girmiyor — received_questions yalnızca gönderim notunu yayınlıyor. Dipnot bu sözleşmeyi görünür kılıyor.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sendArchiveEmpty": "Arşivin boş — yanlış yaptığın ilk soruyu ekle.",
+  "sendArchiveNoMatch": "Bu aramaya uyan soru yok.",
+  "sendArchiveTruncated": "En yeni {count} soru gösteriliyor.",
+  "@sendArchiveTruncated": {
+    "description": "Arşiv 500 satırda kesiliyor; kesildiğini SÖYLEMEK, sessizce eksik liste göstermekten iyi.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sendUnsendableOptions": "Şıklar eksik",
+  "sendUnsendableScan": "Fotoğraf inceleniyor",
+  "sendUnsendableHideToggle": "Kullanılamayanları gizle",
   "leagueTab": "Lig",
   "friendsTab": "Arkadaşlar",
   "leagueDaysLeft": "{count, plural, =0{Bugün kapanıyor} =1{1 gün kaldı} other{{count} gün kaldı}}",
@@ -648,6 +852,63 @@
   "friendsRemove": "Çıkar",
   "friendsBlock": "Engelle",
   "friendsBlocked": "Engellendi. Sana soru gönderemez ve istek atamaz.",
+  "pairStreakLabel": "ortak seri",
+  "@pairStreakLabel": {
+    "description": "Tur 7 · n6: arkadaş listesi satırındaki rozet. Kişisel seriyle AYNI alev, farklı renk — mercan senin serin, nane ortak seri. Ortak seri yoksa satırda hiçbir şey görünmez; boş durum GÖSTERİLMEZ."
+  },
+  "pairStreakInviteTitle": "{name} sorusunu çözdün",
+  "@pairStreakInviteTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pairStreakInviteBody": "Sen de ona bir soru gönder, ortak seriniz başlasın.",
+  "pairStreakInviteAction": "Soru gönder",
+  "pairStreakInviteLater": "Şimdi değil",
+  "@pairStreakInviteLater": {
+    "description": "Çağrı yalnızca BİR KEZ çıkıyor; bu seçenekte o arkadaş için bir hafta susuyor. Cihazda tutuluyor — sunucuya yazmak gerekmiyor."
+  },
+  "pairStreakStartedTitle": "Ortak seri başladı",
+  "pairStreakStartedBody": "Sen ve {name}. Her ikiniz de günde bir soru çözdükçe sayı büyür.",
+  "@pairStreakStartedBody": {
+    "description": "KURAL BURADA YAZILI: günlük ve iki tarafın da KENDİ çalışması. Gönderim seriyi başlatıyor, sürdürmüyor.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pairStreakStartedAction": "Süper",
+  "pairStreakRiskTitle": "Ortak serin bugün bekliyor",
+  "pairStreakRiskBody": "{count, plural, =1{Bir soru çözersen 1 günlük seriniz devam eder.} other{Bir soru çözersen {count} günlük seriniz devam eder.}}",
+  "@pairStreakRiskBody": {
+    "description": "KİMİN ÇÖZMEDİĞİ YAZMIYOR. Kullanıcıya yalnızca KENDİ payı söyleniyor — 'arkadaşın seni bekliyor' ifadesi arkadaşı baskı aracına çevirirdi.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pairStreakBrokenTitle": "Ortak seriniz sıfırlandı",
+  "pairStreakBrokenBody": "Olur böyle. Bugün birbirinize soru gönderin, yeniden başlasın.",
+  "@pairStreakBrokenBody": {
+    "description": "SUÇLAMA YOK ve metin DAVETLE bitiyor. Kırılma bildirimi HİÇ gönderilmiyor — kullanıcı uygulamayı açtığında görüyor."
+  },
+  "pairStreakBrokenAction": "Başlat",
+  "pairStreakLeave": "Ortak seriden çık",
+  "@pairStreakLeave": {
+    "description": "Tek dokunuşla çıkış. Çıkış karşı tarafa BİLDİRİLMİYOR — bildirilirse ayrılmak sosyal olarak cezalandırılırdı."
+  },
+  "pairStreakFull": "{count, plural, other{Aynı anda en fazla {count} ortak seri tutabilirsin}}",
+  "@pairStreakFull": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "friendsMutual": "{count, plural, =0{} =1{1 ortak arkadaş} other{{count} ortak arkadaş}}",
   "@friendsMutual": {
     "description": "Sunucu yalnızca SAYI döndürüyor; ortak arkadaşların kimliği sızdırılmıyor.",
@@ -765,7 +1026,7 @@
   "mascotToneArabeskci": "Duygulu ve dramatik; dert ortağın.",
   "mascotToneSanayiUstasi": "Kısa konuşur, işe odaklanır.",
   "mascotToneCeo": "Net ve planlı; işi sıraya koyar.",
-  "mascotSampleEvHanimi": "{ad} tam {n} gündür aksatmıyor. Ne çalışkan çocuk.",
+  "mascotSampleEvHanimi": "{ad} tam {n} gündür aksatmıyor canım. Sen de bir bak istersen, yorulmadan.",
   "@mascotSampleEvHanimi": {
     "description": "Persona kartındaki örnek bildirim. Havuzdaki friend_streak metninin aynısı; seçim yapılmadan önce göründüğü için arayüz metni sayılıyor.",
     "placeholders": {
@@ -777,7 +1038,7 @@
       }
     }
   },
-  "mascotSampleArabeskci": "{ad} {n} gündür hiç bırakmadı. Helal olsun dostuma.",
+  "mascotSampleArabeskci": "{ad} {n} gündür hiç bırakmamış be gülüm. Sen de bırakma.",
   "@mascotSampleArabeskci": {
     "description": "Persona kartındaki örnek bildirim. Havuzdaki friend_streak metninin aynısı; seçim yapılmadan önce göründüğü için arayüz metni sayılıyor.",
     "placeholders": {
@@ -789,7 +1050,7 @@
       }
     }
   },
-  "mascotSampleSanayiUstasi": "{ad} {n} gündür tezgâhın başında. Adam gibi iş.",
+  "mascotSampleSanayiUstasi": "{ad} {n} gündür tezgâhın başında. Hadi bakalım, sıra sende.",
   "@mascotSampleSanayiUstasi": {
     "description": "Persona kartındaki örnek bildirim. Havuzdaki friend_streak metninin aynısı; seçim yapılmadan önce göründüğü için arayüz metni sayılıyor.",
     "placeholders": {
@@ -801,7 +1062,7 @@
       }
     }
   },
-  "mascotSampleCeo": "{ad} {n} gün üst üste hedefini tutturdu.",
+  "mascotSampleCeo": "{ad} {n} gün üst üste hedefini tutturdu. Bugünkü tekrarın 6 dakika.",
   "@mascotSampleCeo": {
     "description": "Persona kartındaki örnek bildirim. Havuzdaki friend_streak metninin aynısı; seçim yapılmadan önce göründüğü için arayüz metni sayılıyor.",
     "placeholders": {
