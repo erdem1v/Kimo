@@ -11,7 +11,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(14);
+select plan(15);
 
 select tests.create_supabase_user('alice');
 select tests.create_supabase_user('mallory');
@@ -156,6 +156,26 @@ select lives_ok(
          tests.get_supabase_uid('mallory')::text || '/avatar.jpg',
          tests.get_supabase_uid('mallory')),
   'kendi klasöründeki avatar yolu yazılabiliyor'
+);
+
+-- ================================= (7) storage.objects'te UPDATE POLİTİKASI YOK
+-- Task 14 · D2. İstemci fotoğrafı `upsert: true` ile yüklüyordu; Supabase bunu
+-- `x-upsert` başlığına çevirip sunucuda UPSERT olarak işliyor ve
+-- `storage.objects` üzerinde bir UPDATE politikası ARIYOR. Böyle bir politika
+-- olmadığı için HER yükleme 403 "new row violates row-level security policy"
+-- ile düşüyordu — kaydetme yolunun tamamı kapalıydı ve kuruluş akışında
+-- kuyruk, düşen kaydı fotoğrafıyla birlikte siliyordu.
+--
+-- DÜZELTME İSTEMCİDE YAPILDI (`upsert` kaldırıldı), BURADA DEĞİL. Bu iddia
+-- ters yönü koruyor: biri aynı hatayı "storage'a UPDATE politikası ekleyerek"
+-- çözmeye kalkarsa kırmızı döner. Öyle bir politika, taraması 'clear' çıkmış
+-- bir fotoğrafın üzerine başka bir görsel yazılmasına izin verirdi ve
+-- `mistakes.photo_path`in YAZ-BİR-KEZ olmasını (0020) anlamsız kılardı.
+select is(
+  (select count(*)::int from pg_policies
+    where schemaname = 'storage' and tablename = 'objects' and cmd = 'UPDATE'),
+  0,
+  'storage.objects üzerinde UPDATE politikası YOK — yüklenen görselin üzerine yazılamaz'
 );
 
 select * from finish();

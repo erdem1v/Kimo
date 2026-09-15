@@ -243,10 +243,12 @@ class SocialRepository {
           .uploadBinary(
             path,
             bytes,
-            fileOptions: const FileOptions(
-              contentType: 'image/jpeg',
-              upsert: true,
-            ),
+            // `upsert` YOK: aynı gerekçe (bkz. mistake_repository.add).
+            // Yol zaten zaman damgalı ve eskiler aşağıda süpürülüyor, yani
+            // üzerine yazma hiç gerekmiyordu; `x-upsert` ise storage'da
+            // olmayan bir UPDATE politikası arayıp 403 döndürüyordu — avatar
+            // yükleme de bu yüzden hiç çalışmıyordu.
+            fileOptions: const FileOptions(contentType: 'image/jpeg'),
           );
     } catch (e) {
       throw AvatarException('Fotoğraf yüklenemedi: ${_reason(e)}');

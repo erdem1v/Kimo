@@ -224,13 +224,28 @@ class MistakeRepository {
     if (imageBytes != null) {
       final String uid = _client.auth.currentUser!.id;
       path = '$uid/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      // `upsert` YOK — VE OLMAMALI (Task 14 · D2).
+      //
+      // Supabase Storage'da `upsert: true`, `x-upsert` başlığıyla gidiyor ve
+      // sunucu bunu INSERT değil UPSERT olarak işliyor: `storage.objects`
+      // üzerinde bir UPDATE politikası ARIYOR. Bu depoda storage için yalnızca
+      // insert/select/delete politikaları var, dolayısıyla HER yükleme
+      //   403 "new row violates row-level security policy"
+      // ile düşüyordu. Sonuç: `add()` hiç tamamlanmıyor, çağıran yolu
+      // kuyruğa düşüyor ("kuyruğa alınıyor") ve kuruluş akışında
+      // `PhotoQueue.flush`in `StorageException` dalı kaydı DÜŞÜRÜP fotoğrafı
+      // SİLİYORDU. Kullanıcının gördüğü: "internet var ama fotoğraf kuyrukta
+      // kaldı", sonra da yok oldu.
+      //
+      // Doğru düzeltme burası, UPDATE politikası EKLEMEK DEĞİL: yol zaten
+      // milisaniyelik zaman damgası taşıyor (çakışma pratikte imkânsız) ve
+      // `mistakes.photo_path` YAZ-BİR-KEZ (0020 `revoke update (photo_path)`).
+      // UPDATE politikası eklemek, taraması 'clear' çıkmış bir fotoğrafın
+      // üzerine başka bir görsel yazılmasına izin verirdi.
       await _client.storage.from(_bucket).uploadBinary(
             path,
             imageBytes,
-            fileOptions: const FileOptions(
-              contentType: 'image/jpeg',
-              upsert: true,
-            ),
+            fileOptions: const FileOptions(contentType: 'image/jpeg'),
           );
     }
 
