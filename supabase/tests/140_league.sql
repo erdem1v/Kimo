@@ -58,10 +58,15 @@ select is(public.league_label('zumrut'), 'Zümrüt', 'zumrut etiketi doğru');
 
 -- =========================================================== kohort boyutu
 select is(public.league_cohort_size(), 30, 'kohort 30 kişilik');
+-- BU İDDİA ESKİDEN YANLIŞ GÜVENCE VERİYORDU: kohortun TAVANINI (30) ölçüyor,
+-- gerçek ÜYE SAYISINI değil. Çakışma tavandan değil üye sayısından doğuyor —
+-- kademe nüfusunun 30'a bölümünden artan grup 6-9 kişilik olabiliyor ve o
+-- aralıkta ilk-5 ile son-5 kesişiyor. Gerçek koruma artık `settle`in içinde:
+-- düşme yalnızca kohort >= 11 iken uygulanıyor (bkz. 330_league_cohorts.sql).
 select ok(
-  public.league_cohort_size() > 5 + 5,
-  'kohort ilk 5 ile son 5''i birlikte barındıracak kadar büyük — '
-  'aksi hâlde aynı kişi hem çıkıp hem düşerdi'
+  public.league_cohort_size() >= 11,
+  'kohort tavanı, terfi ve düşme kümelerinin kesişmeyeceği en küçük '
+  'boyuttan (11) büyük'
 );
 
 -- ================================================= terfi ve düşme zincirleri
@@ -84,7 +89,11 @@ declare
 begin
   for i in 1..12 loop
     v_id := tests.create_supabase_user('lig' || i);
-    update public.profiles set league = 'altin' where id = v_id;
+    -- YERLEŞİK kullanıcı: yeni kullanıcı düşme koruması (ilk iki hafta)
+    -- devreye girmesin. Korumanın kendisi 330'da ayrıca sınanıyor.
+    update public.profiles
+       set league = 'altin', created_at = now() - interval '60 days'
+     where id = v_id;
     insert into public.league_members (cohort_id, user_id, xp)
     values ('11111111-1111-1111-1111-111111111111', v_id, 1000 - i * 10);
   end loop;

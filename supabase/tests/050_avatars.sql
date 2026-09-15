@@ -12,7 +12,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(13);
+select plan(16);
 
 select tests.create_supabase_user('alice');
 select tests.create_supabase_user('bob');       -- alice'in arkadaşı
@@ -51,6 +51,49 @@ select tests.authenticate_as('mallory');
 select is(public.can_read_avatar(
             tests.get_supabase_uid('alice')::text || '/guncel.jpg'),
           false, 'H5: yabancı avatarı okuyamıyor');
+
+-- ==================================================== ENGEL (0089)
+-- `can_read_avatar`ın üç dalının HİÇBİRİNDE engel kontrolü yoktu. İki ayrı
+-- sızıntı vardı ve ikisi de DEPOLAMA düzeyinde (arayüz ayrıntısı değil):
+--   a) ARKADAŞ dalı: engelleme arkadaşlığı SİLMİYOR ve `are_friends` engelleri
+--      hiç görmüyor, yani engelli "eski arkadaş" avatarı açık kalıyordu.
+--   b) KOHORT dalı: engellediğin kişiyle aynı lig grubundaysan avatarına
+--      imzalı URL üretebiliyordun.
+-- Tek satırlık düzeltme (`exists()` bloğunun sonuna engel kontrolü) ikisini
+-- birden kapatıyor; kendi klasörün dalı etkilenmiyor.
+select tests.reset_role();
+insert into public.user_blocks (blocker_id, blocked_id)
+values (tests.get_supabase_uid('bob'), tests.get_supabase_uid('alice'));
+
+select tests.authenticate_as('bob');
+select is(public.can_read_avatar(
+            tests.get_supabase_uid('alice')::text || '/guncel.jpg'),
+          false,
+          'ENGELLEDİĞİ eski arkadaşının avatarını ARTIK okuyamıyor');
+
+-- Kohort dalı: engel kalkarsa kohort üyeliği tek başına yeterli mi?
+select tests.reset_role();
+delete from public.user_blocks
+ where blocker_id = tests.get_supabase_uid('bob')
+   and blocked_id = tests.get_supabase_uid('alice');
+insert into public.league_cohorts (id, tier, week_start)
+values ('cccccccc-0000-0000-0000-000000000000', 'bronz', public.istanbul_week());
+insert into public.league_members (cohort_id, user_id, xp) values
+  ('cccccccc-0000-0000-0000-000000000000', tests.get_supabase_uid('alice'), 10),
+  ('cccccccc-0000-0000-0000-000000000000', tests.get_supabase_uid('mallory'), 5);
+
+select tests.authenticate_as('mallory');
+select is(public.can_read_avatar(
+            tests.get_supabase_uid('alice')::text || '/guncel.jpg'),
+          true, 'aynı kohorttaki yabancı avatarı görebiliyor (kohort dalı açık)');
+
+select tests.reset_role();
+insert into public.user_blocks (blocker_id, blocked_id)
+values (tests.get_supabase_uid('mallory'), tests.get_supabase_uid('alice'));
+select tests.authenticate_as('mallory');
+select is(public.can_read_avatar(
+            tests.get_supabase_uid('alice')::text || '/guncel.jpg'),
+          false, 'ENGELLEDİĞİNDE kohort dalı da kapanıyor');
 select is(public.can_read_avatar(
             tests.get_supabase_uid('alice')::text || '/eski.jpg'),
           false, 'H5: yabancı eski dosyayı da okuyamıyor');

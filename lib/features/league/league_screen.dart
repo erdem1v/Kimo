@@ -173,10 +173,17 @@ class _LeagueBoardViewState extends State<LeagueBoardView> {
           _header(context, l, board, me, total),
           const SizedBox(height: Gap.lg),
           for (int i = 0; i < total; i++) ...<Widget>[
-            // Bölge çizgileri GERÇEK kohort boyutuna göre çiziliyor: 30 kişilik
-            // bir grup dolmamışsa (hafta başı) çizgiler yine doğru yerde durur
-            // çünkü sunucu da ilk 5 / son 5 kuralını gerçek üye sayısına
-            // uyguluyor (`settle_past_leagues`).
+            // Bölge çizgileri GERÇEK kohort boyutuna göre çiziliyor: 30
+            // kişilik bir grup dolmamışsa (hafta başı, ya da kademe nüfusunun
+            // 30'a bölümünden artan grup) çizgiler yine doğru yerde durur.
+            //
+            // AŞAĞIDAKİ `i > League.promotionCount` KAPISI SUNUCUYLA AYNI
+            // KURAL: düşme bölgesi yalnızca kohort >= 11 iken çiziliyor, ve
+            // `settle_past_leagues` de düşmeyi yalnızca o eşikten itibaren
+            // uyguluyor (göç 0089). Task 13'e kadar İKİ TARAF AYRIŞIYORDU:
+            // istemci 7 kişilik kohortta hiç düşme bölgesi çizmezken sunucu
+            // 3.-7. sıraları düşürüyordu — kullanıcı "düşme bölgesinde
+            // değilim" görüp hafta sonunda düşüyordu.
             if (i == League.promotionCount && total > League.promotionCount)
               _zoneLine(context, l.leaguePromotionZone, context.c.mint),
             if (total > League.demotionCount &&

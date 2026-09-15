@@ -74,8 +74,14 @@ class SocialRepository {
     }
   }
 
-  /// Bu haftaki lig grubum: 15 kişilik gruba yerleştirir (gerekirse yenisini
-  /// açar), geçmiş haftaları sonuçlandırır ve sıralamayı döndürür.
+  /// Bu haftaki lig grubum: `League.cohortSize` kişilik gruba yerleştirir
+  /// (gerekirse yenisini açar), geçmiş haftaları sonuçlandırır ve sıralamayı
+  /// döndürür.
+  ///
+  /// ENGELLENEN KULLANICI SATIR OLARAK KALIYOR ama takma adı ve avatarı
+  /// sunucuda maskeleniyor (göç 0089); `LeagueEntry.fromRow` null takma adı
+  /// zaten "Öğrenci"ye çeviriyor. Satırı düşürmek sıralamayı ve üye sayısını
+  /// bozardı, ayrıca engeli karşı tarafa ele verirdi.
   Future<LeagueBoard?> myLeagueBoard() async {
     try {
       await _client.rpc<dynamic>('ensure_league_membership');

@@ -8,7 +8,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(10);
+select plan(12);
 
 select tests.create_supabase_user('takim_a');
 select tests.create_supabase_user('takim_b');
@@ -98,6 +98,19 @@ select is(
     where jobname in ('scan-photos-sweep', 'cleanup-anonymous-daily')),
   2,
   'tarama süpürmesi ve anonim temizlik işleri zamanlanmış'
+);
+-- SONUÇ BİLDİRİMİ AYRI BİR İŞ, ve bu bilinçli: devir Pazartesi 00:05
+-- Istanbul'da koşuyor, `send_push`te sessiz aralık yok. Sonucu settle içinde
+-- göndermek 13-18 yaş kitlesine gece yarısı bildirim atmak olurdu.
+select is(
+  (select count(*)::int from cron.job where jobname = 'league-results-push'),
+  1,
+  'lig sonucu bildirimi ayrı bir işte zamanlanmış'
+);
+select is(
+  (select schedule from cron.job where jobname = 'league-results-push'),
+  '0 6 * * *',
+  'sonuç bildirimi 06:00 UTC = 09:00 Istanbul — gece yarısı değil'
 );
 
 select * from finish();

@@ -36,6 +36,10 @@ const ALLOWED_KINDS = new Set([
   "question_solved",
   "friend_league_up",
   "friend_streak",
+  // 0089: lig sonucu. TUR IKI YERDE BIRDEN OLUYDU — 20 metni ve basligi
+  // tabloda duruyordu ama ne bir tetikleyici uretiyordu ne de bu liste onu
+  // kabul ediyordu; bir tetikleyici yazilsa bile bildirim 400 ile duserdi.
+  "league_result",
 ]);
 
 const MAX_TITLE = 120;
