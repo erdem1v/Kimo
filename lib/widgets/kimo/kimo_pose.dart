@@ -63,6 +63,12 @@ enum KimoReaction {
   streakUp,
 
   /// Günlük sandık — 1,2 sn. En büyük hareket; günde en fazla bir kez.
+  ///
+  /// **v1'DE HİÇ TETİKLENMİYOR** (Task 13 notu): tek çağıranı
+  /// `session_end_screen._openChest` ve o `Features.gemsVisible` ile kapılı
+  /// (elmas Task 10'da arayüzden gizlendi). Poz ve testi duruyor ki v2'de
+  /// elmas geri açıldığında bozulmamış olsun — okuyan kişi çalışan bir
+  /// animasyon sanmasın.
   chestOpen,
 
   /// Seviye atlama — 1 sn ölçek nabzı.

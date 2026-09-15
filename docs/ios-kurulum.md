@@ -92,9 +92,14 @@ flutter devices
 flutter run -d <cihaz-kimliği>
 ```
 
-`supabase.json` yoksa uygulama **demo modunda** açılır: yerel mock veri, oturum
-yok (bkz. `lib/services/supabase_config.dart` → `isConfigured`). Onboarding
-akışını uçtan uca denemek için bu yeterlidir.
+`supabase.json` **ZORUNLUDUR**: yoksa uygulama AÇILMAZ, eksik yapılandırmayı
+anlatan bir hata ekranı gösterir (`lib/main.dart` → `ConfigErrorApp`).
+Simülatörde bile önce `cp supabase.example.json supabase.json` yapın.
+
+> Bu paragraf Task 13'e kadar "demo modunda açılır: yerel mock veri, oturum
+> yok" diyordu. Mock mod **Task 03'te kaldırıldı**; yanlış ilk deneyim vaat
+> eden bu cümle Task 11 raporunda bir bulgu olarak yazılmış ama
+> düzeltilmemişti.
 
 Gerçek sunucuya bağlanmak için:
 

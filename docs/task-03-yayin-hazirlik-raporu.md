@@ -485,6 +485,24 @@ süresiz, leech/clamp davranışları).
 
 ---
 
+
+> ## ⚠️ BU RUNBOOK ARTIK GEÇERSİZ (Task 13'te işaretlendi)
+>
+> Aşağıdaki üretime çıkış adımları tarihli bir çalışma raporudur ve birden
+> fazla yerde kodla çelişiyor:
+>
+> * "`select * from cron.job;` (**3 iş** görünmeli)" — göçler Task 13 itibarıyla
+>   **sekiz** iş kuruyor: `league-weekly-rollover`, `league-results-push`,
+>   `scan-photos-sweep`, `cleanup-anonymous-daily`, `signup-throttle-prune`,
+>   `ai-cache-prune`, `pair-streak-daily`, `ledger-prune-daily`,
+>   `subscriptions-reconcile` (dokuz — `ledger-prune-daily` iki fonksiyonu tek
+>   işte çağırıyor).
+> * `guardian-confirm` fonksiyonu **kaldırıldı** (Task 07, veli onayı rejimi).
+> * Göç sayısı ve `functions deploy` listesi bayat.
+>
+> **Güncel dağıtım adımları:** `docs/task-13-kapanis-raporu.md`.
+> Geçmişi yeniden yazmamak için metnin kendisi olduğu gibi bırakıldı.
+
 ## Üretime çıkış runbook'u (sırayla)
 
 1. **Supabase Dashboard → Database → Extensions**: `pg_cron` ve `pg_net`'i

@@ -4,7 +4,29 @@
 üretildi; içindeki her veri/aktarım ifadesinin arkasında bir dosya:satır dayanağı
 var. Köşeli parantezli alanlar (`[şirket unvanı]` gibi) siz doldurana kadar boş.
 
-**Sürüm:** 1.3 · **Hazırlanma tarihi:** [tarih] · **Dayanak commit:** `b28f34b`+Task 10
+**Sürüm:** 1.4 · **Hazırlanma tarihi:** [tarih] · **Dayanak commit:** `b28f34b`+Task 13
+
+> **1.4'te ne değişti (Task 13).** Uygulamaya **uygulama içi satın alma
+> (Kimo Plus aboneliği)** eklendi ve bu ÜÇ TARAFI birden değiştirdi:
+>
+> **(a) Yeni iki veri alıcısı var: Apple ve Google — ödeme işlemcisi olarak.**
+> Kart bilgisi bize HİÇ ULAŞMIYOR; bize gelen, mağazanın verdiği bir işlem
+> kimliği ve abonelik durumu (§1.1, §1.10).
+>
+> **(b) Mağaza gizlilik etiketlerinde `Purchases` artık EVET.** App Store
+> Connect'te "Purchases → Purchase History" ve Play Veri Güvenliği'nde "Satın
+> alma geçmişi" işaretlenmeli (§3.2, §3.3).
+>
+> **(c) Kullanım Koşulları §13 yeniden yazıldı:** "satın alma ŞU AN YOKTUR"
+> ifadesi kalktı; yenileme, iptal, iade, deneme ve cayma hakkı gerçek
+> kurallarıyla yazıldı. **Fiyat metne yazılmadı, bilinçli:** Apple 3.1.2 ve
+> Play abonelik politikası gösterilen fiyatın mağazanın kendi yerelleştirilmiş
+> fiyatı olmasını şart koşuyor.
+>
+> **Ayrıca (d):** Task 12'nin getirdiği ortak seri, çoklu çekimin premium
+> kapısı, uzaktan özellik bayrakları ve hak iadesi envantere işlendi; havuz
+> altyapısı (A-10) sunucuda KAPATILDI ve 92 günlük saklama süresi artık
+> gerçekten uygulanıyor (budama işi kuruldu).
 
 > **1.3'te ne değişti (Task 10).** Uygulamaya **ödüllü reklam** eklendi ve bu
 > ÜÇ TARAFI birden değiştirdi:
@@ -33,7 +55,8 @@ var. Köşeli parantezli alanlar (`[şirket unvanı]` gibi) siz doldurana kadar 
 > tersini yazıyordu.
 >
 > `app_config.legal_version` **1.3** yapılmalı: onay kayıtları o değeri
-> damgalıyor.
+> damgalıyor. *(Task 13 notu: metin 1.4'e çıktı; yükseltme sırası için
+> aşağıdaki §7.4/7'ye bakın — bu adım EN SONA bırakılmalı.)*
 
 > **1.2'de ne değişti (Task 09).** Uygulama adı kesinleşti ve metinlere
 > işlendi: mağaza listelemesi **"Kimo: AI YKS"**, uygulamanın adı **"Kimo"**.
@@ -93,6 +116,20 @@ okunmasıyla çıkarıldı. **Emin olunamayan yerler açıkça işaretlendi.**
 | **Doğum yılı** (`birth_year`) | `public.profiles` | **13 yaş alt sınırının uygulanması** ve yaş derecelendirmesi. Başka hiçbir özelliği etkilemiyor | Yalnızca sunucu fonksiyonları; **kullanıcıya bile yaş döndürülmüyor** | Hesap silinene kadar | Yok | `20260905000200_guardian_removal.sql` (`set_birth_year`) |
 | Sınav yılı ve müfredat (`exam_year`, `curriculum`) | Supabase Auth kullanıcı metadata'sı | Konuların doğru müfredata eşlenmesi, tekrar takviminin sınav tarihine göre kesilmesi | Kullanıcı | Hesap silinene kadar | `curriculum` sabiti (`eski`/`maarif`) OpenAI istem metnine giriyor | `lib/state/user_profile.dart:152-160` |
 | Arkadaş kodu (`friend_code`) | `public.profiles` | Arkadaş eklemenin tek yolu | Kullanıcı; kodu bilen herkes | Hesap silinene kadar; kullanıcı günde 1 kez yenileyebilir | Yok | `20260902000700_friend_code.sql:27-31` |
+| **Abonelik durumu** (`subscriptions`: plan, durum, bitiş, mağaza işlem kimliği) | `public.subscriptions` — **sunucu sahipli**, istemci hiçbir satırı göremez/yazamaz | Ödenmiş katmanın (Kimo Plus) uygulanması; iade/iptal sonrası erişimin kapatılması | Yalnızca sunucu fonksiyonları. Kullanıcı kendi durumunu `my_daily_state.sub_*` sütunlarından görüyor | Hesap silinene kadar (`on delete cascade`) | **Apple / Google** — makbuz doğrulaması için mağaza API'sine işlem kimliği gidiyor | `20260913000500_subscriptions.sql` |
+| **Ortak seri** (`pair_streaks`: iki kullanıcı kimliği, seri, en iyi, son gün) | `public.pair_streaks` — sunucu sahipli | İki arkadaşın birlikte sürdürdüğü seri | Yalnızca sunucu fonksiyonları; okuma `my_pair_streaks()` ile ve **engellenen çift süzülüyor** | Hesap silinene kadar (`on delete cascade`) | Yok | `20260912000800_pair_streaks.sql:51-63` |
+
+> **ÖDEME ARACI BİLGİSİ TOPLANMIYOR.** Kart numarası, son kullanma tarihi,
+> CVV ya da fatura adresi bize **hiç ulaşmıyor**; tahsilatı Apple ve Google
+> yapıyor. Bize gelen, mağazanın verdiği opak bir işlem kimliği ile abonelik
+> durumudur. (Bu yüzden Play formunda "Finansal bilgiler" HAYIR, "Satın alma
+> geçmişi" EVET.)
+
+> **ÇOKLU ÇEKİM PREMIUM'A BAĞLI (Task 12).** Bir özelliğin ilk kez ücretli
+> katmana bağlanması bir veri toplama değişikliği DEĞİL, ama Kullanım
+> Koşulları §13'ün "ücretsiz özelliklerin korunması" taahhüdünü ilgilendiriyor:
+> çoklu çekim ücretsizde HİÇ sunulmamıştı, yani ücretsizden alınmadı. **Tekli
+> çekim her zaman ücretsiz kalıyor** ve bu §13'e açıkça yazıldı.
 | Anonim hesap işareti (`is_anonymous`) | `public.profiles` | Kayıt olmadan denemeye izin vermek | Sunucu | 7 gün (bkz. §1.9) | Yok | `20260902000800_anonymous.sql:31` |
 
 **Toplanmayan kimlik verileri (doğrulandı):** ad-soyad, telefon numarası, T.C.
@@ -456,9 +493,15 @@ Mağaza formları için önemli — hepsi kod taramasıyla doğrulandı:
   yok~~ → **AdMob ve onun geçişli olarak getirdiği `webview_flutter`,
   `webview_flutter_android`, `webview_flutter_wkwebview` eklentileri var.**
   Reklam içeriği bir WebView'de çiziliyor.
-- ~~Uygulama içi satın alma / ödeme yok~~ → **Ödeme hâlâ YOK** ama uygulamada
-  bir Plus TANITIM ekranı var ve fiyat gösteriyor. Satın alma düğmesi görünür
-  biçimde devre dışı; makbuz doğrulaması ve abonelik ayrı bir iş.
+- ~~Uygulama içi satın alma / ödeme yok~~ → **Task 13'te DÜŞTÜ: abonelik var.**
+  Satın alma Apple App Store / Google Play üzerinden yapılıyor. **Ödeme aracı
+  bilgisi (kart numarası vb.) bize HİÇ ULAŞMIYOR**; bize gelen, mağazanın
+  verdiği bir işlem kimliği, ürün kimliği ve abonelik durumu. Makbuz
+  doğrulaması **sunucuda** yapılıyor; istemci hiçbir koşulda katman iddia
+  edemiyor.
+  - *Not:* Plus tanıtım ekranı artık **sabit fiyat göstermiyor** — fiyatın tek
+    kaynağı mağaza yanıtı. Mağaza yanıt vermediyse fiyat içeren hiçbir metin
+    çizilmiyor.
 
 **KORUNAN iddialar (kod taramasıyla doğrulandı):**
 
@@ -757,9 +800,25 @@ silinmesi. **Dikkat:** satır silindiğinde depolama nesnesi otomatik gitmiyor
 (`mistakes` silmede storage'ı temizleyen tetikleyici yok), yani silme akışı
 önce dosyayı silmeli.
 
+> **✅ KAPANDI (Task 13).** Havuzun SUNUCU yüzeyi de kapatıldı:
+> `mistakes.is_public` artık istemciden yazılamıyor (göç 0090) ve
+> `set_question_sharing`, `submit_pool_answer`, `random_public_questions`,
+> `random_questions_by_topic`, `available_question_counts` `authenticated`'a
+> kapatıldı (0091 + 0096).
+>
+> **Neden kapatıldı:** açık olması iki somut zarar üretiyordu. (a) Kullanıcı
+> doğrudan PostgREST ile `is_public = true` yazarak kendi soru FOTOĞRAFINI
+> takma adıyla tüm oturumlu kullanıcılara açabiliyordu — ve bunu yapan bir
+> arayüz olmadığı için HİÇBİR onay defteri kaydı oluşmuyordu. (b)
+> `submit_pool_answer` doğru cevapta 10 XP + seri veriyordu; iki hesapla
+> sıralama şişirilebiliyordu (K.K. §6'nın yasakladığı şey).
+>
+> Fonksiyonlar DÜŞÜRÜLMEDİ, yalnızca yetkileri geri alındı: havuz v2'de
+> dönerse geri açma tek göç.
+
 ---
 
-### A-10 · Ortak havuz altyapısı sunucuda hâlâ açık 🟡 Orta
+### A-10 · Ortak havuz altyapısı sunucuda hâlâ açık 🟡 Orta — ✅ **KAPANDI (Task 13)**
 
 **Ne:** İstemci `is_public` değerini sabit `false` yazıyor ve havuz ekranları
 arşive taşınmış (`lib/features/capture/confirm_screen.dart:126-129`;
@@ -933,7 +992,8 @@ Her satır için: **Toplanıyor mu · Kimlikle ilişkili mi (Linked to You) ·
 | **Other Data** | Other Data Types | ✅ Evet | Evet | App Functionality | **Doğum yılı** (yalnızca yıl) ve onay kayıtları (§1.1, §1.7) |
 | **Sensitive Info** | — | ❌ Hayır | — | — | Irk, din, sağlık, cinsel yönelim, siyasi görüş toplanmıyor |
 | **Identifiers** | Device ID → reklam amacı | ❌ Hayır | — | — | AdMob'a reklam kimliği GİTMİYOR; bu satırdaki mevcut "Evet" yalnızca FCM bildirim jetonu içindir |
-| **Location / Financial / Health / Contacts / Browsing History / Search History / Purchases** | — | ❌ Hayır | — | — | §1.11. **Purchases hâlâ HAYIR**: uygulama içi satın alma yok, Plus ekranı yalnızca tanıtım |
+| **Purchases** | Purchase History | ✅ **Evet** | **Evet** | App Functionality | **Task 13'te DEĞİŞTİ.** Abonelik durumu, plan kimliği ve mağaza işlem kimliği hesaba bağlı tutuluyor (§1.1). **Kart/ödeme aracı bilgisi TOPLANMIYOR** — mağaza tahsil ediyor |
+| **Location / Financial / Health / Contacts / Browsing History / Search History** | — | ❌ Hayır | — | — | §1.11. **Financial Info HAYIR**: ödeme aracı bilgisi bize hiç ulaşmıyor |
 
 > **Not — "Photos or Videos" için amaç seçimi:** Yalnızca *App Functionality*
 > işaretlenmeli. Fotoğraf analitik, kişiselleştirme veya reklam için
@@ -979,7 +1039,9 @@ gerekçesi).
 | **Uygulama bilgileri ve performansı** | Tanılama | ✅ | Zorunlu | Analiz (teşhis) |
 | **Cihaz veya diğer kimlikler** | Cihaz/diğer kimlikler | ✅ | İsteğe bağlı (bildirimler kapatılabilir) | Uygulama işlevi (push bildirimi). **Reklam kimliği DEĞİL** — AAID izni manifest'ten kaldırıldı |
 | **Uygulama etkinliği** | Diğer kullanıcı eylemleri | ✅ | İsteğe bağlı | **1.3'te eklendi.** Reklam gösterimi/etkileşimi (AdMob) — Reklamcılık veya pazarlama |
+| **Satın alma geçmişi** | Abonelik durumu, plan ve mağaza işlem kimliği | ✅ | Toplanıyor · paylaşılmıyor | Uygulama işlevselliği | **Task 13'te DEĞİŞTİ.** Hesaba bağlı; silinemez değil (hesap silinince gidiyor) |
 | **Konum · Finansal bilgiler · Sağlık ve fitness · Ses dosyaları · Dosyalar ve belgeler · Takvim · Kişiler · Web tarama** | — | ❌ | — | — |
+| | | | | | **Finansal bilgiler HAYIR, bilinçli:** kart/ödeme aracı bilgisi bize HİÇ ULAŞMIYOR — tahsilatı mağaza yapıyor |
 
 **Ek Play soruları:**
 
@@ -1886,8 +1948,10 @@ veli veya yasal temsilcinin sorumluluğu saklı kalmak üzere uygulanır.
 
 ### 13. Reklamlar ve ücretli hizmetler
 
-**Uygulama ücretsizdir ve reklamla desteklenir. Uygulama içi satın alma,
-abonelik veya başka bir ödeme ŞU AN YOKTUR.**
+**Uygulama ücretsiz kullanılabilir ve reklamla desteklenir. Ayrıca isteğe
+bağlı, uygulama içi bir abonelik (Kimo Plus) sunulur.** Abonelik olmadan da
+uygulamanın çekirdek işlevi — soru kaydetme, tekli çekim ve tekrar yapma —
+tam olarak çalışır.
 
 **Reklamlar.** Uygulamada tek bir reklam biçimi var: **ödüllü reklam.**
 Kendiliğinden açılan tam ekran reklam, şerit (banner) reklam ya da açılış
@@ -1906,34 +1970,56 @@ reklamı yok ve eklemeyi planlamıyoruz.
   muamelesi ayarını kullanıyoruz. Yine de uygunsuz bir reklam görürseniz
   [iletişim e-postası] adresine yazın — ağ tarafında engelleyebiliriz.
 
-**Kimo Plus.** Uygulamada daha yüksek analiz hakkı sunan bir **Plus tanıtım
-ekranı** bulunuyor. **Satın alma henüz açık değildir**; ekrandaki düğme devre
-dışıdır ve hiçbir ücret tahsil edilmez. Satın alma açıldığında aşağıdaki
-kurallar geçerli olacak ve sizi ayrıca bilgilendireceğiz:
+**Kimo Plus.** Uygulamada **Kimo Plus** adlı bir abonelik sunuyoruz. Aşağıdaki
+kurallar geçerlidir:
 
-- **[Fiyatlandırma]** Ücretler, özellikler ve varsa deneme süresi satın alma
-  ekranında açıkça gösterilir. Fiyatlar KDV dahil olarak belirtilir.
-- **[Ödeme]** Satın almalar Apple App Store veya Google Play üzerinden yapılır;
-  ödeme, iade ve fatura süreçleri ilgili mağazanın kurallarına tabidir.
-- **[Yenileme]** Abonelikler, siz iptal etmediğiniz sürece dönem sonunda
-  otomatik olarak yenilenir. İptali cihazınızın mağaza hesabı ayarlarından
-  yapabilirsiniz.
-- **[Cayma hakkı]** Mesafeli Sözleşmeler Yönetmeliği kapsamında, elektronik
-  ortamda anında ifa edilen hizmetlerde cayma hakkına ilişkin istisnalar
-  saklıdır; bu husus satın alma öncesi ayrıca bildirilir.
-- **[18 yaş altı]** Uygulamada veli onayı mekanizması bulunmadığından, 18
+- **Ne veriyor.** Plus, ücretsiz katmana göre daha yüksek analiz hakkı verir ve
+  çoklu çekimi (tek turda birden çok soru fotoğrafı) açar; ayrıca ödüllü reklam
+  teklifi Plus'ta gösterilmez. **Plus'ın da bir üst sınırı vardır** ve o sınır
+  satın alma ekranında rakamla yazılıdır. "Sınırsız" demiyoruz.
+- **Planlar ve fiyat.** İki plan var: **aylık** ve **yıllık** (yıllık plan aya
+  indirgendiğinde daha ucuzdur). **Ödeyeceğiniz tutar, satın alma ekranında
+  mağazanızın kendi para biriminde ve KDV dahil olarak gösterilen tutardır.**
+  Bu metinde sabit bir fiyat yazmıyoruz: fiyat mağaza tarafından belirlenir ve
+  ülkeye, vergiye ve mağaza fiyat kademesine göre değişebilir.
+- **Ücretsiz deneme.** İlk abonelikte **7 günlük ücretsiz deneme** sunulur.
+  Deneme hakkı **mağaza hesabınıza** bağlıdır (Apple Kimliği / Google hesabı) ve
+  **kullanıcı başına bir kezdir**; uygunluğu mağaza belirler. Deneme
+  süresi bitmeden iptal ederseniz ücret alınmaz.
+- **Ödeme.** Satın almalar **Apple App Store** veya **Google Play** üzerinden
+  yapılır. Ödemeyi biz tahsil etmiyoruz; kart bilgilerinizi görmüyoruz. Ödeme,
+  fatura ve iade süreçleri ilgili mağazanın kurallarına tabidir.
+- **Yenileme.** Abonelik, **dönem bitiminden en az 24 saat önce iptal
+  etmediğiniz sürece otomatik olarak yenilenir** ve ücret o anda tahsil edilir.
+  Yenileme tutarı, yenileme anında mağazada geçerli olan tutardır.
+- **İptal.** İptali **cihazınızın mağaza hesabı ayarlarından** yaparsınız;
+  uygulama içindeki "Aboneliği yönet" bağlantısı sizi doğrudan oraya götürür.
+  **İptal, ödediğiniz dönemin sonuna kadar Plus'ı kapatmaz** — süre dolana
+  kadar kullanmaya devam edersiniz.
+- **İade.** İade talepleri **mağaza tarafından** değerlendirilir (Apple için
+  "Report a Problem", Google Play için Play destek). Bir iade onaylandığında
+  Plus erişimi **derhâl** sona erer; sunucumuz bunu mağazadan gelen bildirimle
+  ve ayrıca her gece yapılan bir doğrulamayla uygular.
+- **Cayma hakkı.** 6502 sayılı Kanun ve Mesafeli Sözleşmeler Yönetmeliği
+  kapsamında, **elektronik ortamda anında ifa edilen hizmetlerde** cayma
+  hakkına ilişkin istisnalar saklıdır (Yönetmelik m.15/1-ğ). Bu, mağazanın
+  kendi iade politikasından bağımsızdır ve tüketici olarak haklarınızı
+  ortadan kaldırmaz.
+- **18 yaş altı.** Uygulamada veli onayı mekanizması bulunmadığından, 18
   yaşından küçük kullanıcıların satın alma yapması velinin bilgisi ve izniyle
   yapılmış sayılır. Velilere, cihaz düzeyinde (App Store / Google Play) satın
-  alma kısıtlaması kurmalarını öneririz.
-- **[Ücretsiz özelliklerin korunması]** Ücretli bir katman gelmesi, o güne
-  kadar ücretsiz sunduğumuz temel özellikleri kendiliğinden ücretli hâle
-  getirmez; böyle bir değişiklik olursa önceden duyurulur. **Soru kaydetme ve
-  tekrar yapma her zaman ücretsiz kalır.**
-- **[Reklamsız kullanım]** Plus, ödüllü reklam teklifini kaldırır. Ücretsiz
-  katmanda da reklam izlemek hiçbir zaman zorunlu değildir.
-- **[Fesih hâlinde]** Hesabınız bu koşulları ihlal ettiğiniz için kapatılırsa
+  alma kısıtlaması kurmalarını **önemle öneririz**.
+- **Ücretsiz özelliklerin korunması.** Ücretli katmanın varlığı, o güne kadar
+  ücretsiz sunduğumuz temel özellikleri kendiliğinden ücretli hâle getirmez;
+  böyle bir değişiklik olursa önceden duyurulur. **Soru kaydetme, TEKLİ ÇEKİM
+  ve tekrar yapma her zaman ücretsiz kalır.**
+- **Fesih hâlinde.** Hesabınız bu koşulları ihlal ettiğiniz için kapatılırsa
   kullanılmamış dönem için iade yapılmayabilir; iade talepleri ilgili mağazanın
   kurallarına göre değerlendirilir.
+- **Abonelik bilgileriniz.** Aboneliğinizin durumu, planı, bitiş tarihi ve
+  mağaza işlem kimliği sunucumuzda tutulur. Ne tuttuğumuz ve ne kadar
+  sakladığımız Gizlilik Politikası'ndadır. **Kart numarası, son kullanma
+  tarihi ya da benzeri ödeme aracı bilgisi bize HİÇ ULAŞMAZ.**
 
 ### 14. Hesabın kapatılması ve fesih
 
@@ -2201,7 +2287,7 @@ Bu belge tek başına yayına yetmez. Sıra:
    **Adres girilmezse ilgili satır uygulamada hiç görünmez** — sessizce eksik
    kalır, hata vermez.
 7. **`app_config.legal_version`** — yayınlanan metinlerin sürümü buraya
-   yazılmalı (bu belgede `1.1`). **Atlanırsa onay kayıtları `1.0` damgalanır**
+   yazılmalı (bu belgede `1.4`). **Atlanırsa onay kayıtları `1.0` damgalanır**
    ve sunucu günlüğüne uyarı yazılır; kayıt akışı durmaz.
 8. **Mağaza formları** — §3'teki cevapların girilmesi. App Review notuna 1.2'nin
    dört şartının nerede karşılandığı yazılmalı.

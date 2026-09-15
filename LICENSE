@@ -1,0 +1,28 @@
+Kimo — Tüm hakları saklıdır
+Copyright (c) 2026
+
+Bu depodaki kaynak kod, tasarım varlıkları, veritabanı şeması ve dokümantasyon
+tescilli (proprietary) ve gizlidir.
+
+Telif hakkı sahibinin önceden yazılı izni olmaksızın; bu yazılımın tamamının
+veya bir kısmının kopyalanması, değiştirilmesi, birleştirilmesi, yayımlanması,
+dağıtılması, alt lisanslanması, satılması, tersine mühendisliğe tabi tutulması
+ya da ondan türev çalışma üretilmesi YASAKTIR.
+
+Depoya erişim verilmiş olması, yukarıdaki hakların hiçbirini devretmez.
+
+------------------------------------------------------------------------------
+ÜÇÜNCÜ TARAF BİLEŞENLER
+
+Uygulama, kendi lisanslarıyla dağıtılan açık kaynak bileşenler kullanır
+(Flutter ve `pubspec.yaml`'daki paketler; gömülü Baloo 2 ve DM Sans yazı
+tipleri SIL Open Font License 1.1 ile gelir).
+
+Bu bileşenlerin lisans metinleri uygulama içinde
+**Ayarlar → Açık kaynak lisansları** ekranında eksiksiz gösterilir. Bu dosya o
+lisansların yerine geçmez ve onların koşullarını sınırlamaz.
+
+------------------------------------------------------------------------------
+GARANTİ YOK
+
+YAZILIM "OLDUĞU GİBİ" SUNULUR; AÇIK VEYA ÖRTÜLÜ HİÇBİR GARANTİ VERİLMEZ.

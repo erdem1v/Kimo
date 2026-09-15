@@ -690,6 +690,18 @@
   },
   "plusLegalTermsLabel": "Kullanım Koşulları",
   "plusLegalPrivacyLabel": "Gizlilik Politikası",
+  "licensesTitle": "Açık kaynak lisansları",
+  "@licensesTitle": {
+    "description": "Ayarlar > Açık kaynak lisansları ekranının başlığı (Task 13)."
+  },
+  "licensesIntro": "Kimo, aşağıdaki açık kaynak bileşenleri kullanıyor. Her birinin lisans metni kendi kartında.",
+  "@licensesIntro": {
+    "description": "Lisans ekranının giriş cümlesi."
+  },
+  "settingsLicenses": "Açık kaynak lisansları",
+  "@settingsLicenses": {
+    "description": "Ayarlar listesindeki lisans satırı."
+  },
   "plusRestore": "Satın alımları geri yükle",
   "plusManage": "Aboneliği yönet",
   "plusNotAvailableYet": "Plus henüz açılmadı. Hazır olduğunda bu düğmeden başlatabileceksin.",

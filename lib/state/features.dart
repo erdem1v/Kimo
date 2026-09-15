@@ -35,6 +35,12 @@ class Features {
   /// çizilmiyor; kullanıcı boş bir sandık açmıyor. Günlük hedefin duyurusu
   /// (`sessionGoalReached`) ve ödülün XP kısmı (`+{xpGained}` karosu) yerinde
   /// kalıyor, yani ödül hâlâ görünür.
+  /// NEDEN `ff_` AİLESİNE ALINMADI (Task 13 notu): Task 12 uzaktan bayrak
+  /// altyapısını getirdi ve aşağıdaki üç sabit için "yürürlükteki karar
+  /// sunucuda" diye yazıyor. Elmas o aileye BİLEREK alınmadı — bu bir kill
+  /// switch değil, bir **v2 ürün kararı**. Uzaktan açılması istenmiyor: v2
+  /// geldiğinde elmasın kazanımı, sandığı ve kutlaması birlikte dönecek ve o
+  /// an bir `app_config` satırı değil bir sürüm gerekiyor.
   static const bool gemsVisible = bool.fromEnvironment('SHOW_GEMS');
 
   // ==================================================== sunucu bayrağı YEDEKLERİ

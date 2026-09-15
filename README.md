@@ -1,81 +1,81 @@
 # Kimo
 
-YKS'ye hazırlanan lise öğrencileri için Türkçe bir **AI koçluk ve sınav
-hazırlık** uygulaması. Uygulamanın kalbi şu döngüdür:
+YKS'ye hazırlanan lise öğrencileri için Türkçe bir **hata arşivi ve aralıklı
+tekrar** uygulaması. Uygulamanın kalbi şu döngüdür:
 
-> Öğrenci bir soruyu yanlış çözer → hata **hata bankasına** kaydedilir →
-> **aralıklı tekrar (spaced repetition)** ile zaman içinde tekrar tekrar
-> sorulur → tüm döngü **Duolingo tarzı oyunlaştırma** (can, XP, seri, lig,
-> rozet) ile sarmalanır.
+> Öğrenci bir soruyu yanlış çözer → fotoğrafı çekilir, yapay zekâ soruyu
+> okur → hata **hata bankasına** kaydedilir → **aralıklı tekrar** ile zaman
+> içinde tekrar tekrar sorulur → tüm döngü **oyunlaştırma** (XP, seri, lig,
+> analiz hakkı) ile sarmalanır.
 
-Arayüz, AI yanıtları ve bildirimler **%100 Türkçe**dir. Başka dil şimdilik
-planlanmıyor; yine de metinler `.arb` dosyaları üzerinden yönetilir.
+Arayüz, AI yanıtları ve bildirimler **%100 Türkçe**dir. Başka dil planlanmıyor;
+yine de metinler `.arb` dosyaları üzerinden yönetilir.
 
 ---
 
-## Teknik yığın (stack)
+## Teknik yığın
 
 | Katman | Seçim |
 | --- | --- |
-| Framework | Flutter (stable, Android/iOS/Web) |
-| State management | Riverpod (v3) |
-| Veri modelleri | Freezed + json_serializable |
-| Yerel veritabanı | drift (SQL) — *bağımlılık eklendi, kalıcı katman sonraki fazda* |
-| Lokalizasyon | flutter_localizations + gen_l10n (`.arb`) |
-| Backend | **Şimdilik yok — tamamen yerel.** İleride Supabase düşünülüyor |
+| Framework | Flutter (stable, Android/iOS) |
+| Durum yönetimi | **Kod üretimi ve DI çerçevesi YOK.** `ChangeNotifier` / `ValueListenable` ve dosya sonundaki singleton depolar (`lib/data/`, `lib/state/`) |
+| Veri modelleri | Elle yazılmış saf Dart sınıfları (`lib/models/`). `fromRow` haritalayıcıları elle yazılır |
+| Arka uç | **Supabase** — Postgres + RLS, Edge Functions (Deno), Storage, Auth |
+| Yerel kalıcılık | `shared_preferences` (üstveri) + `path_provider` (fotoğraf baytları) |
+| Lokalizasyon | `flutter_localizations` + `gen_l10n` (`lib/l10n/app_tr.arb`) |
+| Bildirim | `flutter_local_notifications` (cihazda) + FCM (sunucudan) |
+| Reklam | AdMob, **yalnızca ödüllü** — banner/interstitial/açılış YOK |
+| Çökme raporlama | Sentry |
 
-> **Not:** AI çağrıları hiçbir zaman istemciden doğrudan yapılmaz ve API
-> anahtarı asla istemci kodunda bulunmaz. Backend eklendiğinde çağrılar
-> sunucu tarafı bir "AI Gateway" üzerinden geçer.
+> **Not:** AI çağrıları hiçbir zaman istemciden doğrudan yapılmaz ve sağlayıcı
+> anahtarı asla istemci kodunda bulunmaz. Çağrılar `analyze-question` Edge
+> Function'ı üzerinden geçer; anahtar yalnızca Supabase fonksiyon ortamındadır.
+
+### Neden kod üretimi yok
+
+`build_runner`, `freezed`, `json_serializable` ve `drift` bu depoda **yoktur**.
+README uzun süre bunların kullanıldığını yazıyordu ve bu yanlıştı; Task 13'te
+düzeltildi. Üretilen tek dosya `gen_l10n` çıktısı ve o da depoya işleniyor.
 
 ## Klasör yapısı
 
-Feature-first; her özellik altında `data / domain / presentation` ayrımı:
-
 ```
 lib/
-  core/            # tema, sabitler, yardımcılar, lokalizasyon
-  features/
-    auth/ onboarding/ mistake_bank/
-    spaced_repetition/   # SM-2 scheduler + "Bugünün Tekrarları" ekranı  ✅ (MVP)
-    question_bank/ gamification/ coach_chat/
-    progress_dashboard/ notifications/
-  shared/
-    models/        # Student, Question, Mistake, ReviewSchedule, GamificationState
-    widgets/       # ör. Tip A şekil çizimi (CustomPainter)
-  main.dart / app.dart
+  main.dart · app.dart
+  data/        # Supabase depoları, kuyruklar (fotoğraf, gönderim)
+  features/    # admin auth capture credit home inbox league mistakes
+               # onboarding plus practice profile reviews settings social
+  l10n/        # app_tr.arb + üretilen AppLocalizations
+  models/      # saf Dart modeller
+  services/    # bildirim, push, ses, reklam, satın alma, hukuki bağlantılar
+  state/       # uygulama ayarları, kullanıcı profili, özellik bayrakları
+  theme/       # tasarım token'ları ve tipografi
+  widgets/     # Kimo maskotu (CustomPainter) ve tasarım kiti
+  _archive/    # ARŞİV: havuz (ortak soru havuzu) ekranları. Analizden hariç,
+               # canlı koddan import EDİLMİYOR. Sunucu yüzeyi Task 13'te
+               # kapatıldı; geri açma reçetesi lib/_archive/README.md'de.
+supabase/
+  migrations/  # 101 zaman damgalı göç — şemanın tek kaynağı
+  functions/   # 10 Edge Function (+ _shared)
+  tests/       # 37 pgTAP dosyası, 831 iddia
+  mutations/   # 55 mutasyon: her korumanın testi GERÇEKTEN ayırt ediyor mu
+tools/         # Docker'sız çalışan statik kapılar (aşağıda)
 ```
 
 ## Kurulum
 
 ```bash
 flutter pub get
-flutter gen-l10n
-dart run build_runner build
-flutter run
+cp supabase.example.json supabase.json     # değerleri doldurun
+flutter run --dart-define-from-file=supabase.json
 ```
 
-### ⚠️ Kod üretimi (build_runner) hakkında önemli not
+**`supabase.json` ZORUNLUDUR.** Yoksa uygulama açılmaz: `main.dart` eksik
+yapılandırmayı anlatan bir hata ekranı gösterip çıkar (`ConfigErrorApp`).
+Eskiden bir "demo/mock modu" vardı; **Task 03'te kaldırıldı.**
 
-Bu makinedeki kullanıcı yolu Türkçe karakter (`ö`) içerdiğinden, Dart'ın
-AOT snapshot yazıcısı `build_runner`'ı doğrudan çalıştırırken hata veriyor
-(`Unable to write file ... build.dart.aot`). Geçici çözüm: projeye **ASCII
-bir junction** üzerinden erişip codegen'i oradan çalıştırın:
-
-```bash
-# Yönetici GEREKMEZ:
-cmd /c mklink /J C:\kimo "C:\Users\Taha Karagöz\Desktop\kimo"
-cd C:\kimo
-dart run build_runner build
-```
-
-Üretilen dosyalar gerçek proje klasörüne yazılır (junction aynı yeri gösterir).
-`flutter test`, `flutter run`, `dart analyze` gerçek yoldan sorunsuz çalışır;
-yalnızca `build_runner` bu junction'a ihtiyaç duyar.
-
-> `flutter` PowerShell'de PATH'te değilse: `C:\src\flutter\bin` klasörünü
-> kullanıcı PATH'ine ekleyin ve terminali/uygulamayı yeniden başlatın. Ayrıca
-> `git` PATH'te olmalıdır (`C:\Program Files\Git\cmd`).
+`.arb` dosyasını düzenledikten sonra `flutter gen-l10n` çalıştırın ve üretilen
+dosyayı commit'leyin.
 
 ## Test
 
@@ -83,25 +83,39 @@ yalnızca `build_runner` bu junction'a ihtiyaç duyar.
 flutter test
 ```
 
-- `SpacedRepetitionScheduler` için saf birim testleri
-  (`test/features/spaced_repetition/...`).
-- "Bugünün Tekrarları" ekranı için widget testi (`test/widget_test.dart`).
+### Statik kapılar (Docker'sız, saniyeler)
+
+Geliştirme makinesinde Flutter ya da Docker olmayabilir; bu betikler oradaki
+tek geri bildirim yolu ve CI'da da koşuyorlar.
+
+```bash
+python3 tools/check_workflows.py    # is akışı dosyaları AYRIŞTIRILABİLİR mi
+python3 tools/check_sql.py          # göç dengesi, plan(n), yetki, OUT sütunu
+python3 tools/check_symbols.py      # tasarım token'ı / kit sembolleri
+python3 tools/check_imports.py      # eksik/kullanılmayan import
+python3 tools/build_taxonomy.py --check
+```
+
+Her betiğin bir `--selftest`i var: uydurma bir ihlali yakalayamazsa kırmızı
+döner. Bu depoda bir denetleyici **iki kez** sessizce hiçbir şey bulmama
+hatasına düştü; selftest o dersin karşılığı.
+
+> `tools/check_workflows.py` Task 13'te eklendi. `ci.yml` Task 10'dan Task
+> 13'e kadar **geçersiz YAML** idi ve GitHub onu hiç koşturmadı — yani pgTAP,
+> mutasyon ve `flutter test` o aralıkta hiç çalışmadı.
 
 ## Veritabanı ve güvenlik testleri
 
 Şema `supabase/migrations/` altında, zaman damgalı dosyalar hâlinde ve sırayla
-uygulanır. Temel şema `20240101000000_init.sql` (eskiden `supabase/schema.sql`
-idi ve `migrations/` dışında olduğu için `supabase db reset` tarafından hiç
-uygulanmıyordu).
-
-### Yerel yığın + pgTAP
+uygulanır.
 
 ```bash
-npm install supabase --save-dev        # Docker Desktop (WSL2) gerekir
+npm install supabase --save-dev        # Docker gerekir
 npx supabase start                     # -x storage-api KULLANMAYIN:
                                        # storage.objects şeması o konteynerden gelir
 npx supabase db reset                  # göçler + seed.sql (pgTAP + tests.* yardımcıları)
-npx supabase test db                   # supabase/tests/ altındaki pgTAP süiti
+npx supabase test db                   # pgTAP süiti
+bash tools/mutation_check.sh           # testler gerçekten ayırt ediyor mu
 ```
 
 `db reset` çıktısında **`skipped` satırı olmamalı.** Supabase CLI, adı
@@ -117,61 +131,55 @@ uygulamaya kalkar. `db reset` yalnızca yerel/test veritabanı içindir.
 
 ### Edge function'lar
 
-JWT doğrulaması artık `supabase/config.toml` içinde beyan ediliyor
-(`[functions.send-push] verify_jwt = true`), yani dağıtım bayrak gerektirmez:
+JWT doğrulaması `supabase/config.toml` içinde beyan ediliyor, yani dağıtım
+bayrak gerektirmez:
 
 ```bash
-supabase functions deploy send-push
-supabase functions deploy analyze-question
+supabase functions deploy analyze-question send-push scan-photos \
+  delete-account delete-question cleanup-anonymous ad-reward \
+  verify-purchase store-notify reconcile-subscriptions
 ```
 
-`send-push` çalışmadan önce `app_config` doldurulmalı:
+`verify_jwt = false` olan **yalnızca iki** fonksiyon var — `ad-reward` ve
+`store-notify` — ve ikisi de kullanıcı JWT'si taşımayan bir dış geri çağrıdan
+besleniyor. **Hiçbir doğrulamasız fonksiyon servis rolü istemcisi kurmaz.**
 
-```sql
-insert into public.app_config (key, value) values
-  ('push_url',         '<edge function adresi>'),
-  ('push_service_key', '<SUPABASE_SERVICE_ROLE_KEY>')
-on conflict (key) do update set value = excluded.value;
-delete from public.app_config where key = 'push_secret';   -- artık kullanılmıyor
-```
+Sırlar ve kurulum adımları için `docs/task-13-kapanis-raporu.md`.
 
-## Aralıklı tekrar (SM-2)
+## Aralıklı tekrar
 
-`SpacedRepetitionScheduler` **saf Dart** bir sınıftır (UI/DB bağımsız,
-kolayca test edilebilir):
+`ReviewScheduler` **saf Dart** bir sınıftır (UI/DB bağımsız, kolayca test
+edilebilir) — `lib/features/reviews/domain/review_scheduler.dart`:
 
-- Öğrenme adımları: **1 → 3 → 7 → 14 → 30** gün, sonrası `easeFactor` ile
-  çarpımsal büyür.
-- `easeFactor` başlangıç **2.5**, alt sınır **1.3**.
-- Yanlış cevap: seri sıfırlanır, aralık 1 güne döner.
+- Öğrenme adımları: **1 → 3 → 7 → 30** gün.
+- Son adımdan sonra soru kuyruğu TERK ETMEZ: **45 gün** arayla seyrek döner.
+- `lapses >= 4` → `isLeech` ("kavramı baştan çalış" sinyali).
+- Yanlış cevap adımı geri alır.
+
+SM-2 **değil**: `easeFactor` diye bir kavram yok. FSRS değerlendirmesi kapsam
+dışı.
 
 ## Güvenlik ve gizlilik (reşit olmayan kullanıcılar)
 
-- **Uygulama 13 yaş ve üzeri içindir** ve bu sınır kodda zorlanır
-  (`set_birth_year`, göç `0063`): 13 yaşından küçük bir doğum yılı `KM013`
-  ile reddedilir ve kullanıcı nazik bir açıklama görür.
+- **Uygulama 13 yaş ve üzeri içindir** ve bu sınır kodda zorlanır: 13 yaşından
+  küçük bir doğum yılı `KM013` ile reddedilir.
 - **Veli onayı mekanizması YOKTUR** (Task 07'de kaldırıldı). 13–17 yaş için
-  hukuken zorunlu değil: COPPA 13 altı için geçerli, Apple veli onayını Kids
-  Category'de arıyor, Play Families 13 altını hedefleyenler için. Koşullarda
-  belirtilir, mekanizma kurulmaz.
+  hukuken zorunlu değil; koşullarda belirtilir, mekanizma kurulmaz.
 - Kayıt adımında **Kullanım Koşulları ve Gizlilik Politikası onayı** alınır ve
   metin sürümüyle birlikte `user_consents` defterine yazılır.
 - Kötüye kullanan kullanıcı **askıya alınabilir ya da kalıcı olarak
   yasaklanabilir** (`user_sanctions`); uygunsuz içerikte üç ihlalde otomatik
-  askı devreye girer. Yasak veri katmanında zorlanır, istemci kapısı değildir.
+  askı devreye girer. Yasak **veri katmanında** zorlanır, istemci kapısı
+  değildir.
 - Gereksiz kişisel veri (konum, kişi listesi vb.) toplanmaz.
-- Sırlar `.env` ile yönetilir ve `.gitignore`'dadır; `.env.example`'a bakın.
-  Hukuki metin adresleri `supabase.json` içinde `--dart-define-from-file` ile
-  gelir (`supabase.example.json`'a bakın).
+- İstemci yapılandırması `supabase.json` ile `--dart-define-from-file`
+  üzerinden gelir (`supabase.example.json`'a bakın). **Sunucu sırları asla
+  istemciye gitmez**; Supabase fonksiyon ortamında dururlar.
 
 > ⚖️ **Yasal uyarı:** Tam **KVKK uyumluluğu** ayrı bir hukuki inceleme
 > gerektirir; bu depo teknik iskeleti sağlar, hukuki uygunluğu garanti etmez.
 
-## Yol haritası (özet)
+## Lisans
 
-- [x] Proje iskeleti, SM-2 scheduler + testler, veri modelleri
-- [x] "Bugünün Tekrarları" ekranı (mock veri)
-- [ ] drift kalıcı katmanı + hata bankası
-- [ ] Oyunlaştırma modülü (kalıcı can/XP/seri/lig/rozet)
-- [ ] Tip A şekil kütüphanesinin genişletilmesi, statik soru bankası
-- [ ] AI koçluk sohbeti (sunucu gateway ile)
+Kapalı kaynak — bkz. `LICENSE`. Kullanılan açık kaynak bileşenlerin lisansları
+uygulama içinde **Ayarlar → Açık kaynak lisansları** ekranında gösterilir.

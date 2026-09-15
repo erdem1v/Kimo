@@ -15,8 +15,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// gerileme olurdu — eski istemcinin 403 alıp sessizce XP kaybetmesi senaryosunu
 /// reddederken çevrimdışı kullanıcı için aynısını kabul etmek tutarsız olurdu.
 ///
-/// KAPSAM: dört cevaplama akışının hepsi — `pool`, `sent`, `review`, `goal`.
-/// Yani ağ yokken hiçbir cevap kaybolmuyor.
+/// KAPSAM: ÜÇ CANLI akış — `sent`, `review`, `goal` — artı arşivden kalan
+/// `pool` dalı. Yani ağ yokken hiçbir cevap kaybolmuyor.
+///
+/// `pool` DALI ARTIK ULAŞILAMAZ: havuz Task 02'de arşive alındı ve o türü
+/// kuyruğa yazan tek kod `lib/_archive/`de. Task 13 sunucu yüzeyini de kapattı
+/// (`submit_pool_answer` artık `authenticated`'a kapalı). Dal SİLİNMİYOR:
+/// kullanıcıların DİSKİNDE bekleyen eski kuyruk kayıtları için sigorta, ve
+/// havuz v2'de dönerse bedava çalışıyor.
 ///
 /// Havuz ve arkadaştan gelen sorularda bir kabul var: doğruluğu sunucu
 /// belirlediği için çevrimdışıyken SONUÇ GÖSTERİLEMİYOR. Kullanıcı "cevabın
@@ -204,6 +210,9 @@ class SubmissionQueue {
   Future<Map<String, dynamic>?> _send(Map<String, dynamic> e) async {
     final String kind = e['kind'] as String? ?? '';
     switch (kind) {
+      // ARŞİV: yalnızca diskte bekleyen ESKİ kuyruk kayıtları için. Canlı kod
+      // bu türü hiç yazmıyor ve sunucudaki RPC Task 13'te kapatıldı — çağrı
+      // 42501 ile düşer ve kayıt kuyrukta kalır (kaybolmaz).
       case 'pool':
         return _one('submit_pool_answer', <String, dynamic>{
           'p_mistake': e['mistake_id'],

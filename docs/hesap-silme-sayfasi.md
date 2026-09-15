@@ -43,7 +43,7 @@ bekleme süresi olmaması (`account_repository.dart:9-18`), anonim hesapların
 
 # YAYINLANACAK METİN
 
-## [uygulama adı] — Hesabımı sil
+## Kimo — Hesabımı sil
 
 **Son güncelleme:** [tarih]
 
@@ -78,7 +78,9 @@ silinemezse **işlem durur ve hesabınız olduğu gibi kalır.** Yarım bir silm
 - Arşivinizdeki tüm sorular ve **soru fotoğraflarınız**
 - Profil fotoğrafınız
 - Profiliniz: takma adınız, maskotunuz, doğum yılınız, arkadaş kodunuz
-- XP'niz, seriniz, elmaslarınız, lig geçmişiniz
+- XP'niz, seriniz, uygulama içi ödül bakiyeleriniz, lig geçmişiniz
+- Abonelik kaydınız (varsa) — mağazadaki aboneliğinizi İPTAL ETMEZ;
+  onu App Store / Google Play ayarlarından yapmanız gerekir
 - Çalışma ve tekrar geçmişiniz, cevap kayıtlarınız
 - Arkadaşlıklarınız ve arkadaşlık istekleriniz
 - Gönderdiğiniz ve size gönderilen sorular
@@ -106,11 +108,20 @@ Dürüst olmak adına bunları da yazıyoruz:
 Hesap açmadan uygulamayı denediyseniz hiçbir şey yapmanıza gerek yok:
 kayıt olunmamış hesaplar **7 gün sonra otomatik olarak** silinir.
 
+> Cihazınızda gönderilmeyi bekleyen fotoğraflar varsa onlar telefonunuzun
+> kendi hafızasındadır; uygulamayı kaldırdığınızda onlar da gider.
+
 ### Tek bir soruyu silmek
 
-Şu an uygulama içinde soruları tek tek silme özelliği yok. Belirli bir sorunun
-ya da fotoğrafın silinmesini istiyorsanız **[iletişim e-postası]** adresine
-yazın, sileriz.
+**Uygulama içinde mevcut.** Sorunun kartındaki sil eylemi soruyu ve fotoğrafını
+birlikte kaldırır; fotoğraf depolamadan da gerçekten silinir.
+
+İstemezseniz **[iletişim e-postası]** adresine de yazabilirsiniz.
+
+> *(Task 13 notu: bu bölüm "tek tek silme özelliği yok" diyordu ve AYNI
+> depodaki Gizlilik Politikası §8 ile §1.9 "mevcut" diyordu — özellik Task
+> 08'de eklenmişti. Bu sayfa Play Console'a giriliyor ve mağaza beyan-gerçek
+> karşılaştırması tam olarak bu tür çelişkiyi arıyor.)*
 
 ### Diğer talepleriniz
 

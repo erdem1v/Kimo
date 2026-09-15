@@ -340,8 +340,6 @@ class AdminQuestion {
   /// müfredatlı bir moderatöre "müfredatta karşılığı yok" görünüyordu.
   final String curriculum;
 
-  bool get inPool => isPublic && moderation == 'ok';
-
   factory AdminQuestion.fromRow(Map<String, dynamic> row) {
     final dynamic raw = row['options'];
     return AdminQuestion(

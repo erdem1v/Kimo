@@ -28,6 +28,7 @@ import '../onboarding/persona_card.dart';
 import '../settings/delete_account_screen.dart';
 import '../settings/blocked_users_screen.dart';
 import '../plus/plus_screen.dart';
+import '../settings/licenses_screen.dart';
 import '../settings/privacy_screen.dart';
 
 /// Tek ayarlar ekranı. Profilden sağ üstteki tek girişten açılıyor.
@@ -203,6 +204,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 icon: KimoIcons.lock,
                 label: l.settingsPrivacy,
                 onTap: () => _push(const PrivacyScreen()),
+              ),
+              const SizedBox(height: Gap.sm),
+              // AÇIK KAYNAK LİSANSLARI (Task 13). Flutter'ın kendisi,
+              // supabase_flutter, google_mobile_ads, sentry_flutter ve gömülü
+              // Baloo 2 / DM Sans (SIL OFL 1.1) atıf gerektiriyor ve depoda
+              // bunu gösteren hiçbir yer yoktu.
+              _row(
+                context,
+                icon: KimoIcons.notebook,
+                label: l.settingsLicenses,
+                onTap: () => _push(const LicensesScreen()),
               ),
               if (_isAdmin) ...<Widget>[
                 const SizedBox(height: Gap.xl),

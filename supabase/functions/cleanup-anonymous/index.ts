@@ -11,10 +11,14 @@
 // KİM ÇAĞIRIYOR: zamanlanmış bir iş. `verify_jwt = true`, çağıran servis rolü
 // jetonuyla imzalıyor — yani uç nokta kimliksiz açık DEĞİL.
 //
-// DİKKAT — DEPODA HENÜZ ZAMANLAYICI YOK. `pg_cron` ya da Supabase Scheduled
-// Functions kurulumu bu depoda bulunmuyor; bu fonksiyon yazıldı ama onu
-// düzenli çağıran bir şey yok. Elle ya da dış bir zamanlayıcıyla çağrılana
-// kadar temizlik YAPILMIYOR. (Raporda açık madde olarak duruyor.)
+// ZAMANLAYICI: `pg_cron` işi `cleanup-anonymous-daily`, her gece 22:30 UTC
+// (göç 0051). `app_config.edge_base_url` ve Vault'taki `service_role_key`
+// girilmemişse sorgu sessizce no-op olur — yani sır girilmeden temizlik
+// yapılmaz ama hata da üretilmez.
+//
+// Bu blok Task 13'e kadar "DEPODA HENÜZ ZAMANLAYICI YOK" diyordu; 0051 onu
+// zamanlamıştı ve yorum bayat kalmıştı (aynı yanlış `docs/task-10` raporunda
+// da tekrarlanıyordu).
 //
 // SIRA: `delete-account` ile aynı — önce depolama, sonra hesap. Kısmi başarı
 // durumunda o kullanıcı ATLANIYOR ve sonraki turda yeniden denenecek; tek bir
