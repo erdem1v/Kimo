@@ -117,6 +117,27 @@ class _AuthGateState extends State<AuthGate> {
     }
 
     if (hasSession == _hasSession && needs == _needsOnboarding) return;
+
+    // OTURUM DÜŞTÜYSE YIĞINI KÖKE İNDİR (Task 14).
+    //
+    // Bu kapı MaterialApp'in `home`'u; `setState` yalnızca KÖK rotanın
+    // içeriğini değiştiriyor. Ayarlar, profil alt ekranları ve benzerleri
+    // Navigator'a İTİLMİŞ rotalar, yani kökün ÜSTÜNDE duruyorlar ve kapı
+    // karşılama ekranına dönse bile ekranda kalmaya devam ediyorlardı.
+    //
+    // Görünen hâli: "Çıkış yap"a basan kullanıcı Ayarlar ekranında kalıyor ve
+    // hâlâ giriş yapmış gibi görünüyordu — oysa oturum gerçekten kapanmıştı
+    // (`supabase.auth: Signing out user`, saklanan jeton siliniyor). Sonraki
+    // her istek sessizce yetkisiz düşerdi. Simülatörde üretildi: çıkıştan
+    // sonra Ayarlar açık kalıyor, saklanan `auth-token` anahtarı ise yok.
+    //
+    // Hesap silme yolu da aynı kapıdan geçiyor (`delete-account` sonrası
+    // `signOut`), yani orada da geçerli.
+    if (!hasSession) {
+      final NavigatorState nav = Navigator.of(context);
+      if (nav.canPop()) nav.popUntil((Route<dynamic> r) => r.isFirst);
+    }
+
     setState(() {
       _hasSession = hasSession;
       _needsOnboarding = needs;
