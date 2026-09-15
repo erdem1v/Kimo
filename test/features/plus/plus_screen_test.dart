@@ -37,6 +37,7 @@ void main() {
 
   testWidgets('CTA var ama DEVRE DIŞI ve nedeni yazıyor',
       (WidgetTester tester) async {
+    PlusPlans.resetForTest();
     await pumpPlus(tester);
     final KimoButton cta = tester.widget<KimoButton>(
         find.widgetWithText(KimoButton, l.plusCta(PlusPlans.trialDays)));
@@ -50,6 +51,7 @@ void main() {
       (WidgetTester tester) async {
     // Hiçbir şeyi geri yüklemeyen bir "geri yükle" satırı kanonik bir App
     // Store reddi. `legal_links.dart` aynı kararı belgeliyor.
+    PlusPlans.resetForTest();
     await pumpPlus(tester);
     expect(find.text(l.plusRestore), findsNothing);
     expect(find.text(l.plusManage), findsNothing);
@@ -68,8 +70,31 @@ void main() {
     expect(find.text(l.plusExtraPlus), findsOneWidget);
   });
 
-  testWidgets('yıllık plan varsayılan seçili ve avantaj rozeti onda',
+  testWidgets('MAĞAZA YANITI YOKSA plan kartı ve rozet HİÇ çizilmiyor',
       (WidgetTester tester) async {
+    // Task 13'e kadar planlar koddaki yer tutucu listeden geliyordu ve sabit
+    // TL fiyatlarıyla ÇİZİLİYORLARDI — Apple 3.1.2 açısından yayın engeli.
+    PlusPlans.resetForTest();
+    await pumpPlus(tester);
+    expect(find.text(l.plusSaveBadge(33)), findsNothing);
+    expect(find.text(l.plusPlanYearly), findsNothing);
+    expect(find.text(l.plusPlanMonthly), findsNothing);
+  });
+
+  testWidgets('mağaza yanıtı gelince yıllık varsayılan seçili, rozet onda',
+      (WidgetTester tester) async {
+    // Fiyatlar MAĞAZANIN metni; test onları temsilî veriyor.
+    PlusPlans.setProducts(<PlusPlan>[
+      const PlusPlan(
+          id: PlusPlans.yearlyId,
+          priceLabel: 'YILLIK-FİYAT',
+          perMonthLabel: 'AYLIK-KARŞILIK',
+          savingPercent: 33),
+      const PlusPlan(
+          id: PlusPlans.monthlyId,
+          priceLabel: 'AYLIK-FİYAT',
+          perMonthLabel: 'AYLIK-FİYAT'),
+    ]);
     await pumpPlus(tester);
     // Sayfa Task 12'de çoklu çekim bölümüyle uzadı (Tur 7 · n4) ve planlar
     // katlamanın altına indi; `ListView` tembel kurduğu için rozet ancak
@@ -81,6 +106,7 @@ void main() {
     );
     expect(find.text(l.plusSaveBadge(33)), findsOneWidget);
     expect(PlusPlans.defaultPlan?.savingPercent, 33);
+    PlusPlans.resetForTest();
   });
 
   testWidgets('çoklu çekim bölümü rakam söylüyor, abartı söylemiyor',
