@@ -1,0 +1,93 @@
+# iOS derlemesi.
+#
+# NEDEN VAR: Task 13'e kadar iOS için HİÇBİR iş akışı yoktu — ne analiz, ne
+# derleme, ne artifact. Depoda iOS tarafına dokunan her değişiklik (Firebase,
+# AdMob, ve şimdi satın alma) yalnızca bir geliştirme makinesinde
+# doğrulanabiliyordu; o makinede de iOS HİÇ DERLENMEDİ (Task 11 §7: bellek
+# yetersizliği). Yani iOS kırılmaları ancak mağazaya yükleme denemesinde
+# görünürdü.
+#
+# BU İŞ İMZASIZ DERLİYOR. Ücretli Apple Developer hesabı yok, dolayısıyla
+# arşiv/TestFlight adımı YAZILAMAZ. `--no-codesign` yine de değerli: eksik
+# kaynak, kırık plist, uyumsuz eklenti ve Swift derleme hatalarının tamamını
+# yakalıyor — yani bugüne kadar hiç koşmamış olan kapıyı kuruyor.
+#
+# HESAP GELİNCE EKLENECEK: `xcodebuild archive` + `exportArchive` ve
+# TestFlight yüklemesi (`APP_STORE_CONNECT_*` sırlarıyla).
+#
+# Nasıl çalıştırılır: Actions > "ios build" > Run workflow
+name: ios build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    name: iOS derle (imzasız)
+    # macOS koşucusu ŞART: Xcode yalnızca orada var ve Linux'ta
+    # `flutter build ios` hiç çalışmıyor.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # Firebase yapılandırması: Android tarafındaki `google-services.json`ın
+      # iOS karşılığı. Sır tanımlı değilse derleme yine tamamlanır; yalnızca
+      # push bildirimleri o çıktıda çalışmaz. Sessiz kalmıyoruz.
+      - name: Firebase yapılandırması (varsa)
+        env:
+          GOOGLE_SERVICE_INFO_PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
+        run: |
+          if [ -n "$GOOGLE_SERVICE_INFO_PLIST" ]; then
+            printf '%s' "$GOOGLE_SERVICE_INFO_PLIST" > ios/Runner/GoogleService-Info.plist
+            echo "::notice::GoogleService-Info.plist yazıldı — push bildirimleri etkin."
+          else
+            echo "::warning::GOOGLE_SERVICE_INFO_PLIST sırrı yok — çıktı push bildirimleri OLMADAN derlenecek."
+          fi
+
+      - name: Supabase yapılandırması (varsa)
+        env:
+          SUPABASE_JSON: ${{ secrets.SUPABASE_JSON }}
+        run: |
+          if [ -n "$SUPABASE_JSON" ]; then
+            printf '%s' "$SUPABASE_JSON" > supabase.json
+            echo "::notice::supabase.json yazıldı — uygulama gerçek sunucuya bağlanacak."
+          else
+            echo "::warning::SUPABASE_JSON sırrı yok — bu çıktı YAPILANDIRMASIZ ve AÇILMAZ (lib/main.dart ConfigErrorApp)."
+          fi
+
+      - run: flutter pub get
+
+      # pubspec.lock depoya işleniyor ve pubspec.yaml ile eşzamanlı kalmalı.
+      - name: pubspec.lock değişmedi mi
+        run: git diff --exit-code pubspec.lock
+
+      - name: iOS derle (imzasız)
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: |
+          ARGS=""
+          if [ -f supabase.json ]; then
+            ARGS="--dart-define-from-file=supabase.json"
+          fi
+          if [ -n "$SENTRY_DSN" ]; then
+            ARGS="$ARGS --dart-define=SENTRY_DSN=$SENTRY_DSN"
+          fi
+          flutter build ios --release --no-codesign $ARGS
+
+      # Çıktının gerçekten üretildiğini doğrula: sessizce boş bir sonuç
+      # "derleme geçti" demenin en kötü yolu olurdu (android.yml'in aynı
+      # kaygısı).
+      - name: Çıktıyı doğrula
+        run: |
+          APP="build/ios/iphoneos/Runner.app"
+          test -d "$APP" || { echo "::error::Runner.app üretilmedi"; exit 1; }
+          SIZE=$(du -sk "$APP" | cut -f1)
+          test "$SIZE" -gt 5000 || { echo "::error::Runner.app şüpheli derecede küçük (${SIZE}KB)"; exit 1; }
+          echo "::notice::Runner.app — $((SIZE / 1024)) MB (imzasız)"

@@ -404,7 +404,7 @@ class _CreditWallScreenState extends State<CreditWallScreen> {
   Widget _plusCard(BuildContext context, L10n l) {
     final KimoColors c = context.c;
     final KimoTypography t = context.t;
-    final PlusPlan yearly = PlusPlans.defaultPlan;
+    final PlusPlan? yearly = PlusPlans.defaultPlan;
     return KimoCard(
       color: c.actionTint,
       elevated: false,
@@ -444,16 +444,25 @@ class _CreditWallScreenState extends State<CreditWallScreen> {
             label: l.plusCta(PlusPlans.trialDays),
             onPressed: () => _openPlus(context),
           ),
-          const SizedBox(height: Gap.xs),
-          Text.rich(
-            emphasize(
-              l.plusTrialNote(yearly.priceLabel, yearly.perMonthLabel),
-              l.plusAutoRenew,
-              base: t.caption.copyWith(color: c.actionText),
-              strong: t.captionStrong.copyWith(color: c.actionTextStrong),
+          // FİYAT YALNIZCA MAĞAZA YANITIYLA ÇİZİLİYOR. Eskiden burada
+          // `plus_plans.dart`'taki sabit TL yer tutucuları canlı
+          // gösteriliyordu — Apple 3.1.2 gösterilen fiyatın mağazanın kendi
+          // yerelleştirilmiş fiyatı olmasını şart koşuyor ve ortada tahsil
+          // eden bir mekanizma bile yoktu. Mağaza yanıtı yoksa künye HİÇ
+          // çizilmiyor; kart yine de Plus'ı tanıtıyor ve dokunuş paywall'ı
+          // açıyor.
+          if (yearly != null) ...<Widget>[
+            const SizedBox(height: Gap.xs),
+            Text.rich(
+              emphasize(
+                l.plusTrialNote(yearly.priceLabel, yearly.perMonthLabel),
+                l.plusAutoRenew,
+                base: t.caption.copyWith(color: c.actionText),
+                strong: t.captionStrong.copyWith(color: c.actionTextStrong),
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
+          ],
         ],
       ),
     );

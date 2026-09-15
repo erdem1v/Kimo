@@ -46,6 +46,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isAdmin = false;
   AgeStatus? _age;
 
+  /// Plus satırının rakamları — SUNUCUDAN. `null` ise satır çizilmiyor:
+  /// paywall bir RAKAM VAADİ taşıyor ve uydurma sayıyla açılamaz.
+  DailyState? _daily;
+
   @override
   void initState() {
     super.initState();
@@ -57,13 +61,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final List<Object?> parts = await Future.wait<Object?>(<Future<Object?>>[
       moderationRepository.isAdmin(),
       dailyStateRepository.ageStatus(),
+      dailyStateRepository.read(),
     ]);
     final bool admin = parts[0]! as bool;
     final AgeStatus? age = parts[1] as AgeStatus?;
+    final DailyState? daily = parts[2] as DailyState?;
     if (!mounted) return;
     setState(() {
       _isAdmin = admin;
       _age = age;
+      _daily = daily;
     });
   }
 
@@ -167,14 +174,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onTap: () => _push(const BlockedUsersScreen()),
               ),
               const SizedBox(height: Gap.sm),
-              // Kimo Plus tanıtımı. Satın alma AYRI BİR TASK: ekran açılıyor,
-              // birincil düğme görünür biçimde devre dışı ve nedeni yazıyor.
-              _row(
-                context,
-                icon: KimoIcons.spark,
-                label: l.settingsPlus,
-                onTap: () => _push(const PlusScreen()),
-              ),
+              // Kimo Plus. RAKAMLAR SUNUCUDAN: eskiden `const PlusScreen()`
+              // ile parametresiz açılıyordu ve ekran koddaki 8/10/300/50/1000
+              // yedeğine düşüyordu — Task 12 bu kusuru hak duvarında
+              // düzeltmiş ama ÜÇÜNCÜ girişe (burası) uygulamamıştı. Sonuç:
+              // `app_config` sınırları gevşetilince aynı ekran iki girişte
+              // iki farklı rakam gösteriyordu.
+              //
+              // DEĞER OKUNAMADIYSA SATIR HİÇ ÇİZİLMİYOR: rakam vaadi taşıyan
+              // bir ekranı uydurma sayılarla açmak, deponun yasakladığı şey.
+              if (_daily != null)
+                _row(
+                  context,
+                  icon: KimoIcons.spark,
+                  label: l.settingsPlus,
+                  onTap: () => _push(PlusScreen(
+                    freeWindowLimit: _daily!.aiWindowLimit,
+                    freeMonthLimit: _daily!.aiMonthLimit,
+                    plusWindowLimit: _daily!.plusWindowLimit,
+                    plusMonthLimit: _daily!.plusMonthLimit,
+                    windowHours: _daily!.aiWindowHours,
+                  )),
+                ),
               const SizedBox(height: Gap.sm),
               // Veri aktarımı bildirimi ve hukuki metinlerin yuvası (Task 03).
               _row(

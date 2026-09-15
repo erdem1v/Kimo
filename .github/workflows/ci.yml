@@ -1,6 +1,6 @@
 # CI — bu depodaki İLK otomatik kalite kapısı.
 #
-# Neden var: 203 pgTAP iddiası yazıldı ama geliştirme makinesinde çalıştırılamadı
+# Neden var: yüzlerce pgTAP iddiası yazıldı ama geliştirme makinesinde çalıştırılamadı
 # (Docker/Supabase CLI/Flutter kurulu değil). CI koşucularında Docker var, yani
 # testler burada gerçekten çalışıyor. "Yazıldı ama çalıştırılmadı" durumundan
 # çıkmanın en ucuz yolu bu.
@@ -70,6 +70,26 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      # İŞ AKIŞI DOSYALARININ KENDİSİ. Bu kapı Task 13'te eklendi çünkü
+      # `ci.yml` Task 10'un 5feeb02 commit'inde GEÇERSİZ YAML hâline geldi
+      # (`- name: "Sınırsız" vaadi …` — çift tırnakla başlayan skalerden sonra
+      # düz metin). Bozuk bir iş akışını GitHub HİÇ KOŞTURMAZ, yani pgTAP,
+      # mutasyon, statik kapılar ve `flutter test` Task 10'dan Task 13'e kadar
+      # HİÇ ÇALIŞMADI — Task 12'nin yedi kırık noktasının fark edilmeden
+      # commit'e hazır hâle gelmesinin sebebi de bu.
+      #
+      # TAVUK-YUMURTA: bozuk bir ci.yml kendi içindeki bu adımı da
+      # koşturamaz. Betiğin ASIL yeri geliştirme makinesi; buradaki kopya
+      # yalnızca dosya ZATEN geçerliyken bir SONRAKİ bozulmayı yakalıyor.
+      - name: PyYAML
+        run: pip install --quiet pyyaml
+
+      - name: İş akışı denetleyicisinin kendi sınaması
+        run: python tools/check_workflows.py --selftest
+
+      - name: İş akışı dosyaları ayrıştırılabiliyor mu
+        run: python tools/check_workflows.py
 
       # Denetleyicinin kendisi sessizce hiçbir şey bulmama hatasına düşmüştü;
       # selftest bunu her koşuda kanıtlıyor.
@@ -185,7 +205,14 @@ jobs:
             exit 1
           fi
 
-      - name: "Sınırsız" vaadi kullanıcıya verilmemiş mi
+      # BAŞLIK TEK TIRNAKLA SARILI. Task 10 bunu `- name: "Sınırsız" vaadi …`
+      # olarak yazmıştı: YAML'de çift tırnakla BAŞLAYAN bir skalerden sonra
+      # düz metin gelemez. Sonuç, bu dosyanın 5feeb02'den beri
+      # AYRIŞTIRILAMAMASI — yani pgTAP, mutasyon, statik kapılar ve
+      # `flutter test` Task 10'dan bu yana HİÇ KOŞMADI. Task 12'nin yedi
+      # kırık noktasının fark edilmeden commit'e hazır hâle gelmesinin
+      # sebebi de bu.
+      - name: '"Sınırsız" vaadi kullanıcıya verilmemiş mi'
         run: |
           if git grep -n -i "sınırsız" -- lib/l10n/app_tr.arb; then
             echo "::error::Plus'ın da tavanı var; 'sınırsız' kullanıcıya söylenemez."
@@ -193,13 +220,32 @@ jobs:
           fi
 
       # Apple 3.1.2 ve Play abonelik politikası gösterilen fiyatın MAĞAZANIN
-      # yerelleştirilmiş fiyatı olmasını şart koşuyor. Yer tutucu fiyatlar tek
-      # bir dosyada toplanıyor ki abonelik task'ı tek yeri değiştirsin ve
-      # araya sabit bir ₺ sızmasın.
-      - name: Sabit fiyat yalnızca plus_plans.dart'ta mı
+      # yerelleştirilmiş fiyatı olmasını şart koşuyor.
+      #
+      # KAPI TASK 13'TE SERTLEŞTİ. Eskiden yer tutucu fiyatlar tek bir dosyada
+      # TOPLANIYORDU (`plus_plans.dart` muaftı) ve o dosya `1.200`/`150` TL
+      # değerlerini hem paywall'da hem HAK DUVARINDA canlı çizdiriyordu —
+      # yani kapı sızmayı engelliyordu ama yayın engelini engellemiyordu.
+      # Artık fiyatın tek kaynağı mağaza yanıtı (`PurchaseService.products`),
+      # dolayısıyla MUAFİYET KALKTI: lib/ içinde hiçbir dosyada sabit para
+      # birimi yazamaz.
+      #
+      # Desen kendi satırını yakalamasın diye para birimi LİTERAL yazılmıyor;
+      # kabuk onu bir ondalık koddan üretiyor (`can` kapısının aynı kaygısı).
+      - name: Sabit fiyat hiçbir yerde yok mu
         run: |
-          if git grep -n "₺" -- lib/ ':!lib/features/plus/plus_plans.dart'; then
-            echo "::error::Fiyat mağazadan gelmeli; tek kaynak plus_plans.dart."
+          TL="$(printf '\u20ba')"
+          # KAPININ KENDİ SINAMASI: uydurma bir ihlali yakalayamazsa iş kırmızı.
+          TMP="$(mktemp)"
+          printf 'const x = "%s150";\n' "$TL" > "$TMP"
+          if ! grep -q "$TL" "$TMP"; then
+            rm -f "$TMP"
+            echo "::error::KAPI BOZUK — para birimi deseni üretilemedi."
+            exit 1
+          fi
+          rm -f "$TMP"
+          if git grep -n -F "$TL" -- lib/; then
+            echo "::error::Fiyat MAĞAZADAN gelmeli; lib/ içinde sabit fiyat olamaz."
             exit 1
           fi
 

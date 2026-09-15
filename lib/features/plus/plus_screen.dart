@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../data/photo_queue.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../services/legal_links.dart';
+import '../../services/purchase_service.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
 import '../../widgets/kit/kimo_button.dart';
@@ -15,8 +18,11 @@ import 'plus_plans.dart';
 ///
 /// GİRİŞLER: hak duvarındaki Plus satırı/kartı ve Ayarlar → Kimo Plus.
 ///
-/// SATIN ALMA BU TASK'TA YOK. Abonelik ve makbuz doğrulaması ayrı bir task;
-/// burada:
+/// SATIN ALMA (Task 13): üç eylem de GERÇEK — satın al, geri yükle, aboneliği
+/// yönet. Üçü de Apple'ın doğrudan sorduğu şeyler ve üçü de `PurchaseService`
+/// üzerinden gidiyor.
+///
+/// MAĞAZA YANITI YOKSA EKRAN BUGÜNKÜ DÜRÜST HÂLİNDE KALIYOR:
 ///   * Birincil düğme GÖRÜNÜR BİÇİMDE devre dışı (`onPressed: null`) ve
 ///     altında nedenini söyleyen tek bir satır var. Hiçbir şey yapmayan bir
 ///     düğme, kullanıcının dokunarak keşfettiği bir yalan olurdu.
@@ -25,6 +31,14 @@ import 'plus_plans.dart';
 ///     "'Hazırlanıyor' yer tutucusu bilinçli olarak geri getirilmedi: mağaza
 ///     incelemesinde doğrudan sorulan şey oydu." Hiçbir şeyi geri yüklemeyen
 ///     bir geri-yükle satırı kanonik bir App Store reddi.
+///   * VE HİÇBİR FİYAT ÇİZİLMİYOR. Eskiden `1.200`/`150` TL yer tutucuları
+///     canlı gösteriliyordu; Apple 3.1.2 gösterilen fiyatın mağazanın kendi
+///     yerelleştirilmiş fiyatı olmasını şart koşuyor.
+///
+/// RAKAMLAR PARAMETRE, VARSAYILAN YOK: eskiden `?? 8/10/300/50/1000` yedeği
+/// vardı ve Ayarlar girişi ekranı parametresiz açıyordu — `app_config`
+/// sınırları değişince paywall eski rakamı göstermeye devam ediyordu (Task 11
+/// raporu §9.1). Artık üç girişin üçü de sunucu değerlerini geçiriyor.
 ///
 /// "SINIRSIZ" KELİMESİ HİÇBİR YERDE GEÇMİYOR: Plus'ın da tavanı var (8 saatte
 /// 50, ayda 1.000). Rakam söyleniyor, abartı söylenmiyor. CI'da bir kapı bunu
@@ -33,29 +47,43 @@ import 'plus_plans.dart';
 /// AI KOÇ VE RAPOR LİSTEDE YOK: v1'de yok. Deponun standardı —
 /// "arayüzde gösterilen her mekanik sunucuda gerçekten çalışıyor olmalı".
 class PlusScreen extends StatefulWidget {
-  const PlusScreen({super.key, this.freeWindowLimit, this.freeMonthLimit,
-      this.plusWindowLimit, this.plusMonthLimit, this.windowHours});
+  const PlusScreen({
+    super.key,
+    required this.freeWindowLimit,
+    required this.freeMonthLimit,
+    required this.plusWindowLimit,
+    required this.plusMonthLimit,
+    required this.windowHours,
+  });
 
-  /// Kıyas tablosunun rakamları. Verilmezse ürün varsayılanları kullanılıyor;
-  /// duvardan açıldığında sunucudan gelen değerler geçiyor.
-  final int? freeWindowLimit;
-  final int? freeMonthLimit;
-  final int? plusWindowLimit;
-  final int? plusMonthLimit;
-  final int? windowHours;
+  /// Kıyas tablosunun rakamları — HEPSİ SUNUCUDAN, `required`.
+  ///
+  /// Eskiden `int?` idi ve okunamayan değer koddaki 8/10/300/50/1000
+  /// yedeğine düşüyordu. Ekran "8 saatte 50 analiz" gibi bir RAKAM VAADİ
+  /// taşıyor; `app_config` sınırları gevşetildiğinde yalan söylemesi kabul
+  /// edilemez. Değer okunamadıysa ekranı AÇMAYAN taraf çağıran.
+  final int freeWindowLimit;
+  final int freeMonthLimit;
+  final int plusWindowLimit;
+  final int plusMonthLimit;
+  final int windowHours;
 
   @override
   State<PlusScreen> createState() => _PlusScreenState();
 }
 
 class _PlusScreenState extends State<PlusScreen> {
-  late PlusPlan _selected = PlusPlans.defaultPlan;
+  PlusPlan? _selected = PlusPlans.defaultPlan;
 
-  int get _hours => widget.windowHours ?? 8;
-  int get _freeWindow => widget.freeWindowLimit ?? 10;
-  int get _freeMonth => widget.freeMonthLimit ?? 300;
-  int get _plusWindow => widget.plusWindowLimit ?? 50;
-  int get _plusMonth => widget.plusMonthLimit ?? 1000;
+  /// Satın alma ya da geri yükleme sürüyor — çift dokunuş iki isteğe
+  /// dönüşmesin (`friends_view`'deki `_busy` deseni).
+  bool _busy = false;
+
+  int get _hours => widget.windowHours;
+  int get _freeWindow => widget.freeWindowLimit;
+  int get _freeMonth => widget.freeMonthLimit;
+  int get _plusWindow => widget.plusWindowLimit;
+  int get _plusMonth => widget.plusMonthLimit;
 
   /// "Bir oturumda N kat daha fazla analiz" — TÜRETİLİYOR, yazılmıyor.
   int get _multiplier =>
@@ -153,6 +181,40 @@ class _PlusScreenState extends State<PlusScreen> {
         ],
       ),
     );
+  }
+
+  // ======================================================== eylemler
+  //
+  // ÜÇÜ DE `PurchaseService` ÜZERİNDEN. Katman mağaza yokken hiçbir şey
+  // yapmayan bir gerçeklemeye düşüyor ve o durumda bu üç yol zaten
+  // ÇİZİLMİYOR — yani "hiçbir şey yapmayan düğme" hiç doğmuyor.
+  //
+  // SONUÇ KULLANICIYA SÖYLENMİYOR, ÇÜNKÜ SUNUCU SÖYLÜYOR: satın alma
+  // tamamlandığında katman `my_daily_state.ai_tier` üzerinden premium'a
+  // dönüyor. İstemci "aldın" diye bir şey İDDİA ETMİYOR — deponun değişmezi.
+  Future<void> _run(Future<bool> Function() action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await action();
+    } catch (e) {
+      debugPrint('satın alma akışı: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _buy() async {
+    final PlusPlan? plan = _selected;
+    if (plan == null) return;
+    await _run(() => Purchases.instance.buy(plan));
+  }
+
+  Future<void> _restore() => _run(Purchases.instance.restore);
+
+  void _openManage() {
+    final Uri? uri = Purchases.instance.manageUri();
+    if (uri != null) unawaited(openLegalUrl(uri.toString()));
   }
 
   Widget _topBar(BuildContext context, L10n l) {
@@ -270,7 +332,7 @@ class _PlusScreenState extends State<PlusScreen> {
   Widget _planCard(BuildContext context, L10n l, PlusPlan plan) {
     final KimoColors c = context.c;
     final KimoTypography t = context.t;
-    final bool sel = plan.id == _selected.id;
+    final bool sel = plan.id == _selected?.id;
     final bool yearly = plan.savingPercent != null;
     return Stack(
       clipBehavior: Clip.none,
@@ -355,7 +417,9 @@ class _PlusScreenState extends State<PlusScreen> {
           // Semantics(enabled: false)) — yeni koda gerek yok.
           KimoButton(
             label: l.plusCta(PlusPlans.trialDays),
-            onPressed: PlusPlans.isConfigured ? () {} : null,
+            onPressed: (PlusPlans.isConfigured && _selected != null && !_busy)
+                ? _buy
+                : null,
           ),
           const SizedBox(height: Gap.xs),
           if (!PlusPlans.isConfigured)
@@ -364,15 +428,17 @@ class _PlusScreenState extends State<PlusScreen> {
               textAlign: TextAlign.center,
               style: t.caption.copyWith(color: c.inkMuted),
             )
-          else
+          else if (_selected != null)
+            // OTOMATİK YENİLEME KOŞULLARI SATIN ALMA NOKTASINDA: Apple bunu
+            // ZORUNLU tutuyor ve fiyat MAĞAZANIN metni.
             Text.rich(
               emphasize(
                 l.plusTerms(
-                  _selected.savingPercent != null
+                  _selected!.savingPercent != null
                       ? l.plusPlanYearly
                       : l.plusPlanMonthly,
                   PlusPlans.trialDays,
-                  _selected.priceLabel,
+                  _selected!.priceLabel,
                 ),
                 l.plusAutoRenew,
                 base: t.caption.copyWith(color: c.inkSecondary),
@@ -386,8 +452,9 @@ class _PlusScreenState extends State<PlusScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                _link(context, l.plusRestore, () {}),
-                _link(context, l.plusManage, () {}),
+                _link(context, l.plusRestore, _busy ? null : _restore),
+                if (Purchases.instance.manageUri() != null)
+                  _link(context, l.plusManage, _openManage),
               ],
             ),
           ],
@@ -417,7 +484,7 @@ class _PlusScreenState extends State<PlusScreen> {
     );
   }
 
-  Widget _link(BuildContext context, String label, VoidCallback onTap) {
+  Widget _link(BuildContext context, String label, VoidCallback? onTap) {
     final KimoTypography t = context.t;
     return TextButton(
       onPressed: onTap,

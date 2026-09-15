@@ -27,6 +27,11 @@ on:
         default: release
         type: choice
         options: [release, debug]
+      bundle:
+        description: "APK yerine .aab üret (Play'e yükleme için ŞART)"
+        required: false
+        default: false
+        type: boolean
   push:
     tags: ['v*']
 
@@ -69,6 +74,7 @@ jobs:
           fi
 
       - name: Yayın anahtarı (varsa)
+        id: signing
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEY_PROPERTIES: ${{ secrets.ANDROID_KEY_PROPERTIES }}
@@ -76,9 +82,11 @@ jobs:
           if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEY_PROPERTIES" ]; then
             printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/kimo-release.jks
             printf '%s' "$ANDROID_KEY_PROPERTIES" > android/key.properties
-            echo "::notice::Yayın anahtarı yazıldı — APK gerçek anahtarla imzalanacak."
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Yayın anahtarı yazıldı — çıktı gerçek anahtarla imzalanacak."
           else
-            echo "::warning::Yayın anahtarı sırları yok — APK DEBUG anahtarıyla imzalanacak (Play'e yüklenemez)."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Yayın anahtarı sırları yok — çıktı DEBUG anahtarıyla imzalanacak (Play'e yüklenemez)."
           fi
 
       - name: Supabase yapılandırması (varsa)
@@ -89,7 +97,7 @@ jobs:
             printf '%s' "$SUPABASE_JSON" > supabase.json
             echo "::notice::supabase.json yazıldı — uygulama gerçek sunucuya bağlanacak."
           else
-            echo "::warning::SUPABASE_JSON sırrı yok — APK DEMO MODUNDA derlenecek (yerel mock veri, oturum yok)."
+            echo "::warning::SUPABASE_JSON sırrı yok — bu çıktı YAPILANDIRMASIZ ve AÇILMAZ; eksik ayarları anlatan bir hata ekranı gösterir (lib/main.dart ConfigErrorApp). 'Demo modu' Task 03'te kaldırıldı."
           fi
 
       # ------------------------------------------------------------- derleme
@@ -128,8 +136,16 @@ jobs:
           else
             echo "::warning::ADMOB_APP_ID sırrı yok — APK Google'ın TEST uygulama kimliğiyle derlenecek, gerçek reklam gelmez."
           fi
-          echo "flutter build apk --$BUILD_TYPE (define'lar gizli)"
-          flutter build apk --"$BUILD_TYPE" $ARGS
+          # PLAY YENİ UYGULAMALAR İÇİN `.aab` ŞART KOŞUYOR. Task 13'e kadar
+          # bu iş yalnızca APK üretiyordu, yani IAP'li bir sürümü Play'e
+          # yüklemenin yolu YOKTU. APK yan yükleme testi için kalıyor.
+          if [ "${{ inputs.bundle }}" = "true" ]; then
+            echo "flutter build appbundle --$BUILD_TYPE (define'lar gizli)"
+            flutter build appbundle --"$BUILD_TYPE" $ARGS
+          else
+            echo "flutter build apk --$BUILD_TYPE (define'lar gizli)"
+            flutter build apk --"$BUILD_TYPE" $ARGS
+          fi
 
       # Derlenen dosyanın gerçekten var olduğunu ve boyutunu doğrula: sessizce
       # boş bir çıktı yüklemek "APK hazır" demenin en kötü yolu olurdu.
@@ -137,12 +153,18 @@ jobs:
         id: artifact
         run: |
           BUILD_TYPE="${{ inputs.flavor || 'release' }}"
-          SRC="build/app/outputs/flutter-apk/app-$BUILD_TYPE.apk"
-          test -f "$SRC" || { echo "::error::APK üretilmedi: $SRC yok"; exit 1; }
+          if [ "${{ inputs.bundle }}" = "true" ]; then
+            SRC="build/app/outputs/bundle/${BUILD_TYPE}/app-$BUILD_TYPE.aab"
+            EXT="aab"
+          else
+            SRC="build/app/outputs/flutter-apk/app-$BUILD_TYPE.apk"
+            EXT="apk"
+          fi
+          test -f "$SRC" || { echo "::error::Çıktı üretilmedi: $SRC yok"; exit 1; }
           SIZE=$(stat -c%s "$SRC")
-          test "$SIZE" -gt 1000000 || { echo "::error::APK şüpheli derecede küçük ($SIZE bayt)"; exit 1; }
+          test "$SIZE" -gt 1000000 || { echo "::error::Çıktı şüpheli derecede küçük ($SIZE bayt)"; exit 1; }
           VERSION=$(grep -m1 '^version:' pubspec.yaml | sed 's/version:[[:space:]]*//' | tr '+' '-')
-          NAME="kimo-$VERSION-$BUILD_TYPE-${GITHUB_SHA::7}.apk"
+          NAME="kimo-$VERSION-$BUILD_TYPE-${GITHUB_SHA::7}.$EXT"
           cp "$SRC" "$NAME"
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "::notice::$NAME — $((SIZE / 1024 / 1024)) MB"
@@ -168,9 +190,17 @@ jobs:
           # sorusu soruluyor, değerin kendisi hiç yazdırılmıyor.
           SUPABASE_JSON: ${{ secrets.SUPABASE_JSON }}
         run: |
-          NOTES="Bu APK **debug anahtarıyla** imzalıdır: yan yüklemeyle test için uygundur, Play Store'a yüklenemez."
+          # NOT ARTIK KOŞULLU. Task 13'e kadar bu satır KOŞULSUZ "debug
+          # anahtarıyla imzalıdır" diyordu, oysa imzalama yukarıda koşullu:
+          # gerçek yayın anahtarıyla imzalanmış bir çıktı YANLIŞ notla
+          # yayınlanıyordu.
+          if [ "${{ steps.signing.outputs.signed }}" = "true" ]; then
+            NOTES="Bu çıktı **gerçek yayın anahtarıyla** imzalıdır."
+          else
+            NOTES="Bu çıktı **debug anahtarıyla** imzalıdır: yan yüklemeyle test için uygundur, mağazaya yüklenemez."
+          fi
           if [ -z "$SUPABASE_JSON" ]; then
-            NOTES="$NOTES"$'\n\n'"UYARI: SUPABASE_JSON sırrı tanımlı olmadığı için bu APK **demo modunda** derlendi — gerçek sunucuya bağlanmaz."
+            NOTES="$NOTES"$'\n\n'"UYARI: SUPABASE_JSON sırrı tanımlı olmadığı için bu çıktı **yapılandırmasızdır ve AÇILMAZ** — eksik ayarları anlatan bir hata ekranı gösterir. ('Demo modu' Task 03'te kaldırıldı.)"
           fi
           gh release create "${GITHUB_REF_NAME}" \
             "${{ steps.artifact.outputs.name }}" \

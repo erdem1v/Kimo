@@ -21,7 +21,16 @@ void main() {
       localizationsDelegates: L10n.localizationsDelegates,
       supportedLocales: L10n.supportedLocales,
       theme: AppTheme.light(),
-      home: const PlusScreen(),
+      // RAKAMLAR ARTIK ZORUNLU PARAMETRE: `?? 8/10/300/50/1000` yedeği
+      // kaldırıldı. Paywall bir RAKAM VAADİ taşıyor ve `app_config`
+      // sınırları gevşetildiğinde eski sayıyı göstermesi kabul edilemezdi.
+      home: const PlusScreen(
+        freeWindowLimit: 10,
+        freeMonthLimit: 300,
+        plusWindowLimit: 50,
+        plusMonthLimit: 1000,
+        windowHours: 8,
+      ),
     ));
     await tester.pump(const Duration(milliseconds: 32));
   }
@@ -71,7 +80,7 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text(l.plusSaveBadge(33)), findsOneWidget);
-    expect(PlusPlans.defaultPlan.savingPercent, 33);
+    expect(PlusPlans.defaultPlan?.savingPercent, 33);
   });
 
   testWidgets('çoklu çekim bölümü rakam söylüyor, abartı söylemiyor',
@@ -101,9 +110,45 @@ void main() {
     expect(find.textContaining('Rapor'), findsNothing);
   });
 
-  test('fiyatlar TEK dosyada ve yer tutucu olduğu beyan edilmiş', () {
+  test('MAĞAZA YANITI YOKSA hiçbir plan ve hiçbir fiyat yok', () {
+    // Task 13'e kadar bu dosya `1.200`/`150` TL yer tutucularını TAŞIYORDU ve
+    // onları hem paywall'da hem hak duvarında CANLI çizdiriyordu. Apple 3.1.2
+    // ve Play abonelik politikası gösterilen fiyatın kullanıcının mağazasının
+    // kendi yerelleştirilmiş fiyatı olmasını şart koşuyor — yani bu bir yayın
+    // engeliydi ve mağaza eklentisi gelmeden de kapandı.
+    PlusPlans.resetForTest();
     expect(PlusPlans.isConfigured, isFalse);
-    expect(PlusPlans.current.length, 2);
-    expect(PlusPlans.current.first.priceLabel, contains('₺'));
+    expect(PlusPlans.current, isEmpty);
+    expect(PlusPlans.defaultPlan, isNull);
+  });
+
+  test('mağaza yanıtı geldiğinde sıra korunuyor ve satın alma açılıyor', () {
+    // SIRA TASARIM KARARI: yıllık önce ("%33 AVANTAJ" onda ve varsayılan
+    // seçili o). Mağaza ürünleri hangi sırayla döndürürse döndürsün.
+    PlusPlans.setProducts(<PlusPlan>[
+      const PlusPlan(
+          id: PlusPlans.monthlyId, priceLabel: 'A', perMonthLabel: 'A'),
+      const PlusPlan(
+          id: PlusPlans.yearlyId,
+          priceLabel: 'B',
+          perMonthLabel: 'C',
+          savingPercent: 33),
+    ]);
+    expect(PlusPlans.isConfigured, isTrue);
+    expect(PlusPlans.current.first.id, PlusPlans.yearlyId);
+    expect(PlusPlans.defaultPlan?.savingPercent, 33);
+    PlusPlans.resetForTest();
+  });
+
+  test('tanınmayan ürün kimliği listeye girmiyor', () {
+    // Mağaza bir gün fazladan ürün döndürürse ekran onu ÇİZMEMELİ: iki plan
+    // kartı tasarımın şartı ve tanımadığımız bir ürünün fiyatını göstermek
+    // kullanıcıya anlamadığımız bir şey satmak olurdu.
+    PlusPlans.setProducts(<PlusPlan>[
+      const PlusPlan(id: 'baska_urun', priceLabel: 'X', perMonthLabel: 'X'),
+    ]);
+    expect(PlusPlans.current, isEmpty);
+    expect(PlusPlans.isConfigured, isFalse);
+    PlusPlans.resetForTest();
   });
 }
