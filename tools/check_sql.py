@@ -258,13 +258,18 @@ def view_drops(src):
 def _policy_bodies(text):
     """{politika_adi: [normalize edilmis govde, ...]}."""
     out = {}
-    for m in re.finditer(r'create\s+policy\s+(\w+)\s+on\s+public\.(\w+)',
-                         text, re.I):
+    # AD TIRNAKLI OLABILIR: bu depoda `"Kendi hatani ekle"` gibi bosluklu
+    # politika adlari var ve ilk surumun `\w+` kalibi onlari HIC gormuyordu —
+    # 19_ban_not_enforced'in bayat geri almasi tam bu yuzden kacmisti.
+    # `on public.X` ayri satira da dusebiliyor; `\s+` yeni satiri kapsiyor.
+    for m in re.finditer(
+            r'create\s+policy\s+("[^"]+"|\w+)\s+on\s+public\.(\w+)',
+            text, re.I):
         end = text.find(';', m.end())
         if end < 0:
             continue
         chunk = re.sub(r'--[^\n]*', '', text[m.start():end])
-        key = '%s.%s' % (m.group(2).lower(), m.group(1).lower())
+        key = '%s.%s' % (m.group(2).lower(), m.group(1).strip('"').lower())
         out.setdefault(key, []).append(re.sub(r'\s+', ' ', chunk).strip().lower())
     return out
 

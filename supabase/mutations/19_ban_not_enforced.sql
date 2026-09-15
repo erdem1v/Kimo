@@ -33,12 +33,18 @@ create policy sends_insert_friend on public.question_sends
     )
   );
 -- @UNDO
+-- CANLI politika 0067'nin sürümü. Bu geri alma 0062'yi kuruyordu ve
+-- `and public.has_birth_year(auth.uid())` koşulunu TAŞIMIYORDU: mutasyon 19
+-- koştuktan sonra koşunun geri kalanında YAŞ KAPISI politikadan düşüyordu.
+-- 270'in "INSERT politikası HEM askı HEM yaş koşulunu taşıyor" iddiası FAZ
+-- 3'te bu yüzden yeşile dönmüyordu.
 drop policy if exists "Kendi hatanı ekle" on public.mistakes;
 create policy "Kendi hatanı ekle"
   on public.mistakes for insert
   with check (
     auth.uid() = user_id
     and not public.is_suspended(auth.uid())
+    and public.has_birth_year(auth.uid())
   );
 
 drop policy if exists sends_insert_friend on public.question_sends;
