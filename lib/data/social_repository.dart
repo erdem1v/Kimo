@@ -243,11 +243,14 @@ class SocialRepository {
           .uploadBinary(
             path,
             bytes,
-            // `upsert` YOK: aynı gerekçe (bkz. mistake_repository.add).
-            // Yol zaten zaman damgalı ve eskiler aşağıda süpürülüyor, yani
-            // üzerine yazma hiç gerekmiyordu; `x-upsert` ise storage'da
-            // olmayan bir UPDATE politikası arayıp 403 döndürüyordu — avatar
-            // yükleme de bu yüzden hiç çalışmıyordu.
+            // `upsert` KALDIRILDI — ama burada bir HATA DÜZELTMESİ DEĞİL,
+            // sadeleştirme. Avatar kovasının `"avatars update own"` (0024)
+            // UPDATE politikası VAR, yani `x-upsert` burada çalışıyordu;
+            // soru fotoğraflarını düşüren şey `mistake-photos` kovasında öyle
+            // bir politikanın hiç olmamasıydı (bkz. mistake_repository.add).
+            // Yine de gereksiz: yol zaten milisaniyelik zaman damgalı ve
+            // eskiler aşağıda süpürülüyor. Kaldırmak, akışı bir politikaya
+            // bağlı olmaktan çıkarıyor.
             fileOptions: const FileOptions(contentType: 'image/jpeg'),
           );
     } catch (e) {

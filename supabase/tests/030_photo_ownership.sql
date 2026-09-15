@@ -171,18 +171,23 @@ select lives_ok(
 -- çözmeye kalkarsa kırmızı döner. Öyle bir politika, taraması 'clear' çıkmış
 -- bir fotoğrafın üzerine başka bir görsel yazılmasına izin verirdi ve
 -- `mistakes.photo_path`in YAZ-BİR-KEZ olmasını (0020) anlamsız kılardı.
--- SORU BİZİM KOVALARIMIZ HAKKINDA. `storage.objects` üzerinde Supabase'in
--- kendi kurduğu politikalar da var (ilk sürüm hepsini sayıyordu ve CI'da
--- kırmızı döndü); iddia yalnızca `mistake-photos` ve `avatars`ı ilgilendiren
--- UPDATE politikalarını arıyor.
+-- SORU YALNIZCA `mistake-photos` HAKKINDA.
+--
+-- İlk sürüm `avatars`ı da sayıyordu ve CI kırmızı döndü — haklı olarak:
+-- `"avatars update own"` (0024) BİLEREK var ve orada doğru. Avatar akışı
+-- gerçekten üzerine yazma semantiği istiyor ve avatarın moderasyon taraması
+-- gibi bir değişmezi yok. Soru fotoğrafının var: taraması 'clear' çıkmış bir
+-- görselin üzerine başkası yazılabilmemeli.
+--
+-- Bu ayrım aynı zamanda D2'nin neden yalnızca soru fotoğraflarını vurduğunu
+-- açıklıyor: avatar yüklemesi `upsert` ile çalışıyordu çünkü kovasının UPDATE
+-- politikası vardı; `mistake-photos`unki hiç olmadı.
 select is(
   (select count(*)::int from pg_policies
     where schemaname = 'storage' and tablename = 'objects' and cmd = 'UPDATE'
-      and (coalesce(qual, '') || coalesce(with_check, ''))
-          ~ '(mistake-photos|avatars)'),
+      and (coalesce(qual, '') || coalesce(with_check, '')) ~ 'mistake-photos'),
   0,
-  'storage.objects üzerinde kovalarımız için UPDATE politikası YOK — '
-  'yüklenen görselin üzerine yazılamaz'
+  'mistake-photos için UPDATE politikası YOK — yüklenen görselin üzerine yazılamaz'
 );
 
 select * from finish();
