@@ -122,6 +122,16 @@ select is(
 
 -- Sürüm DEĞİŞİRSE yeni onay gerekir — kayıt metne bağlıdır.
 select tests.reset_role();
+-- İLK ONAY GERİYE ALINIYOR. `my_consents` `distinct on (kind) ... order by
+-- kind, recorded_at desc` ile en yenisini seçiyor ve `recorded_at` varsayılanı
+-- `now()` — yani İŞLEM zamanı. Bir test işleminde yazılan iki onay AYNI damgayı
+-- taşıyor, sıralama berabere kalıyor ve görünüm ikisinden herhangi birini
+-- döndürebiliyor; iddia bu yüzden '1.1' görüyordu. Üretimde iki onay ayrı
+-- işlemlerde (günler arayla) yazıldığı için beraberlik oluşmuyor, yani bu
+-- fikstürün kusuru — ama görünümün sıralaması yalnızca `recorded_at`e
+-- dayandığı sürece beraberlik hâlinde belirsiz kalmaya devam eder.
+update public.user_consents set recorded_at = now() - interval '1 day'
+ where user_id = tests.get_supabase_uid('alice') and kind = 'terms';
 update public.app_config set value = '2.0' where key = 'legal_version';
 select tests.authenticate_as('alice');
 select lives_ok(

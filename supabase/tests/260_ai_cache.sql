@@ -41,14 +41,19 @@ select ok(not has_table_privilege('authenticated', 'public.ai_result_cache', 'IN
 select ok(not has_table_privilege('anon', 'public.ai_result_cache', 'SELECT'),
           'önbellek anon tarafından okunamıyor');
 
+-- İMZALAR ÜÇ PARAMETRELİ. `p_taxonomy_version` 0071'de eklendi (önbellek
+-- taksonomi sürümüne de anahtarlanıyor, yoksa ağaç değişince eski sonuç
+-- dönerdi). Bu üç iddia iki parametreli imzayı sormaya devam ediyordu ve
+-- `has_function_privilege` var olmayan imzada FALSE değil HATA veriyor —
+-- yani dosya yedinci satırda düşüyor, kalan 12 iddia hiç koşmuyordu.
 select ok(has_function_privilege('authenticated',
-            'public.ai_cache_get(text,text)', 'EXECUTE'),
+            'public.ai_cache_get(text,text,text)', 'EXECUTE'),
           'ai_cache_get authenticated''a AÇIK (edge fonksiyonu çağıranın JWT''siyle çağırıyor)');
 select ok(has_function_privilege('authenticated',
-            'public.ai_cache_put(text,text,jsonb)', 'EXECUTE'),
+            'public.ai_cache_put(text,text,jsonb,text)', 'EXECUTE'),
           'ai_cache_put authenticated''a açık');
 select ok(not has_function_privilege('anon',
-            'public.ai_cache_get(text,text)', 'EXECUTE'),
+            'public.ai_cache_get(text,text,text)', 'EXECUTE'),
           'ai_cache_get anon''a kapalı');
 select ok(not has_function_privilege('authenticated',
             'public.prune_ai_result_cache()', 'EXECUTE'),

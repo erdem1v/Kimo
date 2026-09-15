@@ -27,12 +27,21 @@ values (tests.get_supabase_uid('sahip'), tests.get_supabase_uid('dost'),
         'accepted');
 
 -- ============================================== yükleme → pending (trigger)
-select tests.authenticate_as('sahip');
+-- FİKSTÜR AYRICALIKLI KURULUYOR (aşağıdaki 'bicim' fikstürüyle aynı biçim).
+-- Bu dosyanın konusu paylaşıma çıkmış içeriğin taramadan geçmesi, yani
+-- `is_public = true` fikstürün ANLAMI. 0090 o sütunun INSERT yetkisini geri
+-- aldığı için `authenticated` olarak yazmak artık 42501 veriyor ve dosya
+-- yedinci satırda düşüyordu. Sütun ayrıcalıkları tablo sahibine uygulanmaz;
+-- `postgres` olarak kurup hemen role dönüyoruz. Tetikleyici (0050) rolden
+-- bağımsız çalışıyor, yani 'pending' iddiası aynı şeyi kanıtlamaya devam
+-- ediyor.
+select tests.reset_role();
 insert into public.mistakes
-  (subject, concept, photo_path, options, correct_index, is_public)
-values ('Tarih', 'İnkılaplar',
+  (user_id, subject, concept, photo_path, options, correct_index, is_public)
+values (tests.get_supabase_uid('sahip'), 'Tarih', 'İnkılaplar',
         tests.get_supabase_uid('sahip')::text || '/supheli.jpg',
         '[{"label":"A","text":""},{"label":"B","text":""}]'::jsonb, 0, true);
+select tests.authenticate_as('sahip');
 
 select is(
   (select m.photo_scan from public.mistakes m

@@ -84,6 +84,18 @@ select throws_ok(
 );
 
 -- ============================================ DAVRANIŞ: meşru akış
+-- ROL AYRICALIKLI, KİMLİK HÂLÂ MALLORY. `submit_pool_answer` 0091'de
+-- `authenticated`a KAPATILDI (havuz arşivde; açık kalması iki hesaplı bir XP
+-- şişirme yoluydu) — aşağıdaki bölüm o günden beri yanlıştı ama 32 commit
+-- push edilmediği için CI'da hiç koşmadı ve ilk koşuda dosyanın tamamını
+-- düşürdü.
+--
+-- Yetkiyi test uğruna geri açmak kilidi gevşetmek olurdu; iddiaları silmek
+-- sunucu otoriteli XP'yi sınamasız bırakırdı. Üçüncü yol: kimliği koruyup
+-- ayrıcalıklı rolle koşmak. Kilidin kendisi aşağıdaki katalog bölümünde
+-- ('submit_pool_answer KAPALI') ayrıca kanıtlanıyor.
+select tests.authenticate_as_owner('mallory');
+
 -- Yanlış cevap: XP yok ama deneme kaydediliyor.
 select is(
   (select xp_awarded from public.submit_pool_answer(
@@ -119,7 +131,7 @@ create temp table _mol on commit drop as
   select id from public.mistakes where concept = 'Mol';
 grant select on _mol to authenticated;
 
-select tests.authenticate_as('mallory');
+select tests.authenticate_as_owner('mallory');
 select is(
   (select xp_awarded from public.submit_pool_answer(
      (select id from _mol), 0)),

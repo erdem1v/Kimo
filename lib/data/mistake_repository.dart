@@ -218,7 +218,6 @@ class MistakeRepository {
     List<QuestionOption>? options,
     int? correctIndex,
     String? exam,
-    bool isPublic = false,
     List<String> extraConcepts = const <String>[],
   }) async {
     String? path;
@@ -248,7 +247,17 @@ class MistakeRepository {
           : options.map((QuestionOption o) => o.toJson()).toList(),
       'correct_index': correctIndex,
       'exam': (exam == null || exam.isEmpty) ? null : exam,
-      'is_public': isPublic,
+      // `is_public` GÖNDERİLMİYOR. 0090 sütunun INSERT yetkisini geri aldı
+      // (havuz arşivde; açık kalması kullanıcının kendi soru FOTOĞRAFINI
+      // hiçbir onay kaydı oluşmadan herkese açabilmesi demekti). Yükte
+      // kalmaya devam ettiği için her kayıt 42501 ile reddediliyordu —
+      // KAYDETME YOLUNUN TAMAMI kapalıydı, üstelik `photo_queue`un
+      // `PostgrestException` dalı reddedilen kaydı düşürüp fotoğrafı da
+      // sildiği için sessiz veri kaybına dönüyordu.
+      //
+      // Sunucu varsayılanı zaten `false` (0007), yani davranış değişmiyor.
+      // Havuz v2'de geri açılacaksa yol `lib/_archive/README.md`de yazılı ve
+      // ilk adım yetkiyi geri vermek.
       'extra_concepts': extraConcepts.isEmpty ? null : extraConcepts,
     }).select('id').single();
     final String? newId = inserted['id'] as String?;

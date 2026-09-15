@@ -134,6 +134,62 @@ begin
   perform set_config('request.jwt.claim.sub', u->>'id', true);
 end $$;
 
+-- Kimlik AYNI, rol AYRICALIKLI: `auth.uid()` kullanıcıyı göstermeye devam
+-- eder ama sütun/fonksiyon ayrıcalıkları uygulanmaz.
+--
+-- NEDEN VAR: bazı sunucu mekanikleri İSTEMCİYE KAPALI ama hâlâ canlı
+-- (`submit_pool_answer` havuz arşive alınınca 0091'de kapandı). Davranışlarını
+-- sınamanın üç yolu vardı: (a) yetkiyi geri açmak — kilidi test uğruna
+-- gevşetmek, (b) iddiaları silmek — mekaniği sınamasız bırakmak, (c) kimliği
+-- koruyup ayrıcalıklı rolle koşmak. Bu (c). Katalog bölümü yetkinin KAPALI
+-- olduğunu ayrıca kanıtlamaya devam ediyor, yani kilit hâlâ test ediliyor.
+--
+-- `authenticate_as` ile aynı kısıtlar geçerli: `security invoker`, `SET` yok.
+create or replace function tests.authenticate_as_owner(identifier text)
+returns void
+language plpgsql
+as $$
+declare u json;
+begin
+  u := tests.get_supabase_user(identifier);
+  if u is null or u->>'id' is null then
+    raise exception 'test kullanıcısı bulunamadı: %', identifier;
+  end if;
+  -- 'none' = oturumun ayrıcalıklı kullanıcısı (bkz. tests.reset_role).
+  perform set_config('role', 'none', true);
+  perform set_config('request.jwt.claims', json_build_object(
+    'sub',   u->>'id',
+    'role',  'authenticated',
+    'aud',   'authenticated',
+    'email', u->>'email',
+    'user_metadata', u->'raw_user_meta_data',
+    'app_metadata',  u->'raw_app_meta_data'
+  )::text, true);
+  perform set_config('request.jwt.claim.sub', u->>'id', true);
+end $$;
+
+-- Sunucu tablosundan fikstür kimliği okumak için. `ai_calls` hiçbir uygulama
+-- rolüne açık değil (0093) ama iade testlerinin çoğu iadeyi KULLANICININ
+-- kendisi olarak çağırmak zorunda — kanıtladıkları şey tam olarak o. Kimliği
+-- almak için role dönmek her çağrıda üç satır fikstür demekti; bu tek kapı
+-- aynı işi yapıyor ve testin rolünü hiç bozmuyor.
+--
+-- `p_refunded`: null → hepsi · true → yalnız iade edilmişler · false → yalnız
+-- iade edilmemişler.
+create or replace function tests.last_ai_call(identifier text,
+                                              p_refunded boolean default null)
+returns bigint
+language sql
+security definer
+set search_path = public, tests
+as $$
+  select max(c.id) from public.ai_calls c
+   where c.user_id = tests.get_supabase_uid(identifier)
+     and (p_refunded is null
+          or (p_refunded     and c.refunded_at is not null)
+          or (not p_refunded and c.refunded_at is null));
+$$;
+
 -- Oturumsuz (anon) rolü: grant testleri için.
 create or replace function tests.authenticate_as_anon()
 returns void

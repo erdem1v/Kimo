@@ -179,10 +179,15 @@ select is(public.ai_age_ok(), false,
 
 -- Depolama tarafı: satır da yazılamıyor. Analiz kapısı tek başına yetmezdi —
 -- 13 altı reddedilen bir kullanıcının fotoğrafı depoda kalabilirdi.
+--
+-- `user_id` SÜTUN LİSTESİNDEN ÇIKTI (0090'dan beri INSERT yetkisi yok,
+-- `default auth.uid()` dolduruyor). Kalmasının iki zararı vardı: aşağıdaki
+-- karşı-iddia 42501 ile DÜŞÜYORDU, ve bu `throws_ok` yine 42501 gördüğü için
+-- YEŞİL kalıyordu — ama artık yaş kapısını değil sütun ayrıcalığını
+-- kanıtlıyordu. Yani kapı kaldırılsa bile test yeşil dönerdi.
 select throws_ok(
-  format('insert into public.mistakes (user_id, subject, concept, photo_path)
-          values (%L, ''Matematik'', ''Türev'', %L)',
-         tests.get_supabase_uid('yilsiz'),
+  format('insert into public.mistakes (subject, concept, photo_path)
+          values (''Matematik'', ''Türev'', %L)',
          tests.get_supabase_uid('yilsiz')::text || '/1.jpg'),
   '42501', null,
   'doğum yılı yokken hata satırı EKLENEMİYOR (fotoğraf depoda bırakılmaz)'
@@ -191,9 +196,8 @@ select throws_ok(
 -- AŞIRI KİLİTLEME KARŞI-İDDİASI: yılı olan kullanıcı hâlâ ekleyebiliyor.
 select tests.authenticate_as('yetiskin');
 select lives_ok(
-  format('insert into public.mistakes (user_id, subject, concept)
-          values (%L, ''Matematik'', ''Türev'')',
-         tests.get_supabase_uid('yetiskin')),
+  'insert into public.mistakes (subject, concept)
+   values (''Matematik'', ''Türev'')',
   'yılı olan kullanıcı soru eklemeye DEVAM ediyor'
 );
 

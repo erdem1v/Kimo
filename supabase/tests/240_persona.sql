@@ -200,6 +200,11 @@ select is(
 -- AŞIRI KİLİTLEME KARŞI-İDDİASI: yukarıdaki sayım fonksiyonlar SİLİNSE de
 -- sıfır dönerdi. Bu satır bildirim yolunun hâlâ ayakta olduğunu söylüyor —
 -- ve başlıkların hiçbirinin eski adı taşımadığını.
+-- AYRICALIKLI ROL: `push_kinds` sunucu tablosu, hiçbir uygulama rolüne açık
+-- değil (bildirim metinlerinin tek istemci kapısı `notification_lines`).
+-- Bu iki iddia katalog sorgusu, davranış değil — rol değiştirmenin sakıncası
+-- yok ve dosya burada 42501 ile düşüyordu.
+select tests.reset_role();
 select is(
   (select count(*)::int from public.push_kinds where title ilike '%yks coach%'),
   0,

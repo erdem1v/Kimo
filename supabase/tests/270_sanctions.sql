@@ -249,17 +249,30 @@ select is(
   'üç işaretlemeyle askıya alındı'
 );
 
+-- KİMLİK AYRICALIKLI FİKSTÜRDE ALINIYOR. `mistakes` SELECT politikası yalnız
+-- sahibe açık; yönetici olmak RLS'i değiştirmiyor (yönetici yolu
+-- `admin_review_photo_scan`in DEFINER yetkisinden geçiyor, tablodan değil).
+-- Alt sorgu `bekci` olarak koşunca BOŞ dönüyor, RPC `null` kimlikle çağrılıyor
+-- ve SESSİZCE hiçbir şey yapmıyordu — askı kalkmıyor, iddia "otomatik askı
+-- kalkmıyor" diye kırmızı dönüyordu. Yani hata mekanizmada değil fikstürdeydi
+-- ama görüntüsü tam tersiydi. Aynı ders 060'ta yazılıydı.
+create temp table _y3 on commit drop as
+  select id from public.mistakes
+   where user_id = tests.get_supabase_uid('yanlis') and concept = 'y3';
+grant select on _y3 to authenticated;
+
 select tests.authenticate_as('bekci');
-select public.admin_review_photo_scan(
-  (select id from public.mistakes
-    where user_id = tests.get_supabase_uid('yanlis') and concept = 'y3'),
-  'clear');
+select public.admin_review_photo_scan((select id from _y3), 'clear');
 
 select is(
   public.is_suspended(tests.get_supabase_uid('yanlis')),
   false,
   'yönetici "temiz" deyince OTOMATİK askı kalkıyor — yanlış pozitif kilitlemiyor'
 );
+
+-- DEFTER OKUMALARI AYRICALIKLI: `user_sanctions` ve `photo_violations` hiçbir
+-- uygulama rolüne açık değil (0093). İkisi de katalog okuması, davranış değil.
+select tests.reset_role();
 select is(
   (select action from public.user_sanctions
     where user_id = tests.get_supabase_uid('yanlis')

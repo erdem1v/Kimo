@@ -58,14 +58,23 @@ select ok(
 -- ================================================= OKUMA: sürüm pazarlığı
 select tests.authenticate_as('ogrenci');
 
+-- SÜRÜM AYRICALIKLI FİKSTÜRDE ALINIYOR: `curriculum_meta` 0072'de bütün
+-- uygulama rollerinden geri alındı (istemci sürümü `curriculum_tree`in
+-- YANITINDAN öğreniyor, tabloyu hiç okumuyor). Alt sorgu `authenticated`
+-- olarak koştuğu için dosya burada 42501 ile düşüyordu — iddia edilen şeyle
+-- ilgisi olmayan bir sebeple.
+create temp table _curver on commit drop as
+  select version from public.curriculum_meta;
+grant select on _curver to authenticated;
+
 select is(
-  (public.curriculum_tree('eski', (select version from public.curriculum_meta))
+  (public.curriculum_tree('eski', (select version from _curver))
      ->> 'fresh')::boolean,
   true,
   'sürüm eşleşince fresh:true'
 );
 select ok(
-  (public.curriculum_tree('eski', (select version from public.curriculum_meta))
+  (public.curriculum_tree('eski', (select version from _curver))
      -> 'exams') is null,
   'taze yanıtta AĞAÇ GÖNDERİLMİYOR (434 konu her açılışta inmesin)'
 );

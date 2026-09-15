@@ -64,12 +64,17 @@ select ok(has_function_privilege('authenticated', 'public.is_admin()', 'EXECUTE'
 select ok(has_function_privilege('authenticated',
             'public.notification_lines()', 'EXECUTE'),
           'notification_lines AÇIK (yerel bildirim metinlerinin tek kapısı)');
-select ok(has_function_privilege('authenticated',
+-- BU İKİ İDDİA TERSİNE ÇEVRİLDİ (0092). Gerekçeleri — "havuz ekranı" ve
+-- "müfredat haritası" — artık var olmayan ekranlardı: havuz Task 02'de
+-- arşive alındı ve ikisinin de TEK çağıranı `lib/_archive/pool/`de. Yani
+-- yeşil iki iddia, olmayan bir dünyanın yetkilerini savunuyordu; havuz v2'ye
+-- kadar açık kalmaları yalnızca saldırı yüzeyiydi.
+select ok(not has_function_privilege('authenticated',
             'public.random_public_questions(int)', 'EXECUTE'),
-          'random_public_questions AÇIK (havuz ekranı)');
-select ok(has_function_privilege('authenticated',
+          'random_public_questions KAPALI (havuz arşivde)');
+select ok(not has_function_privilege('authenticated',
             'public.available_question_counts()', 'EXECUTE'),
-          'available_question_counts AÇIK (müfredat haritası)');
+          'available_question_counts KAPALI (müfredat haritası arşivde)');
 select ok(has_function_privilege('authenticated',
             'public.ensure_league_membership()', 'EXECUTE'),
           'ensure_league_membership AÇIK (lig sekmesi)');
@@ -145,9 +150,13 @@ select throws_ok(
   '42501', null,
   'kullanıcı doğrudan bildirim gönderemiyor'
 );
+-- AŞIRI KİLİTLEME KARŞI-İDDİASI. Eskiden `available_question_counts()`
+-- çağırıyordu — 0092 onu kapatınca bu iddia da düştü. Yerine GERÇEKTEN CANLI
+-- bir yol kondu: `ensure_league_membership` lig sekmesi her açıldığında
+-- çağrılıyor (yukarıda AÇIK olduğu ayrıca iddia ediliyor).
 select lives_ok(
-  'select public.available_question_counts()',
-  'meşru RPC hâlâ çağrılabiliyor'
+  'select public.ensure_league_membership()',
+  'meşru RPC hâlâ çağrılabiliyor (lig sekmesinin açılış çağrısı)'
 );
 
 select * from finish();

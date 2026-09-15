@@ -82,6 +82,15 @@ values (tests.get_supabase_uid('alice'), 'Fizik', 'Kuvvet', 'islem_hatasi',
        (tests.get_supabase_uid('bob'), 'Fizik', 'Kuvvet', 'islem_hatasi',
         tests.get_supabase_uid('bob')::text || '/b.jpg');
 
+-- BAYRAK AÇILIYOR. 0094 `ff_pair_streak`i SUNUCUYA da taşıdı ve varsayılanı
+-- `false` — yani bu satır olmadan `start_pair_streak` ve `pair_streak_rollover`
+-- hiçbir şey yapmadan `false` dönüyor ve dosyanın davranış bölümünün TAMAMI
+-- (altı iddia) mekanizma bozuk gibi görünerek düşüyor. Aşağıdaki "bayrak
+-- kapalıyken" bölümü bayrağı bilerek `false`a çekip geri açıyor, yani kapının
+-- kendisi ayrıca sınanmaya devam ediyor.
+insert into public.app_config (key, value) values ('ff_pair_streak', 'true')
+  on conflict (key) do update set value = excluded.value;
+
 select tests.authenticate_as('alice');
 select ok(not (select public.start_pair_streak(tests.get_supabase_uid('bob'))),
           'çözülmüş gönderim yokken seri BAŞLAMIYOR');

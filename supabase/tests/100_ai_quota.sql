@@ -283,8 +283,7 @@ select tests.authenticate_as('alice');
 
 select ok(
   (select public.refund_ai_use(
-     (select max(c.id) from public.ai_calls c
-       where c.user_id = tests.get_supabase_uid('alice')))),
+     tests.last_ai_call('alice'))),
   'iade başarılı');
 
 select is((select ai_left from public.ai_state()), 1,
@@ -295,9 +294,7 @@ select is((select ai_state from public.ai_state()), 'low',
 -- İDEMPOTANSLIK: aynı satırı ikinci kez iade etmek hak BASMIYOR.
 select ok(
   not (select public.refund_ai_use(
-     (select max(c.id) from public.ai_calls c
-       where c.user_id = tests.get_supabase_uid('alice')
-         and c.refunded_at is not null))),
+     tests.last_ai_call('alice', true))),
   'ikinci iade FALSE döner — idempotent');
 select is((select ai_left from public.ai_state()), 1,
           'ikinci iade sayıyı DEĞİŞTİRMEDİ — hak basılamıyor');
@@ -309,8 +306,7 @@ insert into public.ai_calls (user_id, tier) values
 select tests.authenticate_as('alice');
 select ok(
   not (select public.refund_ai_use(
-     (select max(c.id) from public.ai_calls c
-       where c.user_id = tests.get_supabase_uid('mallory')))),
+     tests.last_ai_call('mallory'))),
   'başkasının çağrısı iade EDİLEMİYOR');
 
 -- GÜNLÜK İADE TAVANI: `ai_refund_daily` = 2, biri kullanıldı.
@@ -321,15 +317,11 @@ insert into public.ai_calls (user_id, tier) values
 select tests.authenticate_as('alice');
 select ok(
   (select public.refund_ai_use(
-     (select max(c.id) from public.ai_calls c
-       where c.user_id = tests.get_supabase_uid('alice')
-         and c.refunded_at is null))),
+     tests.last_ai_call('alice', false))),
   'ikinci iade tavanın içinde');
 select ok(
   not (select public.refund_ai_use(
-     (select max(c.id) from public.ai_calls c
-       where c.user_id = tests.get_supabase_uid('alice')
-         and c.refunded_at is null))),
+     tests.last_ai_call('alice', false))),
   'GÜNLÜK TAVAN bağlıyor — okunamayan fotoğraf göndermek bedava değil');
 -- ALTYAPI hatası sınıra yazılmıyor: bizim hatamız kullanıcının bütçesine
 -- yazılmamalı. AMA bunu söyleyebilecek tek taraf SUNUCU — istemcinin bir
@@ -337,8 +329,7 @@ select ok(
 -- istemci onu HİÇ çağıramıyor.
 select throws_ok(
   format($q$select public.refund_ai_use_infra('uydurma-sir', %s)$q$,
-         (select max(c.id) from public.ai_calls c
-           where c.user_id = tests.get_supabase_uid('alice'))),
+         tests.last_ai_call('alice')),
   '42501', null,
   'istemci tavansız iade yolunu ÇAĞIRAMIYOR — tavanı parametreyle açamaz');
 
@@ -349,17 +340,14 @@ insert into public.app_config (key, value) values ('ai_refund_secret', 'test-sir
   on conflict (key) do update set value = excluded.value;
 select ok(
   (select public.refund_ai_use_infra('test-sir',
-     (select max(c.id) from public.ai_calls c
-       where c.user_id = tests.get_supabase_uid('alice')
-         and c.refunded_at is null))),
+     tests.last_ai_call('alice', false))),
   'doğru sırla ALTYAPI iadesi tavana bakmadan veriliyor');
 -- Sır yoksa fail-closed (grant_ad_reward'ın aynı kuralı).
 select tests.reset_role();
 delete from public.app_config where key = 'ai_refund_secret';
 select ok(
   not (select public.refund_ai_use_infra('test-sir',
-     (select max(c.id) from public.ai_calls c
-       where c.user_id = tests.get_supabase_uid('alice')))),
+     tests.last_ai_call('alice'))),
   'sır GİRİLMEMİŞSE iade VERİLMİYOR (fail-closed)');
 
 select * from finish();

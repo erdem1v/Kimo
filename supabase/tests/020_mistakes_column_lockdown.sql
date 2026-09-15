@@ -102,13 +102,24 @@ select ok(not has_column_privilege('anon', 'public.mistakes', 'moderation', 'UPD
 -- ============================================ DAVRANIŞ
 select tests.authenticate_as('alice');
 
--- Meşru akış: istemcinin bugün attığı insert (user_id YOK, default dolduruyor)
+-- Meşru akış: istemcinin bugün attığı insert (user_id YOK, default dolduruyor).
+--
+-- `is_public` SÜTUN LİSTESİNDEN ÇIKTI. Yukarıdaki iddia 0090'dan beri yetkinin
+-- geri alındığını söylüyordu ama bu satır sütunu yazmaya devam ediyordu, yani
+-- dosya kendi kendisiyle çelişiyordu: "yazılamaz" diyen iddia yeşil, "meşru
+-- akış çalışıyor" diyen iddia kırmızı olurdu. İlk gerçek CI koşusunda tam
+-- böyle oldu.
+--
+-- Asıl bulgu testte değil İSTEMCİDEYDİ: `mistake_repository.add` yüke
+-- `'is_public': isPublic` koymayı sürdürüyordu, yani KAYDETME YOLUNUN TAMAMI
+-- 42501 ile kapalıydı. Bu iddia adında yazdığı gibi o yolu tutuyor — sütun
+-- listesi istemcinin gönderdiğiyle aynı kalmalı.
 select lives_ok(
   format('insert into public.mistakes
-            (subject, concept, mistake_type, note, photo_path, is_public)
-          values (''Matematik'', ''Türev'', ''dikkatsizlik'', ''not'', %L, false)',
+            (subject, concept, mistake_type, note, photo_path)
+          values (''Matematik'', ''Türev'', ''dikkatsizlik'', ''not'', %L)',
          tests.get_supabase_uid('alice')::text || '/1.jpg'),
-  'kendi hatasını fotoğrafıyla ekleyebiliyor (mistake_repository.dart:143 yolu)'
+  'kendi hatasını fotoğrafıyla ekleyebiliyor (mistake_repository.dart:239 yolu)'
 );
 
 select throws_ok(

@@ -147,6 +147,17 @@ values (tests.get_supabase_uid('alice'), 'Fizik', 'Basınç', 'islem_hatasi',
        (tests.get_supabase_uid('alice'), 'Fizik', 'Isı', 'islem_hatasi',
         tests.get_supabase_uid('alice')::text || '/q3.jpg');
 
+-- TARAMA 'clear'E ÇEKİLİYOR. 0087 gönderim RPC'sine içerik kapısını ekledi
+-- (`moderation = 'ok' and photo_scan = 'clear'`) — RLS politikasının zaten
+-- istediği koşulun DEFINER gövdesinde tekrarı. Fotoğraflı her kayıt
+-- tetikleyiciyle 'pending' doğuyor (0050), yani bu satır olmadan aşağıdaki
+-- gönderimlerin hepsi `not_sendable` dönüyor ve üç iddia birden, sınamak
+-- istedikleri şeyle (tek çağrıda yazım, kendine gönderim, günlük tavan)
+-- ilgisi olmayan bir sebeple düşüyor. `photo_scan` UPDATE'i istemciye kapalı,
+-- bu yüzden ayrıcalıklı bölümde.
+update public.mistakes set photo_scan = 'clear'
+ where user_id = tests.get_supabase_uid('alice');
+
 -- Sınırları DÜŞÜRÜP sınıyoruz, 3 çağrı yapıp değil (100_ai_quota deseni).
 insert into public.app_config (key, value) values ('qsend_daily', '2')
 on conflict (key) do update set value = excluded.value;
@@ -311,6 +322,8 @@ insert into public.mistakes (user_id, subject, concept, mistake_type, photo_path
 values (tests.get_supabase_uid('zeynep'), 'Fizik', 'Kuvvet', 'islem_hatasi',
         tests.get_supabase_uid('zeynep')::text || '/z.jpg',
         '["A","B"]'::jsonb, 0);
+update public.mistakes set photo_scan = 'clear'
+ where user_id = tests.get_supabase_uid('zeynep');
 select tests.authenticate_as('zeynep');
 select is(
   (select sent from public.send_question_to_friends(

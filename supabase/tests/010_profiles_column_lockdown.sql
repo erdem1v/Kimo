@@ -141,6 +141,15 @@ select ok(
 -- `nickname` ataması ya da `assign_friend_code` çağrısı kaybolsaydı yeni
 -- kullanıcı adsız ya da KODSUZ doğar, arkadaş eklemenin tek yolu sessizce
 -- kapanırdı. Fikstür kullanıcıları tetikleyiciyle doğuyor; ikisini de sor.
+--
+-- AYRICALIKLI ROL ŞART: `profiles` SELECT politikası "Kendi profilini gör"
+-- (`auth.uid() = id`), yani BU NOKTADA etkin olan alice mallory'nin satırını
+-- göremez ve iki alt sorgu da NULL döner — `isnt(..., null)` sessizce
+-- KIRMIZI olurdu, üstelik sebebi tetikleyicinin bozulması gibi görünürdü.
+-- Blok Task 08'de yazıldı ama 32 commit push edilmediği için CI'da hiç
+-- koşmamıştı; ilk koşuda tam bu iki iddiayla düştü. Aynı ders 060'ta
+-- fikstür kimlikleri için zaten yazılıydı.
+select tests.reset_role();
 select isnt(
   (select nickname from public.profiles where id = tests.get_supabase_uid('mallory')),
   null,

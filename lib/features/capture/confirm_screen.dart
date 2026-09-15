@@ -209,7 +209,6 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
         correctIndex: _correctIndex,
         exam: _exam,
         // Soru havuzu bu sürümde yok (bkz. lib/_archive/README.md).
-        isPublic: false,
         extraConcepts: _extras,
       );
       // Kuyruktan gelen bir kaydı tamamladıysak kopyası artık gereksiz.
