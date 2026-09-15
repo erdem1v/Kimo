@@ -472,6 +472,33 @@ verify_jwt = true
 [functions.ad-reward]
 verify_jwt = false
 
+# Satin alma dogrulamasi (Task 13). `uid` GOVDEDEN DEGIL JWT'den okunuyor;
+# dogrulama acik olmak ZORUNDA, yoksa bu fonksiyon "herkese premium yaz"
+# primitifine donerdi — `delete-account` ve `delete-question` ile ayni gerekce.
+[functions.verify-purchase]
+verify_jwt = true
+
+# Magaza sunucu bildirimleri (Task 13). **BU DEPODAKI IKINCI verify_jwt = false
+# FONKSIYONU.**
+#
+# NEDEN KAPALI: bildirim Apple'in ya da Google Pub/Sub'in sunucusundan geliyor
+# ve kullanici JWT'si TASIMIYOR — `ad-reward` ile birebir ayni gerekce.
+#
+# BU FONKSIYON SERVIS ROLU ISTEMCISI KURMAZ. Yazma yolu tek bir
+# anon-cagrilabilir RPC ve paylasilan bir sir (`apply_subscription`, goc 0092).
+#
+# VE BILDIRIMIN ICERIGINE GUVENMIYOR: yukten yalnizca makbuz kimligi okunuyor,
+# durum MAGAZANIN KENDI API'sinden yeniden soruluyor. Boylece Apple'in x5c
+# zincir dogrulamasi (henuz yazilmadi — sinanacak gercek imza yok, cunku hesap
+# yok) olmadan da sahte bir bildirim abonelik DEGISTIREMIYOR.
+[functions.store-notify]
+verify_jwt = false
+
+# Gecelik abonelik mutabakati (Task 13). Zamanlanmis is servis rolu jetonuyla
+# cagiriyor; webhook'un SESSIZCE calismamasina karsi ikinci katman.
+[functions.reconcile-subscriptions]
+verify_jwt = true
+
 # NOT (Task 07 / goc 0063): `guardian-confirm` KALDIRILDI. Veli onayi rejimi
 # tumuyle cikarildi (13+ konumlandirmasi); fonksiyon, `guardian_requests`
 # tablosu ve `profiles.guardian_email` sutunu dustu. Bu blok da onlarla

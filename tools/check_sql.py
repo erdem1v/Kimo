@@ -14,11 +14,14 @@ sonra en sik cikan ve en ucuz yakalanan hatalari gorunur kilar:
      yeni fonksiyonda EXECUTE'u PUBLIC'e verir; unutulan bir revoke sessiz bir
      acik birakir.
   5. `create or replace function` ile OUT sutun listesini (returns table)
-     DEGISTIREN gocler. Postgres yalnizca SONA sutun eklemeye izin verir; ad ya
-     da SIRA degisirse "cannot change return type of existing function" ile
-     PATLAR ve `db reset` o gocte durur. Bu depoda dort kez yasandi
-     (0014/0015, 0016/0024, 0083'te `consume_ai_use` DOGRU cozuldu ama
-     `ai_state` atlandi).
+     DEGISTIREN gocler. Postgres OUT parametrelerinin tanimladigi satir tipini
+     degistirmeye HIC izin vermez — SONA sutun EKLEMEK de dahil:
+     "cannot change return type of existing function / Row type defined by OUT
+     parameters is different". Tek yol `drop function` + `create function`.
+     Bu depoda dort kez yasandi (0014/0015, 0016/0024, ve Task 12'de
+     `consume_ai_use` DOGRU cozulurken `ai_state` atlandi); 0083'un kendi
+     yorumu kurali yaziyor: "yeni `call_id` sutunu ... `create or replace` ile
+     YAPILAMIYOR".
   6. `create or replace view` ile sutun listesinin ORTASINA sutun ekleyen
      gocler. Ayni kural: yalnizca SONA ekleme serbest, aksi halde
      "cannot change name of view column" ile patlar (0081'de `received_questions`).
@@ -300,12 +303,14 @@ def main():
         src = io.open(path, encoding='utf-8').read()
         for name, cols in out_columns(src):
             prev = fn_hist.get(name)
+            # SONA EKLEME DE GUVENLI DEGIL: Postgres OUT satir tipinin
+            # degismesini hic kabul etmiyor. Tek istisna yok.
             if prev is not None and cols != prev:
-                if cols[:len(prev)] != prev and not re.search(
+                if not re.search(
                         r'drop\s+function\s+if\s+exists\s+public\.%s\b' % name,
                         src, re.I):
                     problems.append(
-                        ('OUT SUTUN SIRASI/ADI DEGISTI, DROP YOK: %s '
+                        ('OUT SUTUN LISTESI DEGISTI, DROP YOK: %s '
                          '(create or replace bunu reddeder; drop + create yazin)'
                          % name, path))
             fn_hist[name] = cols

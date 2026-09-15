@@ -18,7 +18,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(19);
+select plan(21);
 
 select tests.create_supabase_user('alice');
 
@@ -58,6 +58,13 @@ select is((select ff_pair_streak from public.feature_flags()), false,
           'anahtar yokken ortak seri KAPALI doğuyor (DSA Md. 28(1) kılavuzu)');
 select is((select ff_multi_capture from public.feature_flags()), true,
           'anahtar yokken çoklu çekim açık (bayrak bir kill switch)');
+-- SATIN ALMA BAYRAĞI (0092). Riskli her özellik uzaktan kapatılabilmeli:
+-- mağaza tarafı arızalanır ya da fiyat sorgusu boş dönerse paywall'ın düğmesi
+-- SÜRÜM BEKLEMEDEN kapanabilmeli.
+select has_column('public'::name, 'my_daily_state'::name,
+                  'ff_iap'::name, 'görünümde ff_iap var');
+select is((select ff_iap from public.feature_flags()), true,
+          'ff_iap varsayılan AÇIK');
 select is((select ff_ad_reward from public.feature_flags()), true,
           'anahtar yokken ödüllü reklam açık');
 

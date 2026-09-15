@@ -52,6 +52,12 @@ class DailyState {
     this.ffPairStreak,
     this.ffMultiCapture,
     this.ffAdReward,
+    this.ffIap,
+    this.subStatus,
+    this.subStore,
+    this.subExpiresAt,
+    this.subRenews = false,
+    this.subInTrial = false,
   });
 
   /// Hakkın durumu. `null` = sunucunun söylediği değer tanınmadı → arayüz
@@ -108,8 +114,38 @@ class DailyState {
   final int plusWindowLimit;
   final int plusMonthLimit;
 
-  /// Premium aboneliğin bitişi (varsa). Bu sürümde dolduran bir yol yok.
+  /// Premium aboneliğin bitişi (varsa). Task 13'ten beri DOLU: tek yazar
+  /// `apply_subscription` (göç 0092), defterden türetiliyor.
   final DateTime? premiumUntil;
+
+  // ------------------------------------------------------------- abonelik
+  //
+  // Tek bir `premiumUntil` "deneme mi, yenilenecek mi, hangi mağaza" sorularına
+  // cevap veremiyor ve eksik veriyle karar UYDURMAK bu sınıfın yasakladığı şey.
+  // Sunucu ayrı bir fonksiyondan (`subscription_state`) veriyor.
+  //
+  // `null` = ABONELİK YOK ya da sütun okunamadı. İkisi de aynı şeyi
+  // gerektiriyor (satın alma yüzeyini normal göster), bu yüzden ayrılmıyor.
+
+  /// `trial | active | grace | expired | refunded | revoked`.
+  final String? subStatus;
+
+  /// `ios | android` — "Aboneliği yönet" bağlantısı hangi mağazaya gidecek.
+  final String? subStore;
+
+  /// Dönem bitişi. `premiumUntil` ile aynı olmak zorunda değil: iki
+  /// platformdan abone olan birinde `premiumUntil` en geç olanı taşır.
+  final DateTime? subExpiresAt;
+
+  /// Dönem sonunda kendiliğinden yenilenecek mi (iptal edilmediyse true).
+  final bool subRenews;
+
+  /// Ücretsiz deneme süresi içinde mi.
+  final bool subInTrial;
+
+  /// Etkin bir aboneliği var mı — paywall'ın "zaten Plus'sın" dalı.
+  bool get hasSubscription =>
+      subStatus == 'trial' || subStatus == 'active' || subStatus == 'grace';
 
   final int gems;
   final int xp;
@@ -151,6 +187,7 @@ class DailyState {
   final bool? ffPairStreak;
   final bool? ffMultiCapture;
   final bool? ffAdReward;
+  final bool? ffIap;
 
   /// Ortak seri yüzeyi çizilsin mi.
   bool get pairStreakEnabled => ffPairStreak ?? Features.pairStreakFallback;
@@ -163,6 +200,10 @@ class DailyState {
   /// Ödüllü reklam yüzeyi. Sunucu ayrıca `ad_offer` ile "şu an teklif edilir
   /// mi" diyor; bu bayrak ondan ÖNCE gelen bir kill switch.
   bool get adRewardEnabled => ffAdReward ?? Features.adRewardFallback;
+
+  /// Satın alma yüzeyi. Mağaza tarafı arızalanır ya da fiyat sorgusu boş
+  /// dönerse paywall'ın düğmesi SÜRÜM BEKLEMEDEN kapanabilmeli.
+  bool get iapEnabled => ffIap ?? Features.iapFallback;
 
   /// Sunucuya göre bugün aktif miyim (seri bugün işlendi mi).
   bool get activeToday =>
@@ -231,6 +272,14 @@ class DailyState {
       ffPairStreak: _flag(row['ff_pair_streak']),
       ffMultiCapture: _flag(row['ff_multi_capture']),
       ffAdReward: _flag(row['ff_ad_reward']),
+      ffIap: _flag(row['ff_iap']),
+      subStatus: row['sub_status'] as String?,
+      subStore: row['sub_store'] as String?,
+      subExpiresAt: _date(row['sub_expires_at']),
+      // `?? false`: abonelik YOKSA sunucu satır döndürmüyor ve bu alanlar
+      // null geliyor. "Yenilenmeyecek" ve "denemede değil" doğru okuma.
+      subRenews: _flag(row['sub_renews']) ?? false,
+      subInTrial: _flag(row['sub_in_trial']) ?? false,
     );
   }
 }

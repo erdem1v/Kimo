@@ -10,6 +10,9 @@
 --   istanbul_week → `istanbul_day()`in haftalık karşılığı. Görünümlerin
 --       SELECT listesinden çağrılıyor, yani `authenticated` EXECUTE
 --       edebilmeli. Sızdırdığı şey bir takvim tarihi.
+--   subscription_state → `my_daily_state`in üçüncü kaynağı. Sıfır argümanlı ve
+--       `auth.uid()`e kilitli; görünümün FROM listesinde olduğu için
+--       `authenticated` EXECUTE edebilmeli.
 --
 -- LİSTEYE BİLEREK GİRMEYENLER (Task 13'te KAPATILANLAR):
 --   set_question_sharing → havuz arayüzden çıktı (Task 02) ve `lib/` içinde
@@ -26,7 +29,11 @@
 -- NOT: `apply_question_report` zaten listede DEĞİLDİ (havuz dönemi şikâyeti);
 -- yürürlükteki şikâyet yolu `report_received_question` ve o listede kalıyor.
 --
--- YALNIZCA-ANON: `grant_ad_reward` (0076) ve `refund_ai_use_infra` (0083).
+-- YALNIZCA-ANON: `grant_ad_reward` (0076), `refund_ai_use_infra` (0083) ve
+-- `apply_subscription` (0092). Üçü de kullanıcı JWT'si TAŞIMAYAN bir mağaza /
+-- ağ geri çağrısından besleniyor ve üçü de paylaşılan sırla yetkili.
+-- `authenticated`'a açılmaları sırasıyla: bedava reklam hakkı, kota tavanının
+-- kalkması, BEDAVA ABONELİK demek olurdu.
 --
 -- Bu dosyanın geri kalanı 0087'nin AYNISI. Kapılar kümülatif.
 
@@ -46,6 +53,8 @@ declare
     'is_valid_topic',
     -- zaman yardimcilari (gorunumlerin SELECT listesinden cagriliyor)
     'istanbul_week',
+    -- abonelik durum yuzeyi (my_daily_state'in kaynagi)
+    'subscription_state',
     'my_curriculum',
     -- moderasyon
     'admin_pending_reports',
@@ -172,7 +181,8 @@ declare
   -- `refund_ai_use_infra` (0083) burada: TAVANSIZ iade yolu. Tavanlı yol
   -- (`refund_ai_use`) v_keep'te ve `authenticated`'a açık; tavansız olan
   -- ASLA açılamaz, yoksa istemci kendi kota tavanını kaldırırdı.
-  v_anon_only text[] := array['grant_ad_reward', 'refund_ai_use_infra'];
+  v_anon_only text[] := array['grant_ad_reward', 'refund_ai_use_infra',
+                              'apply_subscription'];
   r    record;
   v_bad text[];
 begin
@@ -438,7 +448,7 @@ declare
   -- hesap silmede geride satır bırakırlarsa "hesabınız ve ona bağlı tüm
   -- kayıtlar silinir" beyanı yanlış olurdu.
   v_owned text[] := array['user_sanctions', 'photo_violations',
-                          'ai_calls', 'ad_rewards'];
+                          'ai_calls', 'ad_rewards', 'subscriptions'];
   v_bad   text[];
 begin
   -- (a) auth.users'a bakan her anahtar cascade mi?
@@ -522,7 +532,7 @@ declare
     -- geliyor; defterin kendisi kullanıcıya bile okunabilir olmamalı.
     -- `ad_rewards.status` yazılabilse istemci reklamı izlemeden hak kazanırdı.
     'ai_calls', 'ad_rewards'
-  ];
+  , 'subscriptions'];
   v_bad text[];
 begin
   select array_agg(t) into v_bad
@@ -547,7 +557,8 @@ $mig$;
 -- bu üç sütunu taşımak zorunda.
 do $mig$
 declare
-  v_want text[] := array['ff_pair_streak', 'ff_multi_capture', 'ff_ad_reward'];
+  v_want text[] := array['ff_pair_streak', 'ff_multi_capture',
+                         'ff_ad_reward', 'ff_iap'];
   v_miss text[];
 begin
   select array_agg(w) into v_miss

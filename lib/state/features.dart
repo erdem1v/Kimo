@@ -70,4 +70,13 @@ class Features {
   /// ve o okunamadıysa reklam satırı da çizilmiyor — bu bayrak ondan önceki
   /// kaba anahtar.
   static const bool adRewardFallback = true;
+
+  /// Satın alma okunamadığında ÇİZİLMİYOR.
+  ///
+  /// Diğer üçünden farklı olarak KAPALI tarafta duruyor, bilinçli: satın alma
+  /// yüzeyi mağaza sorgusuna da bağlı (`PlusPlans.isConfigured` çalışma zamanı
+  /// durumundan türüyor) ve sunucu okunamadığında "satın al" düğmesi çizmek,
+  /// arkasında ne olduğunu bilmediğimiz bir düğme çizmek olurdu. Deponun
+  /// kuralı: hiçbir şey yapmayan arayüz çizilmez.
+  static const bool iapFallback = false;
 }
