@@ -191,6 +191,35 @@ class UserProfile extends ChangeNotifier {
     unawaited(curriculumRepository.refresh(_curriculum!));
   }
 
+  /// Kurulumun profil adımı: takma ad + sınav yılı TEK çağrıda.
+  ///
+  /// Adım eskiden `setNickname` ve `setExamYear`i arka arkaya çağırıyordu,
+  /// yani iki ayrı `auth.updateUser` turu atıyordu. İkincisi, birincinin
+  /// tetiklediği oturum tazelemesiyle yarışabiliyor ve adım "Kaydedilemedi"
+  /// ile düşebiliyordu (Task 14 · G3 — bir kez gözlendi, ikinci dokunuş
+  /// geçti). Tek tur hem yarış yüzeyini hem de gecikmeyi yarıya indiriyor.
+  ///
+  /// AYARLAR EKRANI AYRI SETTER'LARI KULLANMAYA DEVAM EDİYOR: orada alanlar
+  /// tek tek değişiyor ve birini yazarken diğerini göndermek, kullanıcının
+  /// dokunmadığı alanı da yeniden yazmak olurdu.
+  Future<void> setProfileBasics({
+    required String nickname,
+    required int examYear,
+  }) async {
+    final String value = nickname.trim();
+    if (value.isEmpty) return;
+    _nickname = value;
+    _examYear = examYear;
+    _curriculum = curriculumForYear(examYear);
+    notifyListeners();
+    await _save(<String, dynamic>{
+      'nickname': value,
+      'curriculum': _curriculum,
+      'exam_year': examYear,
+    });
+    unawaited(curriculumRepository.refresh(_curriculum!));
+  }
+
   Future<void> setNickname(String nickname) async {
     final String value = nickname.trim();
     if (value.isEmpty) return;

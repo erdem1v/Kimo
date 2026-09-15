@@ -1015,6 +1015,14 @@
   "@ageTooYoungBody": {
     "description": "13 yaş sınırı reddi. SUÇLAYICI DEĞİL: kullanıcı yanlış bir şey yapmadı, ürün ona uygun değil. Kapı kapanmıyor; hesap kilitlenmiyor."
   },
+  "ageTooYoungContact": "Bize yaz",
+  "@ageTooYoungContact": {
+    "description": "Yaş reddi kartındaki iletişim düğmesi. Metin \"bize yazabilirsin\" diyordu ama yazacak bir yer çizilmiyordu (Task 14 · G2)."
+  },
+  "ageTooYoungContactUnavailable": "Destek adresi henüz tanımlı değil.",
+  "@ageTooYoungContactUnavailable": {
+    "description": "SUPPORT_EMAIL verilmemişse gösterilen açıklama."
+  },
   "profileStepTitle": "Seni nasıl çağırayım?",
   "profileNicknameHint": "Takma adın",
   "profileExamYearTitle": "Hangi yıl gireceksin?",

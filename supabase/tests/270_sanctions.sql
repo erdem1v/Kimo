@@ -17,7 +17,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(46);
+select plan(48);
 
 select tests.create_supabase_user('ihlalci');
 select tests.create_supabase_user('temiz');
@@ -430,6 +430,40 @@ select throws_ok(
 select ok(
   has_function_privilege('authenticated', 'public.is_suspended(uuid)', 'EXECUTE'),
   'is_suspended authenticated''a AÇIK — politika ifadeleri onu çağırıyor'
+);
+
+-- ======================== AYNI İŞLEMDEKİ SATIRLARIN SIRASI BELİRLİ (0095)
+-- Task 14 · G4. `is_suspended`, `my_sanction` ve `admin_user_sanctions`
+-- "en yeni yaptırım kazanır" mantığını `order by created_at desc, id desc`
+-- ile kuruyor. `created_at` varsayılanı `now()` olduğu sürece aynı işlemde
+-- yazılan yaptırımlar EŞİT damga taşıyor ve `id` rastgele bir uuid olduğu
+-- için sıralama rastgeleye düşüyordu — kullanıcının askılı mı yasaklı mı
+-- olduğu şansa kalıyordu.
+--
+-- İDDİA SONUCU DEĞİL SIRALAMANIN KENDİSİNİ SORUYOR. "Sonuncusu kazandı mı"
+-- diye sormak, bozuk hâlde de yarı yarıya yeşil dönerdi — yani mutasyonu
+-- ayırt etmezdi. Damgaların FARKLI olması ise sıralamanın tam olmasının
+-- gerek ve yeter koşulu: `clock_timestamp()` ile üç satır üç damga alıyor,
+-- `now()` ile üçü de aynı damgayı alıyor.
+select tests.reset_role();
+select tests.create_supabase_user('sirali');
+insert into public.user_sanctions (user_id, action, until, reason_code, source)
+values (tests.get_supabase_uid('sirali'), 'suspend', now() + interval '1 day',
+        'other', 'auto'),
+       (tests.get_supabase_uid('sirali'), 'ban', null, 'other', 'admin'),
+       (tests.get_supabase_uid('sirali'), 'lift', null, 'other', 'admin');
+
+select is(
+  (select count(distinct created_at)::int from public.user_sanctions
+    where user_id = tests.get_supabase_uid('sirali')),
+  3,
+  'aynı işlemde yazılan üç yaptırım ÜÇ FARKLI damga taşıyor — sıralama tam'
+);
+-- Sıra tam olduğuna göre sonuç da belirli: son karar 'lift', yani askı yok.
+select is(
+  public.is_suspended(tests.get_supabase_uid('sirali')),
+  false,
+  'son yazılan karar (lift) kazanıyor — sonuç artık rastgele değil'
 );
 
 select * from finish();

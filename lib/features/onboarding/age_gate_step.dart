@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/daily_state_repository.dart';
 import '../../data/photo_queue.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../../services/legal_links.dart';
 import '../../services/sound_service.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -179,9 +180,38 @@ class _AgeGateStepState extends State<AgeGateStep> {
           ),
           const SizedBox(height: Gap.xs),
           Text(l.ageTooYoungBody, style: t.caption),
+          // İLETİŞİM YOLU (Task 14 · G2). Gövde metni "bir yanlışlık olduğunu
+          // düşünüyorsan bize yazabilirsin" diyordu ama kart yalnızca başlık
+          // ve gövde çiziyordu: reddedilen kullanıcı çıkmaz bir ekranda kalıp
+          // yazacak bir yer bulamıyordu. Biçim `suspended_screen`in itiraz
+          // yoluyla aynı — adres yoksa sessizce kaybolmuyor, söyleniyor.
+          const SizedBox(height: Gap.sm),
+          KimoButton(
+            label: l.ageTooYoungContact,
+            kind: KimoButtonKind.tertiary,
+            onPressed: () => _contactSupport(context, l),
+          ),
         ],
       ),
     );
+  }
+
+  /// Yaş reddine itiraz e-postası.
+  Future<void> _contactSupport(BuildContext context, L10n l) async {
+    sound.tap();
+    if (!LegalLinks.has(LegalLinks.supportEmail)) {
+      _snack(l.ageTooYoungContactUnavailable);
+      return;
+    }
+    final Uri mail = Uri(
+      scheme: 'mailto',
+      path: LegalLinks.supportEmail.trim(),
+      queryParameters: const <String, String>{
+        'subject': 'Kimo — yaş sınırı itirazı',
+      },
+    );
+    final bool ok = await openLegalUrl(mail.toString());
+    if (!ok && mounted) _snack(l.ageTooYoungContactUnavailable);
   }
 
   Widget _yearWheel(BuildContext context) {

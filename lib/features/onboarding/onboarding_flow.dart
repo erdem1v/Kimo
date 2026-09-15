@@ -169,8 +169,12 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         case _Step.age:
           break;
         case _Step.profile:
-          await userProfile.setNickname(_nickname.text.trim());
-          await userProfile.setExamYear(_year!);
+          // TEK tur (Task 14 · G3): iki ayrı `updateUser` çağrısı yerine
+          // birleşik yazım.
+          await userProfile.setProfileBasics(
+            nickname: _nickname.text.trim(),
+            examYear: _year!,
+          );
         case _Step.mascot:
           await userProfile.setMascot(_mascot ?? Mascot.fallback);
         case _Step.notifications:
