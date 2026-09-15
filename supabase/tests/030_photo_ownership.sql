@@ -171,11 +171,18 @@ select lives_ok(
 -- çözmeye kalkarsa kırmızı döner. Öyle bir politika, taraması 'clear' çıkmış
 -- bir fotoğrafın üzerine başka bir görsel yazılmasına izin verirdi ve
 -- `mistakes.photo_path`in YAZ-BİR-KEZ olmasını (0020) anlamsız kılardı.
+-- SORU BİZİM KOVALARIMIZ HAKKINDA. `storage.objects` üzerinde Supabase'in
+-- kendi kurduğu politikalar da var (ilk sürüm hepsini sayıyordu ve CI'da
+-- kırmızı döndü); iddia yalnızca `mistake-photos` ve `avatars`ı ilgilendiren
+-- UPDATE politikalarını arıyor.
 select is(
   (select count(*)::int from pg_policies
-    where schemaname = 'storage' and tablename = 'objects' and cmd = 'UPDATE'),
+    where schemaname = 'storage' and tablename = 'objects' and cmd = 'UPDATE'
+      and (coalesce(qual, '') || coalesce(with_check, ''))
+          ~ '(mistake-photos|avatars)'),
   0,
-  'storage.objects üzerinde UPDATE politikası YOK — yüklenen görselin üzerine yazılamaz'
+  'storage.objects üzerinde kovalarımız için UPDATE politikası YOK — '
+  'yüklenen görselin üzerine yazılamaz'
 );
 
 select * from finish();
