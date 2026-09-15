@@ -240,6 +240,25 @@ jobs:
       #
       # Desen kendi satırını yakalamasın diye para birimi LİTERAL yazılmıyor;
       # kabuk onu bir ondalık koddan üretiyor (`can` kapısının aynı kaygısı).
+      # ICU KAÇIŞI YALNIZCA YER TUTUCULU İLETİDE ÇÖZÜLÜYOR. `intl`, bir iletiyi
+      # ancak `{placeholder}` içeriyorsa ICU olarak ayrıştırıyor ve `''`yi tek
+      # kesmeye indiriyor. Yer tutucusuz bir iletide `''` OLDUĞU GİBİ çiziliyor:
+      # paywall'da "Çoklu çekim Plus''ta" yazıyordu ve bunu ancak Task 14'te
+      # simülatörde gözle görebildik — derleyici de testler de sessizdi.
+      - name: ARB'de çözülmemiş ICU kaçışı var mı
+        run: |
+          python3 - <<'PY'
+          import io, json, sys
+          d = json.load(io.open('lib/l10n/app_tr.arb', encoding='utf-8'))
+          bad = [k for k, v in d.items()
+                 if not k.startswith('@') and isinstance(v, str)
+                 and "''" in v and '{' not in v]
+          if bad:
+              print('::error::yer tutucusuz iletide çözülmeyecek ICU kaçışı: %s' % bad)
+              sys.exit(1)
+          print('ARB: çözülmemiş ICU kaçışı yok')
+          PY
+
       - name: Sabit fiyat hiçbir yerde yok mu
         run: |
           TL="$(printf '\u20ba')"

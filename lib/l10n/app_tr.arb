@@ -164,7 +164,7 @@
   "@batchRefunded": {
     "description": "Tur 7 · n4 kuralı: hak sayımı yalnızca okunabilen fotoğraflar için düşer (0083 iade)."
   },
-  "plusBatchTitle": "Çoklu çekim Plus''ta",
+  "plusBatchTitle": "Çoklu çekim Plus'ta",
   "plusBatchBody": "Denemenin bütün yanlışlarını arka arkaya çek, hepsi tek seferde okunsun. Tek tek çekmek zorunda kalma.",
   "plusBatchPhotos": "Tek seferde {count} fotoğraf",
   "@plusBatchPhotos": {
