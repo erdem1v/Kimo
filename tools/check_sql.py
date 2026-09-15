@@ -33,8 +33,23 @@ sonra en sik cikan ve en ucuz yakalanan hatalari gorunur kilar:
      `36_window_wrong_length` tam boyle bayatladi; Task 13'te `39` ve `40`
      ayni sekilde bayatladi.
 
+  8. BAGIMLI GORUNUMU OLAN `drop view`. 6. kontrolun kor noktasi: ortaya
+     sutun ekleyen bir gocu `drop + create`e cevirmek dogru gorunur ama
+     gorunum YAPRAK DEGILSE Postgres dusurmeyi reddeder:
+     "cannot drop view X because other objects depend on it". Bu depoda tam
+     boyle oldu — 0086 `my_daily_state`i `received_questions` uzerine kurdu,
+     Task 13 de 0087'yi 6. kontrolu memnun etmek icin `drop + create` yapti ve
+     `db reset` ILK gercek CI kosusunda o dosyada durdu. 6. kontrol yesil,
+     goc kirmiziydi; yani tek basina yetmiyor.
+
 Kullanim:  python tools/check_sql.py
+           python tools/check_sql.py --selftest
 Cikis kodu 1 ise sorun bulunmustur.
+
+KENDI SINAMASI: bu depoda iki denetleyici sessizce hicbir sey bulmama hatasina
+dustu, ve bu dosyanin 6. kontrolu de yarim cikti. `--selftest` her kontrole
+BILEREK bozuk bir girdi verip kirmizi dondugunu, ayni girdinin duzeltilmis
+halinde yesil dondugunu kaniyor.
 """
 
 import io
@@ -202,6 +217,22 @@ def view_columns(src):
     return found
 
 
+def view_refs(src, name, start):
+    """Gorunumun govdesindeki `from/join public.X` adlari."""
+    end = src.find(';', start)
+    body = re.sub(r'--[^\n]*', '', src[start:end if end != -1 else len(src)])
+    return set(re.findall(r'\b(?:from|join)\s+public\.(\w+)', body, re.I))
+
+
+def view_drops(src):
+    """Dusurulen gorunum adlari (yorum satirlari haric)."""
+    code = chr(10).join(
+        l for l in src.split(chr(10)) if not l.lstrip().startswith('--'))
+    return [(m.group(2), bool(m.group(3))) for m in re.finditer(
+        r'drop\s+view\s+(if\s+exists\s+)?public\.(\w+)(\s+cascade)?',
+        code, re.I)]
+
+
 def _fn_bodies(text):
     """{ad: [normalize edilmis imza+govde, ...]} — yalnizca `$fn$` govdeliler."""
     out = {}
@@ -220,15 +251,16 @@ def _fn_bodies(text):
     return out
 
 
-def plan_problems():
+def plan_problems(tests=None):
     """pgTAP dosyalarinda `plan(n)` ile gercek iddia sayisini karsilastirir."""
+    tests = tests or TESTS
     found = []
-    if not os.path.isdir(TESTS):
+    if not os.path.isdir(tests):
         return found
-    for name in sorted(os.listdir(TESTS)):
+    for name in sorted(os.listdir(tests)):
         if not name.endswith('.sql'):
             continue
-        path = (TESTS + '/' + name)
+        path = (tests + '/' + name)
         src = io.open(path, encoding='utf-8').read()
         code = strip_literals(src)[0]
         m = re.search(r'select\s+plan\s*\(\s*(\d+)\s*\)', code, re.I)
@@ -242,11 +274,12 @@ def plan_problems():
     return found
 
 
-def main():
-    problems = plan_problems()
+def main(migrations=None, tests=None, quiet=False):
+    migrations = migrations or MIGRATIONS
+    problems = plan_problems(tests or TESTS)
     files = sorted(
-        os.path.join(MIGRATIONS, f).replace(os.sep, '/')
-        for f in os.listdir(MIGRATIONS) if f.endswith('.sql')
+        os.path.join(migrations, f).replace(os.sep, '/')
+        for f in os.listdir(migrations) if f.endswith('.sql')
     )
 
     created = set()
@@ -324,8 +357,24 @@ def main():
     # Ikisi de ayni Postgres kuralindan: yalnizca SONA ekleme serbest.
     # `drop function/view if exists` yazilmissa sorun yok.
     fn_hist, view_hist = {}, {}
+    view_deps = {}           # gorunum adi -> referans verdigi iliskiler
     for path in files:
         src = io.open(path, encoding='utf-8').read()
+
+        # 8) bagimli gorunumu olan `drop view`
+        created_here = {n for n, _r, _c in view_columns(src)}
+        for dropped, cascade in view_drops(src):
+            dependents = sorted(
+                v for v, refs in view_deps.items()
+                if v != dropped and dropped in refs)
+            orphans = [d for d in dependents if d not in created_here]
+            if orphans:
+                problems.append(
+                    ('BAGIMLI GORUNUM DUSURULUYOR: %s%s -> %s (Postgres drop'"'"'u '
+                     'reddeder; ya sona ekleyip `create or replace` yazin ya da '
+                     'bagimlilari ayni gocte yeniden kurun)'
+                     % (dropped, ' cascade' if cascade else '',
+                        ', '.join(orphans)), path))
         for name, cols in out_columns(src):
             prev = fn_hist.get(name)
             # SONA EKLEME DE GUVENLI DEGIL: Postgres OUT satir tipinin
@@ -347,6 +396,9 @@ def main():
                      '(create or replace yalnizca SONA ekler; drop + create yazin)'
                      % name, path))
             view_hist[name] = cols
+        for m in re.finditer(r'create\s+(?:or\s+replace\s+)?view\s+public\.(\w+)',
+                             src, re.I):
+            view_deps[m.group(1)] = view_refs(src, m.group(1), m.end())
 
     # 7) bayat mutasyon geri almalari
     live_body = {}
@@ -356,7 +408,7 @@ def main():
             live_body[name] = (bs[-1], os.path.basename(path))
 
     mut_dir = 'supabase/mutations'
-    if os.path.isdir(mut_dir):
+    if migrations == MIGRATIONS and os.path.isdir(mut_dir):
         for name in sorted(os.listdir(mut_dir)):
             if not name.endswith('.sql'):
                 continue
@@ -377,17 +429,86 @@ def main():
 
     # 4) yetkisi hic yonetilmemis fonksiyonlar
     unmanaged = sorted(created - execute_managed)
-    if unmanaged:
+    if unmanaged and migrations == MIGRATIONS:
         problems.append(
             ('EXECUTE YETKISI YAZILMAMIS: %s' % unmanaged,
              '(son recheck gocu bunlari kapatir; yine de acikca yazilmali)'))
 
-    for what, where in problems:
-        print('%-58s %s' % (what, where))
-    print()
-    print('goc dosyasi: %d | sorun: %d' % (len(files), len(problems)))
+    if not quiet:
+        for what, where in problems:
+            print('%-58s %s' % (what, where))
+        print()
+        print('goc dosyasi: %d | sorun: %d' % (len(files), len(problems)))
     return 1 if problems else 0
 
 
+# ----------------------------------------------------------- kendi sinamasi
+# Her ciftin ILKI bilerek bozuk, IKINCISI ayni seyin duzeltilmis hali. Ikisi
+# birlikte kaniyor: kapi bozugu yakaliyor VE dogru olana yanlis alarm vermiyor.
+# Yalniz "bozugu yakaladi" yetmez — 6. kontrol tam olarak oyle yesil gorunup
+# 8. kontrolun yakaladigi hatayi kacirdi.
+_FIXTURES = (
+    ('5 · OUT sutun listesi degisti',
+     {'0001_a.sql': "create function public.f() returns table (a int) as $fn$ "
+                    "select 1 $fn$ language sql;"
+                    "\nrevoke execute on function public.f() from public;",
+      '0002_b.sql': "create or replace function public.f() returns table (a int, b int) "
+                    "as $fn$ select 1, 2 $fn$ language sql;"},
+     {'0001_a.sql': "create function public.f() returns table (a int) as $fn$ "
+                    "select 1 $fn$ language sql;"
+                    "\nrevoke execute on function public.f() from public;",
+      '0002_b.sql': "drop function if exists public.f();"
+                    "\ncreate function public.f() returns table (a int, b int) "
+                    "as $fn$ select 1, 2 $fn$ language sql;"}),
+
+    ('6 · gorunum sutunu ortaya eklendi',
+     {'0001_a.sql': "create view public.v as\nselect t.a as a, t.c as c\nfrom public.t;",
+      '0002_b.sql': "create or replace view public.v as\nselect t.a as a, t.b as b, "
+                    "t.c as c\nfrom public.t;"},
+     {'0001_a.sql': "create view public.v as\nselect t.a as a, t.c as c\nfrom public.t;",
+      '0002_b.sql': "create or replace view public.v as\nselect t.a as a, t.c as c, "
+                    "t.b as b\nfrom public.t;"}),
+
+    ('8 · bagimli gorunum dusuruluyor',
+     {'0001_a.sql': "create view public.v as\nselect t.a as a\nfrom public.t;",
+      '0002_b.sql': "create view public.w as\nselect v.a as a\nfrom public.v;",
+      '0003_c.sql': "drop view if exists public.v;\ncreate view public.v as\n"
+                    "select t.a as a, t.b as b\nfrom public.t;"},
+     {'0001_a.sql': "create view public.v as\nselect t.a as a\nfrom public.t;",
+      '0002_b.sql': "create view public.w as\nselect v.a as a\nfrom public.v;",
+      '0003_c.sql': "create or replace view public.v as\nselect t.a as a, t.b as b\n"
+                    "from public.t;"}),
+)
+
+
+def _run_fixture(files):
+    import shutil
+    import tempfile
+    d = tempfile.mkdtemp(prefix='check_sql_selftest_')
+    try:
+        for name, body in files.items():
+            io.open(os.path.join(d, name), 'w', encoding='utf-8').write(body)
+        return main(migrations=d, tests=d, quiet=True)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def selftest():
+    """Her kontrole bilerek bozuk girdi verip kirmizi dondugunu kaniar."""
+    failed = 0
+    for label, broken, fixed in _FIXTURES:
+        if _run_fixture(broken) == 0:
+            print('selftest BASARISIZ: %s — bozuk girdi YAKALANMADI' % label)
+            failed = 1
+        elif _run_fixture(fixed) != 0:
+            print('selftest BASARISIZ: %s — duzeltilmis girdide yanlis alarm' % label)
+            failed = 1
+        else:
+            print('selftest: %s — bozuk yakalandi, duzeltilmis temiz' % label)
+    # 7 (bayat @UNDO) gercek `supabase/mutations` agacini istiyor; fikstur
+    # uretmek yerine canli agacta kosuyor ve zaten ana kosumda denetleniyor.
+    return failed
+
+
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(selftest() if '--selftest' in sys.argv else main())

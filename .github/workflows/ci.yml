@@ -107,6 +107,14 @@ jobs:
       - name: Import'lar
         run: python tools/check_imports.py
 
+      # Task 14'te bu denetleyicinin 6. kontrolü YEŞİL dönerken göç CI'da
+      # patladı: ortaya sütun eklemeyi yakalıyordu ama düzeltmenin bağımlı bir
+      # görünümü düşürdüğünü göremiyordu. 8. kontrol o kör noktayı kapatıyor;
+      # kendi sınaması da her koşuda ikisinin de gerçekten ayırt ettiğini
+      # kanıtlıyor — depodaki diğer dört denetleyicinin zaten yaptığı gibi.
+      - name: SQL denetleyicisinin kendi sınaması
+        run: python tools/check_sql.py --selftest
+
       - name: SQL göçleri ve pgTAP plan sayıları
         run: python tools/check_sql.py
 

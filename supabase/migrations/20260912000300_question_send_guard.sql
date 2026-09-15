@@ -238,23 +238,34 @@ comment on function public.send_question_to_friends(uuid, uuid[], text) is
 -- AYNEN duruyor: bu paketteki en olası regresyon onları yeniden yazarken
 -- birini sessizce düşürmek olurdu.
 --
--- DROP + CREATE, `create or replace view` DEĞİL. `create or replace view`
--- yalnızca listenin SONUNA sütun eklemeye izin veriyor; `sender_avatar_path`
--- ise `sender_mascot` ile `note` arasına giriyor (tasarımda sıra anlamlı:
--- gönderenin kimliği bir arada duruyor). Yerinde bırakılsaydı göç
---   ERROR: cannot change name of view column "note" to "sender_avatar_path"
--- ile patlar ve `supabase db reset` bu dosyada dururdu. Aynı ders 0079'da
--- `my_daily_state` için de yazılmıştı.
-drop view if exists public.received_questions;
-
-create view public.received_questions
+-- SÜTUN EN SONA EKLENİYOR ve `create or replace view` kullanılıyor.
+--
+-- Bu paket önce DROP + CREATE yazıyordu, çünkü `create or replace view`
+-- yalnızca listenin SONUNA sütun eklemeye izin veriyor ve `sender_avatar_path`
+-- tasarımda `sender_mascot`ın yanına, gönderen kimliğinin arasına giriyordu.
+-- O sürüm CI'da `supabase db reset`i BU DOSYADA durdurdu:
+--   ERROR: cannot drop view received_questions because other objects depend on it
+--   view my_daily_state depends on view received_questions
+-- `my_daily_state` (0086) gelen kutusu sayısını buradan okuyor, yani görünüm
+-- artık yaprak değil; düşürmek zincirin tamamını düşürmek demek.
+--
+-- İki çıkış vardı: (a) `my_daily_state`i de düşürüp yeniden kurmak,
+-- (b) sütunu sona alıp yerinde değiştirmek. (b) seçildi: (a),
+-- `my_daily_state`in gövdesini depoda ÜÇÜNCÜ kez kopyalardı ve bu paketin
+-- kendi dersi zaten "kopyalanan gövde sessizce ıraksar"dı. Sıranın taşıdığı
+-- tek şey okunabilirlikti; ne pgTAP (`has_column` sırasız) ne PostgREST
+-- (ada göre JSON) ne de istemci (`row['sender_avatar_path']`) sıraya bakıyor.
+--
+-- `create or replace view` bağımlı görünümü de bozmuyor: `my_daily_state`in
+-- saklı tanımı kendi sütun listesiyle donmuş durumda, sona eklenen sütun ona
+-- ulaşmıyor.
+create or replace view public.received_questions
 with (security_invoker = false) as
 select
   s.id                as send_id,
   s.sender_id,
   sp.nickname         as sender_nickname,
   sp.mascot           as sender_mascot,
-  sp.avatar_path      as sender_avatar_path,
   s.note,
   s.created_at,
   s.solved_at,
@@ -265,7 +276,8 @@ select
   m.exam,
   m.photo_path,
   m.options,
-  case when s.solved_at is not null then m.correct_index end as correct_index
+  case when s.solved_at is not null then m.correct_index end as correct_index,
+  sp.avatar_path      as sender_avatar_path
 from public.question_sends s
 join public.mistakes m on m.id = s.mistake_id
 join public.profiles sp on sp.id = s.sender_id
@@ -288,9 +300,10 @@ where s.receiver_id = auth.uid()
   )
   and s.dismissed_at is null;
 
--- DROP + CREATE grant'ları SİLİYOR (`create or replace view` korurdu), yani
--- bu iki satır artık isteğe bağlı değil ZORUNLU. 0068'in dersi zaten
--- görünümü yeniden tanımlayan bir göçün eski grant'ı farkında olmadan
--- diriltebilmesiydi; burada tersi geçerli.
+-- `create or replace view` grant'ları KORUYOR, yani bu iki satır teknik olarak
+-- zorunlu değil. Yine de duruyorlar: 0068'in dersi, görünümü yeniden tanımlayan
+-- bir göçün eski bir grant'ı farkında olmadan diriltebilmesiydi. Yetkiyi her
+-- tanımın yanında açıkça yazmak, bir sonraki düzenleme DROP'a dönerse de doğru
+-- kalan tek biçim.
 revoke all on public.received_questions from public, anon;
 grant select on public.received_questions to authenticated;
