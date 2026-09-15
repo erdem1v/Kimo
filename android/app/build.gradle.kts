@@ -70,8 +70,20 @@ android {
         applicationId = "com.stratejico.kimo"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        // SDK SÜRÜMLERİ AÇIK SAYILARLA SABİT (Task 14). Eskiden
+        // `flutter.minSdkVersion` / `flutter.targetSdkVersion`e bırakılmıştı;
+        // o değerler Flutter SDK'sıyla birlikte SESSİZCE değişiyor.
+        //
+        // Neden şimdi önemli: Play Billing Library'nin bir taban minSdk şartı
+        // var ve Play'in targetSdk politikası her yıl tabanı yükseltiyor. İkisi
+        // de "bir gün Flutter güncellendi ve derleme başka bir şey üretti"
+        // sınıfından sürpriz üretmemeli — uygulamanın hangi Android
+        // sürümlerinde çalıştığı DEPODAN okunabilmeli.
+        //
+        // Bugünkü Flutter 3.47.2 varsayılanlarıyla AYNI değerler; yani bu
+        // değişiklik davranışı değiştirmiyor, yalnızca sabitliyor.
+        minSdk = 24
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 

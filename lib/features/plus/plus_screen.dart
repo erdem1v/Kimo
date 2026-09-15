@@ -75,6 +75,23 @@ class PlusScreen extends StatefulWidget {
 class _PlusScreenState extends State<PlusScreen> {
   PlusPlan? _selected = PlusPlans.defaultPlan;
 
+  @override
+  void initState() {
+    super.initState();
+    // MAĞAZA YANITI GEÇ GELMİŞ OLABİLİR. Ürün sorgusu açılışta başlatılıyor
+    // (`main.dart`) ve `await` edilmiyor; kullanıcı paywall'ı o sorgu
+    // dönmeden açarsa liste boş olurdu ve ekran "satın alma kapalı" derdi.
+    // Boşsa bir kez daha soruyoruz — dolu ise ağa hiç çıkmıyoruz.
+    if (PlusPlans.current.isEmpty) unawaited(_loadProducts());
+  }
+
+  Future<void> _loadProducts() async {
+    final List<PlusPlan> products = await Purchases.instance.products();
+    if (!mounted || products.isEmpty) return;
+    PlusPlans.setProducts(products);
+    setState(() => _selected = PlusPlans.defaultPlan);
+  }
+
   /// Satın alma ya da geri yükleme sürüyor — çift dokunuş iki isteğe
   /// dönüşmesin (`friends_view`'deki `_busy` deseni).
   bool _busy = false;

@@ -17,6 +17,11 @@
          hatırlatmalar geri kurulsun; yoksa her yeniden başlatma o günün
          hatırlatmalarını sessizce siliyordu. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- BILLING: uygulama içi satın alma (Kimo Plus aboneliği, Task 14).
+         `in_app_purchase_android` bunu kendi manifest'inden merge ediyor;
+         yukarıdaki iki izinle aynı gerekçeyle AÇIKÇA beyan ediliyor —
+         uygulamanın hangi izinlere dayandığı depodan okunabilmeli. -->
+    <uses-permission android:name="com.android.vending.BILLING"/>
 
     <!-- REKLAM KİMLİĞİ (AAID) BİLİNÇLİ OLARAK DÜŞÜRÜLÜYOR (Task 10).
          `google_mobile_ads` bu izni kendi manifest'inden MERGE ile ekliyor;

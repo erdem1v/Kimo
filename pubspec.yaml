@@ -64,6 +64,7 @@ dependencies:
   # WEB DESTEGI YOK. Bu depoda `web/` var; reklam servisi kIsWeb'de hicbir sey
   # yapmadan "reklam yok" donuyor (bkz. lib/services/ads/ad_service.dart).
   google_mobile_ads: ^9.1.0
+  in_app_purchase: ^3.3.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

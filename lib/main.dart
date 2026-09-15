@@ -9,7 +9,10 @@ import 'app.dart';
 import 'data/curriculum_repository.dart';
 import 'data/notification_lines.dart';
 import 'services/ads/ad_service.dart';
+import 'features/plus/plus_plans.dart';
 import 'services/crash_service.dart';
+import 'services/purchase_service.dart';
+import 'services/store_purchase_service.dart';
 import 'services/notification_service.dart';
 import 'services/push_service.dart';
 import 'services/supabase_config.dart';
@@ -97,6 +100,23 @@ Future<void> _run() async {
   // diyalog yok. Üç sessiz neden (doluluk, platform, yapılandırma) tek bir
   // görünmeyen satıra düşüyor.
   unawaited(AdService.instance.init());
+
+  // SATIN ALMA (Task 14). Task 13 katmanın tamamını yazmış ama eklentiyi
+  // ekleyememişti; burası "değişecek tek satır" olarak bırakılan yer.
+  //
+  // Aynı kural: `runApp`'i BLOKLAMIYOR. `start()` yalnızca mağaza akışını
+  // dinlemeye başlıyor — uygulama kapalıyken tamamlanan bir satın alma
+  // (Play'de banka onayı, App Store'da aile onayı) sonucu bir sonraki
+  // açılışta veriyor ve dinleyici olmadan o sonuç KAYBOLURDU.
+  //
+  // Ürün sorgusu da await EDİLMİYOR: mağaza yanıtı gelene kadar
+  // `PlusPlans.current` boş kalıyor, yani paywall fiyat İÇERMEYEN dürüst
+  // hâlinde çiziliyor. Yanıt gelince liste doluyor.
+  Purchases.instance = StorePurchaseService.instance;
+  StorePurchaseService.instance.start();
+  unawaited(
+    StorePurchaseService.instance.products().then(PlusPlans.setProducts),
+  );
 
   // Bildirim metinleri veritabanında; önbellek diskten okunur (ucuz, ağsız).
   // Tazeleme Supabase kurulduktan SONRA ve await EDİLMEDEN yapılır: ağ
