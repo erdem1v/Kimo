@@ -42,6 +42,15 @@ sonra en sik cikan ve en ucuz yakalanan hatalari gorunur kilar:
      `db reset` ILK gercek CI kosusunda o dosyada durdu. 6. kontrol yesil,
      goc kirmiziydi; yani tek basina yetmiyor.
 
+  9. GERI ALINMIS YETKIYI DIRILTEN `grant`. Bir goc bir nesne+yetki+rol
+     ucluslu icin `revoke` yazdiysa, SONRAKI bir gocun ayni ucluye `grant`
+     yazmasi neredeyse her zaman kopyala-yapistir kazasidir: yeni goc, kilit
+     konmadan ONCEki bicimi ornek aliyordur. Task 13'un `maintenance.sql`i tam
+     boyle `grant select on profiles_public to authenticated` yazdi ve 0068'in
+     dizin kilidini geri acti — serbest select ile butun kullanici dizini
+     yeniden dokulebilir hale gelmisti. Bilerek geri acmak icin satira
+     `-- @REGRANT` yazin.
+
 Kullanim:  python tools/check_sql.py
            python tools/check_sql.py --selftest
 Cikis kodu 1 ise sorun bulunmustur.
@@ -400,6 +409,33 @@ def main(migrations=None, tests=None, quiet=False):
                              src, re.I):
             view_deps[m.group(1)] = view_refs(src, m.group(1), m.end())
 
+    # 9) geri alinmis yetkiyi dirilten grant
+    grant_state = {}
+    grant_rx = re.compile(
+        r'\b(grant|revoke)\s+(select|insert|update|delete|all|execute)\b'
+        r'(?:[^;]*?)\bon\s+(?:table\s+|function\s+|view\s+)?public\.(\w+)([^;]*)',
+        re.I)
+    for path in files:
+        src = io.open(path, encoding='utf-8').read()
+        for line in src.split(chr(10)):
+            if line.lstrip().startswith('--'):
+                continue
+            allowed = '@REGRANT' in line
+            for m in grant_rx.finditer(line):
+                act, priv, obj, tail = (m.group(1).lower(), m.group(2).lower(),
+                                        m.group(3), m.group(4))
+                roles = set(x.lower() for x in re.findall(
+                    r'\b(authenticated|anon|public|service_role)\b', tail, re.I))
+                for role in roles:
+                    key = (obj, priv, role)
+                    prev = grant_state.get(key)
+                    if act == 'grant' and prev == 'revoke' and not allowed:
+                        problems.append(
+                            ('GERI ALINMIS YETKI DIRILTILIYOR: grant %s on %s to %s '
+                             '(daha once revoke edilmisti; bilerekse satira '
+                             '-- @REGRANT yazin)' % (priv, obj, role), path))
+                    grant_state[key] = act
+
     # 7) bayat mutasyon geri almalari
     live_body = {}
     for path in files:
@@ -478,6 +514,12 @@ _FIXTURES = (
       '0002_b.sql': "create view public.w as\nselect v.a as a\nfrom public.v;",
       '0003_c.sql': "create or replace view public.v as\nselect t.a as a, t.b as b\n"
                     "from public.t;"}),
+
+    ('9 · geri alinmis yetki diriltiliyor',
+     {'0001_a.sql': "revoke select on public.v from authenticated;",
+      '0002_b.sql': "grant select on public.v to authenticated;"},
+     {'0001_a.sql': "revoke select on public.v from authenticated;",
+      '0002_b.sql': "grant select on public.v to authenticated;  -- @REGRANT"}),
 )
 
 

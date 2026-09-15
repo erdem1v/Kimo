@@ -179,5 +179,17 @@ from public.profiles p
 where not p.is_system
   and not p.is_anonymous;
 
+-- YETKİ 0068'İN BIRAKTIĞI YERDE KALIYOR: `authenticated` bu görünümü DOĞRUDAN
+-- OKUYAMAZ. Bu paketin ilk sürümü buraya `grant select ... to authenticated`
+-- yazmıştı — 0074'ten kopyalanan, 0068 dizin kilidinden ÖNCEki biçim — ve
+-- serbest select ile bütün kullanıcı dizinini yeniden dökülebilir hâle
+-- getiriyordu. recheck16'nın göç zamanı kapısı ilk gerçek CI koşusunda tam da
+-- bunu yakalayıp `db reset`i durdurdu; kapı tasarlandığı iş için çalıştı.
+--
+-- Tek istemci kapısı `profiles_by_ids(uuid[])` ve `my_league_board()` olmayı
+-- sürdürüyor. `create or replace view` grant'ları KORUDUĞU için aslında bu üç
+-- satırın hiçbiri şart değil; yine de açıkça yazılıyorlar ki görünümü bir
+-- sonraki yeniden tanımlayan göç, yetkinin ne olması gerektiğini tanımın
+-- yanında görsün.
 revoke all on public.profiles_public from public, anon;
-grant select on public.profiles_public to authenticated;
+revoke select on public.profiles_public from authenticated;
