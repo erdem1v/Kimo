@@ -14,7 +14,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(22);
+select plan(24);
 
 select tests.create_supabase_user('alice');
 select tests.create_supabase_user('bob');
@@ -149,6 +149,33 @@ update public.pair_streaks set last_day = public.istanbul_day() - 2;
 select public.pair_streak_rollover();
 select is((select streak from public.pair_streaks), 0,
           'biri dün çalışmadıysa seri SIFIRLANIYOR');
+
+-- ====================== BAYRAK VE ASKI SUNUCUDA DA (0094)
+-- `ff_pair_streak` yalnızca İSTEMCİ tarafında uygulanıyordu: `start_pair_streak`
+-- bayraktan bağımsız açıktı ve `pair-streak-daily` cron'u kapalıyken de bütün
+-- serileri ilerletiyordu. Kapatma kararı "küçükler için varsayılan kapalı"
+-- (DSA Md. 28(1) Kılavuzu) gerekçesiyle alınmışken eski bir istemci sürümü ya
+-- da doğrudan RPC çağrısı seriyi başlatabiliyor, kapalı dönemde VERİ BİRİKMEYE
+-- devam ediyordu.
+select tests.reset_role();
+insert into public.app_config (key, value) values ('ff_pair_streak', 'false')
+  on conflict (key) do update set value = excluded.value;
+select tests.authenticate_as('alice');
+select ok(
+  not (select public.start_pair_streak(tests.get_supabase_uid('bob'))),
+  'BAYRAK KAPALIYKEN ortak seri başlatılamıyor (sunucu da kapatıyor)');
+
+-- ASKI ÜRETİMİ DURDURUR (0062). Ortak seri karşı tarafa GÖRÜNEN kalıcı bir
+-- satır yaratıyor, yani bir üretim yüzeyi.
+select tests.reset_role();
+update public.app_config set value = 'true' where key = 'ff_pair_streak';
+insert into public.user_sanctions (user_id, action, until, reason_code, source)
+values (tests.get_supabase_uid('alice'), 'suspend', now() + interval '7 days',
+        'other', 'admin');
+select tests.authenticate_as('alice');
+select ok(
+  not (select public.start_pair_streak(tests.get_supabase_uid('bob'))),
+  'ASKIDAKİ kullanıcı ortak seri BAŞLATAMIYOR');
 
 select * from finish();
 rollback;

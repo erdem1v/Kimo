@@ -13,7 +13,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(29);
+select plan(30);
 
 select tests.create_supabase_user('alice');    -- gönderen
 select tests.create_supabase_user('bob');      -- alıcı
@@ -288,6 +288,37 @@ select ok(
       and bucket = 'qsend') >= 2,
   'sayaç işlemişti — başarısızlık istisna atmadığı için geri alınmadı'
 );
+
+-- ================== "SAYIYI 0 YAZ, ÖZELLİK KAPANSIN" YANLIŞTI (0094)
+-- `bump_rate_limit` ilk INSERT'i `on conflict` dalına HİÇ GİRMEDEN yapıyordu;
+-- `p_limit` yalnızca ÇAKIŞMA dalında okunuyordu. Yani `p_limit = 0` iken
+-- pencere başına BİR çağrı geçiyordu: `qsend_daily = '0'` yazan operatör
+-- özelliği kapattığını sanır ama her kullanıcı günde bir soru göndermeye
+-- devam ederdi. Aynı tuzak `ai_refund_daily` dahil BÜTÜN kovalarda vardı.
+--
+-- Fonksiyon hiçbir role açık değil (yalnızca definer yollar çağırıyor), bu
+-- yüzden iddia ÜRÜN DÜZEYİNDE yazılıyor.
+select tests.reset_role();
+insert into public.app_config (key, value) values ('qsend_daily', '0')
+  on conflict (key) do update set value = excluded.value;
+-- Taze bir gönderen: önceki bloklar alice'in kovalarını doldurdu.
+select tests.create_supabase_user('zeynep');
+select tests.age_all_users();
+insert into public.friendships (requester_id, addressee_id, status)
+values (tests.get_supabase_uid('zeynep'), tests.get_supabase_uid('bob'), 'accepted');
+insert into public.mistakes (user_id, subject, concept, mistake_type, photo_path,
+                             options, correct_index)
+values (tests.get_supabase_uid('zeynep'), 'Fizik', 'Kuvvet', 'islem_hatasi',
+        tests.get_supabase_uid('zeynep')::text || '/z.jpg',
+        '["A","B"]'::jsonb, 0);
+select tests.authenticate_as('zeynep');
+select is(
+  (select sent from public.send_question_to_friends(
+     (select id from public.mistakes
+       where user_id = tests.get_supabase_uid('zeynep') limit 1),
+     array[tests.get_supabase_uid('bob')], null)),
+  0,
+  'qsend_daily = 0 GERÇEKTEN kapatıyor — ilk gönderim de geçmiyor');
 
 select * from finish();
 rollback;

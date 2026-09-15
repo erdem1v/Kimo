@@ -10,10 +10,12 @@
 -- "iade edilmiş bir satırı yeniden iade etmek" yolunu açık bırakır ve asıl
 -- tehlike şudur: aynı mantık bir döngüde çağrılırsa kullanıcı SINIRSIZ hak
 -- açabilir. Koruma tek satırlık koşulda.
-create or replace function public.refund_ai_use(
-  p_call_id bigint,
-  p_capped  boolean default true
-)
+-- NOT: iki govde de goc dosyasindan URETILDI. Kaynak:
+-- supabase/migrations/20260912000500_ai_refund.sql (0083).
+-- ILK YAZIMDA @UNDO BAYATLAMISTI: Task 13 `p_capped` parametresini
+-- kaldirdi (istemci kota tavanini kapatabiliyordu) ve geri alma IKI
+-- ARGUMANLI surumu yeniden yaratiyordu — yani ikinci bir asiri yukleme.
+create or replace function public.refund_ai_use(p_call_id bigint)
 returns boolean
 language plpgsql security definer set search_path = public
 as $fn$
@@ -27,29 +29,32 @@ begin
   if p_call_id is null then
     return false;
   end if;
-  if p_capped and not public.bump_rate_limit(
+
+  -- TAVAN HER ZAMAN UYGULANIR. Parametreyle gevsetilemez.
+  if not public.bump_rate_limit(
        'ai_refund',
        public.config_int('ai_refund_daily', 10),
        public.istanbul_day()::text) then
     return false;
   end if;
 
+  -- IDEMPOTENT: `refunded_at is null` kosulu iki kez cagrilmayi zararsiz
+  -- kiliyor. Olmasaydi edge fonksiyonun yeniden denemesi ikinci bir yuva
+  -- acardi — yani hak BASARDI.
   update public.ai_calls c
      set refunded_at = now()
    where c.id = p_call_id
-     and c.user_id = v_uid;
+     and c.user_id = v_uid
+     and true;
 
   get diagnostics v_hit = row_count;
   return v_hit > 0;
 end
 $fn$;
-revoke execute on function public.refund_ai_use(bigint, boolean) from public, anon;
-grant  execute on function public.refund_ai_use(bigint, boolean) to authenticated;
+revoke execute on function public.refund_ai_use(bigint) from public, anon;
+grant  execute on function public.refund_ai_use(bigint) to authenticated;
 -- @UNDO
-create or replace function public.refund_ai_use(
-  p_call_id bigint,
-  p_capped  boolean default true
-)
+create or replace function public.refund_ai_use(p_call_id bigint)
 returns boolean
 language plpgsql security definer set search_path = public
 as $fn$
@@ -64,18 +69,17 @@ begin
     return false;
   end if;
 
-  -- Kötüye kullanım sınırı yalnızca KULLANICI KAYNAKLI iadeler için. Altyapı
-  -- hatası (`p_capped = false`) sınıra dahil değil.
-  if p_capped and not public.bump_rate_limit(
+  -- TAVAN HER ZAMAN UYGULANIR. Parametreyle gevsetilemez.
+  if not public.bump_rate_limit(
        'ai_refund',
        public.config_int('ai_refund_daily', 10),
        public.istanbul_day()::text) then
     return false;
   end if;
 
-  -- İDEMPOTENT: `refunded_at is null` koşulu iki kez çağrılmayı zararsız
-  -- kılıyor. Olmasaydı edge fonksiyonun yeniden denemesi ikinci bir yuva
-  -- açardı — yani hak BASARDI.
+  -- IDEMPOTENT: `refunded_at is null` kosulu iki kez cagrilmayi zararsiz
+  -- kiliyor. Olmasaydi edge fonksiyonun yeniden denemesi ikinci bir yuva
+  -- acardi — yani hak BASARDI.
   update public.ai_calls c
      set refunded_at = now()
    where c.id = p_call_id
@@ -86,6 +90,5 @@ begin
   return v_hit > 0;
 end
 $fn$;
-
-revoke execute on function public.refund_ai_use(bigint, boolean) from public, anon;
-grant  execute on function public.refund_ai_use(bigint, boolean) to authenticated;
+revoke execute on function public.refund_ai_use(bigint) from public, anon;
+grant  execute on function public.refund_ai_use(bigint) to authenticated;

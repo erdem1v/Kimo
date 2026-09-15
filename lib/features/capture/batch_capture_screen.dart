@@ -4,9 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../data/daily_state_repository.dart';
 import '../../data/photo_queue.dart';
 import '../../data/submission_queue.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../../models/ai_credit.dart';
 import '../../services/sound_service.dart';
 import '../../theme/tokens.dart';
 import '../../theme/typography.dart';
@@ -58,7 +60,27 @@ class _BatchCaptureScreenState extends State<BatchCaptureScreen> {
   @override
   void initState() {
     super.initState();
+    unawaited(_guard());
     unawaited(_resolveLimit());
+  }
+
+  /// EKRAN KENDİ KAPISINI TAŞIYOR.
+  ///
+  /// Bugün tek giriş `capture_screen`in mod anahtarı ve o hem bayrağı hem
+  /// katmanı kontrol ediyor. Ama İKİNCİ bir giriş (derin bağlantı, bildirim
+  /// yönlendirmesi, başka bir ekran) eklendiği an kill switch ve paywall
+  /// sessizce atlanırdı — ve bunu yakalayan hiçbir şey olmazdı.
+  ///
+  /// Sunucu "batch" kavramını hiç bilmiyor (kota zaten çağrı başına sayıyor),
+  /// yani bu kapı istemcide olmak zorunda. Kapanma durumunda ekran sessizce
+  /// kapanıyor: kullanıcı buraya zaten ulaşmamalıydı, bir hata metni
+  /// göstermek olmayan bir yolu açıklamak olurdu.
+  Future<void> _guard() async {
+    final DailyState? s = await dailyStateRepository.read();
+    if (!mounted) return;
+    final bool allowed =
+        s != null && s.multiCaptureEnabled && s.aiTier == AiTier.premium;
+    if (!allowed) Navigator.of(context).maybePop();
   }
 
   /// Sınır iki şeyin küçüğü: cihaz belleği ve kuyrukta kalan yer.

@@ -10,6 +10,11 @@
 -- (`on_question_sent`). Arkadaş olan biri için bu, tek çaresi engellemek olan
 -- bir bildirim bombardımanı yüzeyiydi. Tur 7 · n5 gönderme akışına iki yeni
 -- giriş noktası eklediği için sınır artık ertelenemez.
+-- NOT: iki govde de goc dosyasindan URETILDI, elle kopyalanmadi. Kaynak:
+-- supabase/migrations/20260912000300_question_send_guard.sql (0081).
+-- ILK YAZIMDA @UNDO BAYATLAMISTI: Task 13 fonksiyonun govdesine
+-- politikanin alti kosulunu ekledi (definer RLS'i atliyor) ve geri alma
+-- o kosullari SILIYORDU. `tools/check_sql.py` artik bunu yakaliyor.
 create or replace function public.send_question_to_friends(
   p_mistake   uuid,
   p_receivers uuid[],
@@ -19,11 +24,13 @@ returns table (sent int, blocked int, reason text)
 language plpgsql security definer set search_path = public
 as $fn$
 declare
-  v_uid     uuid := auth.uid();
-  v_note    text;
-  v_sent    int  := 0;
-  v_blocked int  := 0;
-  r         uuid;
+  v_uid      uuid := auth.uid();
+  v_day      text;
+  v_note     text;
+  v_repeat   int;
+  v_sent     int  := 0;
+  v_blocked  int  := 0;
+  r          uuid;
 begin
   if v_uid is null then
     raise exception 'oturum yok' using errcode = '28000';
@@ -32,19 +39,85 @@ begin
     return query select 0, 0, 'no_receivers'::text;
     return;
   end if;
+  -- ÜST SINIR: tek çağrıda kaç alıcı. Arkadaş listesi tipik olarak çok
+  -- altında; sınır, tek istekle bütün listeye basmayı ucuzlatmamak için.
   if array_length(p_receivers, 1) > 20 then
     raise exception 'En fazla 20 alıcı' using errcode = '22023';
   end if;
+
   v_note := nullif(btrim(coalesce(p_note, '')), '');
   if v_note is not null and char_length(v_note) > 250 then
     raise exception 'Not en fazla 250 karakter' using errcode = '22023';
   end if;
 
+  v_day    := public.istanbul_day()::text;
+  v_repeat := public.config_int('qsend_repeat_days', 30);
+
+  -- ================================================== RLS BURADA ATLANIYOR
+  -- Bu fonksiyon SECURITY DEFINER, yani tablo sahibinin (postgres) yetkisiyle
+  -- kosuyor ve `question_sends` uzerindeki `sends_insert_friend` politikasi
+  -- DEGERLENDIRILMIYOR. Depo bu gercegi baska iki yerde zaten yaziyor:
+  --   0062 (sanctions.sql:517) ve 0063 (guardian_removal.sql:79-81):
+  --   "`add_friend_by_code` SECURITY DEFINER ve RLS'i atliyor — politika
+  --    dogrudan INSERT yolunu, fonksiyondaki kontrol RPC yolunu kapatiyor."
+  -- Depoda hicbir yerde `force row level security` YOK.
+  --
+  -- Dolayisiyla politikanin ALTI KOSULU burada ACIKCA tekrarlanmak zorunda.
+  -- Tekrarlanmasaydi `p_mistake` keyfi bir uuid oldugu icin kullanici
+  -- BASKASININ (ya da moderasyonda isaretlenmis, ya da taramasi bitmemis) bir
+  -- hata satirini arkadaslarina gonderebilirdi.
+  --
+  -- Gonderen-tarafi uc kosul dongunun DISINDA, bir kez: alici degistikce
+  -- degismiyorlar.
+  if public.is_suspended(v_uid) then
+    return query select 0, coalesce(array_length(p_receivers, 1), 0),
+                        'suspended'::text;
+    return;
+  end if;
+
+  if exists (select 1 from public.profiles p
+              where p.id = v_uid and p.is_anonymous) then
+    return query select 0, coalesce(array_length(p_receivers, 1), 0),
+                        'anonymous'::text;
+    return;
+  end if;
+
+  -- SAHIPLIK + icerik kapisi. `mistakes` uzerindeki RLS de atlandigi icin
+  -- `m.user_id = v_uid` kosulu burada tek savunma.
+  if not exists (
+    select 1 from public.mistakes m
+     where m.id = p_mistake
+       and m.user_id = v_uid
+       and m.moderation = 'ok'
+       and m.photo_scan = 'clear'
+  ) then
+    return query select 0, coalesce(array_length(p_receivers, 1), 0),
+                        'not_sendable'::text;
+    return;
+  end if;
+
+  -- Alıcı başına tek tek: biri sınıra çarparsa DİĞERLERİ GİTMELİ. Tek
+  -- ifadede toplu insert, bir alıcının kendi kovasını doldurması yüzünden
+  -- bütün gönderimi düşürürdü.
   foreach r in array p_receivers loop
     if r = v_uid then
       v_blocked := v_blocked + 1;
       continue;
     end if;
+
+    -- Alici-tarafi iki kosul (bkz. yukaridaki "RLS BURADA ATLANIYOR" notu).
+    -- `are_friends` bu gocte HENUZ engel-farkinda degil, bu yuzden engel
+    -- kontrolu ayrica yaziliyor — deponun her sosyal yuzeyde tekrarladigi kural.
+    if not public.are_friends(v_uid, r)
+       or public.is_blocked_between(v_uid, r) then
+      v_blocked := v_blocked + 1;
+      continue;
+    end if;
+
+    -- INSERT. Politikanin alti kosulu YUKARIDA tekrarlandi (definer fonksiyon
+    -- RLS'i atliyor). Asagidaki `exception` dali yine de duruyor: dogrudan
+    -- INSERT yolunda politika hala tek dogruluk kaynagi ve ileride buraya
+    -- eklenen bir kosul once orada yakalanir.
     begin
       insert into public.question_sends (sender_id, receiver_id, mistake_id, note)
       values (v_uid, r, p_mistake, v_note);
@@ -102,11 +175,63 @@ begin
   v_day    := public.istanbul_day()::text;
   v_repeat := public.config_int('qsend_repeat_days', 30);
 
+  -- ================================================== RLS BURADA ATLANIYOR
+  -- Bu fonksiyon SECURITY DEFINER, yani tablo sahibinin (postgres) yetkisiyle
+  -- kosuyor ve `question_sends` uzerindeki `sends_insert_friend` politikasi
+  -- DEGERLENDIRILMIYOR. Depo bu gercegi baska iki yerde zaten yaziyor:
+  --   0062 (sanctions.sql:517) ve 0063 (guardian_removal.sql:79-81):
+  --   "`add_friend_by_code` SECURITY DEFINER ve RLS'i atliyor — politika
+  --    dogrudan INSERT yolunu, fonksiyondaki kontrol RPC yolunu kapatiyor."
+  -- Depoda hicbir yerde `force row level security` YOK.
+  --
+  -- Dolayisiyla politikanin ALTI KOSULU burada ACIKCA tekrarlanmak zorunda.
+  -- Tekrarlanmasaydi `p_mistake` keyfi bir uuid oldugu icin kullanici
+  -- BASKASININ (ya da moderasyonda isaretlenmis, ya da taramasi bitmemis) bir
+  -- hata satirini arkadaslarina gonderebilirdi.
+  --
+  -- Gonderen-tarafi uc kosul dongunun DISINDA, bir kez: alici degistikce
+  -- degismiyorlar.
+  if public.is_suspended(v_uid) then
+    return query select 0, coalesce(array_length(p_receivers, 1), 0),
+                        'suspended'::text;
+    return;
+  end if;
+
+  if exists (select 1 from public.profiles p
+              where p.id = v_uid and p.is_anonymous) then
+    return query select 0, coalesce(array_length(p_receivers, 1), 0),
+                        'anonymous'::text;
+    return;
+  end if;
+
+  -- SAHIPLIK + icerik kapisi. `mistakes` uzerindeki RLS de atlandigi icin
+  -- `m.user_id = v_uid` kosulu burada tek savunma.
+  if not exists (
+    select 1 from public.mistakes m
+     where m.id = p_mistake
+       and m.user_id = v_uid
+       and m.moderation = 'ok'
+       and m.photo_scan = 'clear'
+  ) then
+    return query select 0, coalesce(array_length(p_receivers, 1), 0),
+                        'not_sendable'::text;
+    return;
+  end if;
+
   -- Alıcı başına tek tek: biri sınıra çarparsa DİĞERLERİ GİTMELİ. Tek
   -- ifadede toplu insert, bir alıcının kendi kovasını doldurması yüzünden
   -- bütün gönderimi düşürürdü.
   foreach r in array p_receivers loop
     if r = v_uid then
+      v_blocked := v_blocked + 1;
+      continue;
+    end if;
+
+    -- Alici-tarafi iki kosul (bkz. yukaridaki "RLS BURADA ATLANIYOR" notu).
+    -- `are_friends` bu gocte HENUZ engel-farkinda degil, bu yuzden engel
+    -- kontrolu ayrica yaziliyor — deponun her sosyal yuzeyde tekrarladigi kural.
+    if not public.are_friends(v_uid, r)
+       or public.is_blocked_between(v_uid, r) then
       v_blocked := v_blocked + 1;
       continue;
     end if;
@@ -140,11 +265,10 @@ begin
       return;
     end if;
 
-    -- RLS BURADA ATLANMIYOR: fonksiyon definer ama INSERT'i açıkça
-    -- doğruluyoruz. `sends_insert_friend` politikasının altı koşulu
-    -- (arkadaşlık, engel, askı, anonim, sahiplik, tarama) tek doğruluk
-    -- kaynağı olarak kalmalı; burada onları TEKRARLAMIYORUZ, politikanın
-    -- kendisini çalıştırıyoruz.
+    -- INSERT. Politikanin alti kosulu YUKARIDA tekrarlandi (definer fonksiyon
+    -- RLS'i atliyor). Asagidaki `exception` dali yine de duruyor: dogrudan
+    -- INSERT yolunda politika hala tek dogruluk kaynagi ve ileride buraya
+    -- eklenen bir kosul once orada yakalanir.
     begin
       insert into public.question_sends (sender_id, receiver_id, mistake_id, note)
       values (v_uid, r, p_mistake, v_note);
@@ -159,7 +283,6 @@ begin
                       case when v_sent > 0 then 'ok' else 'none' end::text;
 end
 $fn$;
-
 revoke execute on function public.send_question_to_friends(uuid, uuid[], text)
   from public, anon;
 grant  execute on function public.send_question_to_friends(uuid, uuid[], text)

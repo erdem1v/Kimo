@@ -392,10 +392,12 @@ class MistakeRepository {
     // Günlük hak bitti: sunucu OpenAI'ya HİÇ GİTMEDİ ve 200 ile bunu söyledi.
     // Hata değil, ürün durumu — çağıran elle giriş formunu açıyor.
     if (data['allowed'] == false) {
-      final Object? resets = data['resets_at'];
-      return QuestionAnalysis.outOfCredit(
-        creditResetsAt: resets is String ? DateTime.tryParse(resets) : null,
-      );
+      // `resets_at` OKUNMUYOR: sunucu o alanı 0075'te BİLEREK kaldırdı
+      // ("`resets_at` GİTTİ") ve `creditFields()` onu hiç göndermiyor.
+      // İstemci kaldırılmış bir alanı okumaya devam ediyordu ve sonuç hiçbir
+      // widget tarafından da kullanılmıyordu — sessiz ölü kod, ama sonraki
+      // okuyucuyu "sunucu bunu gönderiyor" diye yanıltıyordu.
+      return const QuestionAnalysis.outOfCredit();
     }
 
     final bool readable = data['is_readable'] == true;

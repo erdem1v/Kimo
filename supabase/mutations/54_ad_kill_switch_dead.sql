@@ -1,26 +1,21 @@
--- test: supabase/tests/100_ai_quota.sql
+-- test: supabase/tests/310_feature_flags.sql
 --
--- MUTASYON: kayan pencere `app_config`'teki uzunlugu yok sayip 24 saat sayiyor.
--- BEKLENEN: 100'un "9 saat onceki cagri PENCEREDE sayilmiyor" iddiasi kirmizi.
+-- MUTASYON: `ai_state()`teki `ff_ad_reward` kapisini sok — bayragi yeniden
+-- OLU birak.
+-- BEKLENEN: 310'un "ff_ad_reward KAPALIYKEN sunucu reklam teklif ETMIYOR"
+-- iddiasi kirmizi.
 --
--- BU MUTASYON NIYE DEGERLI: sayiya dayali butun iddialari GECIYOR — tuketim
--- yine sinirda duruyor, `allowed=false` yine donuyor, `ai_state` yine
--- `window_full` oluyor. Yalnizca YASLANMA iddiasi dusuyor. Yani "dogru
--- gorunuyor ama degil" sinifindan bir hatayi yakaliyor; o sinif bu depoda
--- `27_age_gate_drops_suspension.sql` ile bir kez yasandi.
+-- NEDEN BU BIR KORUMA: 0079 bu bayragi "AdMob tarafinda bir sorun ciktiginda
+-- reklam yuzeyini SURUM BEKLEMEDEN kapatmak icin" diye tanimlamisti. Task
+-- 13'e kadar uretim kodunda TEK BIR OKUYUCUSU YOKTU: ne istemcide
+-- (`adRewardEnabled` getter'inin cagirani yoktu) ne sunucuda. `app_config`'e
+-- `ff_ad_reward = 'false'` yazmak HICBIR SEYI degistirmiyordu, yani uc riskli
+-- yuzeyden biri icin kill switch SAHTEYDI.
 --
--- SABIT KOVA (or. `c.at >= istanbul_day()`) yerine 24 saat secildi, BILEREK:
--- sabit kova mutasyonu GUNUN SAATINE bagli olurdu — suit sabah 09:00'dan once
--- kosarsa 9 saat onceki satir sabit kovada da disarida kalir, mutasyon
--- yakalanmaz ve `mutation_check.sh` "FAZ 2: HALA YESIL" diye kirmiziya doner.
--- 24 saat her saatte ayni sonucu veriyor.
+-- KAPI NEDEN SUNUCUDA: istemci kapisi yalnizca GUNCEL surumleri kapsar.
+-- `ad_offer` sunucunun karari ve eski bir istemci de onu okuyor.
 --
--- NOT: iki govde de goc dosyasindan URETILDI, elle kopyalanmadi. Kaynak:
--- supabase/migrations/20260912000500_ai_refund.sql (0083). ILK YAZIMDA bu
--- uretim BAYATLAMISTI: dosya 0075'in govdesini tasiyordu, yani `refunded_at
--- is null` suzgecleri YOKTU ve @UNDO iade oncesi surumu geri kuruyordu —
--- 100'un uc yeni iade iddiasi FAZ 3'te kirmizi kaliyor, mutation_check.sh
--- `exit 1` ile TUM kosuyu durduruyordu.
+-- NOT: iki govde de goc dosyasindan URETILDI. Kaynak: 0094.
 create or replace function public.ai_state()
 returns table (
   -- SIRA 0075'TEKININ AYNISI OLMAK ZORUNDA. `create or replace`, OUT
@@ -103,7 +98,7 @@ begin
       from public.ai_calls c
      where c.user_id = v_uid
        and c.refunded_at is null
-       and c.at > now() - interval '24 hours';
+       and c.at > now() - make_interval(hours => v_hours);
 
     select count(*)::int into v_month
       from public.ai_calls c
@@ -130,11 +125,11 @@ begin
     -- SONRAKİ HAKKIN ANI — `min(at) + 8sa` DEĞİL; pencerenin k'ıncı en eski
     -- çağrısı (k = kullanılan − etkin + 1). İade edilmiş satırlar sıraya da
     -- girmiyor, yoksa geri verilmiş bir yuva "dolu" gibi saat üretirdi.
-    select c.at + interval '24 hours' into ai_next_at
+    select c.at + make_interval(hours => v_hours) into ai_next_at
       from public.ai_calls c
      where c.user_id = v_uid
        and c.refunded_at is null
-       and c.at > now() - interval '24 hours'
+       and c.at > now() - make_interval(hours => v_hours)
      order by c.at
     offset greatest(v_used - v_effective, 0)
        limit 1;
@@ -189,7 +184,6 @@ begin
   -- güncel sürümleri kapsar, `ad_offer` ise sunucunun kararı.
   ad_offer := ai_tier = 'free'
           and not v_suspended
-          and public.config_bool('ff_ad_reward', true)
           and ai_month_left > 0
           and ai_window_left <= 0
           and ad_rewards_left > 0;
@@ -197,6 +191,8 @@ begin
   return next;
 end
 $fn$;
+revoke execute on function public.ai_state() from public, anon;
+grant  execute on function public.ai_state() to authenticated;
 -- @UNDO
 create or replace function public.ai_state()
 returns table (
@@ -374,3 +370,5 @@ begin
   return next;
 end
 $fn$;
+revoke execute on function public.ai_state() from public, anon;
+grant  execute on function public.ai_state() to authenticated;

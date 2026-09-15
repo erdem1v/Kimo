@@ -131,7 +131,6 @@ class QuestionAnalysis {
     this.concept,
     this.conceptValid = false,
     this.outOfCredit = false,
-    this.creditResetsAt,
     this.creditRemaining,
     this.refunded = false,
   });
@@ -140,7 +139,7 @@ class QuestionAnalysis {
   ///
   /// Bu bir HATA DEĞİL: fotoğraf duruyor, kullanıcı şıkları ve konuyu elle
   /// girip kaydediyor. Kaydetme yolu asla kapanmıyor.
-  const QuestionAnalysis.outOfCredit({this.creditResetsAt})
+  const QuestionAnalysis.outOfCredit()
       : ok = false,
         options = const <QuestionOption>[],
         failure = null,
@@ -181,9 +180,6 @@ class QuestionAnalysis {
   /// Hak bitti mi (analiz yapılmadı).
   final bool outOfCredit;
 
-  /// Hakların tazeleneceği an. Arayüzde geri sayım GÖSTERİLMEZ; yalnızca
-  /// "yarın yenilenecek" bilgisi için.
-  final DateTime? creditResetsAt;
 
   /// Bu çağrıdan sonra kalan hak (sunucu söyledi).
   final int? creditRemaining;

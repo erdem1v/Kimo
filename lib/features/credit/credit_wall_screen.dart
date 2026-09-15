@@ -105,11 +105,23 @@ class _CreditWallScreenState extends State<CreditWallScreen> {
   /// pencere). İstemci yalnızca "elimde gösterebileceğim bir reklam var mı"
   /// sorusunu ekliyor. Üç ayrı sessiz neden: desteklenmeyen platform,
   /// yapılandırılmamış birim, doluluk yok.
+  ///
+  /// `adRewardEnabled` KILL SWITCH'İ (göç 0079). Task 13'e kadar bu bayrağın
+  /// üretim kodunda TEK BİR OKUYUCUSU YOKTU: `app_config`'e
+  /// `ff_ad_reward = 'false'` yazmak hiçbir şeyi değiştirmiyordu, yani
+  /// "AdMob'dan politika uyarısı geldi, reklamı sürüm beklemeden kapat"
+  /// senaryosu çalışmıyordu. Sunucuda da bir kapı var (`ai_state().ad_offer`,
+  /// göç 0094) — o eski istemcileri de kapsıyor; buradaki ise ağ trafiğini
+  /// bile doğurmuyor.
   bool get _showAdRow =>
-      _s.adOffer && AdService.instance.supported && AdService.instance.isReady;
+      _s.adRewardEnabled &&
+      _s.adOffer &&
+      AdService.instance.supported &&
+      AdService.instance.isReady;
 
   /// Günlük tavan dolduğunda satır TIKLANAMAZ BİLGİYE dönüyor (kaybolmuyor).
   bool get _showAdCapRow =>
+      _s.adRewardEnabled &&
       !_anonymous &&
       _s.aiTier == AiTier.free &&
       (_s.adRewardsLeft ?? -1) == 0 &&

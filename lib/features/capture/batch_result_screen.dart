@@ -289,9 +289,17 @@ class _BatchResultScreenState extends State<BatchResultScreen> {
                       color: needsUser ? c.honeyText : c.ink),
                 ),
                 Text(
+                  // İADE KULLANICIYA SÖYLENİYOR (0083 + Task 13). Sunucu hakkı
+                  // okunamayan fotoğraflar için geri veriyor ve ürün kuralı
+                  // (Tur 7 · n4) bunu bir TAAHHÜT olarak yazıyor: "hak sayımı
+                  // yalnızca okunabilen fotoğraflar için düşer". Bu satıra
+                  // kadar taahhüt hiçbir yerde GÖRÜNMÜYORDU — `refunded`
+                  // modele kadar geliyor ve hiçbir ekran okumuyordu.
                   waiting
                       ? l.batchRowIndex(index)
-                      : (p.subject ?? l.batchRowNoTopicHint),
+                      : (p.refunded
+                          ? l.batchRefunded
+                          : (p.subject ?? l.batchRowNoTopicHint)),
                   style: t.caption.copyWith(
                       color: needsUser ? c.honeyText : c.inkMuted),
                 ),

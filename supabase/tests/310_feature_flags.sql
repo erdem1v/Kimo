@@ -18,7 +18,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(21);
+select plan(22);
 
 select tests.create_supabase_user('alice');
 
@@ -108,6 +108,21 @@ select throws_ok(
   NULL,
   'config_bool çalışma zamanında da 42501 — katalog ve davranış uyumlu'
 );
+
+-- ================================ BAYRAK GERÇEKTEN KAPATIYOR MU (0094)
+-- Üç bayraktan yalnızca `ff_multi_capture` gerçek bir kill switch'ti.
+-- `ff_ad_reward`ın üretim kodunda TEK BİR OKUYUCUSU YOKTU ve `ff_pair_streak`
+-- yalnızca arayüzü susturuyordu — sunucudaki RPC'ler ve cron bayraktan
+-- bağımsız çalışmaya devam ediyordu.
+select tests.reset_role();
+insert into public.app_config (key, value) values ('ff_ad_reward', 'false')
+  on conflict (key) do update set value = excluded.value;
+select tests.authenticate_as('alice');
+select is(
+  (select ad_offer from public.my_daily_state),
+  false,
+  'ff_ad_reward KAPALIYKEN sunucu reklam teklif ETMİYOR — kill switch gerçek');
+
 
 select * from finish();
 rollback;

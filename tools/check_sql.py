@@ -25,6 +25,13 @@ sonra en sik cikan ve en ucuz yakalanan hatalari gorunur kilar:
   6. `create or replace view` ile sutun listesinin ORTASINA sutun ekleyen
      gocler. Ayni kural: yalnizca SONA ekleme serbest, aksi halde
      "cannot change name of view column" ile patlar (0081'de `received_questions`).
+  7. BAYAT MUTASYON GERI ALMALARI. Bir mutasyonun `-- @UNDO` bolumu bir
+     fonksiyon govdesi kopyaliyorsa, o govde ilgili gocteki CANLI govdeyle
+     birebir ayni olmali. Degilse geri alma ESKI surumu geri kurar ve
+     `mutation_check.sh` FAZ 3'te takilip `exit 1` ile TUM kosuyu durdurur —
+     ya da daha kotusu, sessizce bir korumayi geri alir. Task 12'de
+     `36_window_wrong_length` tam boyle bayatladi; Task 13'te `39` ve `40`
+     ayni sekilde bayatladi.
 
 Kullanim:  python tools/check_sql.py
 Cikis kodu 1 ise sorun bulunmustur.
@@ -195,6 +202,24 @@ def view_columns(src):
     return found
 
 
+def _fn_bodies(text):
+    """{ad: [normalize edilmis imza+govde, ...]} — yalnizca `$fn$` govdeliler."""
+    out = {}
+    for m in re.finditer(
+            r'create\s+(?:or\s+replace\s+)?function\s+public\.(\w+)\s*\(',
+            text, re.I):
+        start = text.find('$fn$', m.end())
+        if start < 0:
+            continue
+        end = text.find('$fn$', start + 4)
+        if end < 0:
+            continue
+        chunk = text[m.start():start] + text[start:end + 4]
+        chunk = re.sub(r'--[^\n]*', '', chunk)
+        out.setdefault(m.group(1), []).append(re.sub(r'\s+', ' ', chunk).strip())
+    return out
+
+
 def plan_problems():
     """pgTAP dosyalarinda `plan(n)` ile gercek iddia sayisini karsilastirir."""
     found = []
@@ -322,6 +347,33 @@ def main():
                      '(create or replace yalnizca SONA ekler; drop + create yazin)'
                      % name, path))
             view_hist[name] = cols
+
+    # 7) bayat mutasyon geri almalari
+    live_body = {}
+    for path in files:
+        src = io.open(path, encoding='utf-8').read()
+        for name, bs in _fn_bodies(src).items():
+            live_body[name] = (bs[-1], os.path.basename(path))
+
+    mut_dir = 'supabase/mutations'
+    if os.path.isdir(mut_dir):
+        for name in sorted(os.listdir(mut_dir)):
+            if not name.endswith('.sql'):
+                continue
+            mpath = os.path.join(mut_dir, name).replace(os.sep, '/')
+            text = io.open(mpath, encoding='utf-8').read()
+            marker = chr(10) + '-- @UNDO' + chr(10)
+            if marker not in text:
+                continue
+            undo = text.split(marker, 1)[1]
+            for fn, bs in _fn_bodies(undo).items():
+                # Mutasyonun kendi urettigi yardimcilar (`__mut_*`) gocte yok.
+                if fn.startswith('__mut') or fn not in live_body:
+                    continue
+                if bs[-1] != live_body[fn][0]:
+                    problems.append(
+                        ('BAYAT @UNDO: %s -> %s (canli govde %s; geri alma ESKI '
+                         'surumu kuruyor)' % (name, fn, live_body[fn][1]), mpath))
 
     # 4) yetkisi hic yonetilmemis fonksiyonlar
     unmanaged = sorted(created - execute_managed)

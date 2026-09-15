@@ -60,6 +60,7 @@ class PendingPhoto {
     this.subject,
     this.concept,
     this.batchId,
+    this.refunded = false,
   });
 
   final String id;
@@ -75,6 +76,12 @@ class PendingPhoto {
   /// Aynı partide çekilen kareler aynı damgayı taşıyor; parti sonuç ekranı
   /// bunu kullanıyor. `null` = tek kare (bugünkü yol).
   final String? batchId;
+
+  /// Fotoğraf okunamadı ve SUNUCU HAKKI GERİ VERDİ (0083). Arayüz bunu
+  /// söylemek zorunda: "Tur 7 · n4" kuralı hak sayımının yalnızca okunabilen
+  /// fotoğraflar için düştüğünü vaat ediyor ve kullanıcının o vaadi görmesi
+  /// gerekiyor.
+  final bool refunded;
 }
 
 /// Soru fotoğrafları için KALICI kuyruk.
@@ -478,6 +485,7 @@ class PhotoQueue {
           subject: e['subject'] as String?,
           concept: e['concept'] as String?,
           batchId: e['batch'] as String?,
+          refunded: e['refunded'] == true,
         ),
     ];
   }
@@ -706,6 +714,12 @@ class PhotoQueue {
   /// çevrimdışıyken formu doldurmuş biri, sonradan gelen AI tahmini yüzünden
   /// seçtiği dersi kaybetmemeli.
   static void _mergeAnalysis(Map<String, dynamic> e, QuestionAnalysis a) {
+    // İADE BAYRAĞI `!ok` DALINDA DA YAZILIYOR ve bu sıra önemli: sunucu hakkı
+    // TAM OLARAK okunamayan fotoğraflar için iade ediyor (0083), yani
+    // `refunded` ancak `!ok` iken anlamlı. Erken `return` onu hiç
+    // yazdırmıyordu — `QuestionAnalysis.refunded` modele kadar geliyor,
+    // `batchRefunded` metni ARB'de duruyor ve hiçbir ekran okumuyordu.
+    if (a.refunded) e['refunded'] = true;
     if (!a.ok) return;
     if (a.options.isNotEmpty &&
         (e['labels'] as List<dynamic>? ?? const <dynamic>[]).isEmpty) {
