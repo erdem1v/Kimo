@@ -57,5 +57,12 @@ select
 from public.profiles p
 where not p.is_system
   and not p.is_anonymous;
+-- YETKİ 0068'İN BIRAKTIĞI YERDE. Bu geri alma eskiden
+-- `grant select ... to authenticated` yazıyordu — 0047'den kopyalanan, dizin
+-- kilidinden ÖNCEki biçim — ve mutasyon 08 koştuktan sonra koşunun GERİ
+-- KALANINDA `profiles_public` istemciye AÇIK kalıyordu. 280_directory bu
+-- yüzden FAZ 1'de zaten kırmızıydı ve mutasyon 23 "zaten kırmızı" diye
+-- raporlanıyordu — yani bayat bir geri alma, ilgisiz bir mutasyonun
+-- sonucunu geçersiz kılıyordu.
 revoke all on public.profiles_public from public, anon;
-grant select on public.profiles_public to authenticated;
+revoke select on public.profiles_public from authenticated;

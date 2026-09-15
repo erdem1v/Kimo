@@ -171,7 +171,18 @@ select is(
 -- ======================================= ASKIDAN SONRAKİ İHLAL → KALICI YASAK
 -- Süreyi bekleyemeyeceğimiz için askının bitişi geriye alınıyor. `is_suspended`
 -- zamanı `until`den okuduğu için bu, yedi gün beklemekle aynı durum.
-update public.user_sanctions set until = now() - interval '1 hour'
+-- `created_at` DE GERİYE ALINIYOR. `is_suspended` ve aşağıdaki üç iddia
+-- yaptırımları `order by created_at desc, id desc` ile sıralıyor; `created_at`
+-- varsayılanı `now()`, yani İŞLEM zamanı. Askı ve onu izleyen kalıcı yasak
+-- aynı test işleminde yazıldığı için EŞİT damga taşıyor ve `id` rastgele bir
+-- uuid — hangisinin "en yenisi" sayıldığı rastgele kalıyordu. Damgayı da
+-- geriye almak "askı bir saat önce kondu" anlatısına da uyuyor.
+--
+-- NOT: aynı belirsizlik `is_suspended`in KENDİSİNDE de var ve üretimde tek bir
+-- `update ... set photo_scan = 'flagged'` ifadesi birden çok ihlali aynı
+-- işlemde tetikleyebilir. Task 14 raporunda bulgu olarak yazıldı.
+update public.user_sanctions set until      = now() - interval '1 hour',
+                                 created_at = now() - interval '1 hour'
  where user_id = tests.get_supabase_uid('ihlalci');
 
 select is(

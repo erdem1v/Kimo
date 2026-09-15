@@ -51,6 +51,19 @@ sonra en sik cikan ve en ucuz yakalanan hatalari gorunur kilar:
      yeniden dokulebilir hale gelmisti. Bilerek geri acmak icin satira
      `-- @REGRANT` yazin.
 
+ 10. BAYAT @UNDO — POLITIKA ve YETKI surumu. 7. kontrol yalnizca FONKSIYON
+     govdelerini karsilastiriyordu; bir mutasyonun geri almasi POLITIKA ya da
+     GRANT tasiyorsa onlar denetimsizdi. Task 14'te ikisi de gercekten
+     bayatladi ve ikisi de SESSIZCE BIR KORUMAYI DUSURDU:
+       - 10_photo_scan_sends `sends_insert_friend`i 0053b surumune donduruyor,
+         yani 0062'nin ekledigi `not is_suspended(auth.uid())` kosulu
+         KALKIYORDU. Koşunun geri kalaninda askidaki kullanici soru
+         gonderebiliyordu.
+       - 08_streak_gate `grant select on profiles_public to authenticated`
+         yaziyor, yani 0068 dizin kilidini GERI ACIYORDU.
+     Ikisi de "mutasyon X ayirt edilemedi" gibi gorunen, aslinda ilgisiz bes
+     mutasyonun sonucunu gecersiz kilan hatalardi.
+
 Kullanim:  python tools/check_sql.py
            python tools/check_sql.py --selftest
 Cikis kodu 1 ise sorun bulunmustur.
@@ -240,6 +253,20 @@ def view_drops(src):
     return [(m.group(2), bool(m.group(3))) for m in re.finditer(
         r'drop\s+view\s+(if\s+exists\s+)?public\.(\w+)(\s+cascade)?',
         code, re.I)]
+
+
+def _policy_bodies(text):
+    """{politika_adi: [normalize edilmis govde, ...]}."""
+    out = {}
+    for m in re.finditer(r'create\s+policy\s+(\w+)\s+on\s+public\.(\w+)',
+                         text, re.I):
+        end = text.find(';', m.end())
+        if end < 0:
+            continue
+        chunk = re.sub(r'--[^\n]*', '', text[m.start():end])
+        key = '%s.%s' % (m.group(2).lower(), m.group(1).lower())
+        out.setdefault(key, []).append(re.sub(r'\s+', ' ', chunk).strip().lower())
+    return out
 
 
 def _fn_bodies(text):
@@ -436,12 +463,16 @@ def main(migrations=None, tests=None, quiet=False):
                              '-- @REGRANT yazin)' % (priv, obj, role), path))
                     grant_state[key] = act
 
-    # 7) bayat mutasyon geri almalari
+    # 7) bayat mutasyon geri almalari (fonksiyon govdesi)
+    # 10) ayni sey POLITIKA govdesi ve GRANT icin
     live_body = {}
+    live_policy = {}
     for path in files:
         src = io.open(path, encoding='utf-8').read()
         for name, bs in _fn_bodies(src).items():
             live_body[name] = (bs[-1], os.path.basename(path))
+        for name, bs in _policy_bodies(src).items():
+            live_policy[name] = (bs[-1], os.path.basename(path))
 
     mut_dir = 'supabase/mutations'
     if migrations == MIGRATIONS and os.path.isdir(mut_dir):
@@ -462,6 +493,33 @@ def main(migrations=None, tests=None, quiet=False):
                     problems.append(
                         ('BAYAT @UNDO: %s -> %s (canli govde %s; geri alma ESKI '
                          'surumu kuruyor)' % (name, fn, live_body[fn][1]), mpath))
+
+            # 10a) politika govdesi
+            for pol, bs in _policy_bodies(undo).items():
+                if pol not in live_policy:
+                    continue
+                if bs[-1] != live_policy[pol][0]:
+                    problems.append(
+                        ('BAYAT @UNDO POLITIKASI: %s -> %s (canli metin %s; geri '
+                         'alma ESKI surumu kuruyor ve bir kosul dusebilir)'
+                         % (name, pol, live_policy[pol][1]), mpath))
+
+            # 10b) geri alinmis yetkiyi dirilten grant
+            for line in undo.split(chr(10)):
+                if line.lstrip().startswith('--') or '@REGRANT' in line:
+                    continue
+                for m in grant_rx.finditer(line):
+                    if m.group(1).lower() != 'grant':
+                        continue
+                    priv, obj, tail = m.group(2).lower(), m.group(3), m.group(4)
+                    for role in set(x.lower() for x in re.findall(
+                            r'\b(authenticated|anon|public|service_role)\b',
+                            tail, re.I)):
+                        if grant_state.get((obj, priv, role)) == 'revoke':
+                            problems.append(
+                                ('@UNDO GERI ALINMIS YETKIYI DIRILTIYOR: %s -> '
+                                 'grant %s on %s to %s (gocler bunu revoke etmisti)'
+                                 % (name, priv, obj, role), mpath))
 
     # 4) yetkisi hic yonetilmemis fonksiyonlar
     unmanaged = sorted(created - execute_managed)
@@ -547,8 +605,11 @@ def selftest():
             failed = 1
         else:
             print('selftest: %s — bozuk yakalandi, duzeltilmis temiz' % label)
-    # 7 (bayat @UNDO) gercek `supabase/mutations` agacini istiyor; fikstur
-    # uretmek yerine canli agacta kosuyor ve zaten ana kosumda denetleniyor.
+    # 7 ve 10 (bayat @UNDO: fonksiyon / politika / grant) gercek
+    # `supabase/mutations` agacini istiyor, cunku "canli surum" tanimi 101
+    # goc dosyasindan turuyor. Fikstur uretmek yerine ANA KOSUMDA denetleniyor;
+    # ayirt ettikleri Task 14'te iki mutasyonun bayat geri almasi gecici olarak
+    # eski haline dondurulerek gosterildi (ikisi de kirmizi dondu).
     return failed
 
 

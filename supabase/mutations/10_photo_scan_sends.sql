@@ -17,12 +17,20 @@ create policy sends_insert_friend on public.question_sends
     and not public.is_blocked_between(sender_id, receiver_id)
   );
 -- @UNDO
--- Tarama şartlı kanonik politikayı (0053b) geri kur.
+-- CANLI politikayı (0062) geri kur — 0053b'yi DEĞİL.
+--
+-- BU GERİ ALMA BAYATTI ve sessizce bir korumayı düşürüyordu: 0053b sürümünde
+-- `not public.is_suspended(auth.uid())` YOK. 0062 onu ekledi. Geri alma eski
+-- metni kurduğu için, mutasyon 10 koştuktan SONRA askı koşulu politikadan
+-- kalkıyor ve koşunun geri kalanında askıdaki kullanıcı soru gönderebiliyordu.
+-- Sonucu 270'in "ASKIDAN SONRA: soru gönderemiyor" iddiasının FAZ 1'de
+-- kırmızı düşmesiydi (mutasyon 18/19/20/27 "zaten kırmızı" diye raporlandı).
 drop policy if exists sends_insert_friend on public.question_sends;
 create policy sends_insert_friend on public.question_sends
   for insert to authenticated
   with check (
     auth.uid() = sender_id
+    and not public.is_suspended(auth.uid())
     and not exists (
       select 1 from public.profiles p
        where p.id = auth.uid() and p.is_anonymous
