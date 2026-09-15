@@ -1297,6 +1297,14 @@
     "description": "Onboarding ilk çekim: analiz yaş kapısının arkasına alındı (A-2)."
   },
   "captureQueuedOffline": "Bağlantı gelince Kimo bu fotoğrafa bakacak.",
+  "onboardCaptureDoneTitle": "Fotoğrafın sırada",
+  "@onboardCaptureDoneTitle": {
+    "description": "Kurulumdaki ilk çekim tamamlandığında adımın başlığı."
+  },
+  "onboardCaptureAnother": "Bir tane daha çek",
+  "@onboardCaptureAnother": {
+    "description": "Kurulumdaki ilk çekimden SONRA kamera düğmesinin etiketi. welcomePrimary ile AYNI OLMAMALI: ikisi de \"İlk yanlışını çek\" iken kullanıcı fotoğrafın alındığını anlamıyordu."
+  },
   "photoQueueBanner": "{count, plural, =1{1 fotoğrafın sırada bekliyor} other{{count} fotoğrafın sırada bekliyor}}",
   "@photoQueueBanner": {
     "description": "Bekleyen fotoğraf şeridi",

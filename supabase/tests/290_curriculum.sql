@@ -56,16 +56,18 @@ select ok(
 );
 
 -- ================================================= OKUMA: sürüm pazarlığı
-select tests.authenticate_as('ogrenci');
-
 -- SÜRÜM AYRICALIKLI FİKSTÜRDE ALINIYOR: `curriculum_meta` 0072'de bütün
 -- uygulama rollerinden geri alındı (istemci sürümü `curriculum_tree`in
 -- YANITINDAN öğreniyor, tabloyu hiç okumuyor). Alt sorgu `authenticated`
 -- olarak koştuğu için dosya burada 42501 ile düşüyordu — iddia edilen şeyle
--- ilgisi olmayan bir sebeple.
+-- ilgisi olmayan bir sebeple. Tablonun KENDİSİ de ayrıcalıklı rolde
+-- kurulmalı: `create temp table ... as select` kaynağı o anki rolle okuyor.
+select tests.reset_role();
 create temp table _curver on commit drop as
   select version from public.curriculum_meta;
 grant select on _curver to authenticated;
+
+select tests.authenticate_as('ogrenci');
 
 select is(
   (public.curriculum_tree('eski', (select version from _curver))

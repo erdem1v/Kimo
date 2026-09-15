@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/auth_repository.dart';
 import '../../data/notification_lines.dart';
+import '../../data/photo_queue.dart';
 import '../../data/daily_state_repository.dart';
 import '../../services/legal_links.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -239,6 +240,19 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// İlk çekimde kuyruğa alınmış fotoğraf sayısı.
+  ///
+  /// Adımın "çekmeden önce" ve "çektikten sonra" hâllerini bu ayırıyor.
+  /// Kaynak `photoQueue`: ekran durumu ile diskteki gerçek arasında ikinci bir
+  /// doğruluk kaynağı açmıyoruz — kullanıcı kuyruktan silerse adım da geri
+  /// dönüyor.
+  int _queued = 0;
+
+  Future<void> _loadQueued() async {
+    final int n = await photoQueue.loadPendingCount();
+    if (mounted) setState(() => _queued = n);
+  }
+
   Future<void> _capture() async {
     sound.tap();
     // ANALİZ ERTELENİYOR (A-2): kullanıcının yaşı henüz bilinmiyor, dolayısıyla
@@ -250,7 +264,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         builder: (_) => const CaptureScreen(deferAnalysis: true),
       ),
     );
-    if (mounted) setState(() {});
+    if (mounted) await _loadQueued();
   }
 
   // -------------------------------------------------------------------- yapı
@@ -309,9 +323,24 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     };
   }
 
+  /// İKİ HÂLİ VAR (Task 14 · D1).
+  ///
+  /// Eskiden çekimden sonra sayfa AYNI kalıyordu: aynı başlık, aynı gövde ve
+  /// `welcomePrimary` ("İlk yanlışını çek") etiketli aynı düğme. Üstelik
+  /// `WelcomeScreen`in birincil düğmesi de aynı etiketi taşıyor, yani
+  /// kullanıcı arka arkaya İKİ KEZ "İlk yanlışını çek" görüyor ve ikincisinde
+  /// fotoğrafının alınıp alınmadığını anlayamıyordu — en olası davranış aynı
+  /// düğmeye tekrar basıp ikinci bir fotoğrafı kuyruğa sokmaktı.
+  ///
+  /// Şimdi çekimden sonra adım onay hâline geçiyor: başlık fotoğrafın sırada
+  /// olduğunu söylüyor, gövde ne zaman bakılacağını açıklıyor ve kamera
+  /// düğmesinin etiketi AYRIŞIYOR ("Bir tane daha çek"). Alttaki "Devam"
+  /// düğmesi ikisinde de açık — ilk çekim ZORUNLU DEĞİL, sadece artık
+  /// atlandığı görünür oluyor.
   Widget _firstCapturePage(BuildContext context, L10n l) {
     final KimoColors c = context.c;
     final KimoTypography t = context.t;
+    final bool done = _queued > 0;
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: Gap.screen),
       children: <Widget>[
@@ -323,16 +352,20 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           ),
         ),
         const SizedBox(height: Gap.lg),
-        Text(l.captureEmptyTitle, textAlign: TextAlign.center, style: t.title),
+        Text(
+          done ? l.onboardCaptureDoneTitle : l.captureEmptyTitle,
+          textAlign: TextAlign.center,
+          style: t.title,
+        ),
         const SizedBox(height: Gap.sm),
         Text(
-          l.captureEmptyBody,
+          done ? l.captureQueuedBody : l.captureEmptyBody,
           textAlign: TextAlign.center,
           style: t.body.copyWith(color: c.inkSecondary),
         ),
         const SizedBox(height: Gap.xl),
         KimoButton(
-          label: l.welcomePrimary,
+          label: done ? l.onboardCaptureAnother : l.welcomePrimary,
           icon: const KimoIcon(KimoIcons.camera, size: 20),
           onPressed: _capture,
         ),

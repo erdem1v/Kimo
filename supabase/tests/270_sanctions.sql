@@ -126,10 +126,14 @@ select is(
   false,
   'ikinci ihlal de askıya almıyor'
 );
+-- `order by created_at desc, id desc` DEĞİL: `created_at` varsayılanı `now()`,
+-- yani İŞLEM zamanı — aynı test işleminde yazılan iki ihlal AYNI damgayı
+-- taşıyor ve `id` rastgele bir uuid olduğu için ikinci anahtar sıralamayı
+-- belirli hâle GETİRMİYOR. Bu iddia 3. turda tesadüfen yeşil, 4. turda
+-- kırmızı döndü. `strike_no` zaten aranan şeyin kendisi ve monoton.
 select is(
-  (select strike_no from public.photo_violations
-    where user_id = tests.get_supabase_uid('ihlalci')
-    order by created_at desc, id desc limit 1),
+  (select max(strike_no) from public.photo_violations
+    where user_id = tests.get_supabase_uid('ihlalci')),
   2,
   'ihlal sırası kayıtta duruyor (uyarının sertliği buradan seçiliyor)'
 );
@@ -273,12 +277,13 @@ select is(
 -- DEFTER OKUMALARI AYRICALIKLI: `user_sanctions` ve `photo_violations` hiçbir
 -- uygulama rolüne açık değil (0093). İkisi de katalog okuması, davranış değil.
 select tests.reset_role();
+-- Aynı beraberlik sorunu: "en yenisi" yerine ARANAN SATIRIN VARLIĞI
+-- sorgulanıyor. İddia zaten "lift satırı yazıldı ve geçersiz kılınmadı".
 select is(
-  (select action from public.user_sanctions
+  (select count(*)::int from public.user_sanctions
     where user_id = tests.get_supabase_uid('yanlis')
-      and voided_at is null
-    order by created_at desc, id desc limit 1),
-  'lift',
+      and voided_at is null and action = 'lift'),
+  1,
   'geri alma deftere yazılıyor (askı satırı silinmiyor, geçersiz kılınıyor)'
 );
 select is(

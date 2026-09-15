@@ -202,6 +202,9 @@ values (tests.get_supabase_uid('bicim'), 'Fizik', 'Optik',
 
 create temporary table _unsup on commit drop as
 select id from public.mistakes where user_id = tests.get_supabase_uid('bicim');
+-- Tablo `postgres`un; aşağıdaki iddialar `authenticated` rolüyle (aynı oturum,
+-- SET ROLE) okuyor — tablo düzeyi SELECT açıkça verilmeli. 060'ın aynı notu.
+grant select on _unsup to authenticated;
 
 select lives_ok(
   format('update public.mistakes set photo_scan = ''unsupported'' where id = %L',

@@ -309,8 +309,21 @@ select ok(
      tests.last_ai_call('mallory'))),
   'başkasının çağrısı iade EDİLEMİYOR');
 
--- GÜNLÜK İADE TAVANI: `ai_refund_daily` = 2, biri kullanıldı.
+-- GÜNLÜK İADE TAVANI: `ai_refund_daily` = 2, sayaç SIFIRDAN başlatılıyor.
+--
+-- Eskiden "biri kullanıldı" varsayılıyordu ve yanlıştı: `refund_ai_use` tavanı
+-- İDEMPOTANSLIK KONTROLÜNDEN ÖNCE basıyor, yani BAŞARISIZ denemeler de sayaca
+-- yazılıyor (bilerek — aksi hâlde uydurma kimliklerle sınırsız iade denemesi
+-- yapılıp geçerli satırlar aranabilirdi). Yukarıdaki üç deneme — iade,
+-- idempotanslık, başkasının satırı — sayacı çoktan doldurmuştu, dolayısıyla
+-- "tavanın içinde" iddiası tavanın DIŞINDA kalıyordu.
+--
+-- Sayacı burada sıfırlamak, testi o üç denemenin sayısından bağımsız kılıyor:
+-- aşağıdaki iki iddia artık "ikinci iade geçer, üçüncüsü geçmez" diyor ve
+-- başka hiçbir şeye dayanmıyor.
 select tests.reset_role();
+delete from public.rate_limits
+ where user_id = tests.get_supabase_uid('alice') and bucket = 'ai_refund';
 insert into public.ai_calls (user_id, tier) values
   (tests.get_supabase_uid('alice'), 'free'),
   (tests.get_supabase_uid('alice'), 'free');

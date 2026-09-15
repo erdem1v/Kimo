@@ -274,8 +274,17 @@ select throws_ok(
   'tek çağrıda 20''den fazla alıcı reddediliyor'
 );
 
--- Günlük tavan gerçekten bağlıyor mu: tavan 2, iki gönderim yapıldı.
+-- Günlük tavan gerçekten bağlıyor mu.
+--
+-- TAVAN BURADA 1'E ÇEKİLİYOR, "iki gönderim yapıldı" varsayımına
+-- dayanılmıyor. Eski yorum tavanın 2 olduğunu ve alice'in iki gönderim
+-- yaptığını söylüyordu; gerçekte alice'in SAYACI BİR kez artmıştı, çünkü
+-- reddedilen denemeler (tekrar yasağı, arkadaş başına tavan, arkadaş
+-- olmayan) günlük kovayı hiç bumplamıyor. Sayıyı fikstürden türetmek yerine
+-- sınırı düşürmek bu dosyanın zaten yazılı deseni ("Sınırları DÜŞÜRÜP
+-- sınıyoruz, 3 çağrı yapıp değil").
 select tests.reset_role();
+update public.app_config set value = '1' where key = 'qsend_daily';
 insert into public.friendships (requester_id, addressee_id, status)
 values (tests.get_supabase_uid('alice'), tests.get_supabase_uid('mallory'), 'accepted');
 select tests.authenticate_as('alice');
