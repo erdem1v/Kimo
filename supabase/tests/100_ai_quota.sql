@@ -324,6 +324,13 @@ select ok(
 select tests.reset_role();
 delete from public.rate_limits
  where user_id = tests.get_supabase_uid('alice') and bucket = 'ai_refund';
+-- Sayaç BİR olarak kuruluyor: "biri kullanıldı" varsayımı artık fikstürde,
+-- yukarıdaki üç denemenin kaçının saydığında değil. (`bump_rate_limit` tavana
+-- gelince satırı güncellemiyor, yani başarısız denemelerin kaçının sayaca
+-- yazıldığı çağrı sırasına bağlı — testin ona dayanması kırılgandı.)
+insert into public.rate_limits (user_id, bucket, window_key, n)
+values (tests.get_supabase_uid('alice'), 'ai_refund',
+        public.istanbul_day()::text, 1);
 insert into public.ai_calls (user_id, tier) values
   (tests.get_supabase_uid('alice'), 'free'),
   (tests.get_supabase_uid('alice'), 'free');

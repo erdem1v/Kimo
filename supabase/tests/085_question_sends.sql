@@ -274,27 +274,39 @@ select throws_ok(
   'tek çağrıda 20''den fazla alıcı reddediliyor'
 );
 
--- Günlük tavan gerçekten bağlıyor mu.
+-- Günlük tavan gerçekten bağlıyor mu: tavan 2, ALTINDAKİ İKİ GÖNDERİM
+-- BURADA YAPILIYOR.
 --
--- TAVAN BURADA 1'E ÇEKİLİYOR, "iki gönderim yapıldı" varsayımına
--- dayanılmıyor. Eski yorum tavanın 2 olduğunu ve alice'in iki gönderim
--- yaptığını söylüyordu; gerçekte alice'in SAYACI BİR kez artmıştı, çünkü
--- reddedilen denemeler (tekrar yasağı, arkadaş başına tavan, arkadaş
--- olmayan) günlük kovayı hiç bumplamıyor. Sayıyı fikstürden türetmek yerine
--- sınırı düşürmek bu dosyanın zaten yazılı deseni ("Sınırları DÜŞÜRÜP
--- sınıyoruz, 3 çağrı yapıp değil").
+-- Eski yorum "iki gönderim yapıldı" diyordu ve yanlıştı: alice'in günlük
+-- sayacı BİR kez artmıştı. Reddedilen denemeler (tekrar yasağı, arkadaş
+-- başına tavan, arkadaş olmayan alıcı) günlük kovayı hiç bumplamıyor —
+-- `bump_rate_limit`in `on conflict ... where n < p_limit` dalı tavana
+-- gelince satırı GÜNCELLEMİYOR bile.
+--
+-- Sayıyı varsayım yerine fikstürde üretiyoruz: iki yeni arkadaş, birine
+-- gönderim sayacı 2'ye çıkarıyor, ikincisi tavana çarpıyor. Aşağıdaki
+-- "sayaç işlemişti" iddiası da bu sayede n = 2 görüyor.
 select tests.reset_role();
-update public.app_config set value = '1' where key = 'qsend_daily';
+select tests.create_supabase_user('deniz');
+select tests.age_all_users();
 insert into public.friendships (requester_id, addressee_id, status)
-values (tests.get_supabase_uid('alice'), tests.get_supabase_uid('mallory'), 'accepted');
+values (tests.get_supabase_uid('alice'), tests.get_supabase_uid('mallory'), 'accepted'),
+       (tests.get_supabase_uid('alice'), tests.get_supabase_uid('deniz'), 'accepted');
 select tests.authenticate_as('alice');
+
+-- İKİNCİ GÖNDERİM (iddia değil, fikstür): günlük sayaç 2 oluyor.
+select public.send_question_to_friends(
+  (select id from public.mistakes
+    where user_id = tests.get_supabase_uid('alice')
+      and concept = 'Isı' limit 1),
+  array[tests.get_supabase_uid('mallory')], null);
 
 select is(
   (select reason from public.send_question_to_friends(
      (select id from public.mistakes
        where user_id = tests.get_supabase_uid('alice')
          and concept = 'Isı' limit 1),
-     array[tests.get_supabase_uid('mallory')], null)),
+     array[tests.get_supabase_uid('deniz')], null)),
   'daily_limit',
   'GÜNLÜK tavan dolunca kalan alıcılar denenmiyor'
 );
