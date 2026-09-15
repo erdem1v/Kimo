@@ -13,7 +13,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(27);
+select plan(29);
 
 select tests.create_supabase_user('alice');    -- gönderen
 select tests.create_supabase_user('bob');      -- alıcı
@@ -45,6 +45,21 @@ select ok(has_column_privilege('authenticated', 'public.question_sends', 'sender
           'sender_id INSERT edilebilir (gönderme akışı)');
 select ok(has_column_privilege('authenticated', 'public.question_sends', 'note', 'INSERT'),
           'note INSERT edilebilir (gönderirken not eklenebilir)');
+
+-- ==================================================== DELETE KAPALI (0090)
+-- `sends_delete_own` politikası 0008'den beri hem gönderene hem alıcıya satır
+-- silme hakkı veriyordu ve hiçbir lockdown göçü bu tablo için `revoke_delete`
+-- yazmamıştı. Bu, 0050a'nın "satır DURUYOR, moderasyon izi kaybolmaz"
+-- değişmezini deliyordu: taciz eden bir gönderen, alıcı şikâyet etmeden önce
+-- satırı silerse `report_received_question` "bu gönderim sana ait değil" ile
+-- patlar ve şikâyet HİÇ açılamazdı.
+--
+-- İstemci bu yolu hiç kullanmıyordu (`dismiss_received_question` RPC'si var),
+-- yani kapatmanın ürüne maliyeti sıfır. POLİTİKA DÜŞÜRÜLMEDİ — 0084'ün
+-- `mistakes` için yazdığı gerekçe: definer yollar RLS'i zaten atlıyor ve
+-- politikayı silmek katalogda "silme hiç düşünülmemiş" izlenimi bırakırdı.
+select ok(not has_table_privilege('authenticated', 'public.question_sends', 'DELETE'),
+          'question_sends DELETE yetkisi YOK — moderasyon izi silinemiyor');
 
 -- ============================================================== FİKSTÜR
 -- Ayrıcalıklı oturumda kur (postgres tablo sahibi, RLS ona uygulanmaz).
@@ -177,6 +192,14 @@ select is(
      array[tests.get_supabase_uid('mallory')], null)),
   0,
   'ARKADAŞ OLMAYANA gitmiyor — kontrol RPC gövdesinde (definer RLS''i atlıyor)'
+);
+
+-- Çalışma zamanı karşılığı: gönderen kendi satırını bile silemiyor.
+select throws_ok(
+  format($q$delete from public.question_sends where sender_id = %L$q$,
+         tests.get_supabase_uid('alice')),
+  '42501', null,
+  'gönderen kendi gönderimini SİLEMİYOR (dismiss ile gizlenir, silinmez)'
 );
 
 -- ==================================================== SAHİPLİK (definer/RLS)

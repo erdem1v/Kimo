@@ -11,7 +11,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(33);
+select plan(34);
 
 select tests.create_supabase_user('alice');
 -- Yaş kapısı (0067) `mistakes` INSERT'te doğum yılı şart koşuyor; bu testin
@@ -52,8 +52,33 @@ select ok(not has_column_privilege('authenticated', 'public.mistakes', 'photo_pa
 -- ============================================ KATALOG: yazılabilir KALMALI
 select ok(has_column_privilege('authenticated', 'public.mistakes', 'subject', 'INSERT'),
           'subject insert edilebilir');
-select ok(has_column_privilege('authenticated', 'public.mistakes', 'is_public', 'INSERT'),
-          'is_public insert edilebilir (paylaşım opt-in''i ekleme ekranında)');
+-- BU İDDİA TERSİNE ÇEVRİLDİ (0090). Eskiden `is_public` INSERT yetkisini
+-- OLUMLU kanıtlıyordu ve gerekçesi "paylaşım opt-in'i ekleme ekranında"ydı —
+-- O EKRAN YOK (havuz Task 02'de arşive alındı, `setShareConsent`in istemcide
+-- tek çağıranı yok). Yani yeşil bir test artık var olmayan bir dünyayı
+-- doğruluyordu ve yetki daraltıldığında KIRILACAK, doğru düzeltme yanlış
+-- görünecekti.
+--
+-- Açık kalması iki somut zarardı: (a) kullanıcı doğrudan PostgREST ile kendi
+-- soru FOTOĞRAFINI tüm kullanıcılara açabiliyordu (hiçbir onay kaydı
+-- oluşmadan), (b) `submit_pool_answer` ile birlikte iki hesaplı bir XP/lig
+-- şişirme yolu oluyordu.
+select ok(not has_column_privilege('authenticated', 'public.mistakes', 'is_public', 'INSERT'),
+          'is_public YAZILAMIYOR — havuz sunucu tarafında da kapalı');
+-- Davranış iddiası ROL GEREKTİRİYOR: katalog bölümü rol-nötr olduğu için
+-- yalnızca bu iddia için kimliğe bürünüp hemen geri dönüyoruz. `postgres`
+-- olarak koşsaydı sütun ayrıcalıkları sahibe uygulanmadığı için INSERT
+-- BAŞARILI olur ve iddia sessizce yanlış bir şey kanıtlardı.
+select tests.authenticate_as('alice');
+select throws_ok(
+  format($q$insert into public.mistakes
+              (user_id, subject, concept, mistake_type, photo_path, is_public)
+            values (%L, 'Fizik', 'Kuvvet', 'islem_hatasi', %L, true)$q$,
+         tests.get_supabase_uid('alice'),
+         tests.get_supabase_uid('alice')::text || '/havuz.jpg'),
+  '42501', null,
+  'is_public=true ile INSERT çalışma zamanında da reddediliyor');
+select tests.reset_role();
 -- Task 03 (0049/0050/0053) kolonları:
 select ok(has_column_privilege('authenticated', 'public.mistakes', 'next_review_at', 'UPDATE'),
           'next_review_at güncellenebilir (takvimi istemci yazar)');

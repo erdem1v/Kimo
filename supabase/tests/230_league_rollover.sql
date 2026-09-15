@@ -8,7 +8,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(12);
+select plan(13);
 
 select tests.create_supabase_user('takim_a');
 select tests.create_supabase_user('takim_b');
@@ -111,6 +111,16 @@ select is(
   (select schedule from cron.job where jobname = 'league-results-push'),
   '0 6 * * *',
   'sonuç bildirimi 06:00 UTC = 09:00 Istanbul — gece yarısı değil'
+);
+
+-- BUDAMA İŞİ (0091). `prune_ai_calls` ve `prune_ad_rewards` Task 10'dan beri
+-- YAZILI ama ÇAĞIRAN YOKTU: defterler süresiz büyüyordu ve
+-- `docs/hukuki-metinler.md:206-207`'nin BEYAN ETTİĞİ 92 günlük saklama süresi
+-- teknik olarak karşılanmıyordu. Bu bir metin-kod uyuşmazlığıydı.
+select is(
+  (select count(*)::int from cron.job where jobname = 'ledger-prune-daily'),
+  1,
+  'defter budama işi zamanlanmış — 92 gün saklama beyanı artık uygulanıyor'
 );
 
 select * from finish();

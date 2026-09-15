@@ -7,7 +7,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(17);
+select plan(20);
 
 select tests.create_supabase_user('alice');
 select tests.create_supabase_user('bob');
@@ -93,6 +93,47 @@ select is(
   (select count(*)::int from public.user_blocks),
   0,
   'engellenen kişi engel kaydını GÖREMİYOR'
+);
+
+-- ============================================ KÖK DÜZELTME: are_friends (0091)
+-- `are_friends` 0008'den beri yalnızca `friendships`e bakıyordu ve engelleme
+-- arkadaşlığı SİLMİYOR. Yani "arkadaş olmak" ile "engellenmiş olmak"
+-- çelişmiyordu ve engel kontrolü HER sosyal yüzeyde AYRICA yazılmak
+-- zorundaydı; unutulduğu yerlerde açık kalıyordu (`can_read_avatar`ın arkadaş
+-- dalı, `profiles_public.avatar_path`). Task 12 bu borcu bir mutasyonun içine
+-- yazmıştı (`mutations/42`).
+--
+-- ARKADAŞLIK SATIRI DURUYOR: engel kalkınca ilişki geri geliyor. Tersine
+-- çevrilebilir, veri kaybı yok.
+select tests.reset_role();
+select is(
+  (select public.are_friends(tests.get_supabase_uid('alice'),
+                             tests.get_supabase_uid('bob'))),
+  false,
+  'ENGELLİ çiftte are_friends FALSE — kök düzeltme'
+);
+select is(
+  (select count(*)::int from public.friendships
+    where status = 'accepted'
+      and ((requester_id = tests.get_supabase_uid('alice')
+            and addressee_id = tests.get_supabase_uid('bob'))
+        or (requester_id = tests.get_supabase_uid('bob')
+            and addressee_id = tests.get_supabase_uid('alice')))),
+  1,
+  'arkadaşlık SATIRI duruyor — engel kalkınca ilişki geri gelir'
+);
+-- Ve bunun somut sonucu: engelli eski arkadaşın avatar yolu artık sızmıyor.
+-- Avatar fikstürü BURADA kuruluyor: yoksa iddia boş yere yeşil yanardı.
+select tests.reset_role();
+update public.profiles
+   set avatar_path = tests.get_supabase_uid('alice')::text || '/a.jpg'
+ where id = tests.get_supabase_uid('alice');
+select tests.authenticate_as('bob');
+select is(
+  (select p.avatar_path from public.profiles_by_ids(
+     array[tests.get_supabase_uid('alice')]) p),
+  null,
+  'engelli eski arkadaşın avatar yolu profiles_public''te de null'
 );
 
 -- ====================================================== ENGELLEME: İSTEK

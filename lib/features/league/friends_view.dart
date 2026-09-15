@@ -90,6 +90,16 @@ class _FriendsViewState extends State<FriendsView> {
       // `myCode` listeden bağımsız: ilişki+profil zinciriyle PARALEL yürür
       // (profilesByIds gerçekten relations'a bağımlı; o zincir kalıyor).
       final Future<String?> codeFuture = friendRepository.myCode();
+      // ENGELLİLER, listeden süzmek için. Engelleme arkadaşlık SATIRINI
+      // silmiyor (bilinçli: engel kalkınca ilişki geri gelsin) ve `0091`
+      // `are_friends`i engel-farkında yaptı — ama `relations()` tabloyu
+      // DOĞRUDAN okuyor, yani satır geliyor. Süzgeç burada bir SUNUM kararı:
+      // güvenlik yüzeylerinin hepsi (avatar, gönderim, ortak seri, lig)
+      // sunucuda zaten kapalı; burada kapatılan şey kullanıcının "engelledim
+      // ama hâlâ listemde" çelişkisi (`app_tr.arb:933` "listelerde seni
+      // göremez" diyor).
+      final Future<List<BlockedUser>> blockedFuture =
+          friendRepository.blockedUsers();
       final List<Friendship> rels = await socialRepository.relations();
       final String me = _meId ?? '';
       final List<String> ids =
@@ -97,6 +107,9 @@ class _FriendsViewState extends State<FriendsView> {
       final List<PublicProfile> people =
           await socialRepository.profilesByIds(ids);
       final String? code = await codeFuture;
+      final Set<String> blocked = <String>{
+        for (final BlockedUser b in await blockedFuture) b.id,
+      };
 
       // Bayrak KAPALIYSA ortak seri çağrısı HİÇ yapılmıyor: kapatılmış bir
       // özelliğin ağ trafiği de olmamalı.
@@ -127,6 +140,7 @@ class _FriendsViewState extends State<FriendsView> {
           for (int i = 0; i < pendingIds.length; i++) pendingIds[i]: counts[i],
         };
         _myCode = code;
+        _blocked = blocked;
         _pairEnabled = pairOn;
         _pairs = <String, PairStreak>{
           for (final PairStreak p in pairs) p.friendId: p,
@@ -143,10 +157,14 @@ class _FriendsViewState extends State<FriendsView> {
     }
   }
 
+  /// Engellediğim kullanıcılar. Arkadaş satırı sunucuda DURUYOR (engel
+  /// kalkınca ilişki geri gelsin diye); listeden süzmek sunum kararı.
+  Set<String> _blocked = const <String>{};
+
   List<PublicProfile> get _friends {
     final String me = _meId ?? '';
     return _relations
-        .where((Friendship f) => f.accepted)
+        .where((Friendship f) => f.accepted && !_blocked.contains(f.otherId(me)))
         .map((Friendship f) => _people[f.otherId(me)])
         .whereType<PublicProfile>()
         .toList();
@@ -156,7 +174,9 @@ class _FriendsViewState extends State<FriendsView> {
     final String me = _meId ?? '';
     return _relations
         .where((Friendship f) =>
-            !f.accepted && f.stateFor(me) == FriendState.incoming)
+            !f.accepted &&
+            f.stateFor(me) == FriendState.incoming &&
+            !_blocked.contains(f.otherId(me)))
         .map((Friendship f) => _people[f.otherId(me)])
         .whereType<PublicProfile>()
         .toList();

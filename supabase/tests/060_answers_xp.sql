@@ -10,7 +10,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(26);
+select plan(27);
 
 select tests.create_supabase_user('alice');    -- soru sahibi
 select tests.create_supabase_user('mallory');  -- çözen
@@ -159,22 +159,24 @@ select is(
 );
 
 -- ============================================ paylaşım / profil RPC'leri
+-- BU BLOK TERSİNE ÇEVRİLDİ (0091). `set_question_sharing` havuz döneminden
+-- kalmıştı ve `lib/` içinde TEK bir çağıranı yoktu; sunucunun paylaşımı hâlâ
+-- kabul etmesi, Gizlilik Politikası'nın "havuz şu an kullanımda değil"
+-- beyanıyla çelişiyordu. Fonksiyon DÜŞÜRÜLMEDİ, yalnızca yetkisi geri alındı:
+-- havuz v2'de dönerse geri açma tek göç.
 select tests.authenticate_as('alice');
-select lives_ok(
+select ok(not has_function_privilege(
+            'authenticated', 'public.set_question_sharing(uuid, boolean)', 'EXECUTE'),
+          'set_question_sharing istemciye KAPALI (havuz arşivde)');
+select throws_ok(
   format('select public.set_question_sharing(%L, false)',
          (select id from public.mistakes where concept = 'Kuvvet')),
-  'sahibi paylaşımı geri çekebiliyor'
-);
-
-select tests.reset_role();
-update public.mistakes set moderation = 'removed' where concept = 'Kuvvet';
-select tests.authenticate_as('alice');
-select throws_ok(
-  format('select public.set_question_sharing(%L, true)',
-         (select id from public.mistakes where concept = 'Kuvvet')),
   '42501', null,
-  'kaldırılmış içerik havuza geri açılamıyor'
+  'çalışma zamanında da 42501 — paylaşım açılamıyor'
 );
+select ok(not has_function_privilege(
+            'authenticated', 'public.submit_pool_answer(uuid, int)', 'EXECUTE'),
+          'submit_pool_answer KAPALI — iki hesaplı XP şişirme yolu kapandı');
 
 select throws_ok(
   'select public.upsert_my_profile(''a'')',
