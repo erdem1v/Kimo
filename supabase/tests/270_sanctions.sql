@@ -449,7 +449,7 @@ select tests.reset_role();
 select tests.create_supabase_user('sirali');
 insert into public.user_sanctions (user_id, action, until, reason_code, source)
 values (tests.get_supabase_uid('sirali'), 'suspend', now() + interval '1 day',
-        'other', 'auto'),
+        'other', 'auto_photo'),
        (tests.get_supabase_uid('sirali'), 'ban', null, 'other', 'admin'),
        (tests.get_supabase_uid('sirali'), 'lift', null, 'other', 'admin');
 
