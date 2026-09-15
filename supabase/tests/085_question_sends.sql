@@ -222,23 +222,35 @@ select throws_ok(
 -- BAŞKASININ sorusunu arkadaşlarına gönderebiliyordu.
 --
 -- BU DOSYANIN EN ÖNEMLİ İDDİASI BU: başkasının satırı gönderilemiyor.
+--
+-- KİMLİK AYRICALIKLI FİKSTÜRDE ALINIYOR. Alt sorgu `bob` olarak koşuyordu ve
+-- `mistakes` SELECT politikası yalnız sahibe açık: bob alice'in satırını
+-- GÖREMİYOR, alt sorgu NULL dönüyor ve RPC `p_mistake = null` ile çağrılıyordu.
+-- `not_sendable` cevabı o zaman da geliyor — ama SAHİPLİKTEN değil, satırın
+-- hiç bulunamamasından. Yani dosyanın "EN ÖNEMLİ İDDİASI" diye işaretlediği
+-- iki satır, sahiplik kapısı SÖKÜLSE DE yeşil kalıyordu; mutasyon 43 bunu
+-- gösterdi (FAZ 2'de test hâlâ yeşildi).
 select tests.reset_role();
 insert into public.friendships (requester_id, addressee_id, status)
 values (tests.get_supabase_uid('bob'), tests.get_supabase_uid('mallory'), 'accepted')
 on conflict do nothing;
+
+create temp table _alice_q on commit drop as
+  select id from public.mistakes
+   where user_id = tests.get_supabase_uid('alice') and concept = 'Kuvvet';
+grant select on _alice_q to authenticated;
+
 select tests.authenticate_as('bob');
 select is(
   (select sent from public.send_question_to_friends(
-     (select id from public.mistakes
-       where user_id = tests.get_supabase_uid('alice') limit 1),
+     (select id from _alice_q),
      array[tests.get_supabase_uid('mallory')], null)),
   0,
   'BAŞKASININ sorusu gönderilemiyor — sahiplik gövdede zorlanıyor'
 );
 select is(
   (select reason from public.send_question_to_friends(
-     (select id from public.mistakes
-       where user_id = tests.get_supabase_uid('alice') limit 1),
+     (select id from _alice_q),
      array[tests.get_supabase_uid('mallory')], null)),
   'not_sendable',
   'red sebebi ayrımlanmadan "not_sendable" dönüyor'

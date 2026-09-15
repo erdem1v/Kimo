@@ -18,7 +18,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(22);
+select plan(23);
 
 select tests.create_supabase_user('alice');
 
@@ -114,7 +114,21 @@ select throws_ok(
 -- `ff_ad_reward`ın üretim kodunda TEK BİR OKUYUCUSU YOKTU ve `ff_pair_streak`
 -- yalnızca arayüzü susturuyordu — sunucudaki RPC'ler ve cron bayraktan
 -- bağımsız çalışmaya devam ediyordu.
+-- TEKLİFİN ÖNCE MÜMKÜN OLMASI ŞART. `ad_offer` altı koşulun VE'si ve biri
+-- `ai_window_left <= 0`. Alice hiç hak harcamamışken teklif ZATEN false
+-- dönüyordu, yani bu iddia bayrak kapısı SÖKÜLSE DE yeşil kalıyordu —
+-- mutasyon 54 tam bunu gösterdi (FAZ 2'de test hâlâ yeşildi).
+--
+-- Pencere sınırı 1'e çekilip tek çağrı yazılıyor: artık teklif için gereken
+-- her koşul sağlanıyor ve GERİYE TEK DEĞİŞKEN BAYRAK kalıyor. Aşağıdaki iki
+-- iddia bayrağın iki hâlini de sorduğu için "teklif bastırıldı" ile "zaten
+-- teklif yoktu" ayrışıyor.
 select tests.reset_role();
+insert into public.app_config (key, value) values ('ai_window_free', '1')
+  on conflict (key) do update set value = excluded.value;
+insert into public.ai_calls (user_id, tier)
+values (tests.get_supabase_uid('alice'), 'free');
+
 insert into public.app_config (key, value) values ('ff_ad_reward', 'false')
   on conflict (key) do update set value = excluded.value;
 select tests.authenticate_as('alice');
@@ -122,6 +136,17 @@ select is(
   (select ad_offer from public.my_daily_state),
   false,
   'ff_ad_reward KAPALIYKEN sunucu reklam teklif ETMİYOR — kill switch gerçek');
+
+-- AŞIRI KİLİTLEME KARŞI-İDDİASI: bayrak açıkken teklif GERÇEKTEN çıkıyor.
+-- Bu satır olmadan yukarıdaki iddia "hiç teklif üretilemiyor" hâlinde de
+-- yeşil kalırdı.
+select tests.reset_role();
+update public.app_config set value = 'true' where key = 'ff_ad_reward';
+select tests.authenticate_as('alice');
+select is(
+  (select ad_offer from public.my_daily_state),
+  true,
+  'bayrak AÇIKKEN teklif çıkıyor — iddia bayrağı ölçüyor, boşluğu değil');
 
 
 select * from finish();

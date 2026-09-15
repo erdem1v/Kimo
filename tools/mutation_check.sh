@@ -52,7 +52,22 @@ run_test() {
 }
 
 apply_sql() { psql "$DB_URL" -q -v ON_ERROR_STOP=1 -f "$1" >/dev/null 2>&1; }
-show_tail()  { printf '%s\n' "$LAST_OUT" | tail -n 12 | sed 's/^/           | /'; }
+# DÜŞEN İDDİAYI GÖSTER, kör kuyruk değil.
+#
+# Eski sürüm son 12 satırı basıyordu. pgTAP diagnostikleri `not ok`un HEMEN
+# ardından geliyor, yani dosyanın ortasında düşen bir iddiada kuyruk yalnızca
+# ondan SONRAKİ yeşil satırları gösteriyordu — Task 14'te beş mutasyonun FAZ 1
+# çıktısı tam böyle okunamaz çıktı ve hangi iddianın düştüğü yerelde
+# tahmin edilmeye çalışıldı.
+show_tail() {
+  printf '%s\n' "$LAST_OUT" \
+    | grep -n -A6 -E '^not ok|^# Looks like' \
+    | head -n 40 | sed 's/^/           | /'
+  # Hiç `not ok` yoksa (rc=2 dalı: dosya hiç çalışmadı) kuyruk hâlâ gerekli.
+  if ! printf '%s\n' "$LAST_OUT" | grep -q '^not ok'; then
+    printf '%s\n' "$LAST_OUT" | tail -n 12 | sed 's/^/           | /'
+  fi
+}
 
 pass=0
 fail=0

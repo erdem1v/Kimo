@@ -176,14 +176,42 @@ select ok(
 
 -- ASKI ÜRETİMİ DURDURUR (0062). Ortak seri karşı tarafa GÖRÜNEN kalıcı bir
 -- satır yaratıyor, yani bir üretim yüzeyi.
+--
+-- TAZE İKİLİ ŞART. Bu iddia önce alice–bob'u deniyordu ve o ikilinin serisi
+-- yukarıda ZATEN BAŞLAMIŞTI: `start_pair_streak` "zaten var" dalından `false`
+-- dönüyor, yani iddia askı kapısı SÖKÜLSE DE yeşil kalıyordu. Mutasyon 55 tam
+-- bunu gösterdi (FAZ 2'de test hâlâ yeşildi) — iddia doğru cümleyi yazıyor ama
+-- yanlış sebeple geçiyordu.
+--
+-- Şimdi alice–mallory kullanılıyor: arkadaşlık ve İKİ YÖNDE çözülmüş gönderim
+-- kuruluyor, ikilinin satırı yok, bayrak açık, engel yok. Geriye tek engel
+-- askı kalıyor.
 select tests.reset_role();
 update public.app_config set value = 'true' where key = 'ff_pair_streak';
+
+insert into public.friendships (requester_id, addressee_id, status)
+values (tests.get_supabase_uid('alice'), tests.get_supabase_uid('mallory'),
+        'accepted');
+insert into public.mistakes (user_id, subject, concept, mistake_type, photo_path)
+values (tests.get_supabase_uid('mallory'), 'Fizik', 'Kuvvet', 'islem_hatasi',
+        tests.get_supabase_uid('mallory')::text || '/m.jpg');
+insert into public.question_sends (sender_id, receiver_id, mistake_id, solved_at)
+select tests.get_supabase_uid('alice'), tests.get_supabase_uid('mallory'),
+       m.id, now()
+  from public.mistakes m
+ where m.user_id = tests.get_supabase_uid('alice') limit 1;
+insert into public.question_sends (sender_id, receiver_id, mistake_id, solved_at)
+select tests.get_supabase_uid('mallory'), tests.get_supabase_uid('alice'),
+       m.id, now()
+  from public.mistakes m
+ where m.user_id = tests.get_supabase_uid('mallory') limit 1;
+
 insert into public.user_sanctions (user_id, action, until, reason_code, source)
 values (tests.get_supabase_uid('alice'), 'suspend', now() + interval '7 days',
         'other', 'admin');
 select tests.authenticate_as('alice');
 select ok(
-  not (select public.start_pair_streak(tests.get_supabase_uid('bob'))),
+  not (select public.start_pair_streak(tests.get_supabase_uid('mallory'))),
   'ASKIDAKİ kullanıcı ortak seri BAŞLATAMIYOR');
 
 select * from finish();
