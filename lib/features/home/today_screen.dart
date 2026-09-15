@@ -300,6 +300,27 @@ class _TodayScreenState extends State<TodayScreen> {
             padding: const EdgeInsets.fromLTRB(Gap.screen, 0, Gap.screen, 0),
             child: _pendingPhotosCard(context, l),
           ),
+        // GELEN SORU KARTI DA BURADA OLMAK ZORUNDA — üstteki şeridin bir adım
+        // ötesi (Task 14).
+        //
+        // `_archiveEmpty` panonun TAMAMINI kısa devre yapıyor ve gelen soru
+        // kartı panonun içinde duruyordu. Sonuç: arkadaşı tarafından davet
+        // edilip kendisine soru GÖNDERİLEN ama henüz kendi sorusunu çekmemiş
+        // kullanıcı, bekleyen soruyu hiçbir yerde göremiyordu. Bu, gönderim
+        // özelliğinin en olası alıcısı: yeni kullanıcı.
+        //
+        // Simülatörde üretildi: B hesabının gelen kutusunda soru var
+        // (`received_questions` bir satır dönüyor), Bugün sekmesi "Arşivin
+        // henüz boş" diyordu.
+        //
+        // Bu ekranın yorumu "sıfır veri: tek yol var, o da kendi yanlışını
+        // çekmek" diyordu; bekleyen bir soru varken bu doğru değil.
+        if (_incoming > 0)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                Gap.screen, Gap.md, Gap.screen, 0),
+            child: _incomingCard(context, l),
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(
               Gap.screen, Gap.md, Gap.screen, Gap.screen),
