@@ -334,6 +334,16 @@ etkiliyordu:
    yapan her ortamda ayrıca ayarlanmalı** (CI/CD, imzalı yapı).
 4. **`ff_multi_capture` IAP bağlanana kadar kapalı kalmalı.** Şema canlıya
    gelince açık çıktı ve kapatıldı; bir daha açılmadığından emin olun.
+5. **Depoyu iCloud senkronunun dışına alın** (§9.0). `~/Desktop` altında
+   olduğu için iCloud 103 çakışma kopyası üretmişti; ikisi BAYAT göç kopyasıydı
+   ve `db push`ın yanlışını seçme riski taşıyordu. Temizlendi ama kaynak
+   duruyor, yani tekrar üretilecek.
+6. **`ADMOB_TEST_DEVICE_IDS` doldurulursa** ödüllü reklam akışı simülatörde de
+   test edilebilir hâle gelir; şu an sunucu teklifi doğrulandı ama gösterim
+   doğrulanamıyor.
+7. **K6 kararı sizde**: dört persona görselinin birbirine yakınlığı kasıtlı
+   tasarım. Ayrıştırmak isterseniz `kimo_painter` taban ayısında varyasyon
+   gerekiyor; mevcut test bunu KANITLAMIYOR (yalnız enum ayrıklığına bakıyor).
 5. **Mağaza ürünleri tanımlanmalı**: `kimo_plus_monthly`, `kimo_plus_yearly`.
    Tanımlanana kadar paywall dürüst hâlinde kalıyor — bu doğrulandı.
 6. **iOS'ta StoreKit akışını denemek için** uygulama Xcode'un Run eylemiyle
@@ -484,3 +494,193 @@ Bu turun sonlarında makine **takas alanını tüketti** (6 GB'ın 5.4 GB'ı dol
 simülatör + Xcode derlemesi). Bir Xcode derlemesi 0% CPU'da ~50 dakika takıldı
 ve öldürüldü; statik kapılar yerelde dakikalarca sürdü. Kapılar bozuk değildi
 — `0096` commit'inin doğrulaması bu yüzden CI'a bırakıldı ve CI yeşil döndü.
+
+
+---
+
+## 9. Üçüncü tur — kenar durumlar, K1–K8 ve ortak seri arayüzü (2026-09-16)
+
+Şema canlı olduğu için ilk iki turda test EDİLEMEYEN her şey bu turda
+kapsandı. Tur bu kez mutlu yolda yürümedi: kenar durumlar kod okunarak
+hedeflendi, sonra simülatörde tek tek denendi.
+
+### 9.0 Turdan önce — 103 kopya dosya ve yerel yavaşlığın sebebi
+
+Çalışma ağacında `* 2.*` desenli **103 kopya** vardı (göçlerde 22,
+mutasyonlarda 27, `lib/` içinde 20). Sebep **iCloud Masaüstü senkronu**: depo
+`~/Desktop` altında ve iCloud çakışma kopyası üretiyor.
+
+Hepsi izlenmiyordu, ama İKİSİ BAYATTI ve **aynı 14 haneli sürüm önekini**
+taşıyordu — yani `supabase db push` yanlışını seçebilirdi:
+
+| Kopya | İçeriği |
+|---|---|
+| `20260912000300_question_send_guard 2.sql` | `db reset`'i kıran `drop view` |
+| `20260913000400_maintenance 2.sql` | dizin kilidini geri açan `grant` |
+
+Seçmediği canlıda doğrulandı (`profiles_public` hâlâ `authenticated`a kapalı),
+ama bir sonraki `push`/`reset` için canlı bir mayındı. Temizlendi.
+
+**Yan etki, §8.7'yi açıklıyor:** statik kapılar 1 saniyenin ALTINA indi —
+`check_symbols` 98s → 0.2s, `check_imports` 600s+ → 0.7s. "Makine yavaş"
+dediğim şeyin tamamı buymuş. Derleme de ~50 dk takılmaktan 4 dakikaya indi.
+
+> **Öneri:** depoyu iCloud senkronunun dışına alın (ör. `~/Projects`) ya da
+> Masaüstü & Belgeler senkronunu kapatın. Kopyalar tekrar üretilecek.
+
+### 9.1 K1–K8 — doğrulandı ve düzeltildi
+
+Önce doğrulama: **sekizi de AÇIKTI.** Task 14'te raporlanmışlar ama hiçbirine
+kod değişikliği yapılmamıştı. Yedisi kapandı, biri tasarım kararı olarak
+size bırakıldı.
+
+| # | Önce | Sonra | Simülatörde doğrulandı |
+|---|---|---|---|
+| K1 | Yalnız minik kare tıklanabilir | Etiketin bağlantı olmayan parçaları da kutuyu değiştiriyor | ✅ "kabul ediyorum."a dokunmak kutuyu açtı; **bağlantılar hâlâ çalışıyor** (Safari kimo.work'ü açtı) |
+| K2 | Doğum yılı değeri hiçbir yerde yok | Ayarlar satırı yılı gösteriyor | ✅ "Doğum yılı 2008" |
+| K3 | Çiplerin seçili durumu ağaçta yok | `Semantics(selected:)` | ✅ seçili yıl `Selected` niteliği taşıyor, diğerleri taşımıyor |
+| K4 | Açılışta hiçbir yıl seçili değil, "Kaydet" kapalı | Ortadaki yıl seçili + sabit seçim bandı | ✅ çark 2008 seçili açıldı, "Kaydet" baştan etkin |
+| K5 | "+10 XP" gördükten sonra "+60 XP", döküm yok | Hedef ödülü ayrı satırda | kod düzeyinde; oturum sonu ekranına bu turda ulaşılmadı |
+| K6 | Dört persona görseli birbirine çok yakın | **Değiştirilmedi** | — |
+| K7 | `KimoCard` içindeki `SwitchListTile` her çizimde uyarı fırlatıyordu | `Material(transparency)` | kod düzeyinde |
+| K8 | `setup-cli` `version: latest` | `2.117.0`'a sabitlendi | CI yeşil |
+
+**K4 için kendi hatamı düzeltiyorum.** İkinci turda "çark seçili yılı
+vurguluyor, bulguyu yumuşatacağım" demiştim — **yanlıştı**. Vurgu
+`years[i] == _year` koşuluna bağlı ve `_year` açılışta `null`; gördüğüm
+vurgulu ekran görüntüsü kaydırmadan SONRAYDI. Bulgu olduğu gibi geçerliydi ve
+düzeltildi.
+
+**K6 hakkında karar sizde.** `kimo_painter.dart` taban ayının dört varyantta
+**birebir aynı** olduğunu, değişen tek şeyin aksesuar katmanı olduğunu açıkça
+yazıyor — yani kasıtlı tasarım. Mevcut test yalnızca dört enum değerinin
+ayrık olduğunu sınıyor, gösterim boyutunda ayırt edilebilirliği değil; o
+yüzden testin yeşil olması bulgunun kapandığı anlamına gelmiyor.
+
+### 9.2 Kenar durumlarda bulunan YENİ hatalar
+
+Altısı da kod okunarak hedeflendi, dosya/satır kanıtıyla doğrulandı ve
+düzeltildi.
+
+#### 🔴 Bloke eder
+
+**B8 · Çıkış yapan kullanıcının ilerlemesi sonraki hesaba sızıyordu.**
+`AuthGate` çıkışta `userProfile`, `submissionQueue` ve `photoQueue`u
+temizliyordu; `gameProgress`i temizlemiyordu. Aynı cihazda açılan ikinci
+hesap, öncekinin XP'sini, serisini, haftalık puanını ve günlük sayacını
+görüyordu. **Kendiliğinden düzelmiyordu:** `syncDailyDone` yalnızca YUKARI
+hareket ediyor (`if (dbCount > dailyReviewsDone)`), yani A'nın 5'i B'nin
+0'ıyla değiştirilemiyor; `hydrate` ise ancak sunucu okuması başarılıysa
+çalışıyor. `GameProgress.clear()` eklendi; regresyon testi hem düzeltmeyi hem
+tek yönlü senkron mekanizmasını tutuyor.
+
+**B9 · Aynı fotoğraftan iki soru kaydı.** Bekleyen fotoğraflar ekranındaki
+"Tamamla" iki disk okumasını bekliyor ve ancak sonra onay ekranını itiyor. O
+pencerede ikinci dokunuş AYNI kuyruk kaydı için ikinci bir onay ekranı
+açıyordu; ikisini de kaydetmek tek fotoğraftan iki `mistakes` satırı
+yaratıyor (`mistake_repository.add` idempotent değil ve olamaz). Koruma
+eklendi. ✅ Simülatörde çift dokunuldu: tek ekran açıldı, iptal edince
+doğrudan listeye dönüldü.
+
+#### 🟠 Görünürde bozuk
+
+**G5 · Çevrimdışı ayar değişikliği sessizce geri sarıyordu.**
+`setNotifyEnabled` alanı set edip `notifyListeners` çağırıyor, sonra
+kaydediyordu; yazım düşerse hiçbir şey geri alınmıyordu. Kullanıcı anahtarın
+döndüğünü görüyor, sunucu güncellenmiyor, uygulama yeniden açılınca ayar eski
+hâline dönüyordu. Artık geri alıyor ve hata gösteriliyor.
+✅ Wi-Fi kapalıyken doğrulandı: "Ayar kaydedilemedi. Bağlantını kontrol edip
+tekrar dene." çıktı ve anahtar `0`a geri döndü.
+
+**G6 · Öne gelişte yakalanmamış asenkron hata.** `_syncNotifyPermission`
+`unawaited` çağrılıyor ve `try/catch`i yoktu; `setNotifyEnabled` artık yazım
+düşünce fırlattığı için çevrimdışı dönen her kullanıcıda yakalanmamış bir
+hata oluşurdu. Sarıldı.
+
+**G7 · Kamera/galeri izin reddi çıkmaz sokaktı.** `camera_access_denied`
+genel bir `catch`e düşüp "Fotoğraf alınamadı" diyordu. Sistem penceresi bir
+kez reddedildikten sonra bir daha açılmıyor, yani kullanıcı düğmeye basıp
+duruyordu. Bildirim izni için bu yol Ayarlar'da ZATEN vardı; kamera ve galeri
+için yoktu. Artık ayrı mesaj + "Ayarları aç".
+
+**G8 · Kod yenilemede çift dokunuş.** Sunucu günde bir kez kabul ediyor;
+korumasız çift dokunuş "Kod yenilendi" ile "günde bir kez yenileyebilirsin"i
+arka arkaya gösteriyordu. Hemen yanındaki `_add` akışı bayrak taşıyor, buna
+uygulanmamıştı.
+
+#### 🟡 Küçük
+
+**K9 · Arka plandan dönüş HUD'ı tazelemiyor.** Hak sayısını sunucudan
+değiştirip uygulamayı arka plana atıp geri getirdim: HUD eski değeri
+gösteriyordu; yalnızca aşağı çekince güncellendi. Öne geliş dalı
+(`home_shell`) cihaz kaydı, izin eşitlemesi ve kuyruk boşaltma yapıyor ama
+durum okuması yapmıyor.
+
+**K10 · Bağlantı dönünce hata ekranı kendiliğinden toparlanmıyor.**
+Çevrimdışı yenilemede "Bir şeyler ters gitti" doğru çıkıyor, ama Wi-Fi geri
+gelince ekran o hâlde kalıyor; kullanıcı "Tekrar dene"ye basmalı.
+
+### 9.3 Kenar durumlarda ÜRETİLEMEYENLER
+
+Bunları da yazıyorum, çünkü "denendi ve sorun çıkmadı" bir sonuçtur:
+
+* **Onboarding çekim düğmesinde çift dokunuş** — kod okumasında riskli
+  görünüyordu, üretilemedi: `_capture` push'u beklemeden yapıyor, ikinci
+  dokunuş zaten açılmış ekrana düşüyor.
+* **"Hesabımı aç"ta çift dokunuş** — tek hesap oluştu.
+* **"Arşive kaydet"te çift dokunuş** — tek soru oluştu (`_saving` bayrağı iş
+  görüyor).
+* **Kenardan kaydırma (geri)** — çekim onay ekranından temiz çıktı, yarım
+  durum bırakmadı.
+* **Arka plandan dönüş (onboarding ortasında)** — Safari'ye gidip dönüldü,
+  adım 6/6 ve işaretli onay kutusu korundu.
+* **Galeri izin reddi** — iOS 14+ `PHPicker` süreç dışı çalışıyor ve kütüphane
+  izni İSTEMİYOR, yani bu yol modern iOS'ta zaten ulaşılamaz.
+
+### 9.4 Uygulamanın doğru davrandığı yerler
+
+* **Boş durum ≠ yükleme hatası.** Çevrimdışı yenilemede "Bir şeyler ters
+  gitti / Tekrar dene" çıkıyor, sessiz boş ekran değil. Deponun yazılı kuralı
+  tutuyor.
+* **Çevrimdışı çekim.** Onay ekranı "Bağlantı kurulamadı — bilgileri elle
+  doldurabilirsin" diyor ve İKİ yol da açık: elle kaydet ya da "Analizi
+  bekle" (kuyruk). Bağlantı gelince kuyruk analiz edip kullanıcıya döndü.
+* **Hak göstergesi.** `low` durumu "1 hakkın kaldı · sonraki 07:20'de",
+  `window_full` "Hakların doldu · sonraki 07:20'de" — ikisi de sunucudan
+  sürülerek görüldü.
+* **Hak duvarı.** Kotayı açıklıyor, fiyat çizmiyor, ve **kaydetme yolu açık
+  kalıyor**: "Kaydet, şıkları elle gir".
+* **Ödüllü reklam.** Sunucu `ad_offer: true` diyor; istemci
+  `adOffer && supported && isReady` istediği için AdMob dolgusu olmayan
+  simülatörde satırı gizliyor — doğru davranış.
+* **Engelleme.** Engellenen kullanıcı arkadaş listesinden süzüldü ve lig
+  tahtasında **`nickname` null** dönüyor: satır duruyor (sıralama dürüst
+  kalıyor), kimlik maskeleniyor. Task 13 düzeltmesi çalışıyor.
+
+### 9.5 Ortak seri — arayüz tarafı tamamlandı
+
+İlk turda yalnızca sunucu mekanizması (RPC) doğrulanmıştı. Bu turda arayüz:
+
+| Yüzey | Sonuç |
+|---|---|
+| Bayrak KAPALI | Arkadaş kartında ve menüsünde hiçbir ortak seri yüzeyi yok ✅ |
+| Başlatma | **Gelen kutusundan**: arkadaşın sorusu çözülünce davet çıkıyor → "Ortak seri başladı — Sen ve Ayse" ✅ |
+| Gösterim | Arkadaş kartında "1 ortak seri" ✅ |
+| Çıkış | Menüde "Ortak seriden çık" — yalnızca seri varken beliriyor ✅ |
+| Sunucu kaydı | `pair_streaks` satırı: streak 1, best 1 ✅ |
+
+**Önemli ayrıntı:** başlatma yalnızca gelen kutusu akışından mümkün; arkadaş
+menüsünde "seri başlat" diye bir eylem YOK. İlk denemede fikstürü doğrudan
+veritabanına yazdığım için davet tetiklenmemişti ve yüzey görünmemişti —
+tasarım böyle, hata değil.
+
+### 9.6 Önceki turların düzeltmeleri — canlı doğrulama
+
+| Düzeltme | Sonuç |
+|---|---|
+| B5 · çıkış oturumu kapatıp ekranda bırakıyordu | ✅ çıkış doğrudan karşılama ekranına döndü |
+| B6 · yeni kullanıcı gelen soruyu göremiyordu | ✅ "Arkadaşından 1 soru geldi" kartı çıktı |
+| D1 · kurulumda ikinci "fotoğraf çek" düğmesi | ✅ çekimden sonra "Fotoğrafın sırada / Bir tane daha çek" |
+| **D1'in eksiği (yeni)** | Uygulama yeniden başlatılınca adım yine "İlk yanlışını çek" diyordu: `_loadQueued` yalnızca çekimden dönüşte çağrılıyordu, `initState`te değil. Düzeltildi ve ✅ öldürüp açtıktan sonra "Fotoğrafın sırada" korundu |
+| G2 · yaş reddinde iletişim yolu | ✅ "Bize yaz" düğmesi kartta |
+| B4 · hukuki metinler | ✅ kayıt adımında `Link` düğümü, Safari açılıyor |
