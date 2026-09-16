@@ -1,6 +1,10 @@
 # Task 14 — CI doğrulaması ve uçtan uca test
 
-**Tarih:** 2026-09-15 · **Dal:** `main` · **Son koşu:** `35015455347` ✅
+**Tarih:** 2026-09-15/16 · **Dal:** `main` · **Son koşu:** `35037466441` ✅
+
+> **İkinci tur (2026-09-16).** Göçler canlıya basıldı, hukuki adresler bağlandı,
+> "görünürde bozuk" bulgular düzeltildi ve uçtan uca tur ortak seri dahil
+> tamamlandı. O turda **üç yeni bloke edici hata** çıktı. Bkz. §8.
 
 Üç task boyunca yazılan hiçbir şey çalıştırılmamıştı. Bu task onları ilk kez
 çalıştırdı: 13 CI turu, 832→833 pgTAP iddiası, 56 mutasyon ve simülatörde
@@ -318,14 +322,165 @@ etkiliyordu:
 
 ## 7. Dağıtım notları
 
-1. **Servis rolü anahtarı döndürülmeli.** Önceki oturumda sohbete
-   yapıştırılmıştı. Hiçbir dosyaya, commit'e ya da bu rapora yazılmadı.
-2. **`supabase db push` gerekiyor** — 44 commit'lik göç canlıya basılmadı
-   (B3). Basılmadan `main`'deki uygulama canlı projeye karşı çalışamaz.
-3. **`LEGAL_TERMS_URL`, `LEGAL_PRIVACY_URL`, `LEGAL_KVKK_URL`,
-   `LEGAL_DELETE_URL`, `SUPPORT_EMAIL` doldurulmalı** (B4, G2).
-4. **`ff_multi_capture` IAP bağlanana kadar kapalı kalmalı.**
+1. **ÜÇ SIR DÖNDÜRÜLMELİ.** Hiçbiri dosyaya, commit'e ya da bu rapora
+   yazılmadı; yalnızca çalışma anında ortam değişkeni olarak kullanıldı:
+   * servis rolü anahtarı (önceki oturumda verilmişti),
+   * Supabase kişisel erişim jetonu (`sbp_…`),
+   * proje veritabanı parolası.
+2. ~~`supabase db push` gerekiyor~~ — **YAPILDI** (§8.1): 18 + 1 göç
+   uygulandı, doğrulandı.
+3. ~~`LEGAL_*` ve `SUPPORT_EMAIL` doldurulmalı~~ — **YAPILDI** (§8.2).
+   `supabase.json` izlenmeyen dosya, yani değerler depoya girmedi; **derleme
+   yapan her ortamda ayrıca ayarlanmalı** (CI/CD, imzalı yapı).
+4. **`ff_multi_capture` IAP bağlanana kadar kapalı kalmalı.** Şema canlıya
+   gelince açık çıktı ve kapatıldı; bir daha açılmadığından emin olun.
 5. **Mağaza ürünleri tanımlanmalı**: `kimo_plus_monthly`, `kimo_plus_yearly`.
    Tanımlanana kadar paywall dürüst hâlinde kalıyor — bu doğrulandı.
 6. **iOS'ta StoreKit akışını denemek için** uygulama Xcode'un Run eylemiyle
    başlatılmalı; `flutter run` `Configuration.storekit`i uygulamıyor.
+
+
+---
+
+## 8. İkinci tur — dağıtım ve tamamlanan uçtan uca test (2026-09-16)
+
+### 8.1 Göç dağıtımı
+
+**Ön kontrol (göçlerden ÖNCE, talimat gereği):** `birth_year is null` olan
+**üç** hesap bulundu ve durduruldu. Üçü de sıfır içerikli: iki yarıda
+bırakılmış anonim oturum ve bir `@example.com` test hesabı; hiçbirinde soru,
+depo nesnesi, arkadaşlık ya da gönderim yok. Kişisel hesap
+(`erdemsalman1@gmail.com`, doğum yılı 2010) listede değildi.
+
+Silme **üretimde yıkıcı işlem güvenlik kapısına takıldı**. Kontrol sırasında
+şu da doğrulandı: **hiçbir göç `birth_year`'ı zorunlu kılmıyor** — ne
+`not null`, ne check, ne backfill; `birth_year is not null` yalnızca
+`has_birth_year` gövdesinde, çalışma anında kullanıcı başına değerlendiriliyor.
+Yani üç hesap göçü engellemiyordu. Kararınızla silmeden devam edildi.
+
+Silmek isterseniz, panodaki SQL Editor'da:
+
+```sql
+delete from auth.users u
+ where u.id in (select p.id from public.profiles p where p.birth_year is null);
+```
+
+**Göç:** Uzak geçmiş temizdi, ıraksama yoktu — uzak `20260908000400`'de
+duruyordu. **18 göç uygulandı** (Task 12 + 13 + 0095), hata yok. Ardından 0096
+de basıldı. Doğrulama: `subscriptions` ve `pair_streaks` REST'te **404 → 401**
+(tablo var ve `anon`'a kapalı), `config_bool`/`istanbul_week`/
+`start_pair_streak` yerinde, `profiles_public` hâlâ `authenticated`'a kapalı.
+
+**`legal_version` zaten `1.3`'tü** — sitedeki metinlerin sürümüyle (Sürüm: 1.3)
+ve `docs/hukuki-metinler.md` ile uyumlu. En sona bırakma şartı sağlandı:
+göçlerden sonra bakıldı, doğru değerdeydi, yazılmasına gerek kalmadı.
+
+**Bayraklar:** `ff_multi_capture` şema canlıya gelince **açık** çıktı.
+`capture_screen.dart:462` bayrak açıkken çoklu çekim yüzeyini çiziyor (üstelik
+katman kontrolü olmadan), yani satın alınamayan bir özellik görünür olacaktı.
+Duran karar gereği **kapatıldı**. `ff_pair_streak` test için açılıp sonra
+kapatıldı. Son durum: `pair_streak=false`, `multi_capture=false`,
+`ad_reward=true`, `iap=true`, `legal_version=1.3`.
+
+### 8.2 Hukuki adresler
+
+`LEGAL_TERMS_URL`, `LEGAL_PRIVACY_URL`, `LEGAL_KVKK_URL`, `LEGAL_DELETE_URL`
+ve `SUPPORT_EMAIL` bağlandı. Destek adresi sitede Cloudflare ile gizlenmişti;
+`data-cfemail` çözülerek alındı: `kimo.iletisim@gmail.com`. Dört sayfa da
+HTTP 200 ve üçünün de künyesi **Sürüm: 1.3**.
+
+**B4 kapandı:** kayıt adımında "Kullanım Koşulları" ve "Gizlilik Politikası"
+artık erişilebilirlik ağacında `Link` düğümü — önce düz kalın metindi.
+
+### 8.3 İkinci turda çıkan YENİ bloke ediciler
+
+#### B5 · "Çıkış yap" oturumu kapatıp ekranda bırakıyordu — DÜZELTİLDİ
+
+* **Nerede:** Ayarlar → Çıkış yap (hesap silme yolu da aynı kapıdan geçiyor)
+* **Ne oluyor:** Günlükte `supabase.auth: Signing out user with scope: local`
+  çıkıyor, saklanan `auth-token` anahtarı **gerçekten siliniyor** — ama
+  uygulama Ayarlar ekranında kalıyor, hâlâ giriş yapılmış gibi. Kullanıcı
+  hiçbir şey olmadı sanıyor; sonraki her istek sessizce yetkisiz düşerdi.
+* **Sebep:** `AuthGate` MaterialApp'in `home`'u. `setState` yalnızca KÖK
+  rotanın içeriğini değiştiriyor; Ayarlar Navigator'a **itilmiş** bir rota,
+  yani kökün üstünde duruyor ve yerinde kalıyor. Davranışın "bazen çalışıyor"
+  görünmesinin sebebi buydu: kök ekrandayken çalışıyor, Ayarlar'dan çıkınca
+  çalışmıyordu.
+* **Düzeltme:** oturum düşünce yığın köke indiriliyor.
+
+#### B6 · Yeni kullanıcı kendisine gönderilen soruyu HİÇ göremiyordu — DÜZELTİLDİ
+
+* **Nerede:** Bugün sekmesi, arşiv boşken
+* **Ne oluyor:** B hesabının gelen kutusunda A'dan gelen soru var
+  (`received_questions` bir satır dönüyor) ama ekran "Arşivin henüz boş"
+  diyor ve başka hiçbir şey göstermiyordu.
+* **Sebep:** `today_screen.dart`ta `if (_archiveEmpty) return _emptyArchive(...)`
+  panonun tamamını kısa devre yapıyor; gelen soru kartı panonun içinde.
+* **Neden önemli:** Bu, gönderim özelliğinin **en olası alıcısı** — arkadaşı
+  tarafından davet edilmiş, henüz kendi sorusunu çekmemiş yeni kullanıcı.
+  Arkadaş "gönderdim" diyor, alıcının ekranında hiçbir şey yok.
+* **Not:** Aynı sınıfın bir örneği bu ekranda ZATEN çözülmüştü (bekleyen
+  fotoğraf şeridi boş durumda da çiziliyor, yorumu da bunu yazıyor). Gelen
+  soru kartı aynı gözden kaçışın bir adım ötesiydi.
+
+#### B7 · HUD tekrar sayacı gün bazlıydı — DÜZELTİLDİ
+
+* **Nerede:** `my_daily_state.due_count`
+* **Ne oluyor:** Sayaç vadeyi yalnızca TARİHTEN okuyordu
+  (`next_review_date <= istanbul_day()`), oysa 0049'dan beri vade bir ZAMAN
+  DAMGASI ve yeni soru aynı gün +3 saate vadeleniyor. İstemci de zaman bazlı
+  süzüyor. Sonuç: gece yarısından itibaren, o gün ilerisi için vadelenmiş bir
+  soru HUD'da "1 tekrar" olarak sayılıyor ama oturumun listesine girmiyordu.
+* **Nasıl bulundu:** CI'ın **gece yarısını geçen ilk koşusunda** kırmızı döndü.
+  İddia (`tests/215`) doğruydu; saate bağlı olarak gizleniyordu: vade
+  `now() + 3 saat`, İstanbul saatiyle 21:00'den sonra ertesi güne taşıyor ve
+  tarih karşılaştırması tesadüfen doğru cevabı veriyordu. Bu tasktaki bütün
+  önceki koşular 20:56–22:5x aralığına denk gelmişti — **test günün 21
+  saatinde kanıt üretmiyordu.**
+* **Düzeltme:** 0096 sayacı istemcinin süzgecine eşitliyor; mutasyon 58 yanlış
+  yolu kapıya bağlıyor.
+
+### 8.4 Görünürde bozuk bulguların durumu
+
+| | Durum |
+|---|---|
+| G1 · paywall'da `Plus''ta` | ✅ düzeltildi + ARB kapısı |
+| G2 · yaş reddinde iletişim yolu yok | ✅ "Bize yaz" düğmesi eklendi, simülatörde doğrulandı |
+| G3 · profil kaydı ilk denemede düşüyor | ✅ tek tura indirildi; **tekrarlanmadı** (günlük bağlıyken ilk dokunuşta geçti). Kök sebep kanıtlanmadı — iki ayrı `updateUser` turu yerine tek yazım, yarış yüzeyini kaldırıyor |
+| G4 · `is_suspended` beraberlikte rastgele | ✅ 0095: `created_at` varsayılanı `clock_timestamp()`; `photo_violations` ve `user_consents` de aynı kusuru taşıyordu |
+
+### 8.5 Ortak seri — dört an da doğrulandı
+
+Fikstür: iki test hesabı arkadaş yapıldı (**gerçek akış**: B kodu girdi, A
+"Gelen istekler"den kabul etti), A sorusunu arayüzden gönderdi, iki yönde de
+çözülmüş gönderim kuruldu.
+
+| An | Sonuç |
+|---|---|
+| Bayrak KAPALI | `start_pair_streak` → `false`, `my_pair_streaks` → `[]`, arkadaş kartında **hiçbir yüzey çizilmiyor** ✅ |
+| 1 · Başlatma | `true`; seri 1, en iyi 1, karşı tarafın kimliği/maskotu dönüyor ✅ |
+| 1b · Kopya | ikinci çağrı `false` — ikinci satır yok ✅ |
+| 2 · İlerleme | devir sonrası seri 2, en iyi 2 ✅ |
+| 2b · İdempotans | aynı devir tekrar koştu, sayı değişmedi ✅ |
+| 3 · Kırılma | biri dün çalışmadı → seri 0, **en iyi 2 korundu** ✅ |
+| 4 · Çıkış | bayrak kapatıldı, fikstür temizlendi ✅ |
+
+Not: devir "dün"ü işliyor ve `last_day` zaten dünse dokunmuyor — kurulum
+gününün ikinci kez sayılmaması bu kapıdan geliyor.
+
+### 8.6 İkinci turun test edilemeyenleri
+
+* **Mail oluşturma ekranı:** simülatörde Mail uygulaması yok. "Bize yaz"
+  düğmesi yedek mesajı GÖSTERMİYOR, yani adresin bağlı olduğu doğrulandı;
+  oluşturma ekranının kendisi açılamadı.
+* **Hesap silme:** yıkıcı olduğu için tetiklenmedi.
+* **Yerel bildirimin kendisi:** izin akışı çalıştı, bildirim tetiklenmedi.
+* **Gerçek IAP satın alma:** ürünler hâlâ tanımlı değil; günlükte
+  `storekit_no_response` + `mağazada bulunamayan ürün`, paywall dürüst hâlinde.
+
+### 8.7 Ortam notu
+
+Bu turun sonlarında makine **takas alanını tüketti** (6 GB'ın 5.4 GB'ı dolu;
+simülatör + Xcode derlemesi). Bir Xcode derlemesi 0% CPU'da ~50 dakika takıldı
+ve öldürüldü; statik kapılar yerelde dakikalarca sürdü. Kapılar bozuk değildi
+— `0096` commit'inin doğrulaması bu yüzden CI'a bırakıldı ve CI yeşil döndü.
