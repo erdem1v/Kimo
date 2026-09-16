@@ -7,7 +7,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(8);
+select plan(9);
 
 select tests.create_supabase_user('acemi');
 -- Yaş kapısı (0067) `mistakes` INSERT'te doğum yılı şart koşuyor; bu testin
@@ -36,7 +36,30 @@ select is(
   'tarih gölgesi damgadan türedi'
 );
 
--- HUD sayacı: 3 saat dolmadan due_count''a girmez (zaman bazlı sayım).
+-- HUD sayacı: vade dolmadan due_count''a girmez (ZAMAN bazlı sayım, 0096).
+--
+-- VADE AÇIKÇA "BUGÜNÜN İLERİSİ"NE ÇEKİLİYOR — `now() + 3 saat`e
+-- BIRAKILMIYOR. Sebebi bu iddianın SAATE BAĞLI olmasıydı: tetikleyicinin
+-- verdiği vade İstanbul saatiyle 21:00''den sonra ERTESİ güne taşıyor ve o
+-- pencerede gün bazlı sayım da tesadüfen 0 döndürüyor. Yani iddia günün 21
+-- saatinde hatayı yakalıyor, üç saatinde sessizce yeşil kalıyordu — mutasyon
+-- 58 tam da o pencerede koşup ayırt edilememişti.
+--
+-- Damga bugünün İstanbul gününün SON dakikası: her saatte hem GELECEKTE
+-- (zaman bazlı → 0) hem de BUGÜNÜN TARİHİNDE (gün bazlı → 1). İki sayım
+-- böylece günün her saatinde ayrışıyor.
+update public.mistakes
+   set next_review_at =
+         ((public.istanbul_day() + 1)::timestamp at time zone 'Europe/Istanbul')
+         - interval '1 minute'
+ where concept = 'Kümeler';
+
+select is(
+  (select m.next_review_date from public.mistakes m where m.concept = 'Kümeler'),
+  public.istanbul_day(),
+  'vade bugünün içinde kaldı (tarih gölgesi bugün)'
+);
+
 select is(
   (select s.due_count from public.my_daily_state s),
   0,
