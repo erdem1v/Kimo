@@ -38,13 +38,21 @@ import '../../widgets/kit/kimo_surfaces.dart';
 /// Reddedilen deneme bir YAZMA değil, dolayısıyla hesap kilitlenmiyor;
 /// kullanıcı tek yazımlık hakkını da kaybetmiyor.
 class AgeGateStep extends StatefulWidget {
-  const AgeGateStep({super.key, required this.status, required this.onChanged});
+  const AgeGateStep({
+    super.key,
+    required this.status,
+    required this.onChanged,
+    required this.onDone,
+  });
 
   /// Sunucudan okunan güncel durum. `null` = henüz okunmadı.
   final AgeStatus? status;
 
   /// Yıl kaydedildiğinde akış yeniden okusun diye.
   final Future<void> Function() onChanged;
+
+  /// Yıl kaydedildikten sonra akışı bir sonraki adıma taşır (Task 15 · B2).
+  final Future<void> Function() onDone;
 
   @override
   State<AgeGateStep> createState() => _AgeGateStepState();
@@ -53,6 +61,15 @@ class AgeGateStep extends StatefulWidget {
 class _AgeGateStepState extends State<AgeGateStep> {
   int? _year;
   bool _saving = false;
+
+  /// Çarkın yılları ve denetleyicisi.
+  ///
+  /// **`build` İÇİNDE ÜRETİLMİYOR (Task 15 · B3).** Önceki sürüm her yeniden
+  /// çizimde yeni bir `FixedExtentScrollController` yaratıyor ve hiçbirini
+  /// atmıyordu; üstelik `_year ??= …` ile build sırasında durum değiştiriyor,
+  /// yani çizim bir yan etki üretiyordu.
+  late final List<int> _years;
+  late final FixedExtentScrollController _wheel;
 
   /// 13 yaşından küçük olduğu için reddedildi. Ekranda nazik açıklama çıkıyor.
   bool _tooYoung = false;
@@ -70,6 +87,24 @@ class _AgeGateStepState extends State<AgeGateStep> {
   // gösteriyor, kararı `set_birth_year` veriyor ve reddini AYRI bir SQLSTATE
   // ile bildiriyor; buradaki tek iş o cevabı nazik bir ekrana çevirmek.
 
+  @override
+  void initState() {
+    super.initState();
+    _years = <int>[for (int y = _maxYear; y >= _minYear; y--) y];
+    // AÇILIŞTA BİR YIL SEÇİLİ (Task 14 · K4): eskiden `_year` null başlıyor,
+    // hiçbir şey vurgulanmıyor ve "Kaydet" kapalı duruyordu — çünkü
+    // `onSelectedItemChanged` yalnızca KAYDIRMADA ateşleniyor.
+    final int initial = (_years.length / 2).floor();
+    _year = _years[initial];
+    _wheel = FixedExtentScrollController(initialItem: initial);
+  }
+
+  @override
+  void dispose() {
+    _wheel.dispose();
+    super.dispose();
+  }
+
   Future<void> _saveYear() async {
     final int? y = _year;
     if (y == null || _saving) return;
@@ -78,6 +113,7 @@ class _AgeGateStepState extends State<AgeGateStep> {
       _saving = true;
       _tooYoung = false;
     });
+    bool advance = false;
     try {
       await dailyStateRepository.setBirthYear(y);
       // YAŞ KAPISI AÇILDI (A-2): ilk çekimde kuyruğa alınan fotoğraf artık
@@ -87,6 +123,7 @@ class _AgeGateStepState extends State<AgeGateStep> {
       await photoQueue.releaseAgeGate();
       unawaited(photoQueue.flush());
       await widget.onChanged();
+      advance = true;
     } on PostgrestException catch (e) {
       // Sunucu 13 sınırını AYRI bir SQLSTATE ile bildiriyor: "geçersiz yıl"
       // ile "çok küçüksün" iki farklı ekran gerektiriyor.
@@ -106,6 +143,14 @@ class _AgeGateStepState extends State<AgeGateStep> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+    // ADIM KENDİLİĞİNDEN İLERLİYOR (Task 15 · B2).
+    //
+    // Eskiden kayıt başarılı olunca `_yearSet` true'ya dönüyor, çark/not/
+    // Kaydet dalının tamamı kayboluyor ve geriye "Kaç yılında doğdun?"
+    // başlığıyla yeşil bir rozet kalıyordu: ekranın ortası boş, yapılacak
+    // hiçbir şey yok, ama İKİNCİ bir "Devam et" isteniyordu. Tek cevap için
+    // iki onay.
+    if (advance && mounted) await widget.onDone();
   }
 
   void _snack(String message) {
@@ -129,9 +174,18 @@ class _AgeGateStepState extends State<AgeGateStep> {
         const SizedBox(height: Gap.lg),
 
         if (_yearSet)
+          // YALNIZCA GERİ DÖNÜLDÜĞÜNDE görülüyor: adım kaydettiği anda
+          // ilerliyor. Kaydedilen yıl ARTIK GÖSTERİLİYOR — değeri bir daha
+          // değiştiremeyen kullanıcının en azından ne yazdığını görmesi
+          // gerekiyor (Ayarlar satırıyla aynı gerekçe, Task 14 · K2).
           Row(
             children: <Widget>[
-              StatusBadge(label: l.ageWriteOnceNote, tone: BadgeTone.mastered),
+              StatusBadge(
+                label: widget.status?.birthYear == null
+                    ? l.ageWriteOnceNote
+                    : l.ageSavedNote('${widget.status!.birthYear}'),
+                tone: BadgeTone.mastered,
+              ),
             ],
           )
         else ...<Widget>[
@@ -211,20 +265,10 @@ class _AgeGateStepState extends State<AgeGateStep> {
   Widget _yearWheel(BuildContext context) {
     final KimoColors c = context.c;
     final KimoTypography t = context.t;
-    final List<int> years = <int>[for (int y = _maxYear; y >= _minYear; y--) y];
-    // AÇILIŞTA BİR YIL SEÇİLİ (Task 14 · K4).
-    //
-    // Eskiden `_year` null başlıyordu: çark ortada bir yıl gösteriyor, hiçbir
-    // şey vurgulanmıyor ve "Kaydet" KAPALI duruyordu. Kullanıcıya ne yapması
-    // gerektiğini söyleyen hiçbir işaret yoktu; düğme ancak çark
-    // kaydırılınca açılıyordu, çünkü `onSelectedItemChanged` yalnızca
-    // kaydırmada ateşleniyor.
-    //
-    // Varsayılan olarak ortadaki yıl seçiliyor ve altındaki sabit bant onu
-    // görünür kılıyor. Yaş kapısının kendisi DEĞİŞMİYOR: sunucu kararı
-    // veriyor ve 13 altı reddi aynen duruyor.
-    final int initialIndex = (years.length / 2).floor();
-    _year ??= years[initialIndex];
+    // Yıllar ve denetleyici `initState`te kuruldu; seçili yıl ile altındaki
+    // sabit bant birlikte "burada bir seçim var" diyor. Yaş kapısının kendisi
+    // DEĞİŞMİYOR: sunucu kararı veriyor, 13 altı reddi aynen duruyor.
+    final List<int> years = _years;
     return Container(
       height: 148,
       decoration: BoxDecoration(
@@ -246,7 +290,7 @@ class _AgeGateStepState extends State<AgeGateStep> {
             ),
           ),
           ListWheelScrollView.useDelegate(
-            controller: FixedExtentScrollController(initialItem: initialIndex),
+            controller: _wheel,
             itemExtent: 44,
             diameterRatio: 1.6,
             physics: const FixedExtentScrollPhysics(),

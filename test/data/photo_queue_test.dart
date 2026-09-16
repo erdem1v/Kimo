@@ -241,6 +241,7 @@ void main() {
     setUp(() {
       PhotoQueue.uidOverride = 'u1';
       PhotoQueue.aiConsentOverride = () => true;
+      PhotoQueue.curriculumSetOverride = () => true;
     });
 
     test('oturum yoksa hiçbir şey yapmıyor', () async {
@@ -374,8 +375,34 @@ void main() {
           reason: 'yaş kapısı needsUser DEĞİL — kullanıcı yılı yazınca çözülür');
     });
 
+    test('müfredat belirsizken analiz ERTELENİYOR, kayıt sırada kalıyor',
+        () async {
+      // Task 15. İlk fotoğraf karşılama akışının YAŞ adımında sıraya giriyor
+      // ama müfredat bir adım sonra, sınav yılından türüyor. Kapı olmadan
+      // analiz varsayılan ağaca ("eski") soruyor; 2028 ve sonrasını seçen
+      // kullanıcı (maarif) dönen konuyu kendi ağacında bulamıyor, konu
+      // sessizce düşüyor ve "Arşive kaydet" hiç açılmıyordu.
+      PhotoQueue.aiConsentOverride = () => true;
+      PhotoQueue.curriculumSetOverride = () => false;
+      await seed(<Map<String, dynamic>>[row('a', state: 'needsAnalysis')]);
+      // ÇAĞRI SAYILIYOR, istisna atılmıyor: `flush` analiz hatalarını bilerek
+      // yutup sırayı koruyor, yani atılan bir istisna kapı kalksa bile aynı
+      // durumu bırakır ve testi ayırt etmez hâle getirirdi.
+      int calls = 0;
+      PhotoQueue.analyzeOverride = (_) async {
+        calls++;
+        return const QuestionAnalysis(ok: false, options: <QuestionOption>[]);
+      };
+      await photoQueue.flush();
+      expect(calls, 0, reason: 'müfredat bilinmeden analiz çağrılmamalı');
+      expect((await photoQueue.list()).single.state,
+          PhotoQueueState.needsAnalysis,
+          reason: 'needsUser DEĞİL: profil adımı müfredatı yazınca çözülür');
+    });
+
     test('aktarım onayı yoksa analiz HİÇ çağrılmıyor', () async {
       PhotoQueue.aiConsentOverride = () => false;
+      PhotoQueue.curriculumSetOverride = () => true;
       await seed(<Map<String, dynamic>>[row('a', state: 'needsAnalysis')]);
       PhotoQueue.analyzeOverride = (_) async => throw StateError('çağrılmamalı');
       await photoQueue.flush();
@@ -477,6 +504,7 @@ void main() {
       ]);
       PhotoQueue.uidOverride = 'u1';
       PhotoQueue.aiConsentOverride = () => true;
+      PhotoQueue.curriculumSetOverride = () => true;
       final List<String> analyzed = <String>[];
       PhotoQueue.analyzeOverride = (_) async {
         analyzed.add('x');

@@ -145,12 +145,33 @@ class _SendSheetState extends State<_SendSheet> {
               ),
             ),
             const SizedBox(height: Gap.lg),
-            Text(l.sendTitle, style: t.section),
-            const SizedBox(height: Gap.xxs),
-            Text(
-              widget.title,
-              overflow: TextOverflow.ellipsis,
-              style: t.caption.copyWith(color: c.inkMuted),
+            // KAPATMA HEDEFİ (Task 15 · D3). Yaprağın tek çıkışı perdeye
+            // dokunmaktı — üstelik yükleme, hata ve "arkadaşın yok" hâllerinde
+            // ekranda dokunulabilir HİÇBİR kontrol kalmıyordu.
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(l.sendTitle, style: t.section),
+                      const SizedBox(height: Gap.xxs),
+                      Text(
+                        widget.title,
+                        overflow: TextOverflow.ellipsis,
+                        style: t.caption.copyWith(color: c.inkMuted),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed:
+                      _sending ? null : () => Navigator.of(context).pop(),
+                  icon: const KimoIcon(KimoIcons.close),
+                  tooltip: l.actionClose,
+                ),
+              ],
             ),
             const SizedBox(height: Gap.lg),
             Flexible(child: _body(context, l)),
@@ -183,6 +204,7 @@ class _SendSheetState extends State<_SendSheet> {
               KimoButton(
                 label: l.sendAction,
                 icon: const KimoIcon(KimoIcons.play, size: 18),
+                busy: _sending,
                 onPressed: (_selected.isEmpty || _sending) ? null : _send,
               ),
             ],

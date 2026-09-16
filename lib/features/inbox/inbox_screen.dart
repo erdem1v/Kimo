@@ -367,6 +367,10 @@ class _InboxCardState extends State<_InboxCard> {
         Expanded(
           child: KimoButton(
             label: l.inboxSolve,
+            // İKİNCİL: kart başına bir tane çiziliyor ve `KimoButton`ın kendi
+            // kuralı "ekranda en fazla bir birincil" diyor. Beş gelen soruda
+            // ekran beş mercan düğmeyle doluyor, hiçbiri öne çıkmıyordu.
+            kind: KimoButtonKind.secondary,
             minHeight: Sizes.rowMin,
             onPressed: widget.question.solved
                 ? null
@@ -593,7 +597,18 @@ class _ReportSheetState extends State<_ReportSheet> {
             KimoButton(
               label: l.inboxReportSend,
               icon: const KimoIcon(KimoIcons.flag, size: 18),
+              busy: _sending,
               onPressed: (_reason == null || _sending) ? null : _send,
+            ),
+            // KAPATMA HEDEFİ (Task 15 · D3). Yaprağın tek çıkışı perdeye
+            // dokunmaktı; `send_flow.dart`ın kendi yorumu Apple HIG ve WCAG
+            // 2.5.1/2.5.7'ye atıfla dokunulabilir bir kapatma hedefini
+            // zorunlu kılıyor ve orada uygulanmış durumda.
+            const SizedBox(height: Gap.sm),
+            KimoButton(
+              label: l.actionCancel,
+              kind: KimoButtonKind.tertiary,
+              onPressed: _sending ? null : () => Navigator.of(context).pop(),
             ),
           ],
         ),

@@ -452,8 +452,12 @@ class _TodayScreenState extends State<TodayScreen> {
     if (!mounted) return;
     switch (out) {
       case CreditWallOutcome.manualEntry:
-        await Navigator.of(context).push<bool>(
-          MaterialPageRoute<bool>(
+        // `<String>`: onay ekranının sözleşmesi bu. `<bool>` iken başarılı
+        // bir kayıttan sonraki `pop(kimlik)` tip denetiminde patlıyor,
+        // hata ağ hatası sanılıp kullanıcıya "Kaydedilemedi. Tekrar dene."
+        // deniyor ve tekrar dokunmak MÜKERRER satır yaratıyordu.
+        await Navigator.of(context).push<String>(
+          MaterialPageRoute<String>(
             builder: (_) => const ConfirmMistakeScreen(),
           ),
         );

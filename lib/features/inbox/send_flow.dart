@@ -527,8 +527,14 @@ class _SendArchiveScreenState extends State<SendArchiveScreen> {
           Row(
             children: <Widget>[
               Expanded(
+                // KAPALI DÜĞMENİN GERÇEK KOŞULU (Task 15 · D5). Düğme
+                // `_selectedId == null` iken kapalı, ama yanındaki tek metin
+                // notların gönderilmediğini anlatıyordu — yani başka bir
+                // şeyi. Seçim yapılana kadar önce ENGELİ söylüyoruz.
                 child: Text(
-                  l.sendArchiveNote(widget.friendName),
+                  _selectedId == null
+                      ? l.sendArchiveNeedPick
+                      : l.sendArchiveNote(widget.friendName),
                   style: t.caption.copyWith(color: c.inkMuted),
                 ),
               ),
@@ -546,6 +552,7 @@ class _SendArchiveScreenState extends State<SendArchiveScreen> {
           const SizedBox(height: Gap.md),
           KimoButton(
             label: l.sendArchiveAction,
+            busy: _sending,
             onPressed: (_selectedId == null || _sending) ? null : _send,
           ),
         ],

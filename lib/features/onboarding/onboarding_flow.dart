@@ -20,17 +20,26 @@ import '../../widgets/kit/kimo_button.dart';
 import '../../widgets/kit/kimo_chips.dart';
 import '../../widgets/kit/kimo_icons.dart';
 import '../../widgets/kit/kimo_progress.dart';
+import '../../widgets/kit/kimo_surfaces.dart';
 import '../capture/capture_screen.dart';
 import 'age_gate_step.dart';
 import 'persona_card.dart';
 
 /// Karşılama akışı.
 ///
-/// Adımlar: (ilk çekim) · yaş kapısı · takma ad + sınav yılı · persona ·
-/// bildirim · (kayıt). Parantezliler yalnızca anonim oturumdan gelenler için.
+/// Adımlar: yaş kapısı · takma ad + sınav yılı · hatırlatma + ses · (kayıt).
+/// Sonuncusu yalnızca anonim oturumdan gelenler için.
 /// Kaldırılanlar: üç "nasıl çalışır" anlatım sayfası (ürünün kendisi zaten
-/// anlatıyor), "merhaba" sayfası (karşılama ekranına taşındı) ve e-posta
-/// doğrulama adımı (Task 06).
+/// anlatıyor), "merhaba" sayfası (karşılama ekranına taşındı), e-posta
+/// doğrulama adımı (Task 06), **ilk çekim adımı** ve **ayrı persona adımı**
+/// (Task 15).
+///
+/// **İLK ÇEKİM ADIM DEĞİL, AÇILIŞ (Task 15).** Anonim kullanıcı akışa
+/// girdiğinde çekim ekranı doğrudan açılıyor — Task 02 §7.1'in yazdığı
+/// davranış tam olarak buydu. Araya konan adım `CaptureScreen`in boş hâlinin
+/// kopyasıydı: aynı ARB anahtarları, aynı 130px Kimo ve `welcomePrimary`
+/// etiketli aynı düğme. Karşılama ekranıyla birlikte üst üste ÜÇ ekran aynı
+/// şeyi söylüyordu.
 ///
 /// **Kayıt SONDA.** Anonim oturumla gelen kullanıcı ilk yanlışını çoktan
 /// çekmiş oluyor; son adımda `updateUser` ile aynı `uid` kalıcı hesaba
@@ -46,7 +55,7 @@ class OnboardingFlow extends StatefulWidget {
   State<OnboardingFlow> createState() => _OnboardingFlowState();
 }
 
-enum _Step { firstCapture, age, profile, mascot, notifications, signUp }
+enum _Step { age, profile, reminders, signUp }
 
 class _OnboardingFlowState extends State<OnboardingFlow> {
   final TextEditingController _nickname = TextEditingController();
@@ -59,7 +68,12 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   int? _year;
   Mascot? _mascot;
-  bool? _notify;
+
+  /// Hatırlatma tercihi. **AÇIK BAŞLIYOR** (Task 15): eskiden `null`dı ve
+  /// footer `_notify != null` isteyene kadar kilitliydi, yani adım her
+  /// kullanıcıya en az iki dokunuşa mal oluyordu — biri kararı vermek, biri
+  /// onaylamak için.
+  bool _notify = true;
   bool _saving = false;
   AgeStatus? _age;
 
@@ -104,16 +118,16 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     // fotoğrafı kuyrukta duran kullanıcı adımı yine "İlk yanlışını çek"
     // hâlinde görüyor ve İKİNCİ bir fotoğraf çekiyordu — D1'in ta kendisi,
     // yalnızca yeniden başlatmanın ardında saklanmış hâli.
-    unawaited(_loadQueued());
+    // İlk kare çizildikten SONRA: `initState` içinde rota itmek Navigator'ı
+    // henüz kurulmamış bir ağaçta arıyor.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_presentFirstCapture());
+    });
 
     _steps = <_Step>[
-      // Yalnızca "İlk yanlışını çek" yolundan gelenler için: hesabı olan biri
-      // zaten arşivine sahip.
-      if (_anonymous) _Step.firstCapture,
       _Step.age,
       _Step.profile,
-      _Step.mascot,
-      _Step.notifications,
+      _Step.reminders,
       // Zaten kalıcı hesabı olan (giriş yapmış) kullanıcıya kayıt sorulmaz.
       if (_anonymous) _Step.signUp,
     ];
@@ -171,12 +185,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   /// deliğe dönüştü. Artık yıl yazılmadan ilerlenmiyor; ağ hatasında kullanıcı
   /// "Kaydet"e yeniden basıyor ve nedenini görüyor.
   bool get _canContinue => switch (_current) {
-        _Step.firstCapture => true,
         _Step.age => _age?.birthYearSet ?? false,
         _Step.profile => _nickname.text.trim().length >= 2 && _year != null,
-        // Ön seçili geldiği için kilitlenmez; sürtünme eklemeden geçilir.
-        _Step.mascot => true,
-        _Step.notifications => _notify != null,
+        // Ses ön seçili, hatırlatma açık geliyor: adım kilitlenmiyor.
+        _Step.reminders => true,
         // Onay verilmeden kayıt TAMAMLANMIYOR (Apple 1.2).
         _Step.signUp => _emailOk && _passwordOk && _termsAccepted,
       };
@@ -201,8 +213,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     setState(() => _saving = true);
     try {
       switch (_current) {
-        case _Step.firstCapture:
-          break;
         case _Step.age:
           break;
         case _Step.profile:
@@ -212,11 +222,15 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             nickname: _nickname.text.trim(),
             examYear: _year!,
           );
-        case _Step.mascot:
+          // MÜFREDAT ARTIK BELLİ: sınav yılından türedi. Yaş adımında sıraya
+          // giren fotoğraf bu ana kadar bilerek bekletildi (bkz.
+          // `PhotoQueue.flush`), çünkü analiz konuyu müfredat ağacından
+          // seçiyor ve yanlış ağaçtan gelen konu kaydetmeyi kilitliyordu.
+          unawaited(photoQueue.flush());
+        case _Step.reminders:
           await userProfile.setMascot(_mascot ?? Mascot.fallback);
-        case _Step.notifications:
           bool granted = false;
-          if (_notify == true) {
+          if (_notify) {
             granted = await notifications.requestPermission();
             if (!granted && mounted) _snack(l.notifyDenied);
           }
@@ -335,14 +349,17 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       padding: const EdgeInsets.fromLTRB(Gap.xs, Gap.xs, Gap.screen, Gap.md),
       child: Row(
         children: <Widget>[
-          IconButton(
-            onPressed: _index == 0 ? null : _back,
-            icon: KimoIcon(
-              KimoIcons.back,
-              color: _index == 0 ? c.border : c.ink,
+          // İLK ADIMDA HİÇ ÇİZİLMİYOR. Eskiden `onPressed: null` ile soluk
+          // bir ok duruyordu: geri dönülecek bir yer yokken ekranda kalıcı
+          // olarak ÖLÜ bir kontrol vardı.
+          if (_index == 0)
+            const SizedBox(width: Gap.screen)
+          else
+            IconButton(
+              onPressed: _back,
+              icon: KimoIcon(KimoIcons.back, color: c.ink),
+              tooltip: l.onboardBack,
             ),
-            tooltip: l.onboardBack,
-          ),
           const Spacer(),
           Text(
             l.onboardStep(_index + 1, _steps.length),
@@ -355,63 +372,33 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   Widget _page(BuildContext context, L10n l) {
     return switch (_current) {
-      _Step.firstCapture => _firstCapturePage(context, l),
-      _Step.age => AgeGateStep(status: _age, onChanged: _loadAge),
+      _Step.age => AgeGateStep(status: _age, onChanged: _loadAge, onDone: _next),
       _Step.profile => _profilePage(context, l),
-      _Step.mascot => _mascotPage(context, l),
-      _Step.notifications => _notifyPage(context, l),
+      _Step.reminders => _remindersPage(context, l),
       _Step.signUp => _signUpPage(context, l),
     };
   }
 
-  /// İKİ HÂLİ VAR (Task 14 · D1).
+  /// İlk çekim ekranı bu oturumda bir kez açıldı mı.
+  bool _capturePresented = false;
+
+  /// Anonim kullanıcıyı doğrudan çekim ekranına indirir (Task 15 · B1).
   ///
-  /// Eskiden çekimden sonra sayfa AYNI kalıyordu: aynı başlık, aynı gövde ve
-  /// `welcomePrimary` ("İlk yanlışını çek") etiketli aynı düğme. Üstelik
-  /// `WelcomeScreen`in birincil düğmesi de aynı etiketi taşıyor, yani
-  /// kullanıcı arka arkaya İKİ KEZ "İlk yanlışını çek" görüyor ve ikincisinde
-  /// fotoğrafının alınıp alınmadığını anlayamıyordu — en olası davranış aynı
-  /// düğmeye tekrar basıp ikinci bir fotoğrafı kuyruğa sokmaktı.
+  /// Araya konan "ilk çekim" adımı `CaptureScreen`in boş hâlinin kopyasıydı —
+  /// aynı `captureEmptyTitle` / `captureEmptyBody`, aynı maskot, `welcomePrimary`
+  /// etiketli aynı düğme. Karşılama ekranı da aynı etiketi taşıdığı için
+  /// kullanıcı "İlk yanlışını çek" yazan İKİ ekranı arka arkaya görüyor ve
+  /// ikincisinde ne değiştiğini anlamıyordu.
   ///
-  /// Şimdi çekimden sonra adım onay hâline geçiyor: başlık fotoğrafın sırada
-  /// olduğunu söylüyor, gövde ne zaman bakılacağını açıklıyor ve kamera
-  /// düğmesinin etiketi AYRIŞIYOR ("Bir tane daha çek"). Alttaki "Devam"
-  /// düğmesi ikisinde de açık — ilk çekim ZORUNLU DEĞİL, sadece artık
-  /// atlandığı görünür oluyor.
-  Widget _firstCapturePage(BuildContext context, L10n l) {
-    final KimoColors c = context.c;
-    final KimoTypography t = context.t;
-    final bool done = _queued > 0;
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: Gap.screen),
-      children: <Widget>[
-        Center(
-          child: Kimo(
-            size: 130,
-            controller: _kimo,
-            onTap: () => _kimo.trigger(KimoReaction.tap),
-          ),
-        ),
-        const SizedBox(height: Gap.lg),
-        Text(
-          done ? l.onboardCaptureDoneTitle : l.captureEmptyTitle,
-          textAlign: TextAlign.center,
-          style: t.title,
-        ),
-        const SizedBox(height: Gap.sm),
-        Text(
-          done ? l.captureQueuedBody : l.captureEmptyBody,
-          textAlign: TextAlign.center,
-          style: t.body.copyWith(color: c.inkSecondary),
-        ),
-        const SizedBox(height: Gap.xl),
-        KimoButton(
-          label: done ? l.onboardCaptureAnother : l.welcomePrimary,
-          icon: const KimoIcon(KimoIcons.camera, size: 20),
-          onPressed: _capture,
-        ),
-      ],
-    );
+  /// KUYRUK ÖNCE OKUNUYOR: uygulama kapanıp açıldığında fotoğraf zaten
+  /// kuyruktaysa kamera yeniden açılmıyor, yoksa kullanıcı ikinci bir
+  /// fotoğraf çekmeye itilirdi (Task 14 · D1'in yeniden başlatma hâli).
+  Future<void> _presentFirstCapture() async {
+    if (_capturePresented || !_anonymous) return;
+    _capturePresented = true;
+    await _loadQueued();
+    if (!mounted || _queued > 0) return;
+    await _capture();
   }
 
   Widget _profilePage(BuildContext context, L10n l) {
@@ -459,17 +446,45 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     );
   }
 
-  Widget _mascotPage(BuildContext context, L10n l) {
+  /// Hatırlatma + ses, TEK EKRAN (Task 15 · B4, B5).
+  ///
+  /// İki ayrı adımdı ve persona adımı hiçbir şey SORMUYORDU: seçim
+  /// `initState`te `Mascot.fallback` ile önceden yapılıyor, `_canContinue`
+  /// sabit `true` dönüyordu. Gövde metni de ("Hatırlatmaların hep Kimo'dan
+  /// gelir") zaten bir sonraki adımın konusunu anlatıyordu — iki ekranın
+  /// konusu tekti.
+  ///
+  /// Tercih artık iki düğme değil bir ANAHTAR. Eski hâlde seçim düğme
+  /// TÜRÜYLE taşınıyordu: "Evet" seçili değilken ikincil, "hayır" seçiliyken
+  /// ikincil — yani iki durum aynı ağırlıkta görünüyordu.
+  ///
+  /// Kahraman maskot YOK. Ekranın işi dört tonun farkını beş saniyede
+  /// duyurmak; maskot önizlemenin içinde, olması gereken boyutta duruyor.
+  Widget _remindersPage(BuildContext context, L10n l) {
     final KimoColors c = context.c;
     final KimoTypography t = context.t;
     final Mascot selected = _mascot ?? Mascot.fallback;
-    // Kahraman maskot YOK. Ekranın tek işi dört tonun farkını beş saniyede
-    // duyurmak; 120px'lik bir Kimo, karşılaştırılacak dört cümleyi ekranın
-    // dışına iterdi. Maskot önizlemenin içinde, olması gereken boyutta duruyor.
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: Gap.screen),
       children: <Widget>[
-        Text(l.mascotStepTitle, style: t.title),
+        Text(l.notifyStepTitle, style: t.title),
+        const SizedBox(height: Gap.sm),
+        Text(l.notifyStepBody, style: t.body.copyWith(color: c.inkSecondary)),
+        const SizedBox(height: Gap.md),
+        KimoCard(
+          padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
+          child: SwitchListTile(
+            value: _notify,
+            contentPadding: EdgeInsets.zero,
+            title: Text(l.notifyYes, style: t.label),
+            onChanged: (bool v) {
+              sound.tap();
+              setState(() => _notify = v);
+            },
+          ),
+        ),
+        const SizedBox(height: Gap.xl),
+        Text(l.mascotStepTitle, style: t.section),
         const SizedBox(height: Gap.xs),
         Text(
           l.mascotStepBody,
@@ -490,41 +505,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           ),
           const SizedBox(height: Gap.sm),
         ],
-      ],
-    );
-  }
-
-  Widget _notifyPage(BuildContext context, L10n l) {
-    final KimoColors c = context.c;
-    final KimoTypography t = context.t;
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: Gap.screen),
-      children: <Widget>[
-        Text(l.notifyStepTitle, style: t.title),
-        const SizedBox(height: Gap.sm),
-        Text(l.notifyStepBody, style: t.body.copyWith(color: c.inkSecondary)),
-        const SizedBox(height: Gap.xl),
-        KimoButton(
-          label: l.notifyYes,
-          onPressed: () {
-            sound.tap();
-            setState(() => _notify = true);
-          },
-          kind: _notify == true
-              ? KimoButtonKind.primary
-              : KimoButtonKind.secondary,
-        ),
-        const SizedBox(height: Gap.sm),
-        KimoButton(
-          label: l.notifyNo,
-          kind: _notify == false
-              ? KimoButtonKind.secondary
-              : KimoButtonKind.tertiary,
-          onPressed: () {
-            sound.tap();
-            setState(() => _notify = false);
-          },
-        ),
       ],
     );
   }
@@ -656,8 +636,23 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         children: <Widget>[
           KimoButton(
             label: _label(l, last),
+            busy: _saving,
             onPressed: (_saving || !_canContinue) ? null : _next,
           ),
+          // KAPALI DÜĞMENİN SEBEBİ YAZIYOR (Task 15 · D5 sınıfı).
+          //
+          // Profil adımında "Devam et" iki koşulla kapalı (takma ad en az iki
+          // harf, sınav yılı seçili) ama ekranda bunu söyleyen HİÇBİR metin
+          // yoktu: kullanıcı soluk bir düğmeye bakıp neyin eksik olduğunu
+          // tahmin etmek zorundaydı.
+          if (_blockedReason(l) case final String reason) ...<Widget>[
+            const SizedBox(height: Gap.xs),
+            Text(
+              reason,
+              textAlign: TextAlign.center,
+              style: context.t.caption.copyWith(color: context.c.inkMuted),
+            ),
+          ],
           const SizedBox(height: Gap.md),
           StepDots(total: _steps.length, current: _index + 1),
         ],
@@ -665,9 +660,22 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     );
   }
 
+  /// Footer kapalıysa engeli tek cümleyle söyler; açıksa `null`.
+  ///
+  /// Kayıt adımı KAPSAM DIŞI: orada alanların kendi hata metinleri ve onay
+  /// satırı zaten duruyor, ikinci bir cümle tekrar olurdu.
+  String? _blockedReason(L10n l) {
+    if (_saving || _canContinue) return null;
+    return switch (_current) {
+      _Step.age => l.ageNeedSave,
+      _Step.profile => l.profileNeedBoth,
+      _Step.reminders => null,
+      _Step.signUp => null,
+    };
+  }
+
   String _label(L10n l, bool last) {
     if (_saving) return l.actionSave;
-    if (_current == _Step.mascot) return l.mascotContinue;
     if (_current == _Step.signUp) return l.signUpAction;
     if (last) return l.signUpDone;
     return l.actionContinue;

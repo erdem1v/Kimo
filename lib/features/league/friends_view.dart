@@ -456,11 +456,22 @@ class _FriendsViewState extends State<FriendsView> {
                 ),
               ),
               const SizedBox(width: Gap.sm),
-              KimoButton(
-                label: l.friendsAddAction,
-                expand: false,
-                minHeight: Sizes.rowMin,
-                onPressed: _adding ? null : _addByCode,
+              // BOŞ KODDA KAPALI (Task 15 · D2). Eskiden yalnızca `_adding`
+              // kapatıyordu: alan boşken düğme tamamen etkin görünüyor,
+              // dokunuş `_addByCode`ın ilk satırında sessizce dönüyor ve
+              // kullanıcıya hiçbir şey söylenmiyordu.
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _code,
+                builder: (BuildContext ctx, TextEditingValue v, Widget? _) =>
+                    KimoButton(
+                  label: l.friendsAddAction,
+                  expand: false,
+                  busy: _adding,
+                  minHeight: Sizes.rowMin,
+                  onPressed: (_adding || v.text.trim().isEmpty)
+                      ? null
+                      : _addByCode,
+                ),
               ),
             ],
           ),
@@ -504,6 +515,10 @@ class _FriendsViewState extends State<FriendsView> {
               Expanded(
                 child: KimoButton(
                   label: l.friendsAccept,
+                  // İKİNCİL: bekleyen istek başına bir tane çiziliyor. Üç
+                  // istekte, "Ekle" ile birlikte dört birincil düğme aynı
+                  // ekranda duruyordu.
+                  kind: KimoButtonKind.secondary,
                   minHeight: Sizes.rowMin,
                   onPressed: busy
                       ? null

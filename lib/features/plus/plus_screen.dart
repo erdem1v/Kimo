@@ -434,6 +434,11 @@ class _PlusScreenState extends State<PlusScreen> {
           // Semantics(enabled: false)) — yeni koda gerek yok.
           KimoButton(
             label: l.plusCta(PlusPlans.trialDays),
+            // MEŞGUL HÂLİ GÖRÜNÜR (Task 15 · D5). Düğme üç koşulla
+            // kapanıyordu ama altındaki metin yalnızca birini anlatıyor;
+            // satın alma sürerken ekranda ilerlemeyi gösteren HİÇBİR işaret
+            // yoktu, yalnızca solmuş bir düğme vardı.
+            busy: _busy,
             onPressed: (PlusPlans.isConfigured && _selected != null && !_busy)
                 ? _buy
                 : null,

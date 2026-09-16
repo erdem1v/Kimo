@@ -291,9 +291,22 @@
   "confirmOptional": "(isteğe bağlı)",
   "confirmSave": "Arşive kaydet",
   "confirmSaveFailed": "Kaydedilemedi. Tekrar dene.",
-  "confirmNextReview": "Bu soru yarın karşına çıkacak",
+  "confirmSaving": "Kaydediliyor…",
+  "confirmNeedSubject": "Önce ders seç",
+  "confirmNeedConcept": "Önce konu seç",
+  "ageSavedNote": "Doğum yılın: {year} — bir daha değiştirilemez.",
+  "ageNeedSave": "Doğum yılını seçip Kaydet'e dokun",
+  "profileNeedBoth": "Takma adını yaz ve sınav yılını seç",
+  "@ageSavedNote": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmNextReview": "Bu soruyu birkaç saat sonra karşına çıkaracağım",
   "@confirmNextReview": {
-    "description": "Tekrar merdiveninin İLK adımı koddaki `steps.first` = 1 gün. Tasarımdaki '3 gün' değeri koddaki değerle çelişiyordu; kod kazandı."
+    "description": "İlk tekrar AYNI GÜN, ~3 saat sonra: sunucu tetikleyicisi `mistakes_review_timing` (0033) yeni kayda `now() + interval '3 hours'` yazıyor. Merdivenin 1 günlük ilk adımı ikinci tekrardan itibaren işliyor; metin 'yarın' derken ürünün tuttuğundan farklı bir söz veriyordu (Task 15)."
   },
   "confirmNeedTopic": "Önce ders ve konu seç",
   "confirmNeedCorrect": "Doğru şıkkı işaretle",
@@ -795,6 +808,7 @@
   "sendArchiveSearchHint": "Konu veya ders ara",
   "sendArchiveRecent": "Son eklenenler",
   "sendArchiveAction": "Gönder",
+  "sendArchiveNeedPick": "Önce göndereceğin soruyu seç",
   "sendArchiveNote": "{name} soruyu görecek; senin notların gönderilmez",
   "@sendArchiveNote": {
     "description": "Öğrencinin KENDİ notu (mistakes.note) gönderime hiç girmiyor — received_questions yalnızca gönderim notunu yayınlıyor. Dipnot bu sözleşmeyi görünür kılıyor.",
@@ -1204,6 +1218,8 @@
   },
   "settingsNotifyOff": "Bildirimler kapalı",
   "settingsNotifyOffNote": "Saatleri değiştirmek için önce bildirimleri aç.",
+  "settingsNotifyBlocked": "Bildirimlere izin verilmemiş",
+  "settingsNotifyBlockedNote": "Kimo bildirim gönderemiyor: izin telefonun ayarlarından kapalı. Uygulama içindeki anahtar bunu açamıyor, izni Kimo'nun bildirim ayarlarından vermen gerekiyor.",
   "settingsSaveFailed": "Ayar kaydedilemedi. Bağlantını kontrol edip tekrar dene.",
   "@settingsSaveFailed": {
     "description": "Ayarlar anahtarı sunucuya yazılamayınca. Eskiden anahtar görsel olarak dönüyor, yazım sessizce düşüyor ve yeniden açılışta eski hâline geri sarıyordu (Task 14)."

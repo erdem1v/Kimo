@@ -202,6 +202,7 @@ class UserProfile extends ChangeNotifier {
       'curriculum': _curriculum,
       'exam_year': year,
     });
+    await _refreshClaims();
     // Müfredat DEĞİŞTİ: konu ağacı da öyle. Gömülü yedek iki müfredatı da
     // taşıdığı için seçici hemen çalışıyor; bu çağrı sunucudaki güncel ağacı
     // arka planda getiriyor.
@@ -234,6 +235,7 @@ class UserProfile extends ChangeNotifier {
       'curriculum': _curriculum,
       'exam_year': examYear,
     });
+    await _refreshClaims();
     unawaited(curriculumRepository.refresh(_curriculum!));
   }
 
@@ -274,6 +276,30 @@ class UserProfile extends ChangeNotifier {
 
   Future<void> _save(Map<String, dynamic> data) async {
     await Supabase.instance.client.auth.updateUser(UserAttributes(data: data));
+  }
+
+  /// Müfredat metadata'sı yazıldıktan sonra ERİŞİM JETONUNU tazeler.
+  ///
+  /// **Neden gerekli.** Sunucuda `my_curriculum()` müfredatı
+  /// `auth.jwt() -> 'user_metadata' ->> 'curriculum'` ile okuyor,
+  /// `mistakes.curriculum` varsayılanı ondan geliyor ve yazma tetikleyicisi
+  /// (`mistakes_topic_check`) konuyu O ağaca göre doğruluyor.
+  ///
+  /// `updateUser` kullanıcı kaydını güncelliyor ama JETONU YENİDEN ÜRETMİYOR:
+  /// metadata'da 'maarif' yazdığı hâlde jetonun `user_metadata`'sı boş
+  /// kalıyor, sunucu 'eski' varsayıyor ve maarif ağacından gelen her konu
+  /// `KM022` ile reddediliyordu. Somut sonucu şuydu: sınav yılı 2028 ve
+  /// sonrasını seçen her yeni kullanıcı İLK SORUSUNU HİÇ KAYDEDEMİYORDU.
+  ///
+  /// Hata YUTULUYOR: metadata zaten yazıldı ve jeton en geç kendi
+  /// yenilenmesinde doğru claim'i taşıyacak. Tazeleme bir hızlandırma,
+  /// verinin tek koruması değil.
+  Future<void> _refreshClaims() async {
+    try {
+      await Supabase.instance.client.auth.refreshSession();
+    } catch (e) {
+      debugPrint('jeton tazelenemedi; müfredat claimi sonraki yenilemede: $e');
+    }
   }
 
   /// Oturum kapanınca temizle.

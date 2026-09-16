@@ -32,6 +32,7 @@ class KimoButton extends StatefulWidget {
     this.expand = true,
     this.playTapSound = true,
     this.minHeight,
+    this.busy = false,
   });
 
   final String label;
@@ -51,6 +52,14 @@ class KimoButton extends StatefulWidget {
 
   final double? minHeight;
 
+  /// İş sürüyor mu. `true` iken etiketin solunda küçük bir çember döner ve
+  /// buton dokunuşa yanıt vermez.
+  ///
+  /// Kaydetme yollarında [onPressed] zaten `null`a düşüyordu, yani buton
+  /// soluyordu — ama SEBEBİ görünmüyordu: kullanıcı "kapalı" ile "çalışıyor"
+  /// arasındaki farkı ayırt edemiyordu.
+  final bool busy;
+
   @override
   State<KimoButton> createState() => _KimoButtonState();
 }
@@ -58,7 +67,7 @@ class KimoButton extends StatefulWidget {
 class _KimoButtonState extends State<KimoButton> {
   bool _down = false;
 
-  bool get _enabled => widget.onPressed != null;
+  bool get _enabled => widget.onPressed != null && !widget.busy;
 
   void _setDown(bool value) {
     if (_down == value) return;
@@ -92,7 +101,17 @@ class _KimoButtonState extends State<KimoButton> {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
-        if (widget.icon != null) ...<Widget>[
+        if (widget.busy) ...<Widget>[
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: skin.foreground,
+            ),
+          ),
+          const SizedBox(width: Gap.sm),
+        ] else if (widget.icon != null) ...<Widget>[
           IconTheme(
             data: IconThemeData(color: skin.foreground, size: 20),
             child: widget.icon!,

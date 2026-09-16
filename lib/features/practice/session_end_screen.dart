@@ -78,11 +78,25 @@ class _SessionEndScreenState extends State<SessionEndScreen> {
       body: SafeArea(
         child: Column(
           children: <Widget>[
+            // KAPATMA HEDEFİ (Task 15 · D4). Ekranın ne AppBar'ı ne kapatma
+            // ikonu vardı: çıkış yalnızca alttaki düğmelerdeydi ve uzun bir
+            // özetin sonunda, kaydırma gerektiriyordu.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: IconButton(
+                onPressed: () {
+                  sound.tap();
+                  Navigator.of(context).pop(false);
+                },
+                icon: const KimoIcon(KimoIcons.close),
+                tooltip: l.actionClose,
+              ),
+            ),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: Gap.screen),
                 children: <Widget>[
-                  const SizedBox(height: Gap.xl),
+                  const SizedBox(height: Gap.md),
                   Center(child: Kimo(size: 140, controller: _kimo)),
                   const SizedBox(height: Gap.lg),
                   Text(

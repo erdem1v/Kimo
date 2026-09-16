@@ -177,6 +177,20 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
   /// sorularında ve bazı deneme kitapçıklarında geçiyor.
   static const List<int> _optionCounts = <int>[4, 5];
 
+  /// Yapay zekâ şıkları gerçekten çıkardı mı.
+  ///
+  /// `analysis.ok` tanımı gereği "şıklar var" demek (`MistakeRepository`
+  /// içinde `hasOptions && options.isNotEmpty`), yani sayı da etiketler de
+  /// biliniyor.
+  ///
+  /// Kuyruktan tamamlanan kayıtta `analysis` `null` gelir çünkü analiz akışın
+  /// dışında, `PhotoQueue.flush` içinde yapıldı. Oradaki köken işareti
+  /// (`labels_from_ai`) aynı bilgiyi taşıyor: işaret yoksa şıkları kullanıcı
+  /// belirledi ya da hiç belirlenmedi, yani soru gerçekten anlamlı.
+  bool get _aiGaveOptions =>
+      widget.analysis?.ok == true ||
+      widget.initialFields?['labels_from_ai'] == true;
+
   void _setOptionCount(int n) {
     sound.tap();
     setState(() {
@@ -193,6 +207,12 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
     final L10n l = L10n.of(context);
     final NavigatorState nav = Navigator.of(context);
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    // EKRANI KAPATMA KARARI try/catch'in DIŞINDA veriliyor. `nav.pop` eskiden
+    // `try` gövdesinin içindeydi: pop'un kendisi hata atarsa (rotanın sonuç
+    // tipi tutmuyorsa `didPop` eşdeğişken denetimde patlıyor) bu AĞ HATASI
+    // sanılıyor, kaydedilmiş bir satır kullanıcıya "sıraya alındı" diye
+    // gösteriliyordu.
+    String? result;
     try {
       final List<QuestionOption> options = <QuestionOption>[
         for (final String label in _labels)
@@ -219,13 +239,12 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
       // yolu buna ihtiyaç duyuyor. `true` yerine kimlik dönmek geriye dönük
       // uyumu bozmuyor çünkü çağıranlar `== true` yerine `!= null` kontrol
       // ediyor — ikisi de aynı "kaydedildi" anlamını taşıyor.
-      if (mounted) nav.pop(newId ?? kQueuedSentinel);
+      result = newId ?? kQueuedSentinel;
     } on PostgrestException catch (e) {
       // SUNUCU REDDETTİ: tekrar denemek aynı sonucu verir, kuyruğa almak
       // kaydı sonsuza dek bekletirdi (SubmissionQueue'nun kalıcı-ret dersi).
       debugPrint('hata kaydı sunucuca reddedildi: ${e.code} ${e.message}');
       if (!mounted) return;
-      setState(() => _saving = false);
       if (e.code == MistakeRepository.staleTopicCode) {
         // Ağaç bizde bayat: konu artık müfredatta yok. Sessiz bir "kaydedilemedi"
         // yerine sebebi söyleniyor ve liste tazeleniyor — kullanıcı yeni ağaçtan
@@ -251,11 +270,17 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
         messenger.showSnackBar(SnackBar(content: Text(l.confirmSavedQueued)));
         // KUYRUĞA ALINDI: satır henüz YOK, yani gönderilecek bir kimlik de
         // yok. [kQueuedSentinel] "kaydedildi ama gönderilemez" demek.
-        nav.pop(kQueuedSentinel);
-      } else {
-        setState(() => _saving = false);
+        result = kQueuedSentinel;
       }
+    } finally {
+      // Ekran AÇIK KALIYORSA düğme mutlaka geri geliyor. Sıfırlama eskiden üç
+      // ayrı dalın içindeydi; bir dal kaçınca `_saving` sonsuza dek `true`
+      // kalıyor ve ekrandaki HER kontrol (kaydet, vazgeç, analizi bekle) aynı
+      // anda ölüyordu — kullanıcının tek çıkışı işletim sistemi jestiydi.
+      if (mounted) setState(() => _saving = false);
     }
+    if (!mounted) return;
+    if (result != null) nav.pop(result);
   }
 
   /// Kaydı fotoğraf kuyruğuna yazar (ya da kuyruktaki kaydı günceller).
@@ -302,13 +327,16 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
     final L10n l = L10n.of(context);
     final NavigatorState nav = Navigator.of(context);
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-    final bool ok = await _queueForLater(PhotoQueueState.needsAnalysis);
+    bool ok = false;
+    try {
+      ok = await _queueForLater(PhotoQueueState.needsAnalysis);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
     if (!mounted) return;
     if (ok) {
       messenger.showSnackBar(SnackBar(content: Text(l.captureQueuedOffline)));
       nav.pop(kQueuedSentinel);
-    } else {
-      setState(() => _saving = false);
     }
   }
 
@@ -371,7 +399,11 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
       child: Row(
         children: <Widget>[
           IconButton(
-            onPressed: _saving ? null : () => Navigator.of(context).pop(false),
+            // `null` = VAZGEÇİLDİ. Eskiden `false` dönüyordu; çekim ve parti
+            // akışları ekranı `MaterialPageRoute<String>` olarak ittiği için
+            // `didPop(false)` eşdeğişken tip denetiminde patlıyor, hata jest
+            // işleyicisinde yutuluyor ve DOKUNUŞ HİÇBİR ŞEY YAPMIYORDU.
+            onPressed: _saving ? null : () => Navigator.of(context).pop(),
             icon: KimoIcon(KimoIcons.close, color: c.ink),
             tooltip: l.actionCancel,
           ),
@@ -492,6 +524,11 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
   String _introText(L10n l) {
     final QuestionAnalysis? a = widget.analysis;
     if (a != null && a.ok) return l.confirmIntro;
+    // KUYRUKTAN TAMAMLANAN KAYIT (Task 15). Analiz akışın dışında, `flush`
+    // içinde yapıldığı için `analysis` burada `null` geliyor ve ekran
+    // "Sınavı, dersi ve konuyu seç" diyordu — oysa üçü de DOLU geliyor ve
+    // kullanıcıya kalan tek iş doğru şıkkı işaretlemek.
+    if (_aiGaveOptions) return l.confirmIntro;
     return switch (a?.failure) {
       AnalysisFailure.unreadable => l.analysisReasonUnreadable,
       AnalysisFailure.noQuestion => l.analysisReasonNoQuestion,
@@ -574,8 +611,12 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
             label: l.confirmTopic,
             value: _concept,
             placeholder: l.confirmTopicPick,
-            enabled: _subject != null,
-            onTap: _subject == null ? null : () => _pickTopic(context),
+            // DERS ZORUNLU DEĞİL: `showTopicPicker` dersi opsiyonel alıyor ve
+            // boşken bütün derslerde arıyor (`_pickTopic`'in yorumu da bunu
+            // söylüyor). Satır derse kilitliyken o arama yolunun KAPISI
+            // kapalıydı: "atışlar" yazıp Fizik'e inme yolu vardı ama
+            // kullanıcı oraya hiç ulaşamıyordu.
+            onTap: () => _pickTopic(context),
           ),
         ],
       ),
@@ -649,26 +690,29 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          // ŞIK SAYISI kullanıcıda (Task 08, §5). Eskiden liste ya AI'dan
-          // geliyordu ya da beş harf sabitiyle doluyordu; dört şıklı bir
-          // soruda elle giriş yapan öğrenci olmayan bir E şıkkını işaretleyip
-          // kaydedebiliyordu. Şık METNİ hâlâ girilmiyor — pratik ekranı zaten
-          // yalnızca harfleri gösteriyor, metin girmek görünmeyen bir alanı
-          // doldurmak olurdu.
-          Text(l.confirmOptionCount, style: t.caption),
-          const SizedBox(height: Gap.sm),
-          Wrap(
-            spacing: Gap.sm,
-            children: <Widget>[
-              for (final int n in _optionCounts)
-                KimoChip(
-                  label: l.confirmOptionCountValue(n),
-                  selected: _labels.length == n,
-                  onTap: () => _setOptionCount(n),
-                ),
-            ],
-          ),
-          const SizedBox(height: Gap.lg),
+          // ŞIK SAYISI YALNIZCA ELLE GİRİŞTE sorulur (Task 08 §5 + Task 15).
+          // Elle girişte gerekli: dört şıklı bir soruda öğrenci olmayan bir E
+          // şıkkını işaretleyip kaydedebiliyordu. Ama yapay zekâ şıkları
+          // çıkardıysa sayı ZATEN biliniyor ve doğru çip önceden seçili
+          // geliyordu — yani cevabı işaretlenmiş bir soru soruluyordu.
+          // Üstelik çipe dokunmak AI'nın etiketlerini A–E ile değiştirip
+          // doğru şık işaretini sessizce düşürüyordu.
+          if (!_aiGaveOptions) ...<Widget>[
+            Text(l.confirmOptionCount, style: t.caption),
+            const SizedBox(height: Gap.sm),
+            Wrap(
+              spacing: Gap.sm,
+              children: <Widget>[
+                for (final int n in _optionCounts)
+                  KimoChip(
+                    label: l.confirmOptionCountValue(n),
+                    selected: _labels.length == n,
+                    onTap: () => _setOptionCount(n),
+                  ),
+              ],
+            ),
+            const SizedBox(height: Gap.lg),
+          ],
           Text(l.confirmCorrectOption, style: t.caption),
           const SizedBox(height: Gap.md),
           Row(
@@ -801,6 +845,7 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
         children: <Widget>[
           KimoButton(
             label: l.confirmSave,
+            busy: _saving,
             onPressed: _canSave ? _save : null,
           ),
           if (_canWaitForAnalysis) ...<Widget>[
@@ -819,13 +864,32 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
           ],
           const SizedBox(height: Gap.sm),
           Text(
-            _canSave
-                // Tekrar merdiveninin İLK adımı 1 gün (ReviewScheduler.steps
-                // ilk elemanı). Tasarımda "3 gün" yazıyordu; kod kazandı.
-                ? l.confirmNextReview
-                : (_subject == null || _concept == null)
-                    ? l.confirmNeedTopic
-                    : l.confirmNeedCorrect,
+            // SIRA ÖNEMLİ: `_saving` en başta. `_canSave` zaten `!_saving`
+            // içerdiği için eski merdiven, kayıt sürerken ders+konu doluysa
+            // "Doğru şıkkı işaretle" yazıyordu — kullanıcı az önce
+            // işaretlemişken. Kayıt boyunca görünen TEK geri bildirim buydu
+            // ve yanlıştı.
+            _saving
+                ? l.confirmSaving
+                : _canSave
+                    // İLK TEKRAR AYNI GÜN, ~3 SAAT SONRA. Sunucu tetikleyicisi
+                    // (`mistakes_review_timing`, 0033) yeni kayda
+                    // `now() + interval '3 hours'` yazıyor; merdivenin 1 günlük
+                    // ilk adımı ikinci tekrardan itibaren işliyor. Metin "yarın"
+                    // diyordu, yani ürünün tuttuğundan farklı bir söz veriyordu.
+                    ? l.confirmNextReview
+                    // EKSİK OLAN NE İSE O YAZIYOR. Tek bir "Önce ders ve konu
+                    // seç" cümlesi vardı; ders satırında koca bir "Matematik"
+                    // dururken bu cümle okunmuyor, kullanıcı doğru şıkkı
+                    // işaretlemiş olmasına rağmen düğmenin neden kapalı
+                    // olduğunu göremiyordu.
+                    : (_subject == null && _concept == null)
+                        ? l.confirmNeedTopic
+                        : _subject == null
+                            ? l.confirmNeedSubject
+                            : _concept == null
+                                ? l.confirmNeedConcept
+                                : l.confirmNeedCorrect,
             style: t.caption,
             textAlign: TextAlign.center,
           ),

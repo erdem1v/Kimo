@@ -420,9 +420,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(l.settingsNotifyOff, style: t.section),
+            // YAPRAK İŞLETİM SİSTEMİ İZNİ REDDEDİLDİĞİNDE AÇILIYOR, o yüzden
+            // metin de onu anlatıyor (Task 15 · D5). Eskiden gövde
+            // `settingsNotifyOffNote` ("Saatleri değiştirmek için önce
+            // bildirimleri aç") idi: uygulama içi bir anahtarı tarif ediyordu,
+            // oysa engel telefonun ayarındaydı ve düğme de oraya gidiyordu.
+            Text(l.settingsNotifyBlocked, style: t.section),
             const SizedBox(height: Gap.sm),
-            Text(l.settingsNotifyOffNote, style: t.body),
+            Text(l.settingsNotifyBlockedNote, style: t.body),
             const SizedBox(height: Gap.lg),
             KimoButton(
               label: l.settingsNotifyEnable,

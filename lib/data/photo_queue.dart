@@ -206,6 +206,12 @@ class PhotoQueue {
   @visibleForTesting
   static bool Function()? aiConsentOverride;
 
+  /// Testte "müfredat belli mi" cevabını veren kanca.
+  ///
+  /// `aiConsentOverride` ile aynı gerekçe: kuyruğun kararı profilden okuduğu
+  /// iki bilgiye bağlı ve test onları ağ olmadan kurabilmeli.
+  static bool Function()? curriculumSetOverride;
+
   /// Oturum kimliği. Test ortamında `Supabase.instance` kurulu DEĞİL ve ona
   /// dokunmak fırlatıyor; bu dikiş olmadan `flush()` hiç sınanamıyordu.
   @visibleForTesting
@@ -217,6 +223,7 @@ class PhotoQueue {
     analyzeOverride = null;
     uploadOverride = null;
     aiConsentOverride = null;
+    curriculumSetOverride = null;
     uidOverride = null;
   }
 
@@ -575,6 +582,24 @@ class PhotoQueue {
         }
 
         if (state == PhotoQueueState.needsAnalysis) {
+          if (!(curriculumSetOverride?.call() ?? userProfile.isSet)) {
+            // MÜFREDAT HENÜZ BİLİNMİYOR (Task 15).
+            //
+            // `analyze-question` konuyu KULLANICININ müfredat ağacından
+            // seçiyor ve istemci de kaydederken aynı ağaca karşı doğruluyor.
+            // Müfredat ise sınav yılından türüyor, yani karşılama akışının
+            // İKİNCİ adımında belirleniyor — oysa ilk fotoğraf yaş adımında,
+            // yani bir adım ÖNCE analiz ediliyordu. `curriculum` o an
+            // varsayılana ("eski") düşüyor; 2028 ve sonrasını seçen kullanıcı
+            // (maarif) geri dönen konuyu kendi ağacında bulamıyor, konu
+            // sessizce düşüyor ve "Arşive kaydet" açılmıyordu.
+            //
+            // Kayıt DÜŞMÜYOR, sırada bekliyor: profil adımı müfredatı
+            // yazdığında yeni bir `flush` tetikleniyor.
+            debugPrint('müfredat belirsiz; kuyruk analizi erteleniyor');
+            i++;
+            continue;
+          }
           if (!(aiConsentOverride?.call() ?? userProfile.aiConsent)) {
             // AKTARIM ONAYI YOK (Task 03, 4.2). Onay çekim ekranında bir kez
             // isteniyor ve reddedilirse analiz hiç çağrılmıyor; bu ikinci
@@ -724,6 +749,13 @@ class PhotoQueue {
     if (a.options.isNotEmpty &&
         (e['labels'] as List<dynamic>? ?? const <dynamic>[]).isEmpty) {
       e['labels'] = <String>[for (final QuestionOption o in a.options) o.label];
+      // KÖKEN İŞARETİ (Task 15). Onay ekranı "Kaç şık vardı?" sorusunu
+      // yalnızca sayı GERÇEKTEN bilinmiyorken soruyor. Kuyruktan gelen bir
+      // kayıtta `analysis` null geliyor (analiz burada, akış dışında
+      // yapıldı), yani bayrak olmadan ekran AI'ın saydığı şıkları yeniden
+      // sormak zorunda kalıyordu. `update` alanları birleştirdiği için
+      // işaret sonraki yazımlarda da kalıyor.
+      e['labels_from_ai'] = true;
     }
     if (e['exam'] == null && (a.exam == 'TYT' || a.exam == 'AYT')) {
       e['exam'] = a.exam;

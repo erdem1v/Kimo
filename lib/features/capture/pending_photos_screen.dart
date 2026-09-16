@@ -80,8 +80,13 @@ class _PendingPhotosScreenState extends State<PendingPhotosScreen> {
       await _load();
       return;
     }
-    final bool? saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
+    // SONUÇ TİPİ `String?`: onay ekranı kaydettiğinde satır kimliğini (ya da
+    // [kQueuedSentinel]) döndürüyor, vazgeçildiğinde `null`. Bu rota eskiden
+    // `<bool>` idi ve ekranın `pop('queued')` çağrısı `didPop`un eşdeğişken
+    // tip denetiminde patlıyordu: kullanıcı "sıraya alındı" bildirimini
+    // görüyor, ekran kapanmıyor ve her kontrolü ölmüş hâlde kalıyordu.
+    final String? saved = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(
         builder: (_) => ConfirmMistakeScreen(
           imageBytes: bytes,
           analysis: null,
@@ -91,7 +96,7 @@ class _PendingPhotosScreenState extends State<PendingPhotosScreen> {
       ),
     );
     if (!mounted) return;
-    if (saved == true) refreshBus.ping();
+    if (saved != null) refreshBus.ping();
     await _load();
   }
 

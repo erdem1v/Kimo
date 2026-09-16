@@ -35,15 +35,29 @@ class KimoChip extends StatelessWidget {
           duration: Motion.press,
           constraints: const BoxConstraints(minHeight: 40),
           padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
-          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: selected ? c.ink : c.sunken,
             borderRadius: Radii.all(Radii.chip),
           ),
-          child: Text(
-            label,
-            style: t.bodyStrong.copyWith(
-              color: selected ? c.page : c.inkSecondary,
+          // ÇİP İÇERİĞİ KADAR YER KAPLAR (Task 15).
+          //
+          // Kapsayıcının `alignment`ı vardı ve `Container` hizalama verilince
+          // gelen SINIRLI kısıtın tamamına yayılıyor (`Align`in genişlik
+          // çarpanı yoksa `constraints.biggest` alır). `Wrap` çocuklarına
+          // sınırlı bir genişlik verdiği için her çip satırı kaplıyor, yani
+          // depodaki BÜTÜN çip satırları aslında dikey listelerdi: beş sınav
+          // yılı beş satır, altında yarım ekran boşluk.
+          //
+          // `widthFactor`/`heightFactor` ile hizalama korunuyor ama ölçü
+          // içerikten geliyor; `minHeight: 40` dokunma hedefini tutuyor.
+          child: Align(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: Text(
+              label,
+              style: t.bodyStrong.copyWith(
+                color: selected ? c.page : c.inkSecondary,
+              ),
             ),
           ),
         ),
