@@ -125,6 +125,20 @@ class _SessionEndScreenState extends State<SessionEndScreen> {
                     const SizedBox(height: Gap.md),
                     _chest(context, l, r),
                   ],
+                  // XP DÖKÜMÜ (Task 14 · K5). Cevap ekranı soru başına
+                  // "+10 XP" diyor, buradaki karo ise TOPLAM. Araya günlük
+                  // hedef ödülü girdiğinde sayı sıçrıyor ("+10" gördükten
+                  // sonra "+60") ve sıçramanın nereden geldiği hiçbir yerde
+                  // yazmıyordu. Yalnızca ödül gerçekten alındıysa çiziliyor.
+                  if (r.goalXp > 0) ...<Widget>[
+                    const SizedBox(height: Gap.sm),
+                    Text(
+                      l.sessionXpBreakdown(r.xpGained - r.goalXp, r.goalXp),
+                      textAlign: TextAlign.center,
+                      style: context.t.caption
+                          .copyWith(color: context.c.inkSecondary),
+                    ),
+                  ],
                   const SizedBox(height: Gap.md),
                   _levelCard(context, l, r),
                   const SizedBox(height: Gap.xl),

@@ -346,6 +346,18 @@
   "sessionFirstTry": "ilk denemede",
   "sessionLongestCombo": "en uzun seri",
   "sessionXp": "XP",
+  "sessionXpBreakdown": "{answers} soru + {goal} günlük hedef",
+  "@sessionXpBreakdown": {
+    "description": "Oturum sonu XP dökümü. Cevap ekranı soru başına XP diyor, özet toplamı; arada hedef ödülü varsa sıçrama açıklanmıyordu (Task 14 · K5).",
+    "placeholders": {
+      "answers": {
+        "type": "int"
+      },
+      "goal": {
+        "type": "int"
+      }
+    }
+  },
   "sessionLevel": "Seviye {level}",
   "@sessionLevel": {
     "placeholders": {

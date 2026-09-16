@@ -19,9 +19,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # SÜRÜM SABİT (Task 14 · K8). `version: latest` en son sürümü GitHub
+      # API'sinden çözüyor ve bu turda bir koşu tam da bu yüzden
+      #   Failed to resolve latest Supabase CLI release: rate limit exceeded
+      # ile 5 saniyede düştü — depo kodu doğruyken CI kırmızı göründü.
+      # Sabitlemek hem o takılmayı hem de CLI'ın altımızdan sessizce
+      # değişmesini kapatıyor. Yükseltme artık bilinçli bir commit.
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.117.0
 
       # DİKKAT: `-x storage-api` ile hızlandırmayın. storage.objects şeması ve
       # trigger'ları o konteynerin kendi göçlerinden geliyor; hariç tutulursa

@@ -20,22 +20,31 @@ class KimoChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final KimoColors c = context.c;
     final KimoTypography t = context.t;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: Motion.press,
-        constraints: const BoxConstraints(minHeight: 40),
-        padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? c.ink : c.sunken,
-          borderRadius: Radii.all(Radii.chip),
-        ),
-        child: Text(
-          label,
-          style: t.bodyStrong.copyWith(
-            color: selected ? c.page : c.inkSecondary,
+    // SEÇİLİ DURUM ERİŞİLEBİLİRLİK AĞACINA DA VERİLİYOR (Task 14 · K3).
+    // `selected` eskiden yalnızca rengi sürüyordu; ekran okuyucu beş sınav
+    // yılını da ayrımsız düz metin olarak duyuruyordu. Desen depoda zaten
+    // var: `kimo_nav_bar.dart` sekmeleri böyle işaretliyor.
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: Motion.press,
+          constraints: const BoxConstraints(minHeight: 40),
+          padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? c.ink : c.sunken,
+            borderRadius: Radii.all(Radii.chip),
+          ),
+          child: Text(
+            label,
+            style: t.bodyStrong.copyWith(
+              color: selected ? c.page : c.inkSecondary,
+            ),
           ),
         ),
       ),
@@ -78,14 +87,8 @@ class StatusBadge extends StatelessWidget {
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: Radii.all(Radii.chip),
-      ),
-      child: Text(
-        label,
-        style: t.overline.copyWith(color: fg),
-      ),
+      decoration: BoxDecoration(color: bg, borderRadius: Radii.all(Radii.chip)),
+      child: Text(label, style: t.overline.copyWith(color: fg)),
     );
   }
 }

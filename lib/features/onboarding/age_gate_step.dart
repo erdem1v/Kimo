@@ -38,11 +38,7 @@ import '../../widgets/kit/kimo_surfaces.dart';
 /// Reddedilen deneme bir YAZMA değil, dolayısıyla hesap kilitlenmiyor;
 /// kullanıcı tek yazımlık hakkını da kaybetmiyor.
 class AgeGateStep extends StatefulWidget {
-  const AgeGateStep({
-    super.key,
-    required this.status,
-    required this.onChanged,
-  });
+  const AgeGateStep({super.key, required this.status, required this.onChanged});
 
   /// Sunucudan okunan güncel durum. `null` = henüz okunmadı.
   final AgeStatus? status;
@@ -113,8 +109,9 @@ class _AgeGateStepState extends State<AgeGateStep> {
   }
 
   void _snack(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -134,10 +131,7 @@ class _AgeGateStepState extends State<AgeGateStep> {
         if (_yearSet)
           Row(
             children: <Widget>[
-              StatusBadge(
-                label: l.ageWriteOnceNote,
-                tone: BadgeTone.mastered,
-              ),
+              StatusBadge(label: l.ageWriteOnceNote, tone: BadgeTone.mastered),
             ],
           )
         else ...<Widget>[
@@ -217,37 +211,65 @@ class _AgeGateStepState extends State<AgeGateStep> {
   Widget _yearWheel(BuildContext context) {
     final KimoColors c = context.c;
     final KimoTypography t = context.t;
-    final List<int> years = <int>[
-      for (int y = _maxYear; y >= _minYear; y--) y,
-    ];
+    final List<int> years = <int>[for (int y = _maxYear; y >= _minYear; y--) y];
+    // AÇILIŞTA BİR YIL SEÇİLİ (Task 14 · K4).
+    //
+    // Eskiden `_year` null başlıyordu: çark ortada bir yıl gösteriyor, hiçbir
+    // şey vurgulanmıyor ve "Kaydet" KAPALI duruyordu. Kullanıcıya ne yapması
+    // gerektiğini söyleyen hiçbir işaret yoktu; düğme ancak çark
+    // kaydırılınca açılıyordu, çünkü `onSelectedItemChanged` yalnızca
+    // kaydırmada ateşleniyor.
+    //
+    // Varsayılan olarak ortadaki yıl seçiliyor ve altındaki sabit bant onu
+    // görünür kılıyor. Yaş kapısının kendisi DEĞİŞMİYOR: sunucu kararı
+    // veriyor ve 13 altı reddi aynen duruyor.
+    final int initialIndex = (years.length / 2).floor();
+    _year ??= years[initialIndex];
     return Container(
       height: 148,
       decoration: BoxDecoration(
         color: c.sunken,
         borderRadius: Radii.all(Radii.card),
       ),
-      child: ListWheelScrollView.useDelegate(
-        itemExtent: 44,
-        diameterRatio: 1.6,
-        physics: const FixedExtentScrollPhysics(),
-        onSelectedItemChanged: (int i) {
-          sound.tap();
-          setState(() {
-            _year = years[i];
-            _tooYoung = false;
-          });
-        },
-        childDelegate: ListWheelChildBuilderDelegate(
-          childCount: years.length,
-          builder: (BuildContext ctx, int i) => Center(
-            child: Text(
-              '${years[i]}',
-              style: years[i] == _year
-                  ? t.numberLarge.copyWith(color: c.actionText)
-                  : t.numberMedium.copyWith(color: c.inkMuted),
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          // SEÇİM BANDI: çarkın ortasındaki satırı işaretliyor.
+          IgnorePointer(
+            child: Container(
+              height: 44,
+              margin: const EdgeInsets.symmetric(horizontal: Gap.md),
+              decoration: BoxDecoration(
+                color: c.card,
+                borderRadius: Radii.all(Radii.chip),
+              ),
             ),
           ),
-        ),
+          ListWheelScrollView.useDelegate(
+            controller: FixedExtentScrollController(initialItem: initialIndex),
+            itemExtent: 44,
+            diameterRatio: 1.6,
+            physics: const FixedExtentScrollPhysics(),
+            onSelectedItemChanged: (int i) {
+              sound.tap();
+              setState(() {
+                _year = years[i];
+                _tooYoung = false;
+              });
+            },
+            childDelegate: ListWheelChildBuilderDelegate(
+              childCount: years.length,
+              builder: (BuildContext ctx, int i) => Center(
+                child: Text(
+                  '${years[i]}',
+                  style: years[i] == _year
+                      ? t.numberLarge.copyWith(color: c.actionText)
+                      : t.numberMedium.copyWith(color: c.inkMuted),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

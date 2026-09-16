@@ -83,6 +83,29 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     // Sunucudaki `coalesce(mascot, 'ev_hanimi')` ile aynı varsayılan.
     _mascot = userProfile.mascot ?? Mascot.fallback;
 
+    _termsTap = TapGestureRecognizer()
+      ..onTap = () {
+        sound.tap();
+        unawaited(openLegalUrl(LegalLinks.terms));
+      };
+    _privacyTap = TapGestureRecognizer()
+      ..onTap = () {
+        sound.tap();
+        unawaited(openLegalUrl(LegalLinks.privacy));
+      };
+    _toggleTap = TapGestureRecognizer()
+      ..onTap = () {
+        sound.tap();
+        setState(() => _termsAccepted = !_termsAccepted);
+      };
+
+    // KUYRUK DİSKTEN OKUNUYOR (Task 14). `_queued` yalnızca çekimden dönüşte
+    // tazeleniyordu, yani uygulama kapanıp açılınca sıfırdan başlıyordu:
+    // fotoğrafı kuyrukta duran kullanıcı adımı yine "İlk yanlışını çek"
+    // hâlinde görüyor ve İKİNCİ bir fotoğraf çekiyordu — D1'in ta kendisi,
+    // yalnızca yeniden başlatmanın ardında saklanmış hâli.
+    unawaited(_loadQueued());
+
     _steps = <_Step>[
       // Yalnızca "İlk yanlışını çek" yolundan gelenler için: hesabı olan biri
       // zaten arşivine sahip.
@@ -107,12 +130,26 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     _loadAge();
   }
 
+  /// Onay satırındaki dokunma tanıyıcıları (Task 14 · K1).
+  ///
+  /// ALAN OLARAK TUTULUYOR, `build` içinde ÜRETİLMİYOR: `TapGestureRecognizer`
+  /// elle atılması gereken bir nesne ve her yeniden çizimde yenisini üretmek
+  /// sessiz bir sızıntı. Eski sürüm iki bağlantı tanıyıcısını `build`te
+  /// üretiyordu; üçüncüsünü (kutuyu değiştiren) eklerken ikisi de buraya
+  /// taşındı.
+  late final TapGestureRecognizer _termsTap;
+  late final TapGestureRecognizer _privacyTap;
+  late final TapGestureRecognizer _toggleTap;
+
   @override
   void dispose() {
     _nickname.dispose();
     _email.dispose();
     _password.dispose();
     _kimo.dispose();
+    _termsTap.dispose();
+    _privacyTap.dispose();
+    _toggleTap.dispose();
     super.dispose();
   }
 
@@ -569,11 +606,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           color: c.actionText,
           decoration: TextDecoration.underline,
         ),
-        recognizer: TapGestureRecognizer()
-          ..onTap = () {
-            sound.tap();
-            unawaited(openLegalUrl(url));
-          },
+        recognizer: url == LegalLinks.terms ? _termsTap : _privacyTap,
       );
     }
 
@@ -595,9 +628,15 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                 style: t.caption.copyWith(color: c.inkSecondary),
                 children: <InlineSpan>[
                   link(l.consentTermsLink, LegalLinks.terms),
-                  TextSpan(text: l.consentJoin),
+                  // BAĞLANTI OLMAYAN PARÇALAR KUTUYU DEĞİŞTİRİYOR (K1).
+                  // Eskiden tek dokunma hedefi minicik kareydi; etikete
+                  // dokunmak hiçbir şey yapmıyordu. Üstteki satırın tamamını
+                  // bir `GestureDetector`a sarmak bağlantı tanıyıcılarıyla
+                  // aynı jest arenasına girip onları yutabilirdi; bu yüzden
+                  // hedef span düzeyinde veriliyor.
+                  TextSpan(text: l.consentJoin, recognizer: _toggleTap),
                   link(l.consentPrivacyLink, LegalLinks.privacy),
-                  TextSpan(text: l.consentTail),
+                  TextSpan(text: l.consentTail, recognizer: _toggleTap),
                 ],
               ),
             ),

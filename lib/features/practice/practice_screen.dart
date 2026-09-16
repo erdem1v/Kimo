@@ -70,6 +70,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
   int _correct = 0;
   int _longestCombo = 0;
   int _xpGained = 0;
+
+  /// Hedef ödülünün XP'si (oturum sonu dökümü için, Task 14 · K5).
+  int _goalXp = 0;
   int _gemsAwarded = 0;
   int _comboNow = 0;
   final int _streakAtStart = gameProgress.streak;
@@ -284,7 +287,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
         final Map<String, dynamic>? totals =
             await progressRepository.claimDailyGoal();
         gameProgress.applyServerTotals(totals);
-        _xpGained += (totals?['xp_awarded'] as num?)?.toInt() ?? 0;
+        _goalXp = (totals?['xp_awarded'] as num?)?.toInt() ?? 0;
+        _xpGained += _goalXp;
         _gemsAwarded = (totals?['gems_awarded'] as num?)?.toInt() ?? 0;
         await _refreshPending();
       }
@@ -321,6 +325,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
       totalXp: gameProgress.xp,
       remaining: remaining,
       goalReached: goalReached,
+      goalXp: _goalXp,
     );
 
     // Ekran kendi rotasını `true` ile kapatıyor. Kapanışı buradan yönetmek,

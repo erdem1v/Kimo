@@ -545,20 +545,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ----------------------------------------------------------------- hesap
 
-  /// Doğum yılı durumu. Yılın KENDİSİ gösterilmiyor — sunucu da döndürmüyor
-  /// (`my_age_status`); satırın tek işi yaş kapısının tamamlandığını söylemek.
+  /// Doğum yılı durumu — ARTIK YILIN KENDİSİNİ GÖSTERİYOR (Task 14 · K2).
+  ///
+  /// Eskiden yalnızca "bir kez yazılır, sonradan değiştirilemez" notunu
+  /// çiziyordu ve yılın kendisi uygulamanın HİÇBİR yerinde görünmüyordu —
+  /// hemen üstündeki "Sınav yılı" satırı ise değerini gösteriyor. Değeri
+  /// değiştiremeyen kullanıcının onu görebilmesi daha da gerekli.
+  ///
+  /// Sebep istemcide değil sunucudaydı: `my_age_status` yılı hiç döndürmüyordu
+  /// (0097 ekledi). Eski sunucu sürümüne karşı dayanıklı: `birthYear` null
+  /// gelirse satır eski hâlindeki nota düşüyor.
   ///
   /// Task 07: veli onayı satırının yerini aldı. Yaş artık hiçbir özelliği
   /// kapatmıyor, dolayısıyla burada gösterilecek bir "bekleniyor" durumu yok.
   Widget _birthYearRow(BuildContext context, L10n l) {
     final AgeStatus? a = _age;
+    final String? value;
+    if (a == null) {
+      value = null;
+    } else if (!a.birthYearSet) {
+      value = l.settingsBirthYearUnset;
+    } else {
+      value = a.birthYear?.toString() ?? l.ageWriteOnceNote;
+    }
     return _row(
       context,
       icon: KimoIcons.lock,
       label: l.settingsBirthYear,
-      value: a == null
-          ? null
-          : (a.birthYearSet ? l.ageWriteOnceNote : l.settingsBirthYearUnset),
+      value: value,
     );
   }
 

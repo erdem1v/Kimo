@@ -48,7 +48,13 @@ class KimoCard extends StatelessWidget {
               ]
             : null,
       ),
-      child: child,
+      // MATERIAL ŞART (Task 14 · K7). Kart düz bir `Container`; içine konan
+      // `ListTile`/`SwitchListTile` mürekkep dalgasını çizecek bir `Material`
+      // ata bulamayınca Flutter her çizimde
+      //   "ListTile background color or ink splashes may be invisible"
+      // fırlatıyordu (Ayarlar'da ses ve bildirim satırları). `transparency`
+      // kartın kendi rengini bozmuyor, yalnızca mürekkebe bir yüzey veriyor.
+      child: Material(type: MaterialType.transparency, child: child),
     );
 
     if (onTap == null) return body;

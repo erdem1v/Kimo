@@ -294,10 +294,19 @@ class DailyState {
 /// arkadaş ekleme artık yaşa bağlı değil, askıya bağlı ([SanctionStatus]).
 @immutable
 class AgeStatus {
-  const AgeStatus({required this.birthYearSet, required this.isMinor});
+  const AgeStatus({
+    required this.birthYearSet,
+    required this.isMinor,
+    this.birthYear,
+  });
 
   final bool birthYearSet;
   final bool isMinor;
+
+  /// Kayıtlı doğum yılı (0097). Ayarlar satırı bunu gösteriyor: değer
+  /// DEĞİŞTİRİLEMEZ olduğu için kullanıcının en azından görebilmesi gerek
+  /// (Task 14 · K2). Yıl yazılmamışsa null.
+  final int? birthYear;
 
   /// Sunucudan okunamadığında kullanılan kapalı taraf: yıl yazılmamış sayılır,
   /// yani karşılama akışı kullanıcıyı yaş adımında tutar.
@@ -307,6 +316,9 @@ class AgeStatus {
     return AgeStatus(
       birthYearSet: row['birth_year_set'] == true,
       isMinor: row['is_minor'] == true,
+      // ESKİ SUNUCU SÜRÜMÜNE DAYANIKLI: alan yoksa null kalıyor ve satır
+      // eski hâlindeki notu göstermeye devam ediyor.
+      birthYear: (row['birth_year'] as num?)?.toInt(),
     );
   }
 }

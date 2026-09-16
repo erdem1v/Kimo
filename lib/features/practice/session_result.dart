@@ -18,6 +18,7 @@ class SessionResult {
     required this.totalXp,
     required this.remaining,
     required this.goalReached,
+    this.goalXp = 0,
   });
 
   /// Bu oturumda cevaplanan soru sayısı.
@@ -52,6 +53,14 @@ class SessionResult {
 
   /// Günlük hedefe bu oturumda ulaşıldı mı.
   final bool goalReached;
+
+  /// Günlük hedef ödülünün XP'si — [xpGained]'in İÇİNDE, ondan ayrı DEĞİL.
+  ///
+  /// AYRI TUTULUYOR ÇÜNKÜ EKRANDA AYRI GÖSTERİLİYOR (Task 14 · K5): cevap
+  /// ekranı soru başına "+10 XP" diyor, oturum sonu ise toplamı. Arada hedef
+  /// ödülü varsa sayı sıçruyor ve kullanıcı sıçramanın nereden geldiğini
+  /// göremiyordu. 0 = bu oturumda hedef ödülü alınmadı.
+  final int goalXp;
 
   /// XP'den türetilen seviye. Yeni sütun yok: seviye ayrı bir sayaç değil,
   /// toplam XP'nin okunuşu.
