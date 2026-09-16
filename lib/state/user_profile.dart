@@ -121,10 +121,27 @@ class UserProfile extends ChangeNotifier {
     await _save(<String, dynamic>{'avatar_path': _avatarPath});
   }
 
+  /// Bildirim tercihini yazar. **Başarısızlıkta GERİ ALIR ve fırlatır.**
+  ///
+  /// Eskiden yalnızca iyimser yazıyordu: alan set ediliyor, `notifyListeners`
+  /// çağrılıyor ve `_save` düşerse hiçbir şey geri alınmıyordu. Çevrimdışı
+  /// anahtarı değiştiren kullanıcı anahtarın döndüğünü görüyor, sunucu ise
+  /// hiç güncellenmiyordu — uygulama yeniden açılınca ayar sessizce eski
+  /// hâline dönüyordu. Üstelik istisna `unawaited` çağrılarda yakalanmadan
+  /// kalıyordu (Task 14).
+  ///
+  /// Çağıranın hatayı kullanıcıya göstermesi bekleniyor.
   Future<void> setNotifyEnabled(bool value) async {
+    final bool previous = _notifyEnabled;
     _notifyEnabled = value;
     notifyListeners();
-    await _save(<String, dynamic>{'notify_enabled': value});
+    try {
+      await _save(<String, dynamic>{'notify_enabled': value});
+    } catch (_) {
+      _notifyEnabled = previous;
+      notifyListeners();
+      rethrow;
+    }
   }
 
   /// Paylaşım onayını değiştirir.

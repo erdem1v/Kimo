@@ -226,9 +226,21 @@ class _FriendsViewState extends State<FriendsView> {
     }
   }
 
+  /// Kod yenileme tek seferlik (Task 14).
+  ///
+  /// NEDEN: sunucu yenilemeyi günde BİR kez kabul ediyor (`54000`). Koruma
+  /// yokken hızlı çift dokunuş iki RPC gönderiyor ve kullanıcı arka arkaya
+  /// "Kod yenilendi" ile "günde bir kez yenileyebilirsin" görüyordu —
+  /// üstelik ikinci cevap önce dönerse ekranda YENİLENMEDEN ÖNCEKİ kod
+  /// kalabiliyordu. Hemen yanındaki `_add` akışı `_adding` bayrağını zaten
+  /// taşıyor; aynı koruma buraya uygulanmamıştı.
+  bool _rotating = false;
+
   Future<void> _rotate() async {
+    if (_rotating) return;
     final L10n l = L10n.of(context);
     sound.tap();
+    setState(() => _rotating = true);
     try {
       final String? code = await friendRepository.rotateCode();
       if (!mounted) return;
@@ -242,6 +254,8 @@ class _FriendsViewState extends State<FriendsView> {
       _snack(e.toString().contains('54000')
           ? l.friendsCodeRotateOncePerDay
           : l.friendsCodeRotateFailed);
+    } finally {
+      if (mounted) setState(() => _rotating = false);
     }
   }
 
@@ -396,7 +410,10 @@ class _FriendsViewState extends State<FriendsView> {
               kind: KimoButtonKind.tertiary,
               expand: false,
               minHeight: Sizes.rowMin,
-              onPressed: _rotate,
+              // Devre dışı bırakmak GÖRÜNÜR koruma; `_rotating` kontrolü
+              // içeride de duruyor çünkü `KimoButton` bir `GestureDetector`
+              // ve iki dokunuş aynı karede gelebiliyor.
+              onPressed: _rotating ? null : _rotate,
             ),
           ],
         ],

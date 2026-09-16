@@ -50,6 +50,14 @@
   "captureFromGallery": "Galeriden seç",
   "captureRetake": "Yeniden çek",
   "capturePhotoFailed": "Fotoğraf alınamadı.",
+  "capturePermissionDenied": "Kimo kameraya ve fotoğraflarına erişemiyor. İzni Ayarlardan açabilirsin.",
+  "@capturePermissionDenied": {
+    "description": "Kamera/galeri izni reddedilince. Eskiden genel \"Fotoğraf alınamadı\" mesajı çıkıyordu ve kullanıcı çıkmazda kalıyordu (Task 14)."
+  },
+  "capturePermissionAction": "Ayarları aç",
+  "@capturePermissionAction": {
+    "description": "İzin reddi mesajındaki eylem düğmesi."
+  },
   "captureScanning": "Soruyu okuyorum",
   "@captureScanning": {
     "description": "AI analizi sürerken gösterilen başlık"
@@ -1196,6 +1204,10 @@
   },
   "settingsNotifyOff": "Bildirimler kapalı",
   "settingsNotifyOffNote": "Saatleri değiştirmek için önce bildirimleri aç.",
+  "settingsSaveFailed": "Ayar kaydedilemedi. Bağlantını kontrol edip tekrar dene.",
+  "@settingsSaveFailed": {
+    "description": "Ayarlar anahtarı sunucuya yazılamayınca. Eskiden anahtar görsel olarak dönüyor, yazım sessizce düşüyor ve yeniden açılışta eski hâline geri sarıyordu (Task 14)."
+  },
   "settingsNotifyEnable": "Bildirimleri aç",
   "settingsAccount": "Hesap",
   "settingsMascot": "Kimo'nun sesi",

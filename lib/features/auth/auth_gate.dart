@@ -7,6 +7,7 @@ import '../../data/auth_repository.dart';
 import '../../data/sanction_repository.dart';
 import '../../data/photo_queue.dart';
 import '../../data/submission_queue.dart';
+import '../../state/game_progress.dart';
 import '../../state/user_profile.dart';
 import '../home/home_shell.dart';
 import '../onboarding/onboarding_flow.dart';
@@ -89,6 +90,12 @@ class _AuthGateState extends State<AuthGate> {
       userProfile.loadFromAuth();
     } else {
       userProfile.clear();
+      // İLERLEME DE SIFIRLANIYOR (Task 14). Eskiden burada yoktu ve aynı
+      // cihazda açılan İKİNCİ hesap, öncekinin XP'sini, serisini ve günlük
+      // sayacını görüyordu. Kendiliğinden düzelmiyordu: `syncDailyDone`
+      // yalnızca yukarı hareket ediyor, `hydrate` ise ancak sunucu okuması
+      // başarılıysa çalışıyor.
+      gameProgress.clear();
       // Bekleyen cevaplar diskte kalmasın: aynı cihazda başka bir hesap
       // açılırsa onlar YANLIŞ kullanıcıya yazılırdı. (Kuyruk ayrıca her kaydın
       // sahibini de tutuyor ve boşaltırken yabancı kayıtları atıyor — bu iki

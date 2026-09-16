@@ -1,8 +1,9 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:app_settings/app_settings.dart' as android_settings;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../data/daily_state_repository.dart';
@@ -176,6 +177,35 @@ class _CaptureScreenState extends State<CaptureScreen> {
         return;
       }
       await _analyze(bytes);
+    } on PlatformException catch (e) {
+      // İZİN REDDİ ÇIKMAZ SOKAK DEĞİL (Task 14).
+      //
+      // Eskiden `camera_access_denied` / `photo_access_denied` genel bir
+      // `catch`e düşüyor ve "Fotoğraf alınamadı" diyordu. Sistem penceresi
+      // bir kez reddedildikten sonra bir daha açılmıyor, yani kullanıcı
+      // düğmeye basıp duruyor ve hiçbir şey olmuyordu — kurtarma yolu yoktu.
+      // Bildirim izni için bu yol Ayarlar'da ZATEN vardı
+      // (`_offerSystemSettings`); kamera ve galeri için yoktu.
+      debugPrint('fotoğraf alınamadı: ${e.code} ${e.message}');
+      if (!mounted) return;
+      final L10n l = L10n.of(context);
+      final bool denied = e.code.contains('access_denied') ||
+          e.code.contains('permission');
+      if (!denied) {
+        _snack(l.capturePhotoFailed);
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l.capturePermissionDenied),
+          action: SnackBarAction(
+            label: l.capturePermissionAction,
+            onPressed: () => unawaited(
+              android_settings.AppSettings.openAppSettings(),
+            ),
+          ),
+        ),
+      );
     } catch (e) {
       debugPrint('fotoğraf alınamadı: $e');
       if (!mounted) return;

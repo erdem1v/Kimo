@@ -95,8 +95,18 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   /// içindeki anahtar gerçeği göstersin (yoksa "açık" der ama bildirim gelmez).
   Future<void> _syncNotifyPermission() async {
     if (!userProfile.notifyEnabled) return;
-    final bool enabled = await notifications.areEnabled();
-    if (!enabled) await userProfile.setNotifyEnabled(false);
+    try {
+      final bool enabled = await notifications.areEnabled();
+      if (!enabled) await userProfile.setNotifyEnabled(false);
+    } catch (e) {
+      // SESSİZ AMA YAKALANMIŞ. Bu yol `unawaited` çağrılıyor (öne gelme
+      // dalında) ve `setNotifyEnabled` artık yazım düşünce FIRLATIYOR:
+      // çevrimdışı dönen her kullanıcıda yakalanmamış bir asenkron hata
+      // oluşurdu. Kullanıcıya gösterilecek bir şey yok — bu bir arka plan
+      // eşitlemesi — ama yutmak yerine günlüğe yazılıyor ve alan geri
+      // alındığı için bir sonraki dönüşte tekrar denenecek (Task 14).
+      debugPrint('bildirim izni eşitlenemedi: $e');
+    }
   }
 
   @override

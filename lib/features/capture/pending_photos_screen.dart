@@ -47,7 +47,27 @@ class _PendingPhotosScreenState extends State<PendingPhotosScreen> {
     });
   }
 
+  /// Aynı anda yalnızca bir "Tamamla" akışı (Task 14).
+  ///
+  /// NEDEN: `_complete` iki disk okumasını BEKLİYOR (`bytesOf`, `entry`) ve
+  /// ancak ondan sonra onay ekranını itiyor. O pencerede ikinci bir dokunuş
+  /// ikinci bir akış başlatıyor ve AYNI kuyruk kaydı için İKİ onay ekranı
+  /// açılıyordu; ikisini de kaydetmek tek fotoğraftan İKİ `mistakes` satırı
+  /// yaratıyor (`mistake_repository.add` idempotent değil ve olamaz).
+  /// İkinci `photoQueue.remove` ise sessizce hiçbir şey yapmıyor.
+  bool _completing = false;
+
   Future<void> _complete(PendingPhoto p) async {
+    if (_completing) return;
+    _completing = true;
+    try {
+      await _completeInner(p);
+    } finally {
+      if (mounted) _completing = false;
+    }
+  }
+
+  Future<void> _completeInner(PendingPhoto p) async {
     sound.tap();
     final Uint8List? bytes = await photoQueue.bytesOf(p.id);
     final Map<String, dynamic>? entry = await photoQueue.entry(p.id);

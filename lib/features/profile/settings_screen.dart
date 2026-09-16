@@ -47,6 +47,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isAdmin = false;
   AgeStatus? _age;
 
+  /// Bildirim anahtarı işlem sırasında kilitli (Task 14).
+  bool _notifyBusy = false;
+
   /// Plus satırının rakamları — SUNUCUDAN. `null` ise satır çizilmiyor:
   /// paywall bir RAKAM VAADİ taşıyor ve uydurma sayıyla açılamaz.
   DailyState? _daily;
@@ -99,7 +102,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         listenable: Listenable.merge(<Listenable>[userProfile, appSettings]),
         builder: (BuildContext context, _) => ListView(
           padding: const EdgeInsets.fromLTRB(
-              Gap.screen, Gap.md, Gap.screen, Gap.section),
+            Gap.screen,
+            Gap.md,
+            Gap.screen,
+            Gap.section,
+          ),
           children: <Widget>[
             SectionHeader(title: l.settingsAppearance),
             const SizedBox(height: Gap.md),
@@ -120,7 +127,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onPick: (int h) async {
                     await appSettings.setReviewHour(h);
                     await notifications.replanFromCache(
-                        enabled: userProfile.notifyEnabled);
+                      enabled: userProfile.notifyEnabled,
+                    );
                   },
                 ),
                 const SizedBox(height: Gap.sm),
@@ -131,7 +139,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onPick: (int h) async {
                     await appSettings.setStreakHour(h);
                     await notifications.replanFromCache(
-                        enabled: userProfile.notifyEnabled);
+                      enabled: userProfile.notifyEnabled,
+                    );
                   },
                 ),
                 const SizedBox(height: Gap.sm),
@@ -189,13 +198,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   context,
                   icon: KimoIcons.spark,
                   label: l.settingsPlus,
-                  onTap: () => _push(PlusScreen(
-                    freeWindowLimit: _daily!.aiWindowLimit,
-                    freeMonthLimit: _daily!.aiMonthLimit,
-                    plusWindowLimit: _daily!.plusWindowLimit,
-                    plusMonthLimit: _daily!.plusMonthLimit,
-                    windowHours: _daily!.aiWindowHours,
-                  )),
+                  onTap: () => _push(
+                    PlusScreen(
+                      freeWindowLimit: _daily!.aiWindowLimit,
+                      freeMonthLimit: _daily!.aiMonthLimit,
+                      plusWindowLimit: _daily!.plusWindowLimit,
+                      plusMonthLimit: _daily!.plusMonthLimit,
+                      windowHours: _daily!.aiWindowHours,
+                    ),
+                  ),
                 ),
               const SizedBox(height: Gap.sm),
               // Veri aktarımı bildirimi ve hukuki metinlerin yuvası (Task 03).
@@ -266,9 +277,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _push(Widget screen) {
     sound.tap();
-    Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => screen),
-    );
+    Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute<void>(builder: (_) => screen));
   }
 
   // ------------------------------------------------------------------ görünüm
@@ -335,31 +346,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 l.settingsNotifyOffNote,
                 style: t.caption.copyWith(color: c.inkMuted),
               ),
-        onChanged: (bool v) async {
-          bool ok = v;
-          if (v) ok = await notifications.requestPermission();
-          await userProfile.setNotifyEnabled(ok);
-          if (ok) {
-            // Anahtar AÇILDI: yerel plan hemen kurulsun (eskiden bir sonraki
-            // ekran yüklemesini bekliyordu) ve cihaz push için kaydolsun.
-            await notifications.replanFromCache(enabled: true);
-            unawaited(push.registerDevice());
-          } else {
-            // Anahtar KAPANDI: yalnızca yerel hatırlatmalar değil, sunucu
-            // push'u da dursun. Eskiden jeton silinmiyordu ve bildirimi
-            // kapatan kullanıcı arkadaşlık isteği push'larını almaya devam
-            // ediyordu (Task 03, bulgu 7.1).
-            await notifications.cancelAll();
-            await push.unregisterDevice();
-          }
-          if (!mounted) return;
-          setState(() {});
-          // İzin reddedildiyse sistem penceresi bir daha açılmaz; kullanıcıyı
-          // telefonun ayarına yönlendiriyoruz.
-          if (v && !ok) await _offerSystemSettings(l);
-        },
+        // `_notifyBusy`: anahtar async ve `SwitchListTile` her dokunuşta
+        // ateşliyor. Koruma yokken hızlı çift dokunuş iki `requestPermission`
+        // + iki `setNotifyEnabled` + birbirine karışan
+        // `registerDevice`/`unregisterDevice` çifti üretiyordu; kaybeden yarış
+        // "profil KAPALI diyor ama `device_tokens` jetonu hâlâ tutuyor"
+        // durumunu bırakıyor — çıkış yolunda 0043'te düzeltilen hatanın
+        // aynısı (Task 14).
+        onChanged: _notifyBusy
+            ? null
+            : (bool v) async {
+                setState(() => _notifyBusy = true);
+                try {
+                  bool ok = v;
+                  if (v) ok = await notifications.requestPermission();
+                  await userProfile.setNotifyEnabled(ok);
+                  if (ok) {
+                    // Anahtar AÇILDI: yerel plan hemen kurulsun (eskiden bir sonraki
+                    // ekran yüklemesini bekliyordu) ve cihaz push için kaydolsun.
+                    await notifications.replanFromCache(enabled: true);
+                    unawaited(push.registerDevice());
+                  } else {
+                    // Anahtar KAPANDI: yalnızca yerel hatırlatmalar değil, sunucu
+                    // push'u da dursun. Eskiden jeton silinmiyordu ve bildirimi
+                    // kapatan kullanıcı arkadaşlık isteği push'larını almaya devam
+                    // ediyordu (Task 03, bulgu 7.1).
+                    await notifications.cancelAll();
+                    await push.unregisterDevice();
+                  }
+                  if (!mounted) return;
+                  setState(() {});
+                  // İzin reddedildiyse sistem penceresi bir daha açılmaz; kullanıcıyı
+                  // telefonun ayarına yönlendiriyoruz.
+                  if (v && !ok) await _offerSystemSettings(l);
+                } catch (e) {
+                  // YAZIM DÜŞTÜ (çoğunlukla ağ). `setNotifyEnabled` alanı geri
+                  // aldı; kullanıcıya da söylüyoruz, yoksa anahtar geri kayıyor ve
+                  // sebebi hiçbir yerde görünmüyor.
+                  debugPrint('bildirim ayarı kaydedilemedi: $e');
+                  if (!mounted) return;
+                  setState(() {});
+                  _snack(l.settingsSaveFailed);
+                } finally {
+                  if (mounted) setState(() => _notifyBusy = false);
+                }
+              },
       ),
     );
+  }
+
+  void _snack(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _offerSystemSettings(L10n l) async {
@@ -443,7 +482,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Expanded(child: Text(l.settingsQuietHours, style: t.bodyStrong)),
               Text(
                 l.settingsQuietRange(
-                    appSettings.quietStart, appSettings.quietEnd),
+                  appSettings.quietStart,
+                  appSettings.quietEnd,
+                ),
                 style: t.numberSmall,
               ),
             ],
@@ -462,12 +503,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   kind: KimoButtonKind.secondary,
                   minHeight: Sizes.rowMin,
                   onPressed: () async {
-                    final int? h =
-                        await _pickHour(context, appSettings.quietStart);
+                    final int? h = await _pickHour(
+                      context,
+                      appSettings.quietStart,
+                    );
                     if (h != null) {
                       await appSettings.setQuietRange(h, appSettings.quietEnd);
                       await notifications.replanFromCache(
-                          enabled: userProfile.notifyEnabled);
+                        enabled: userProfile.notifyEnabled,
+                      );
                     }
                   },
                 ),
@@ -479,13 +523,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   kind: KimoButtonKind.secondary,
                   minHeight: Sizes.rowMin,
                   onPressed: () async {
-                    final int? h =
-                        await _pickHour(context, appSettings.quietEnd);
+                    final int? h = await _pickHour(
+                      context,
+                      appSettings.quietEnd,
+                    );
                     if (h != null) {
                       await appSettings.setQuietRange(
-                          appSettings.quietStart, h);
+                        appSettings.quietStart,
+                        h,
+                      );
                       await notifications.replanFromCache(
-                          enabled: userProfile.notifyEnabled);
+                        enabled: userProfile.notifyEnabled,
+                      );
                     }
                   },
                 ),
@@ -586,8 +635,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final KimoColors c = context.c;
     final KimoTypography t = context.t;
     return KimoCard(
-      padding: const EdgeInsets.symmetric(
-          horizontal: Gap.lg, vertical: Gap.md),
+      padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.md),
       radius: Radii.tile,
       onTap: onTap,
       child: Row(

@@ -182,6 +182,32 @@ class GameProgress extends ChangeNotifier {
   }
 
   /// Sunucudaki değerlerle başlat (oturum açılışında).
+  /// Oturum kapanınca BÜTÜN ilerleme durumunu sıfırlar (Task 14).
+  ///
+  /// NEDEN GEREKLİ: `AuthGate` çıkışta `userProfile`, `submissionQueue` ve
+  /// `photoQueue`u temizliyordu ama BURAYI temizlemiyordu. Aynı cihazda ikinci
+  /// bir hesap açıldığında önceki kullanıcının XP'si, serisi, haftalık puanı
+  /// ve "bugün kaç tekrar yaptın" sayacı ekranda kalmaya devam ediyordu.
+  ///
+  /// Kendiliğinden düzelmiyordu: `syncDailyDone` YALNIZCA YUKARI doğru
+  /// hareket ediyor (`if (dbCount > dailyReviewsDone)`), yani A'nın 5'i
+  /// B'nin 0'ıyla değiştirilemiyordu. `hydrate` de ancak sunucu okuması
+  /// BAŞARILI olursa çalışıyor; çevrimdışı ya da hatalı bir açılışta eski
+  /// hesabın rakamları öylece duruyordu.
+  void clear() {
+    xp = 0;
+    streak = 0;
+    _lastActive = null;
+    _serverToday = null;
+    dailyReviewsDone = 0;
+    _dueRemaining = 0;
+    _reviewDay = null;
+    _lastGoalDate = null;
+    weeklyXp = 0;
+    _weekStart = null;
+    notifyListeners();
+  }
+
   void hydrate({
     required int xp,
     required int streak,
