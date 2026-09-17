@@ -37,7 +37,18 @@
 drop view if exists public.my_daily_state;
 drop function if exists public.ai_state();
 
-create function public.ai_state()
+-- `drop` + `create or replace` — ikisi birden, BILEREK.
+--
+-- `drop` zorunlu: OUT satir tipi degisiyor. `create or replace` ise
+-- mutasyonlar icin: 36, 54 ve 59 numarali mutasyonlar bu fonksiyonun tam
+-- govdesini tasiyor ve GERI ALMA yarilari `drop function` YAPAMAZ — o anda
+-- `my_daily_state` gorunumu hala fonksiyona bagimli ve Postgres dusurmeyi
+-- reddediyor ("cannot drop function ... other objects depend on it").
+-- Geri alma `create or replace` yazmak zorunda; check_sql'in 7. kontrolu de
+-- imza onekini karsilastirdigi icin CANLI govde de ayni oneki tasimali.
+-- (Ilk surum `create function` yaziyordu ve mutasyon kontrolu FAZ 3'te
+-- "geri alma calistirilamadi / veritabani BOZUK" ile dustu.)
+create or replace function public.ai_state()
 returns table (
   -- SIRA 0075'TEKININ AYNISI OLMAK ZORUNDA. `create or replace`, OUT
   -- parametrelerinin tanimladigi satir tipini (ad + SIRA dahil) degistirmeye

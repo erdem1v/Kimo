@@ -15,8 +15,11 @@
 -- MUTASYON UCRETSIZ KULLANICIDA GORUNMEZ: iki sutun orada zaten esit. Bu
 -- yuzden 100'un iddialari PREMIUM ve ANONIM koltuktan yapiliyor.
 --
--- NOT: iki govde de goc dosyasindan URETILDI. Kaynak: 0099. Geri alma GOCUN
--- BIREBIR KOPYASI (drop + create).
+-- NOT: iki govde de goc dosyasindan URETILDI. Kaynak: 0099.
+-- GERI ALMA `drop function` YAPAMAZ: o anda `my_daily_state` gorunumu
+-- fonksiyona bagimli ve Postgres dusurmeyi reddeder. `create or replace`
+-- kullaniliyor ve goc de ayni oneki tasiyor (check_sql 7. kontrol imza
+-- onekini de karsilastiriyor).
 create or replace function public.ai_state()
 returns table (
   -- SIRA 0075'TEKININ AYNISI OLMAK ZORUNDA. `create or replace`, OUT
@@ -203,9 +206,7 @@ begin
 end
 $fn$;
 -- @UNDO
-drop function if exists public.ai_state();
-
-create function public.ai_state()
+create or replace function public.ai_state()
 returns table (
   -- SIRA 0075'TEKININ AYNISI OLMAK ZORUNDA. `create or replace`, OUT
   -- parametrelerinin tanimladigi satir tipini (ad + SIRA dahil) degistirmeye
