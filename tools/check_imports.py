@@ -19,7 +19,7 @@ import re
 import sys
 
 PACKAGE = 'kimo'
-ROOTS = ('lib', 'test')
+ROOTS = ('lib', 'test', 'test_e2e')
 SKIP_DIR_MARKER = '_archive'
 
 

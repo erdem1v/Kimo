@@ -61,6 +61,42 @@ jobs:
       - name: Mutasyon kontrolü (testler ayırt ediyor mu?)
         run: bash tools/mutation_check.sh
 
+      # ------------------------------------------------------- entegrasyon ağı
+      # NEDEN BU İŞİN İÇİNDE: yığın zaten ayakta. Ayrı bir işte `supabase start`
+      # bedelini ikinci kez ödemek, aynı testleri iki dakika geç koşturmaktan
+      # başka bir şey getirmezdi.
+      #
+      # NEDEN VAR: Task 15 ve 16'nın iki bloke edicisi de istemci/sunucu
+      # sınırının iki yakasında bir SIRA hatasıydı. pgTAP şemayı tek başına
+      # doğruluyor, `flutter test` istemciyi tek başına; aradaki boşlukta
+      # "yeni kullanıcı ilk sorusunu kaydedemiyor" aylarca yaşayabildi.
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      # `supabase status -o env` API_URL / ANON_KEY / SERVICE_ROLE_KEY veriyor.
+      # Adlar depoya özgü öneklerle aktarılıyor ki testler yanlışlıkla ÜRETİM
+      # değişkenlerini yakalayamasın.
+      - name: Yerel yığının adresini ve anahtarlarını aktar
+        run: |
+          set -o pipefail
+          supabase status -o env > .e2e.env
+          {
+            echo "SUPABASE_E2E_URL=$(grep -E '^API_URL=' .e2e.env | cut -d= -f2- | tr -d '\"')"
+            echo "SUPABASE_E2E_ANON_KEY=$(grep -E '^ANON_KEY=' .e2e.env | cut -d= -f2- | tr -d '\"')"
+            echo "SUPABASE_E2E_SERVICE_ROLE_KEY=$(grep -E '^SERVICE_ROLE_KEY=' .e2e.env | cut -d= -f2- | tr -d '\"')"
+          } >> "$GITHUB_ENV"
+          rm -f .e2e.env
+
+      # SÜİT ATLANAMAZ. `--reporter expanded` ile kaç testin koştuğu görünür;
+      # sıfır test koşan bir süit de yeşil yanar ve hiçbir şey kanıtlamaz —
+      # yukarıdaki "atlanan göç" kontrolüyle aynı gerekçe.
+      - name: Entegrasyon süiti (gerçek Supabase'e karşı)
+        run: flutter test test_e2e/ --reporter expanded
+
   # ------------------------------------------------------------ statik kontrol
   # Flutter işinden ÖNCE ve ondan bağımsız koşar: saniyeler sürüyor ve
   # derleyicinin yakalayacağı hataların çoğunu (var olmayan token/ikon/enum
