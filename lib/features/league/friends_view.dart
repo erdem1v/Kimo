@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../practice/practice_screen.dart';
 import '../../data/daily_state_repository.dart';
 import '../../data/friend_repository.dart';
 import '../../data/social_repository.dart';
@@ -693,6 +694,30 @@ class _FriendsViewState extends State<FriendsView> {
             const SizedBox(height: Gap.xxs),
             Text(l.pairStreakRiskBody(p.streak),
                 style: t.caption.copyWith(color: c.mintText)),
+            // EYLEM KARTA GELDİ (Task 17). Kart "bir soru çözersen … seriniz
+            // devam eder" diyor ama hiçbir kontrol taşımıyordu: kullanıcı
+            // kendi başına Bugün sekmesine dönüp oturumu başlatmak
+            // zorundaydı. Hemen altındaki KIRILMA kartının düğmesi vardı,
+            // yani iki kart aynı ekranda farklı kurallara uyuyordu.
+            //
+            // TEKRAR EKRANI, gönderme akışı DEĞİL: sunucu ortak seriyi
+            // `last_activity_date` ile ilerletiyor (`pair_streak_rollover`),
+            // yani o gün HERHANGİ bir soruyu çözmek yetiyor.
+            const SizedBox(height: Gap.md),
+            KimoButton(
+              label: l.pairStreakRiskAction,
+              kind: KimoButtonKind.secondary,
+              minHeight: Sizes.rowMin,
+              expand: false,
+              onPressed: () {
+                sound.tap();
+                unawaited(Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const PracticeScreen(),
+                  ),
+                ));
+              },
+            ),
           ],
         ),
       ));
