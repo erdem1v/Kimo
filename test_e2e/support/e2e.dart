@@ -44,13 +44,30 @@ String _require(String name) {
   return value;
 }
 
+/// PKCE DEĞİL, IMPLICIT.
+///
+/// `signUp` varsayılan olarak PKCE akışını kullanıyor ve PKCE doğrulayıcıyı
+/// saklamak için `asyncStorage` istiyor — o da `Supabase.initialize` ile gelen
+/// Flutter eklentisinden. Bu süit bilerek Flutter eklentisi kurmuyor (testler
+/// saf Dart istemcisiyle konuşuyor), dolayısıyla akış implicit olmalı.
+/// `signInAnonymously` PKCE kullanmadığı için ilk koşuda bu sınıra
+/// takılmamıştı; süite kalıcı hesap eklenince ortaya çıktı.
+const AuthClientOptions _authOptions =
+    AuthClientOptions(authFlowType: AuthFlowType.implicit);
+
 /// Anonim anahtarla istemci — uygulamanın gördüğü koltuk.
-SupabaseClient anonClient() =>
-    SupabaseClient(_require(envUrl), _require(envAnonKey));
+SupabaseClient anonClient() => SupabaseClient(
+      _require(envUrl),
+      _require(envAnonKey),
+      authOptions: _authOptions,
+    );
 
 /// Servis rolü — YALNIZCA kurulum ve temizlik için; iddialar anon koltuktan.
-SupabaseClient adminClient() =>
-    SupabaseClient(_require(envUrl), _require(envServiceKey));
+SupabaseClient adminClient() => SupabaseClient(
+      _require(envUrl),
+      _require(envServiceKey),
+      authOptions: _authOptions,
+    );
 
 /// Erişim jetonunun içindeki claim'ler.
 ///
