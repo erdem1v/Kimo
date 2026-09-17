@@ -355,3 +355,37 @@ jobs:
       - run: flutter analyze
 
       - run: flutter test
+
+  # ------------------------------------------------------------------ Android
+  #
+  # NEDEN AYRI BİR İŞ: geliştirme makinesinde Android SDK YOK, yani Android
+  # tarafı bu depoda hiçbir zaman DERLENMEDİ — manifest, kaynak bağları
+  # (uyarlanabilir ikon XML'i, açılış görseli, renk kaynağı), R8 kuralları ve
+  # eklenti yüzeyi yalnızca okunarak doğrulanıyordu. Mağazaya gidecek iki
+  # yapıdan birinin hiç derlenmemiş olması, bu turda kapatılan en sessiz
+  # boşluklardan biri.
+  #
+  # `--release` BİLEREK: küçültme (R8) ve kaynak budama YALNIZCA burada
+  # çalışıyor ve eklentilerin bilinen R8 kırılmaları (flutter_local_
+  # notifications'ın Gson serileştirmesi) ancak bu yapıda görünür.
+  # `key.properties` CI'da yok; yapı DEBUG anahtarıyla imzalanıyor ve bu
+  # derleme günlüğüne yazılıyor — Play'e yüklenemez, doğrulama için yeterli.
+  android:
+    name: Android derlemesi
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - run: flutter build apk --release
