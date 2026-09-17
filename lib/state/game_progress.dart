@@ -138,12 +138,17 @@ class GameProgress extends ChangeNotifier {
   }
 
   /// Günlük hedef bugün alındı mı?
+  ///
+  /// GÜN SUNUCUDAN (0099). `_lastGoalDate` artık `my_daily_state`in
+  /// yayınladığı `daily_goal_date` ile tohumlanıyor; eskiden yalnızca
+  /// oturum-içiydi ve `clear()` onu çıkışta sıfırlıyordu. Sonuç: kullanıcı
+  /// uygulamayı yeniden kurar ya da ikinci cihazdan girerse istemci "ödül
+  /// alınmadı" sanıyor, halkayı eksik gösteriyor ve `claim_daily_goal`
+  /// SESSİZCE sıfır ödül döndürüyordu — hata atmadığı için geri alma dalı da
+  /// çalışmıyordu.
   bool get dailyGoalReached {
-    final DateTime n = DateTime.now();
-    return _lastGoalDate != null &&
-        _lastGoalDate!.year == n.year &&
-        _lastGoalDate!.month == n.month &&
-        _lastGoalDate!.day == n.day;
+    final DateTime n = _serverToday ?? _dateOnly(DateTime.now());
+    return _lastGoalDate != null && !_lastGoalDate!.isBefore(n);
   }
 
   double get dailyProgress {
@@ -271,6 +276,7 @@ class GameProgress extends ChangeNotifier {
     League? league,
     DateTime? lastActivityDate,
     DateTime? serverToday,
+    DateTime? dailyGoalDate,
   }) {
     this.xp = xp;
     _weekStart = weekStart(DateTime.now());
@@ -278,6 +284,10 @@ class GameProgress extends ChangeNotifier {
     this.streak = streak;
     if (league != null) this.league = league;
     if (serverToday != null) _serverToday = _dateOnly(serverToday);
+    // ÖDÜLÜN GÜNÜ SUNUCUDAN. `null` gelmesi "bugün alınmadı" demek ve yerel
+    // değeri de temizliyor: aksi hâlde başka bir cihazda alınıp sonra geri
+    // alınmış bir ödül burada "alınmış" kalırdı.
+    _lastGoalDate = dailyGoalDate == null ? null : _dateOnly(dailyGoalDate);
     if (lastActivityDate != null) {
       _lastActive = _dateOnly(lastActivityDate);
     } else if (streak == 0) {

@@ -42,6 +42,9 @@ class DailyState {
     this.adOffer = false,
     this.plusWindowLimit = 0,
     this.plusMonthLimit = 0,
+    this.freeWindowLimit = 0,
+    this.freeMonthLimit = 0,
+    this.dailyGoalDate,
     this.premiumUntil,
     this.lastActivityDate,
     this.serverToday,
@@ -113,6 +116,29 @@ class DailyState {
   /// Kıyas tablosundaki Plus rakamları — sunucudan, koda gömülü değil.
   final int plusWindowLimit;
   final int plusMonthLimit;
+
+  /// ÜCRETSİZ katmanın sınırları — çağıranın katmanından BAĞIMSIZ (0099).
+  ///
+  /// [aiWindowLimit] / [aiMonthLimit] kullanıcının KENDİ katmanını anlatıyor;
+  /// paywall'ın "Ücretsiz" sütunu ise ücretsiz katmanı anlatmak zorunda.
+  /// Sunucu ayrı alan yayınlamadığı sürece ekran `ai_*`i kullanıyordu ve
+  /// abonede tablo "Ücretsiz 50 | Plus 50", anonimde "Ücretsiz 3" yazıyordu.
+  final int freeWindowLimit;
+  final int freeMonthLimit;
+
+  /// Günlük hedef ödülünün alındığı gün (Istanbul). `null` = bugün alınmadı.
+  ///
+  /// Sunucuda hep duruyordu ama yayınlanmıyordu (0099). İstemci yalnızca
+  /// oturum-içi bir alana bakıyordu ve çıkışta sıfırlıyordu: yeniden
+  /// kurulumda ya da ikinci cihazda ödül "alınmadı" sanılıyor,
+  /// `claim_daily_goal` sessizce sıfır ödül döndürüyordu.
+  final DateTime? dailyGoalDate;
+
+  /// Günlük hedef ödülü BUGÜN alınmış mı (sunucunun günü ile).
+  bool get dailyGoalClaimed =>
+      dailyGoalDate != null &&
+      serverToday != null &&
+      !dailyGoalDate!.isBefore(serverToday!);
 
   /// Premium aboneliğin bitişi (varsa). Task 13'ten beri DOLU: tek yazar
   /// `apply_subscription` (göç 0092), defterden türetiliyor.
@@ -257,6 +283,9 @@ class DailyState {
       adOffer: row['ad_offer'] == true,
       plusWindowLimit: _int(row['plus_window_limit']) ?? 0,
       plusMonthLimit: _int(row['plus_month_limit']) ?? 0,
+      freeWindowLimit: _int(row['free_window_limit']) ?? 0,
+      freeMonthLimit: _int(row['free_month_limit']) ?? 0,
+      dailyGoalDate: _date(row['daily_goal_date']),
       premiumUntil: _date(row['premium_until']),
       gems: _int(row['gems']) ?? 0,
       xp: _int(row['xp']) ?? 0,

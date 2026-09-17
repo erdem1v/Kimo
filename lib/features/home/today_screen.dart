@@ -129,6 +129,7 @@ class _TodayScreenState extends State<TodayScreen> {
           league: state.league,
           lastActivityDate: state.lastActivityDate,
           serverToday: state.serverToday,
+          dailyGoalDate: state.dailyGoalDate,
         );
       }
 

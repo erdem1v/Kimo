@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../data/auth_repository.dart';
 import '../../data/daily_state_repository.dart';
 import '../../data/mistake_repository.dart';
 import '../../data/question_send_repository.dart';
@@ -507,12 +506,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
                 unawaited(Navigator.of(context).push<void>(
                   MaterialPageRoute<void>(
                     builder: (_) => PlusScreen(
-                      freeLimitsKnown: !s.hasSubscription &&
-                          !authRepository.isAnonymous,
                       // Rakamlar sunucudan: paywall "8 saatte 50 analiz"
                       // vaadini yazıyor ve yanlış sayı göstermemeli.
-                      freeWindowLimit: s.aiWindowLimit,
-                      freeMonthLimit: s.aiMonthLimit,
+                      freeWindowLimit: s.freeWindowLimit,
+                      freeMonthLimit: s.freeMonthLimit,
                       plusWindowLimit: s.plusWindowLimit,
                       plusMonthLimit: s.plusMonthLimit,
                       windowHours: s.aiWindowHours,

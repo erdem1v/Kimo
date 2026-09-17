@@ -200,10 +200,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   label: l.settingsPlus,
                   onTap: () => _push(
                     PlusScreen(
-                      freeLimitsKnown: !_daily!.hasSubscription &&
-                          !authRepository.isAnonymous,
-                      freeWindowLimit: _daily!.aiWindowLimit,
-                      freeMonthLimit: _daily!.aiMonthLimit,
+                      freeWindowLimit: _daily!.freeWindowLimit,
+                      freeMonthLimit: _daily!.freeMonthLimit,
                       plusWindowLimit: _daily!.plusWindowLimit,
                       plusMonthLimit: _daily!.plusMonthLimit,
                       windowHours: _daily!.aiWindowHours,

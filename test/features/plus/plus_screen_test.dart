@@ -25,7 +25,6 @@ void main() {
       // kaldırıldı. Paywall bir RAKAM VAADİ taşıyor ve `app_config`
       // sınırları gevşetildiğinde eski sayıyı göstermesi kabul edilemezdi.
       home: const PlusScreen(
-        freeLimitsKnown: true,
         freeWindowLimit: 10,
         freeMonthLimit: 300,
         plusWindowLimit: 50,

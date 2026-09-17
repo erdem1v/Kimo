@@ -54,10 +54,13 @@ class PlusScreen extends StatefulWidget {
     required this.plusWindowLimit,
     required this.plusMonthLimit,
     required this.windowHours,
-    required this.freeLimitsKnown,
   });
 
   /// Kıyas tablosunun rakamları — HEPSİ SUNUCUDAN, `required`.
+  ///
+  /// `free*` sütunları ÜCRETSİZ katmanın sınırları ve çağıranın katmanından
+  /// bağımsız (0099); abonede "Ücretsiz 50 | Plus 50", anonimde "Ücretsiz 3"
+  /// yazan hata buradan geliyordu.
   ///
   /// Eskiden `int?` idi ve okunamayan değer koddaki 8/10/300/50/1000
   /// yedeğine düşüyordu. Ekran "8 saatte 50 analiz" gibi bir RAKAM VAADİ
@@ -69,19 +72,6 @@ class PlusScreen extends StatefulWidget {
   final int plusMonthLimit;
   final int windowHours;
 
-  /// [freeWindowLimit] / [freeMonthLimit] gerçekten ÜCRETSİZ katmanın
-  /// sınırları mı (Task 16 · B4).
-  ///
-  /// Sunucu ayrı bir "ücretsiz katman sınırı" alanı yayınlamıyor; `ai_state()`
-  /// iki sütunu da ÇAĞIRANIN katmanına göre dolduruyor. Yani abonelik varken
-  /// tablo "Ücretsiz 50 | Plus 50", anonimken "Ücretsiz 3 | Plus 50" yazıyordu
-  /// — ikisi de yanlış, ikincisi ömür boyu deneme tavanını ücretsiz katman
-  /// diye gösteriyordu. Sayılar yalnızca GİRİŞ YAPMIŞ ve ABONE OLMAYAN
-  /// kullanıcıda ücretsiz katmana eşit.
-  ///
-  /// `false` ise kıyas tablosu HİÇ çizilmiyor: yanlış rakam göstermektense
-  /// göstermemek, deponun "rakam vaadi" ilkesinin gereği.
-  final bool freeLimitsKnown;
 
   @override
   State<PlusScreen> createState() => _PlusScreenState();
@@ -150,11 +140,12 @@ class _PlusScreenState extends State<PlusScreen> {
                   const SizedBox(height: Gap.lg),
                   _batchSection(context, l),
                   const SizedBox(height: Gap.lg),
-                  // KIYAS TABLOSU YALNIZCA RAKAMLAR GERÇEKSE (Task 16 · B4).
-                  if (widget.freeLimitsKnown) ...<Widget>[
-                    _compare(context, l),
-                    const SizedBox(height: Gap.lg),
-                  ],
+                  // RAKAMLAR ARTIK HER KOLTUKTAN DOĞRU (0099): `free_*`
+                  // sütunları ücretsiz katmanı anlatıyor, çağıranın katmanını
+                  // değil. Task 16'nın geçici kapısı (abonede ve anonimde
+                  // tabloyu hiç çizmemek) kalktı.
+                  _compare(context, l),
+                  const SizedBox(height: Gap.lg),
                   _plans(context, l),
                   const SizedBox(height: Gap.screen),
                 ],

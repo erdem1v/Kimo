@@ -12,6 +12,7 @@ import 'package:kimo/state/game_progress.dart';
 /// YUKARI hareket ediyor (`if (dbCount > dailyReviewsDone)`), yani A'nın 5'i
 /// B'nin 0'ıyla değiştirilemiyor. Aşağıdaki son iddia tam olarak onu tutuyor.
 void main() {
+  _dailyGoalFromServerTests();
   test('clear() bütün ilerleme durumunu sıfırlıyor', () {
     final GameProgress g = GameProgress.instance;
     g.hydrate(xp: 4200, streak: 9, lastActive: DateTime(2026, 9, 15));
@@ -43,5 +44,52 @@ void main() {
 
     g.clear();
     expect(g.dailyReviewsDone, 0);
+  });
+}
+
+/// Günlük hedef ödülünün günü SUNUCUDAN geliyor (Task 17 · 0099).
+void _dailyGoalFromServerTests() {
+  group('günlük hedef günü sunucudan', () {
+    setUp(gameProgress.clear);
+
+    test('sunucu "bugün alındı" derse istemci ikinci kez istemiyor', () {
+      // ESKİDEN: `_lastGoalDate` yalnızca oturum-içiydi ve `clear()` onu
+      // çıkışta sıfırlıyordu. Yeniden kurulumda ya da ikinci cihazda istemci
+      // "ödül alınmadı" sanıyor, `claim_daily_goal` sessizce sıfır ödül
+      // döndürüyordu — hata ATMADIĞI için geri alma dalı da çalışmıyordu.
+      final DateTime bugun = DateTime(2026, 9, 17);
+      gameProgress.syncFromDailyState(
+        xp: 100,
+        weeklyXp: 10,
+        streak: 1,
+        serverToday: bugun,
+        dailyGoalDate: bugun,
+      );
+      expect(gameProgress.dailyGoalReached, isTrue);
+      expect(gameProgress.claimDailyGoal(50), isFalse,
+          reason: 'sunucu almış diyorsa yerel ikinci kez eklemez');
+    });
+
+    test('sunucu boş dönerse ödül İSTENEBİLİR kalıyor', () {
+      gameProgress.syncFromDailyState(
+        xp: 100,
+        weeklyXp: 10,
+        streak: 1,
+        serverToday: DateTime(2026, 9, 17),
+      );
+      expect(gameProgress.dailyGoalReached, isFalse);
+      expect(gameProgress.claimDailyGoal(50), isTrue);
+    });
+
+    test('DÜNKÜ ödül bugünü kapatmıyor', () {
+      gameProgress.syncFromDailyState(
+        xp: 100,
+        weeklyXp: 10,
+        streak: 1,
+        serverToday: DateTime(2026, 9, 17),
+        dailyGoalDate: DateTime(2026, 9, 16),
+      );
+      expect(gameProgress.dailyGoalReached, isFalse);
+    });
   });
 }
