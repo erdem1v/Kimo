@@ -12,6 +12,7 @@ import '../../models/mascot.dart';
 import '../../models/models.dart';
 import '../../services/notification_service.dart';
 import '../../services/sound_service.dart';
+import '../../state/app_settings.dart';
 import '../../state/features.dart';
 import '../../state/game_progress.dart';
 import '../../state/refresh_bus.dart';
@@ -131,6 +132,12 @@ class _TodayScreenState extends State<TodayScreen> {
           serverToday: state.serverToday,
           dailyGoalDate: state.dailyGoalDate,
         );
+        // SESSİZ SAATLER SUNUCUDAN (0100). Yerel kopya yalnızca gösterim ve
+        // cihazdaki hatırlatma planı için; uygulayan taraf `send_push`.
+        unawaited(appSettings.syncQuietRangeFromServer(
+          state.quietStart,
+          state.quietEnd,
+        ));
       }
 
       // ORTAK SERİ AKŞAM HATIRLATMASINA KATILIYOR (Tur 7 · n6): ayrı bir

@@ -395,6 +395,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Sessiz aralığı YEREL ve SUNUCU tarafında birlikte yazar (0100).
+  ///
+  /// İKİSİ DE ŞART: yerel kopya cihazdaki hatırlatma planını kaydırıyor,
+  /// sunucudaki kopya ise arkadaştan gelen bildirimleri kesiyor. Yalnızca
+  /// birini yazmak, ayarın yarısının çalıştığı eski duruma geri dönmek olurdu.
+  ///
+  /// SUNUCU YAZIMI BAŞARISIZ OLURSA yerel değer GERİ ALINIYOR: ekranda
+  /// "23:00" yazarken sunucunun hâlâ 22:00 uyguladığı bir hâl, bu turda
+  /// kapatılan "istemci bir yere yazıyor, okuyan başka yere bakıyor"
+  /// sınıfının aynısı olurdu.
+  Future<void> _setQuiet(int start, int end) async {
+    final int prevStart = appSettings.quietStart;
+    final int prevEnd = appSettings.quietEnd;
+    await appSettings.setQuietRange(start, end);
+    try {
+      await dailyStateRepository.setQuietHours(
+        appSettings.quietStart,
+        appSettings.quietEnd,
+      );
+    } catch (e) {
+      debugPrint('sessiz saat sunucuya yazılamadı: $e');
+      await appSettings.setQuietRange(prevStart, prevEnd);
+      if (mounted) _snack(L10n.of(context).settingsSaveFailed);
+      return;
+    }
+    await notifications.replanFromCache(
+      enabled: userProfile.notifyEnabled,
+    );
+  }
+
   void _snack(String message) {
     ScaffoldMessenger.of(
       context,
@@ -512,12 +542,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       context,
                       appSettings.quietStart,
                     );
-                    if (h != null) {
-                      await appSettings.setQuietRange(h, appSettings.quietEnd);
-                      await notifications.replanFromCache(
-                        enabled: userProfile.notifyEnabled,
-                      );
-                    }
+                    if (h != null) await _setQuiet(h, appSettings.quietEnd);
                   },
                 ),
               ),
@@ -532,15 +557,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       context,
                       appSettings.quietEnd,
                     );
-                    if (h != null) {
-                      await appSettings.setQuietRange(
-                        appSettings.quietStart,
-                        h,
-                      );
-                      await notifications.replanFromCache(
-                        enabled: userProfile.notifyEnabled,
-                      );
-                    }
+                    if (h != null) await _setQuiet(appSettings.quietStart, h);
                   },
                 ),
               ),

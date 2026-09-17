@@ -88,7 +88,14 @@ select
   -- yeniden kurar ya da ikinci cihazdan girerse istemci "ödül alınmadı"
   -- sanıyor, ilerleme halkasını eksik gösteriyor ve `claim_daily_goal`
   -- sessizce `gems_awarded = 0` döndürüyordu.
-  p.daily_goal_date
+  p.daily_goal_date,
+  -- SESSİZ SAATLER OKUNABİLİR OLMALI (0100). Yazma `set_quiet_hours`tan
+  -- geçiyor ama istemcinin DEĞERİ de görmesi gerekiyor: yalnızca cihazda
+  -- tutulsaydı ikinci cihaz kendi varsayılanını (22–08) gösterir, sunucu ise
+  -- ilk cihazın yazdığını uygular — deponun iki turdur kapattığı "istemci bir
+  -- yere yazıyor, okuyan başka yere bakıyor" sınıfının aynısı.
+  p.quiet_start,
+  p.quiet_end
 from public.profiles p,
      public.ai_state() s,
      public.feature_flags() f
@@ -170,7 +177,14 @@ select
   -- yeniden kurar ya da ikinci cihazdan girerse istemci "ödül alınmadı"
   -- sanıyor, ilerleme halkasını eksik gösteriyor ve `claim_daily_goal`
   -- sessizce `gems_awarded = 0` döndürüyordu.
-  p.daily_goal_date
+  p.daily_goal_date,
+  -- SESSİZ SAATLER OKUNABİLİR OLMALI (0100). Yazma `set_quiet_hours`tan
+  -- geçiyor ama istemcinin DEĞERİ de görmesi gerekiyor: yalnızca cihazda
+  -- tutulsaydı ikinci cihaz kendi varsayılanını (22–08) gösterir, sunucu ise
+  -- ilk cihazın yazdığını uygular — deponun iki turdur kapattığı "istemci bir
+  -- yere yazıyor, okuyan başka yere bakıyor" sınıfının aynısı.
+  p.quiet_start,
+  p.quiet_end
 from public.profiles p,
      public.ai_state() s,
      public.feature_flags() f

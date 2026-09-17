@@ -1219,7 +1219,7 @@
       }
     }
   },
-  "settingsQuietNote": "Bu aralıkta Kimo'nun hatırlatmaları gönderilmez; aralığa denk gelen hatırlatma bir sonraki uygun saate kayar. Arkadaşlarından gelen bildirimler bundan etkilenmez.",
+  "settingsQuietNote": "Bu aralıkta bildirim gönderilmez — ne Kimo'nun hatırlatmaları ne de arkadaşlarından gelenler. Aralığa denk gelen hatırlatma bir sonraki uygun saate kayar.",
   "settingsHourValue": "{hour}:00",
   "@settingsHourValue": {
     "placeholders": {

@@ -123,6 +123,24 @@ class AppSettings extends ChangeNotifier {
     await prefs.setInt(_kQuietEnd, e);
   }
 
+  /// Sunucudaki aralığı yerele yansıtır — SUNUCUYA GERİ YAZMAZ.
+  ///
+  /// Yazma yolu `set_quiet_hours` (0100) ve tek yönlü olması şart: buradan
+  /// geri yazmak, açılışta okunan değeri hemen geri göndererek sonsuz bir
+  /// gidiş-geliş üretirdi.
+  Future<void> syncQuietRangeFromServer(int? start, int? end) async {
+    if (start == null || end == null) return;
+    final int s = _clampHour(start, defaultQuietStart);
+    final int e = _clampHour(end, defaultQuietEnd);
+    if (_quietStart == s && _quietEnd == e) return;
+    _quietStart = s;
+    _quietEnd = e;
+    notifyListeners();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kQuietStart, s);
+    await prefs.setInt(_kQuietEnd, e);
+  }
+
   static int _clampHour(int? value, int fallback) {
     if (value == null || value < 0 || value > 23) return fallback;
     return value;

@@ -45,6 +45,8 @@ class DailyState {
     this.freeWindowLimit = 0,
     this.freeMonthLimit = 0,
     this.dailyGoalDate,
+    this.quietStart,
+    this.quietEnd,
     this.premiumUntil,
     this.lastActivityDate,
     this.serverToday,
@@ -133,6 +135,14 @@ class DailyState {
   /// kurulumda ya da ikinci cihazda ödül "alınmadı" sanılıyor,
   /// `claim_daily_goal` sessizce sıfır ödül döndürüyordu.
   final DateTime? dailyGoalDate;
+
+  /// Sessiz saat aralığı — SUNUCUNUN kopyası (0100).
+  ///
+  /// Yazma `set_quiet_hours`tan geçiyor; burası okuma yolu. Yalnızca cihazda
+  /// tutulsaydı ikinci cihaz kendi varsayılanını gösterir, sunucu ise ilk
+  /// cihazın yazdığını uygulardı.
+  final int? quietStart;
+  final int? quietEnd;
 
   /// Günlük hedef ödülü BUGÜN alınmış mı (sunucunun günü ile).
   bool get dailyGoalClaimed =>
@@ -286,6 +296,8 @@ class DailyState {
       freeWindowLimit: _int(row['free_window_limit']) ?? 0,
       freeMonthLimit: _int(row['free_month_limit']) ?? 0,
       dailyGoalDate: _date(row['daily_goal_date']),
+      quietStart: _int(row['quiet_start']),
+      quietEnd: _int(row['quiet_end']),
       premiumUntil: _date(row['premium_until']),
       gems: _int(row['gems']) ?? 0,
       xp: _int(row['xp']) ?? 0,
@@ -412,6 +424,17 @@ class DailyStateRepository {
       debugPrint('reklam ödülü başlatılamadı: $e');
       return null;
     }
+  }
+
+  /// Sessiz saat aralığını sunucuya yazar (0100).
+  ///
+  /// Sütunlar kilitli; tek yazma yolu bu RPC. Yerel kopya gösterim ve cihaz
+  /// hatırlatmaları için, UYGULAYAN taraf `send_push`.
+  Future<void> setQuietHours(int start, int end) async {
+    await Supabase.instance.client.rpc<void>(
+      'set_quiet_hours',
+      params: <String, dynamic>{'p_start': start, 'p_end': end},
+    );
   }
 
   Future<AgeStatus?> ageStatus() async {
