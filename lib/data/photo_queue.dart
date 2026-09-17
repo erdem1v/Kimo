@@ -61,6 +61,8 @@ class PendingPhoto {
     this.concept,
     this.batchId,
     this.refunded = false,
+    this.labels = const <String>[],
+    this.correctIndex,
   });
 
   final String id;
@@ -72,6 +74,29 @@ class PendingPhoto {
 
   final String? subject;
   final String? concept;
+
+  /// Şık etiketleri (AI çıkardıysa dolu).
+  final List<String> labels;
+
+  /// İşaretlenmiş doğru şık. `null` = kullanıcı henüz işaretlemedi.
+  ///
+  /// **AI BUNU HİÇ DOLDURMUYOR** ve dolduramaz: `analyze-question` şeması
+  /// doğru şıkkı döndürmüyor — öğrenme anı orada, kullanıcının kendi
+  /// işaretlemesinde. Parti ekranı bu yüzden satır içi bir işaretleyici
+  /// gösteriyor (Task 17): yoksa hiçbir kayıt `ready` olamıyor ve "Hepsini
+  /// onayla" gönderecek bir şey bulamıyordu.
+  final int? correctIndex;
+
+  /// Yalnızca DOĞRU ŞIK eksik: ders, konu ve şıklar hazır.
+  ///
+  /// Parti ekranında satır içi işaretleyici bu durumda çiziliyor; ders ya da
+  /// konu eksikse satır tam onay ekranına götürüyor.
+  bool get needsOnlyCorrectOption =>
+      state == PhotoQueueState.needsUser &&
+      (subject?.isNotEmpty ?? false) &&
+      (concept?.isNotEmpty ?? false) &&
+      labels.isNotEmpty &&
+      correctIndex == null;
 
   /// Aynı partide çekilen kareler aynı damgayı taşıyor; parti sonuç ekranı
   /// bunu kullanıyor. `null` = tek kare (bugünkü yol).
@@ -493,6 +518,12 @@ class PhotoQueue {
           concept: e['concept'] as String?,
           batchId: e['batch'] as String?,
           refunded: e['refunded'] == true,
+          labels: <String>[
+            for (final dynamic x
+                in (e['labels'] as List<dynamic>? ?? const <dynamic>[]))
+              x as String,
+          ],
+          correctIndex: (e['correct_index'] as num?)?.toInt(),
         ),
     ];
   }

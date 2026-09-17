@@ -209,13 +209,22 @@ class _BatchResultScreenState extends State<BatchResultScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
+                  // SAYI GERÇEK OLMALI. Etiket `total` yazıyordu, yani "Hepsini
+                  // onayla · 10 soru" derken gönderebileceği satır sayısı her
+                  // zaman sıfırdı. Artık yalnızca `ready` olanları sayıyor ve
+                  // gönderecek bir şey yoksa kapalı duruyor.
                   KimoButton(
-                    label: l.batchApproveAll(total),
-                    onPressed: _working ? null : () => unawaited(_approveAll()),
+                    label: l.batchApproveAll(_done),
+                    busy: _working,
+                    onPressed: (_working || _done == 0)
+                        ? null
+                        : () => unawaited(_approveAll()),
                   ),
                   const SizedBox(height: Gap.xs),
-                  Text(l.batchTapRowHint,
-                      style: t.caption.copyWith(color: c.inkMuted)),
+                  Text(
+                    _done == 0 ? l.batchNeedCorrect : l.batchTapRowHint,
+                    style: t.caption.copyWith(color: c.inkMuted),
+                  ),
                 ],
               ),
             ),
@@ -274,8 +283,15 @@ class _BatchResultScreenState extends State<BatchResultScreen> {
       color: needsUser ? c.honeyTint : c.card,
       padding: const EdgeInsets.symmetric(
           horizontal: Gap.md, vertical: Gap.md),
-      onTap: waiting ? null : () => unawaited(_openRow(p)),
-      child: Row(
+      // İŞARETLEYİCİ VARKEN KART TIKLANMIYOR: dokunuş şıkka gitmeli, yanlışlıkla
+      // tam onay ekranını açmamalı.
+      onTap: (waiting || p.needsOnlyCorrectOption)
+          ? null
+          : () => unawaited(_openRow(p)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+      Row(
         children: <Widget>[
           Expanded(
             child: Column(
@@ -306,7 +322,9 @@ class _BatchResultScreenState extends State<BatchResultScreen> {
               ],
             ),
           ),
-          if (needsUser)
+          if (p.needsOnlyCorrectOption)
+            const SizedBox.shrink()
+          else if (needsUser)
             Text(l.batchRowFix,
                 style: t.captionStrong.copyWith(color: c.honeyText))
           else if (waiting)
@@ -319,6 +337,61 @@ class _BatchResultScreenState extends State<BatchResultScreen> {
             KimoIcon(KimoIcons.check, size: 18, color: c.mintText),
         ],
       ),
+          // SATIR İÇİ DOĞRU ŞIK (Task 17).
+          //
+          // Bunsuz parti akışı TAMAMLANAMIYORDU: `_isComplete` `correct_index`
+          // istiyor, `_mergeAnalysis` onu hiç yazmıyor ve `analyze-question`
+          // şeması doğru şıkkı zaten döndürmüyor (öğrenme anı kullanıcının
+          // işaretlemesinde). Sonuç: her satır `needsUser`da kalıyor, `_done`
+          // yapısal olarak daima 0 ve "Hepsini onayla" gönderecek bir şey
+          // bulamıyordu — üstelik bu, para ödenen premium akış.
+          if (p.needsOnlyCorrectOption) ...<Widget>[
+            const SizedBox(height: Gap.md),
+            Text(l.confirmCorrectOption,
+                style: t.caption.copyWith(color: c.honeyText)),
+            const SizedBox(height: Gap.sm),
+            Row(
+              children: <Widget>[
+                for (int i = 0; i < p.labels.length; i++) ...<Widget>[
+                  Expanded(child: _optionButton(context, t, c, p, i)),
+                  if (i != p.labels.length - 1) const SizedBox(width: Gap.sm),
+                ],
+              ],
+            ),
+          ],
+        ],
+      ),
     );
+  }
+
+  /// Tek şık düğmesi. İşaretlendiği anda kayıt `ready`ye dönüyor: `update`
+  /// alanları birleştirip `_isComplete`i yeniden değerlendiriyor.
+  Widget _optionButton(BuildContext context, KimoTypography t, KimoColors c,
+      PendingPhoto p, int index) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _working ? null : () => unawaited(_markCorrect(p, index)),
+      child: Container(
+        height: Sizes.rowMin,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: Radii.all(Radii.pill),
+          border: Border.all(color: c.border),
+        ),
+        child: Text(
+          p.labels[index].isNotEmpty
+              ? p.labels[index]
+              : String.fromCharCode(65 + index),
+          style: t.bodyStrong.copyWith(color: c.ink),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _markCorrect(PendingPhoto p, int index) async {
+    sound.tap();
+    await photoQueue.update(p.id, <String, dynamic>{'correct_index': index});
+    if (mounted) await _refresh();
   }
 }

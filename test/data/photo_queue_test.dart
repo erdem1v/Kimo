@@ -362,6 +362,52 @@ void main() {
       expect((await photoQueue.entry('a'))?['subject'], 'Fizik');
     });
 
+    test('doğru şık İŞARETLENİNCE kayıt ready oluyor ve yükleniyor', () async {
+      // Task 17. Parti akışı bu adım olmadan HİÇ tamamlanamıyordu: yukarıdaki
+      // test AI'ın doğru şıkkı asla döndürmediğini yazıyor, ama parti
+      // ekranında onu işaretlemenin bir yolu yoktu. Sonuç: her satır
+      // `needsUser`da kalıyor, `_done` yapısal olarak daima 0 ve "Hepsini
+      // onayla" gönderecek bir şey bulamıyordu — para ödenen premium akışta.
+      await seed(<Map<String, dynamic>>[
+        row('a',
+            state: 'needsUser',
+            subject: 'Fizik',
+            concept: 'Basınç',
+            labels: <String>['A', 'B', 'C']),
+      ]);
+
+      final PendingPhoto before = (await photoQueue.list()).single;
+      expect(before.needsOnlyCorrectOption, isTrue,
+          reason: 'ders, konu ve şıklar hazır; eksik olan yalnızca doğru şık');
+      expect(before.labels, hasLength(3),
+          reason: 'satır içi işaretleyici şık etiketlerini görebilmeli');
+
+      // Parti ekranındaki satır içi işaretleyicinin yaptığı.
+      await photoQueue.update('a', <String, dynamic>{'correct_index': 1});
+
+      final PendingPhoto after = (await photoQueue.list()).single;
+      expect(after.state, PhotoQueueState.ready,
+          reason: 'işaretleme kaydı gönderilebilir hâle getirmeli');
+      expect(after.needsOnlyCorrectOption, isFalse);
+
+      final List<String> uploaded = <String>[];
+      PhotoQueue.uploadOverride = (Map<String, dynamic> e, _) async {
+        uploaded.add(e['id'] as String);
+      };
+      await photoQueue.flush();
+      expect(uploaded, <String>['a'],
+          reason: '"Hepsini onayla" artık gerçekten gönderiyor');
+    });
+
+    test('ders ya da konu eksikse satır içi işaretleyici ÇIKMIYOR', () async {
+      // O satır tam onay ekranına götürmeli: işaretleyici tek başına yeterli
+      // değil, çünkü kayıt yine `ready` olamaz.
+      await seed(<Map<String, dynamic>>[
+        row('a', state: 'needsUser', labels: <String>['A', 'B']),
+      ]);
+      expect((await photoQueue.list()).single.needsOnlyCorrectOption, isFalse);
+    });
+
     test('yaş kapısı sunucudan gelirse kayıt BEKLETİLİYOR', () async {
       await seed(<Map<String, dynamic>>[row('a', state: 'needsAnalysis')]);
       PhotoQueue.analyzeOverride = (_) async => const QuestionAnalysis(

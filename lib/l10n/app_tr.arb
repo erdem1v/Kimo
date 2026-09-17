@@ -149,6 +149,7 @@
   "batchRowNoTopic": "Konu bulunamadı",
   "batchRowNoTopicHint": "Sen seç, kaydedelim",
   "batchRowFix": "Düzelt",
+  "batchNeedCorrect": "Her satırın doğru şıkkını işaretle",
   "batchSafeNote": "Okunamayan fotoğraf yine de kaydedilir; konusunu ve şıklarını sen yazarsın. Hiçbiri kaybolmaz.",
   "batchApproveAll": "{count, plural, =1{Onayla · 1 soru} other{Hepsini onayla · {count} soru}}",
   "@batchApproveAll": {
