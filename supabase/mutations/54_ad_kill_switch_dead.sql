@@ -15,7 +15,10 @@
 -- KAPI NEDEN SUNUCUDA: istemci kapisi yalnizca GUNCEL surumleri kapsar.
 -- `ad_offer` sunucunun karari ve eski bir istemci de onu okuyor.
 --
--- NOT: iki govde de goc dosyasindan URETILDI. Kaynak: 0094.
+-- NOT: iki govde de goc dosyasindan URETILDI. Kaynak: 0099
+-- (ucretsiz katman sutunlari). Geri alma GOCUN BIREBIR KOPYASI
+-- (drop + create): `create or replace` ile geri almak imza oneki
+-- farki uretir ve check_sql'in 7. kontrolu ikisini ayri metin sayar.
 create or replace function public.ai_state()
 returns table (
   -- SIRA 0075'TEKININ AYNISI OLMAK ZORUNDA. `create or replace`, OUT
@@ -39,7 +42,14 @@ returns table (
   ad_rewards_per_day int,
   ad_offer           boolean,
   plus_window_limit  int,
-  plus_month_limit   int
+  plus_month_limit   int,
+  -- ÜCRETSİZ KATMANIN sınırları — ÇAĞIRANIN katmanından BAĞIMSIZ (0099).
+  -- `ai_window_limit` / `ai_month_limit` çağıranın kendi katmanını anlatıyor;
+  -- paywall'ın "Ücretsiz" sütunu ise ücretsiz katmanı anlatmak zorunda.
+  -- Abonede ikisi eşitleniyordu ("Ücretsiz 50 | Plus 50"), anonimde ömür boyu
+  -- deneme tavanı ücretsiz katman gibi görünüyordu ("Ücretsiz 3").
+  free_window_limit  int,
+  free_month_limit   int
 )
 language plpgsql stable security definer set search_path = public
 as $fn$
@@ -67,6 +77,8 @@ begin
   ad_rewards_per_day := public.config_int('ad_reward_daily', 3);
   plus_window_limit  := public.config_int('ai_window_premium', 50);
   plus_month_limit   := public.config_int('ai_month_premium', 1000);
+  free_window_limit  := public.config_int('ai_window_free', 10);
+  free_month_limit   := public.config_int('ai_month_free', 300);
 
   ai_month_resets_at := public.istanbul_month_reset();
   ai_month_resets_on := (ai_month_resets_at at time zone 'Europe/Istanbul')::date;
@@ -191,10 +203,10 @@ begin
   return next;
 end
 $fn$;
-revoke execute on function public.ai_state() from public, anon;
-grant  execute on function public.ai_state() to authenticated;
 -- @UNDO
-create or replace function public.ai_state()
+drop function if exists public.ai_state();
+
+create function public.ai_state()
 returns table (
   -- SIRA 0075'TEKININ AYNISI OLMAK ZORUNDA. `create or replace`, OUT
   -- parametrelerinin tanimladigi satir tipini (ad + SIRA dahil) degistirmeye
@@ -217,7 +229,14 @@ returns table (
   ad_rewards_per_day int,
   ad_offer           boolean,
   plus_window_limit  int,
-  plus_month_limit   int
+  plus_month_limit   int,
+  -- ÜCRETSİZ KATMANIN sınırları — ÇAĞIRANIN katmanından BAĞIMSIZ (0099).
+  -- `ai_window_limit` / `ai_month_limit` çağıranın kendi katmanını anlatıyor;
+  -- paywall'ın "Ücretsiz" sütunu ise ücretsiz katmanı anlatmak zorunda.
+  -- Abonede ikisi eşitleniyordu ("Ücretsiz 50 | Plus 50"), anonimde ömür boyu
+  -- deneme tavanı ücretsiz katman gibi görünüyordu ("Ücretsiz 3").
+  free_window_limit  int,
+  free_month_limit   int
 )
 language plpgsql stable security definer set search_path = public
 as $fn$
@@ -245,6 +264,8 @@ begin
   ad_rewards_per_day := public.config_int('ad_reward_daily', 3);
   plus_window_limit  := public.config_int('ai_window_premium', 50);
   plus_month_limit   := public.config_int('ai_month_premium', 1000);
+  free_window_limit  := public.config_int('ai_window_free', 10);
+  free_month_limit   := public.config_int('ai_month_free', 300);
 
   ai_month_resets_at := public.istanbul_month_reset();
   ai_month_resets_on := (ai_month_resets_at at time zone 'Europe/Istanbul')::date;
@@ -370,5 +391,6 @@ begin
   return next;
 end
 $fn$;
+
 revoke execute on function public.ai_state() from public, anon;
 grant  execute on function public.ai_state() to authenticated;

@@ -13,7 +13,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(72);
+select plan(76);
 
 select tests.create_supabase_user('alice');
 select tests.create_supabase_user('mallory');
@@ -167,6 +167,21 @@ select is((select ai_month_limit from public.my_daily_state), 1000,
 select is((select ad_rewards_left from public.my_daily_state), 0,
           'premium reklam görmüyor');
 
+-- ÜCRETSİZ KATMANIN SINIRLARI ÇAĞIRANIN KATMANINDAN BAĞIMSIZ (0099).
+--
+-- Paywall'ın "Ücretsiz" sütunu bu iki sayıyı yazıyor. Sunucu ayrı bir alan
+-- yayınlamadığı sürece ekran `ai_*` sütunlarını kullanmak zorundaydı ve onlar
+-- ÇAĞIRANIN katmanını anlatıyor: abonede kıyas tablosu "Ücretsiz 50 | Plus 50"
+-- diyordu. İddia bu yüzden PREMIUM koltuktan yapılıyor — ücretsiz kullanıcıda
+-- iki sütun tesadüfen eşit olur ve hata görünmezdi.
+select is((select free_window_limit from public.my_daily_state), 10,
+          'PREMIUM koltuktan bakıldığında bile ücretsiz pencere sınırı 10');
+select is((select free_month_limit from public.my_daily_state), 300,
+          'PREMIUM koltuktan bakıldığında bile ücretsiz aylık cap 300');
+select isnt((select free_window_limit from public.my_daily_state),
+            (select ai_window_limit from public.my_daily_state),
+            'ücretsiz sütun ile ÇAĞIRANIN sütunu aynı sayı DEĞİL');
+
 -- Zaman damgası olmasının TÜM sebebi bu: cron olmadan süresi doluyor.
 select tests.reset_role();
 update public.profiles set premium_until = now() - interval '1 day'
@@ -193,6 +208,12 @@ select is((select ai_state from public.my_daily_state), 'lifetime_full',
           'durum lifetime_full — pencere/ay değil');
 select is((select ai_next_at_hm from public.my_daily_state), null,
           'anonimde gösterilecek saat YOK (hak geri gelmiyor)');
+
+-- ANONİMDE DE ÜCRETSİZ KATMAN SINIRI DEĞİŞMİYOR. Ömür boyu deneme tavanı (3)
+-- `ai_window_limit`; onu "Ücretsiz" sütununda göstermek, ücretsiz katmanı
+-- üçte bir gibi anlatmak olurdu.
+select is((select free_window_limit from public.my_daily_state), 10,
+          'anonim koltuktan da ücretsiz pencere sınırı 10 (deneme tavanı 3 DEĞİL)');
 select is((select ad_offer from public.my_daily_state), false,
           'anonim reklam görmüyor — yeni oturum sıfırlama yolu olurdu');
 

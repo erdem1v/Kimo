@@ -13,6 +13,13 @@
 -- 21:00'den sonra now()+3sa ertesi gune tasidigi icin tarih karsilastirmasi
 -- tesadufen dogru cevabi veriyordu). Duzeltmeden sonra gunun her saatinde
 -- ayirt ediyor.
+-- NOT: iki govde de goc dosyasindan URETILDI. Kaynak: 0099 (ucretsiz
+-- katman sutunlari + daily_goal_date). GORUNUM GOVDELERI KAPININ KOR
+-- NOKTASI: check_sql'in 7. ve 10. kontrolleri yalnizca FONKSIYON,
+-- POLITIKA ve GRANT karsilastiriyor. Gorunume sutun eklendiginde bu
+-- dosya elle guncellenmezse `create or replace view` daha KISA listeyi
+-- yazmaya calisir ve Postgres 'cannot drop columns from view' ile
+-- reddeder — mutasyon kontrolu FAZ 2'de duser.
 create or replace view public.my_daily_state
 with (security_invoker = false) as
 select
@@ -69,7 +76,19 @@ select
   sub.sub_store,
   sub.sub_expires_at,
   sub.sub_renews,
-  sub.sub_in_trial
+  sub.sub_in_trial,
+  -- ÜCRETSİZ KATMANIN sınırları (0099). Paywall'ın "Ücretsiz" sütunu bunları
+  -- kullanıyor; `ai_window_limit`/`ai_month_limit` ÇAĞIRANIN katmanını
+  -- anlatıyor ve abonede/anonimde yanlış sütun oluyordu.
+  s.free_window_limit,
+  s.free_month_limit,
+  -- GÜNLÜK HEDEF ÖDÜLÜ BUGÜN ALINDI MI (0099). Sunucuda zaten duruyordu ama
+  -- yayınlanmıyordu: istemci yalnızca oturum-içi bir alana bakıyor ve
+  -- `GameProgress.clear()` onu çıkışta sıfırlıyor. Kullanıcı uygulamayı
+  -- yeniden kurar ya da ikinci cihazdan girerse istemci "ödül alınmadı"
+  -- sanıyor, ilerleme halkasını eksik gösteriyor ve `claim_daily_goal`
+  -- sessizce `gems_awarded = 0` döndürüyordu.
+  p.daily_goal_date
 from public.profiles p,
      public.ai_state() s,
      public.feature_flags() f
@@ -78,7 +97,6 @@ from public.profiles p,
 -- TAMAMI boş dönerdi — yani abonesi olmayan herkes HUD'unu kaybederdi.
 left join lateral public.subscription_state() sub on true
 where p.id = auth.uid();
-
 -- @UNDO
 create or replace view public.my_daily_state
 with (security_invoker = false) as
@@ -140,7 +158,19 @@ select
   sub.sub_store,
   sub.sub_expires_at,
   sub.sub_renews,
-  sub.sub_in_trial
+  sub.sub_in_trial,
+  -- ÜCRETSİZ KATMANIN sınırları (0099). Paywall'ın "Ücretsiz" sütunu bunları
+  -- kullanıyor; `ai_window_limit`/`ai_month_limit` ÇAĞIRANIN katmanını
+  -- anlatıyor ve abonede/anonimde yanlış sütun oluyordu.
+  s.free_window_limit,
+  s.free_month_limit,
+  -- GÜNLÜK HEDEF ÖDÜLÜ BUGÜN ALINDI MI (0099). Sunucuda zaten duruyordu ama
+  -- yayınlanmıyordu: istemci yalnızca oturum-içi bir alana bakıyor ve
+  -- `GameProgress.clear()` onu çıkışta sıfırlıyor. Kullanıcı uygulamayı
+  -- yeniden kurar ya da ikinci cihazdan girerse istemci "ödül alınmadı"
+  -- sanıyor, ilerleme halkasını eksik gösteriyor ve `claim_daily_goal`
+  -- sessizce `gems_awarded = 0` döndürüyordu.
+  p.daily_goal_date
 from public.profiles p,
      public.ai_state() s,
      public.feature_flags() f

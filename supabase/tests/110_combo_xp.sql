@@ -8,7 +8,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(13);
+select plan(15);
 
 select tests.create_supabase_user('alice');
 -- Yaş kapısı (0067) `mistakes` INSERT'te doğum yılı şart koşuyor; bu testin
@@ -138,6 +138,29 @@ select is(
   true,
   'şıkkı olmayan soruda kendi kendine notlama korunuyor'
 );
+
+-- ================================ GÜNLÜK HEDEF ÖDÜLÜ YAYINLANIYOR (0099)
+--
+-- `claim_daily_goal` ödülü günde bir kez veriyor ve bunu `daily_goal_date`
+-- ile garantiliyor, ama görünüm o alanı YAYINLAMIYORDU. İstemci yalnızca
+-- oturum-içi bir alana bakıyor ve çıkışta sıfırlıyor; kullanıcı uygulamayı
+-- yeniden kurar ya da ikinci cihazdan girerse "ödül alınmadı" sanılıyor,
+-- ilerleme halkası eksik gösteriliyor ve ikinci çağrı SESSİZCE sıfır ödül
+-- döndürüyor (hata atmıyor, yani istemcinin geri alma dalı da çalışmıyor).
+select tests.reset_role();
+update public.profiles set daily_goal_date = public.istanbul_day()
+ where id = tests.get_supabase_uid('alice');
+select tests.authenticate_as('alice');
+select is((select daily_goal_date from public.my_daily_state),
+          public.istanbul_day(),
+          'ödül BUGÜN alındıysa görünüm bunu söylüyor');
+
+select tests.reset_role();
+update public.profiles set daily_goal_date = null
+ where id = tests.get_supabase_uid('alice');
+select tests.authenticate_as('alice');
+select is((select daily_goal_date from public.my_daily_state), null,
+          'ödül alınmadıysa alan boş — istemci tahmin etmiyor');
 
 select * from finish();
 rollback;

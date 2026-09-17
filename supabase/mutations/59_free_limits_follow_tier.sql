@@ -1,29 +1,22 @@
 -- test: supabase/tests/100_ai_quota.sql
 --
--- MUTASYON: kayan pencere `app_config`'teki uzunlugu yok sayip 24 saat sayiyor.
--- BEKLENEN: 100'un "9 saat onceki cagri PENCEREDE sayilmiyor" iddiasi kirmizi.
+-- MUTASYON: `free_*` sutunlarini CAGIRANIN katmanina bagla — yani 0099
+-- oncesindeki davranisi geri getir.
+-- BEKLENEN: 100'un "PREMIUM koltuktan bakildiginda bile ucretsiz pencere
+-- siniri 10" ve "ucretsiz sutun ile CAGIRANIN sutunu ayni sayi DEGIL"
+-- iddialari kirmizi.
 --
--- BU MUTASYON NIYE DEGERLI: sayiya dayali butun iddialari GECIYOR — tuketim
--- yine sinirda duruyor, `allowed=false` yine donuyor, `ai_state` yine
--- `window_full` oluyor. Yalnizca YASLANMA iddiasi dusuyor. Yani "dogru
--- gorunuyor ama degil" sinifindan bir hatayi yakaliyor; o sinif bu depoda
--- `27_age_gate_drops_suspension.sql` ile bir kez yasandi.
+-- NEDEN BU BIR KORUMA: paywall'in "Ucretsiz" sutunu bu iki sayiyi yaziyor.
+-- Sunucu ayri bir alan yayinlamadigi surece ekran `ai_*` sutunlarini
+-- kullanmak zorundaydi ve onlar CAGIRANIN katmanini anlatiyor: abonede kiyas
+-- tablosu "Ucretsiz 50 | Plus 50", anonimde "Ucretsiz 3 | Plus 50" diyordu —
+-- ikincisi omur boyu DENEME tavanini ucretsiz katman diye gosteriyor.
 --
--- SABIT KOVA (or. `c.at >= istanbul_day()`) yerine 24 saat secildi, BILEREK:
--- sabit kova mutasyonu GUNUN SAATINE bagli olurdu — suit sabah 09:00'dan once
--- kosarsa 9 saat onceki satir sabit kovada da disarida kalir, mutasyon
--- yakalanmaz ve `mutation_check.sh` "FAZ 2: HALA YESIL" diye kirmiziya doner.
--- 24 saat her saatte ayni sonucu veriyor.
+-- MUTASYON UCRETSIZ KULLANICIDA GORUNMEZ: iki sutun orada zaten esit. Bu
+-- yuzden 100'un iddialari PREMIUM ve ANONIM koltuktan yapiliyor.
 --
--- supabase/migrations/20260912000500_ai_refund.sql (0083). ILK YAZIMDA bu
--- uretim BAYATLAMISTI: dosya 0075'in govdesini tasiyordu, yani `refunded_at
--- is null` suzgecleri YOKTU ve @UNDO iade oncesi surumu geri kuruyordu —
--- 100'un uc yeni iade iddiasi FAZ 3'te kirmizi kaliyor, mutation_check.sh
--- `exit 1` ile TUM kosuyu durduruyordu.
--- NOT: iki govde de goc dosyasindan URETILDI. Kaynak: 0099
--- (ucretsiz katman sutunlari). Geri alma GOCUN BIREBIR KOPYASI
--- (drop + create): `create or replace` ile geri almak imza oneki
--- farki uretir ve check_sql'in 7. kontrolu ikisini ayri metin sayar.
+-- NOT: iki govde de goc dosyasindan URETILDI. Kaynak: 0099. Geri alma GOCUN
+-- BIREBIR KOPYASI (drop + create).
 create or replace function public.ai_state()
 returns table (
   -- SIRA 0075'TEKININ AYNISI OLMAK ZORUNDA. `create or replace`, OUT
@@ -82,8 +75,8 @@ begin
   ad_rewards_per_day := public.config_int('ad_reward_daily', 3);
   plus_window_limit  := public.config_int('ai_window_premium', 50);
   plus_month_limit   := public.config_int('ai_month_premium', 1000);
-  free_window_limit  := public.config_int('ai_window_free', 10);
-  free_month_limit   := public.config_int('ai_month_free', 300);
+  free_window_limit  := ai_window_limit;
+  free_month_limit   := ai_month_limit;
 
   ai_month_resets_at := public.istanbul_month_reset();
   ai_month_resets_on := (ai_month_resets_at at time zone 'Europe/Istanbul')::date;
@@ -115,7 +108,7 @@ begin
       from public.ai_calls c
      where c.user_id = v_uid
        and c.refunded_at is null
-       and c.at > now() - interval '24 hours';
+       and c.at > now() - make_interval(hours => v_hours);
 
     select count(*)::int into v_month
       from public.ai_calls c
@@ -142,11 +135,11 @@ begin
     -- SONRAKİ HAKKIN ANI — `min(at) + 8sa` DEĞİL; pencerenin k'ıncı en eski
     -- çağrısı (k = kullanılan − etkin + 1). İade edilmiş satırlar sıraya da
     -- girmiyor, yoksa geri verilmiş bir yuva "dolu" gibi saat üretirdi.
-    select c.at + interval '24 hours' into ai_next_at
+    select c.at + make_interval(hours => v_hours) into ai_next_at
       from public.ai_calls c
      where c.user_id = v_uid
        and c.refunded_at is null
-       and c.at > now() - interval '24 hours'
+       and c.at > now() - make_interval(hours => v_hours)
      order by c.at
     offset greatest(v_used - v_effective, 0)
        limit 1;
