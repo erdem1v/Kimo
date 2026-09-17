@@ -152,10 +152,21 @@ Future<void> celebratePairStreak(
 
 /// Çözümden sonra çalıştırılan tek giriş noktası.
 ///
-/// SIRA ÖNEMLİ: önce seri BAŞLATILMAYA çalışılıyor (iki yönde de çözülmüş
-/// gönderim varsa sunucu kabul ediyor), başladıysa KUTLAMA çıkıyor; başlamadıysa
-/// ÇAĞRI çıkıyor. Tersi olsaydı seri zaten başlamış bir ikiliye "başlat" çağrısı
-/// gösterilirdi.
+/// SIRA ÖNEMLİ: önce seri BAŞLATILMAYA çalışılıyor, başladıysa KUTLAMA
+/// çıkıyor. Çağrı ise YALNIZCA sunucu "iki yönde çözülmüş gönderim eksik"
+/// dediğinde çıkıyor — tek durum ki kullanıcının atacağı adım gerçekten işe
+/// yarıyor.
+///
+/// ESKİDEN "başlamadıysa çağrı" idi ve `start` yedi sonucu tek `false`a
+/// katlıyordu (0098 öncesi). Sonuç: serisi ZATEN BAŞLAMIŞ ikiliye ve üst
+/// sınıra çarpmış kullanıcıya da "ortak seriniz başlasın" deniyordu. Bu
+/// dosyanın kendi yorumu tam olarak bunu yasaklıyordu ama ayrım olmadan
+/// kural uygulanamıyordu.
+///
+/// SESSİZ KALINAN DURUMLAR: `exists` (zaten var — söylenecek bir şey yok),
+/// `cap`, `suspended`, `disabled`, `not_eligible`, `error`. Hiçbirinde
+/// kullanıcının yapabileceği bir şey yok; çözümün hemen ardından açılan bir
+/// yaprakla onu bilgilendirmek, kutlaması gereken anı bir redde çevirirdi.
 Future<void> afterSolvingFriendQuestion(
   BuildContext context, {
   required String friendId,
@@ -163,11 +174,13 @@ Future<void> afterSolvingFriendQuestion(
   required bool enabled,
 }) async {
   if (!enabled) return;
-  final bool started = await pairStreakRepository.start(friendId);
+  final String reason = await pairStreakRepository.start(friendId);
   if (!context.mounted) return;
-  if (started) {
+  if (reason == 'started') {
     await celebratePairStreak(context, friendName: friendName);
     return;
   }
-  await offerPairStreak(context, friendId: friendId, friendName: friendName);
+  if (reason == 'needs_solved') {
+    await offerPairStreak(context, friendId: friendId, friendName: friendName);
+  }
 }

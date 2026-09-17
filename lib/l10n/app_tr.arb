@@ -922,7 +922,7 @@
       }
     }
   },
-  "pairStreakInviteBody": "Sen de ona bir soru gönder, ortak seriniz başlasın.",
+  "pairStreakInviteBody": "Sen de ona bir soru gönder; o da çözünce ortak seriniz başlar.",
   "pairStreakInviteAction": "Soru gönder",
   "pairStreakInviteLater": "Şimdi değil",
   "@pairStreakInviteLater": {

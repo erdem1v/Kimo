@@ -273,21 +273,30 @@ class PairStreakRepository {
     }
   }
 
-  /// Ortak seriyi başlatır.
+  /// Ortak seriyi başlatır ve SEBEBİ döndürür (0098).
   ///
-  /// Sunucu İKİ YÖNDE DE çözülmüş gönderim şartını ve üst sınırı kendi
-  /// içinde uyguluyor; `false` "başlamadı" demek ve sebebi AYRIMLAMIYOR —
-  /// deponun `add_friend_by_code`'daki tek-mesaj ilkesi.
-  Future<bool> start(String friendId) async {
+  /// `started` | `exists` | `needs_solved` | `cap` | `suspended` |
+  /// `disabled` | `not_eligible`, ağ hatasında `error`.
+  ///
+  /// ESKİDEN `bool` DÖNÜYORDU ve yedi sonucu tek `false`a katlıyordu. İstemci
+  /// `false`u "henüz başlamadı" sanıp "sen de ona bir soru gönder, ortak
+  /// seriniz başlasın" çağrısını gösteriyordu — serisi ZATEN BAŞLAMIŞ ikiliye
+  /// de, üst sınıra çarpmış kullanıcıya da. Çağrıyı yazan dosyanın kendi
+  /// yorumu bunu yasaklıyordu ama ayrım olmadan kural uygulanamıyordu.
+  ///
+  /// `not_eligible` üç durumu bilerek birleştiriyor (kendine, arkadaş değil,
+  /// engelli): engeli ayrı kod olarak sızdırmak, karşı tarafın engellediğini
+  /// öğrenmenin yolu olurdu.
+  Future<String> start(String friendId) async {
     try {
       final dynamic res = await _client.rpc<dynamic>(
         'start_pair_streak',
         params: <String, dynamic>{'p_friend': friendId},
       );
-      return res == true;
+      return res is String ? res : 'error';
     } catch (e) {
       debugPrint('ortak seri başlatılamadı: $e');
-      return false;
+      return 'error';
     }
   }
 

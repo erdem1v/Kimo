@@ -82,6 +82,11 @@ values (tests.get_supabase_uid('alice'), 'Fizik', 'Kuvvet', 'islem_hatasi',
        (tests.get_supabase_uid('bob'), 'Fizik', 'Kuvvet', 'islem_hatasi',
         tests.get_supabase_uid('bob')::text || '/b.jpg');
 
+-- İDDİALAR ARTIK SEBEBİ ÇİVİLİYOR (0098). `start_pair_streak` yedi sonucu tek
+-- `false`a katlıyordu; `ok(not ...)` bu yüzden "başlamadı"yı doğruluyor ama
+-- NEDEN başlamadığını hiç sınamıyordu. Dönüş `text` olunca her iddia kendi
+-- sebebini yazıyor ve yanlış sebeple geçen bir test kalmıyor.
+--
 -- BAYRAK AÇILIYOR. 0094 `ff_pair_streak`i SUNUCUYA da taşıdı ve varsayılanı
 -- `false` — yani bu satır olmadan `start_pair_streak` ve `pair_streak_rollover`
 -- hiçbir şey yapmadan `false` dönüyor ve dosyanın davranış bölümünün TAMAMI
@@ -92,7 +97,8 @@ insert into public.app_config (key, value) values ('ff_pair_streak', 'true')
   on conflict (key) do update set value = excluded.value;
 
 select tests.authenticate_as('alice');
-select ok(not (select public.start_pair_streak(tests.get_supabase_uid('bob'))),
+select is((select public.start_pair_streak(tests.get_supabase_uid('bob'))),
+          'needs_solved',
           'çözülmüş gönderim yokken seri BAŞLAMIYOR');
 
 -- Tek yönde çözüm yeterli DEĞİL: "ortak" olması iki yön demek.
@@ -101,7 +107,8 @@ insert into public.question_sends (sender_id, receiver_id, mistake_id, solved_at
 select tests.get_supabase_uid('alice'), tests.get_supabase_uid('bob'), m.id, now()
   from public.mistakes m where m.user_id = tests.get_supabase_uid('alice') limit 1;
 select tests.authenticate_as('alice');
-select ok(not (select public.start_pair_streak(tests.get_supabase_uid('bob'))),
+select is((select public.start_pair_streak(tests.get_supabase_uid('bob'))),
+          'needs_solved',
           'TEK yönde çözüm yetmiyor');
 
 select tests.reset_role();
@@ -109,13 +116,17 @@ insert into public.question_sends (sender_id, receiver_id, mistake_id, solved_at
 select tests.get_supabase_uid('bob'), tests.get_supabase_uid('alice'), m.id, now()
   from public.mistakes m where m.user_id = tests.get_supabase_uid('bob') limit 1;
 select tests.authenticate_as('alice');
-select ok((select public.start_pair_streak(tests.get_supabase_uid('bob'))),
+select is((select public.start_pair_streak(tests.get_supabase_uid('bob'))),
+          'started',
           'iki yönde de çözüm varsa seri BAŞLIYOR');
-select ok(not (select public.start_pair_streak(tests.get_supabase_uid('bob'))),
-          'ikinci kez başlatmak FALSE — kopya satır yok');
+select is((select public.start_pair_streak(tests.get_supabase_uid('bob'))),
+          'exists',
+          'ikinci kez başlatmak EXISTS — kopya satır yok, ve İSTEMCİ bunu '
+          '"başlat" çağrısından ayırt edebiliyor');
 
 -- Arkadaş olmayanla seri kurulamıyor.
-select ok(not (select public.start_pair_streak(tests.get_supabase_uid('mallory'))),
+select is((select public.start_pair_streak(tests.get_supabase_uid('mallory'))),
+          'not_eligible',
           'arkadaş olmayanla seri kurulamıyor');
 
 -- ============================================================== OKUMA
@@ -170,8 +181,9 @@ select tests.reset_role();
 insert into public.app_config (key, value) values ('ff_pair_streak', 'false')
   on conflict (key) do update set value = excluded.value;
 select tests.authenticate_as('alice');
-select ok(
-  not (select public.start_pair_streak(tests.get_supabase_uid('bob'))),
+select is(
+  (select public.start_pair_streak(tests.get_supabase_uid('bob'))),
+  'disabled',
   'BAYRAK KAPALIYKEN ortak seri başlatılamıyor (sunucu da kapatıyor)');
 
 -- ASKI ÜRETİMİ DURDURUR (0062). Ortak seri karşı tarafa GÖRÜNEN kalıcı bir
@@ -210,8 +222,9 @@ insert into public.user_sanctions (user_id, action, until, reason_code, source)
 values (tests.get_supabase_uid('alice'), 'suspend', now() + interval '7 days',
         'other', 'admin');
 select tests.authenticate_as('alice');
-select ok(
-  not (select public.start_pair_streak(tests.get_supabase_uid('mallory'))),
+select is(
+  (select public.start_pair_streak(tests.get_supabase_uid('mallory'))),
+  'suspended',
   'ASKIDAKİ kullanıcı ortak seri BAŞLATAMIYOR');
 
 select * from finish();
