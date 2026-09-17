@@ -93,7 +93,7 @@ class PrivacyScreen extends StatelessWidget {
             const SizedBox(width: Gap.md),
             Expanded(child: Text(label, style: t.label)),
             const SizedBox(width: Gap.sm),
-            KimoIcon(KimoIcons.back, size: 16, color: c.border),
+            KimoIcon(KimoIcons.forward, size: 16, color: c.border),
           ],
         ),
       ),

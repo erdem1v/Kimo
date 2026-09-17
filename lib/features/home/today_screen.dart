@@ -616,7 +616,7 @@ class _TodayScreenState extends State<TodayScreen> {
               style: t.bodyStrong.copyWith(color: c.actionText),
             ),
           ),
-          KimoIcon(KimoIcons.back, size: 18, color: c.actionText),
+          KimoIcon(KimoIcons.forward, size: 18, color: c.actionText),
         ],
       ),
     );
@@ -644,7 +644,7 @@ class _TodayScreenState extends State<TodayScreen> {
               style: t.bodyStrong.copyWith(color: c.honeyText),
             ),
           ),
-          KimoIcon(KimoIcons.back, size: 18, color: c.honeyText),
+          KimoIcon(KimoIcons.forward, size: 18, color: c.honeyText),
         ],
       ),
     );

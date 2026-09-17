@@ -661,7 +661,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           if (onTap != null) ...<Widget>[
             const SizedBox(width: Gap.sm),
-            KimoIcon(KimoIcons.back, size: 16, color: c.border),
+            KimoIcon(KimoIcons.forward, size: 16, color: c.border),
           ],
         ],
       ),

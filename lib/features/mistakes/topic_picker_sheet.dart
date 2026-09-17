@@ -287,7 +287,7 @@ class _TopicPickerState extends State<_TopicPicker> {
                   ),
                   const SizedBox(width: Gap.md),
                   Expanded(child: Text(s, style: t.label)),
-                  KimoIcon(KimoIcons.back, size: 16, color: context.c.border),
+                  KimoIcon(KimoIcons.forward, size: 16, color: context.c.border),
                 ],
               ),
             ),

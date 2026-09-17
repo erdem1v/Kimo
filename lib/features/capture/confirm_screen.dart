@@ -651,7 +651,7 @@ class _ConfirmMistakeScreenState extends State<ConfirmMistakeScreen> {
             ),
             if (onTap != null)
               KimoIcon(
-                KimoIcons.back,
+                KimoIcons.forward,
                 size: 18,
                 color: enabled ? c.inkMuted : c.border,
               ),
