@@ -37,10 +37,17 @@
 	     ile çöküyor. Varsayılan Google'ın AÇIK TEST kimliği; yayın derlemesinde
 	     xcconfig'ten gelen $(ADMOB_APP_ID) ile değiştirilmeli.
 	
-	     NSUserTrackingUsageDescription BİLEREK EKLENMEDİ: ATT hiç çağrılmıyor,
-	     IDFA istenmiyor ve yalnızca kişiselleştirilmemiş reklam gösteriliyor
-	     (ageRestrictedTreatment: teen). Bu sayede App Store Connect'teki
-	     "Used to Track: Hayır" cevabı aynen doğru kalıyor. -->
+	     NSUserTrackingUsageDescription BİLEREK EKLENMEDİ: ATT İZNİ HİÇ
+	     İSTENMİYOR (`requestTrackingAuthorization` çağrılmıyor), IDFA
+	     okunmuyor ve yalnızca kişiselleştirilmemiş reklam gösteriliyor
+	     (istekte `npa=1`, `ageRestrictedTreatment: teen`). Bu sayede App
+	     Store Connect'teki "Used to Track: Hayır" cevabı aynen doğru kalıyor.
+
+	     NOT (Task 17 turu): cihaz günlüğünde AdMob SDK'sının
+	     `trackingAuthorizationStatus` çağrısı GÖRÜNÜYOR. Bu izin İSTEMEK
+	     değil, mevcut durumu OKUMAK — kullanım metni gerektirmiyor, kullanıcıya
+	     pencere çıkarmıyor ve SDK "izin yok" cevabını alıp IDFA'sız devam
+	     ediyor. Yukarıdaki cevapları değiştirmiyor. -->
 	<key>GADApplicationIdentifier</key>
 	<string>$(ADMOB_APP_ID)</string>
 	<!-- SKAdNetwork: reklam verenin yükleme ilişkilendirmesi için; BİZDEN veri

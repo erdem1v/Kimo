@@ -147,6 +147,12 @@ Turların hiç girmediği altı akış iki mercekle (sıra · kaynak) denetlendi
   iOS derlemesiyle bildirimin pakete girdiği doğrulandı.
 * **`ITSAppUsesNonExemptEncryption = false`** — anahtar olmadan App Store
   Connect her yüklemede aynı soruyu elle soruyor.
+* **ATT notu düzeltildi.** Info.plist "ATT hiç çağrılmıyor" diyordu; cihaz
+  günlüğünde AdMob SDK'sının `trackingAuthorizationStatus` çağrısı görünüyor.
+  Bu izin İSTEMEK değil, durumu OKUMAK — kullanım metni gerektirmiyor,
+  pencere çıkarmıyor, "Used to Track: Hayır" cevabını değiştirmiyor. Yorum
+  artık tam olarak bunu söylüyor; mağaza formunu dolduran kişinin günlükte
+  o satırı görüp tereddüt etmesi gereksiz olurdu.
 * **Android hiç derlenmemişti** (bu makinede SDK yok, CI'da da iş yoktu).
   CI'a `flutter build apk --release` işi eklendi — ve **ilk koşusunda yayın
   yapısının kırık olduğunu buldu**:
