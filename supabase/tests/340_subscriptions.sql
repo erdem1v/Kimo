@@ -17,7 +17,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(30);
+select plan(31);
 
 select tests.create_supabase_user('alice');
 select tests.create_supabase_user('bob');
@@ -136,11 +136,22 @@ select is(
 -- arıza, yine dene". Durum ise kalıcı: makbuz başkasının. İstemci 503'te
 -- satın almayı tamamlamıyor, mağaza teslimi tekrarlıyor, kullanıcı aynı
 -- anlamsız hatayı görmeye devam ediyordu.
+--
+-- `lives_ok` BİLEREK: iddia "istisna FIRLATMIYOR" ve pgTAP bunu kendi
+-- alt-işleminde yakalıyor. Düz bir `ok(not ...)` mutasyon altında işlemi
+-- KOMPLE düşürürdü ve dosya "hiç çalışmadı" hâline gelirdi — kırmızı ile
+-- bozuk arasındaki farkı kaybetmek, mutasyon kapısının işini bozar.
+select lives_ok(
+  format($q$select public.apply_subscription(
+              'test-sir', 'ios', 'TXN-1', 'active', now() + interval '30 days',
+              true, 'kimo_plus_monthly', %L)$q$,
+         tests.get_supabase_uid('bob')),
+  'çakışma İSTİSNA FIRLATMIYOR — karara bağlanmış sonuç dönüyor');
 select ok(
   not (select public.apply_subscription(
          'test-sir', 'ios', 'TXN-1', 'active', now() + interval '30 days',
          true, 'kimo_plus_monthly', tests.get_supabase_uid('bob'))),
-  'aynı makbuz İKİNCİ bir hesaba bağlanamıyor — false, istisna DEĞİL');
+  'aynı makbuz İKİNCİ bir hesaba bağlanamıyor — dönen değer false');
 select is(
   (select count(*)::int from public.subscriptions
     where user_id = tests.get_supabase_uid('bob')),

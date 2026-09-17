@@ -26,6 +26,13 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- ŞİFRELEME BEYANI (Task 17). Uygulama yalnızca HTTPS/TLS kullanıyor ve
+	     kendi şifreleme algoritmasını taşımıyor; ihracat düzenlemesi açısından
+	     muaf. Bu anahtar OLMADAN App Store Connect her yüklemede aynı soruyu
+	     elle soruyor ve cevap verilene kadar yapı incelemeye GİTMİYOR — sessiz
+	     bir gecikme kaynağı. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<!-- ADMOB UYGULAMA KİMLİĞİ — EKSİKSE SDK "GADInvalidInitializationException"
 	     ile çöküyor. Varsayılan Google'ın AÇIK TEST kimliği; yayın derlemesinde
 	     xcconfig'ten gelen $(ADMOB_APP_ID) ile değiştirilmeli.

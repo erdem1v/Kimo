@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  GİZLİLİK BİLDİRİMİ (App Store, 2024'ten beri zorunlu).
+
+  İÇERİĞİ UYDURULMADI: her satır `docs/hukuki-metinler.md`deki App Store
+  Connect gizlilik etiketi tablosundan geliyor ve o tablo da kod taramasından
+  çıktı. İki yer AYNI ŞEYİ söylemek zorunda — Apple'ın gizlilik raporu bu
+  dosyadan, mağaza kartı formdan üretiliyor ve ikisi çelişirse inceleme
+  takılıyor.
+
+  TAKİP YOK: ATT hiç çağrılmıyor, IDFA istenmiyor, AdMob'a yalnızca
+  kişiselleştirilmemiş reklam isteği gidiyor (`npa=1`,
+  `ageRestrictedTreatment: teen`) ve Android tarafında AD_ID izni
+  KALDIRILDI. Dolayısıyla NSPrivacyTracking = false ve takip alan adı yok.
+
+  ÜÇÜNCÜ TARAF SDK'LARI KENDİ BİLDİRİMİNİ TAŞIYOR (Firebase, AdMob, Sentry,
+  Supabase, in_app_purchase, shared_preferences…). Buradaki bildirim
+  UYGULAMANIN KENDİSİ içindir.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<!-- Tercihler (tema, ses, hatırlatma saatleri, sessiz aralık)
+			     `shared_preferences` üzerinden UserDefaults'ta tutuluyor.
+			     CA92.1 = yalnızca uygulamanın KENDİ verisine erişim. -->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<dict>
+			<!-- Hesap e-postası (kalıcı hesaba geçişte). -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<!-- Hesap kimliği, takma ad, arkadaş kodu. -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeUserID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<!-- FCM bildirim jetonu. Bildirimler kapatılınca, çıkışta ve hesap
+			     silmede siliniyor. -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeDeviceID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<!-- Soru fotoğrafları ve profil fotoğrafı. -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePhotosorVideos</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<!-- Soruya düşülen not, şıklar, şikâyet açıklaması. -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeOtherUserContent</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<!-- XP, seri, çözüm geçmişi, tekrar takvimi. Kişiselleştirme,
+			     aralıklı tekrar motorunun plan kurmasından kaynaklanıyor. -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+				<string>NSPrivacyCollectedDataTypePurposeProductPersonalization</string>
+			</array>
+		</dict>
+		<dict>
+			<!-- AdMob'un gördüğü gösterim ve etkileşim. KİMLİKLE İLİŞKİLİ
+			     DEĞİL: reklam kimliği gönderilmiyor, kullanıcı kimliği
+			     AdMob'a yazılmıyor (ödül doğrulamasında bile takma bir
+			     nonce kullanılıyor). -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeAdvertisingData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising</string>
+			</array>
+		</dict>
+		<dict>
+			<!-- Sentry. Kullanıcı kimliği aktif olarak temizleniyor;
+			     `tracesSampleRate = 0.0` olduğu için performans verisi YOK. -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeCrashData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

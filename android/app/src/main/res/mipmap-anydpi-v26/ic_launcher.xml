@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- UYARLANABİLİR İKON (Android 8+). Zemin marka yeşili, ön plan Kimo.
+     Ön plan varlığı 108dp ızgarasında üretiliyor ve ayı ortadaki 72dp'lik
+     güvenli alana sığıyor — sistem maskesi (daire, kare, squircle…) dışarıyı
+     kırpıyor ve tasarım her maskede aynı duruyor.
+
+     Varlıklar `tools/gen_app_icons.dart` ile ÇİZİLİYOR: ikonun tek kaynağı
+     `KimoPainter`, yani maskot değişirse ikon da tek komutla değişiyor. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+</adaptive-icon>

@@ -60,8 +60,15 @@ export function signedPortion(search: string): string | null {
   return raw.slice(0, idx);
 }
 
-/** base64url (ve base64) → baytlar. */
-export function b64urlToBytes(input: string): Uint8Array {
+/** base64url (ve base64) → baytlar.
+ *
+ * DÖNÜŞ TİPİ `Uint8Array<ArrayBuffer>`, çıplak `Uint8Array` DEĞİL (Task 17):
+ * TypeScript 5.7'den beri `Uint8Array` tampon tipinde jenerik ve çıplak biçim
+ * `ArrayBufferLike`a çözülüyor; `crypto.subtle` ise `BufferSource` istiyor,
+ * yani `SharedArrayBuffer` üzerine kurulu olmayan bir dizi. Bu dosya CI'da
+ * HİÇ derlenmediği için (Deno testleri hiçbir yerde koşmuyordu) hata
+ * görünmüyordu. */
+export function b64urlToBytes(input: string): Uint8Array<ArrayBuffer> {
   const norm = input.replace(/-/g, "+").replace(/_/g, "/");
   const padded = norm + "=".repeat((4 - (norm.length % 4)) % 4);
   const bin = atob(padded);
@@ -83,7 +90,7 @@ function placeComponent(v: Uint8Array, out: Uint8Array, offset: number): void {
 }
 
 /** DER `SEQUENCE { INTEGER r, INTEGER s }` → ham 64 baytlık `r‖s` (P-256). */
-export function derToRaw(der: Uint8Array): Uint8Array {
+export function derToRaw(der: Uint8Array): Uint8Array<ArrayBuffer> {
   let i = 0;
   if (der[i++] !== 0x30) throw new Error("DER: SEQUENCE beklendi");
 
@@ -98,6 +105,9 @@ export function derToRaw(der: Uint8Array): Uint8Array {
     throw new Error("DER: SEQUENCE uzunluğu gövdeyle tutmuyor");
   }
 
+  // Dilim `der`in tamponunu paylaşıyor, yani tipi `der`den geliyor: burada
+  // çıplak `Uint8Array` DOĞRU. Dönüş (`out`) yeni bir tampon ve orada
+  // `Uint8Array<ArrayBuffer>` gerekiyor.
   const readInt = (): Uint8Array => {
     if (der[i++] !== 0x02) throw new Error("DER: INTEGER beklendi");
     const len = der[i++];
@@ -191,7 +201,7 @@ export async function verifySignature(
   signatureB64Url: string,
   key: CryptoKey,
 ): Promise<boolean> {
-  let raw: Uint8Array;
+  let raw: Uint8Array<ArrayBuffer>;
   try {
     raw = derToRaw(b64urlToBytes(signatureB64Url));
   } catch (e) {
