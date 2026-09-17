@@ -77,6 +77,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
       final PublicProfile? me = parts[0] as PublicProfile?;
       final DailyState? s = parts[1] as DailyState?;
+      // AVATAR SUNUCUDAN (Task 17). `profiles.avatar_path` tek kaynak; bu
+      // ekran eskiden `user_metadata`daki ikinci kopyadan okuyordu.
+      if (me != null) userProfile.syncAvatarFromServer(me.avatarPath);
       setState(() {
         if (me != null) _friendCount = me.friendCount;
         _state = s;
@@ -104,7 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
       setState(() => _uploading = true);
       final String path = await socialRepository.uploadAvatar(bytes);
-      await userProfile.setAvatarPath(path);
+      userProfile.setAvatarPath(path);
       if (!mounted) return;
       setState(() => _uploading = false);
     } on AvatarException catch (e) {
@@ -124,7 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _removeAvatar() async {
     try {
       await socialRepository.removeAvatar();
-      await userProfile.setAvatarPath(null);
+      userProfile.setAvatarPath(null);
       if (mounted) setState(() {});
     } on AvatarException catch (e) {
       // Dosya gerçekten silinemediyse kullanıcı bunu bilmeli — "kaldırdım"

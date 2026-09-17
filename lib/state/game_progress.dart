@@ -81,8 +81,17 @@ class GameProgress extends ChangeNotifier {
   bool get streakAtRisk => currentStreak > 0 && !activeToday;
 
   /// Soru çözüldüğünde çağrılır (doğru/yanlış fark etmez). Günde bir kez sayar.
+  ///
+  /// GÜN SUNUCUDAN (Task 17). Sınıfın kendi başlığı "günün tek tanımı sunucuya
+  /// ait; cihaz saati yalnızca sunucu değeri henüz gelmemişken yedek" diyor ve
+  /// [_today] bunu doğru yapıyor — ama burası `DateTime.now()` yazıyordu.
+  /// Seriyi CİHAZ gününe göre büyütüyordu: saati ileri alan bir kullanıcı
+  /// seriyi şişirebiliyor, yurt dışındaki bir kullanıcı ise kendi gününü
+  /// İstanbul gününden farklı yaşadığı için seriyi haksız yere kırdırabiliyordu.
+  /// Sunucu tarafında `apply_progress` zaten İstanbul gününü yazıyor, yani iki
+  /// taraf ayrışıyordu.
   void registerActivity() {
-    final DateTime today = _dateOnly(DateTime.now());
+    final DateTime today = _today;
     final DateTime? last = _lastActive;
     if (last == today) return; // bugün zaten sayıldı
     if (last != null && today.difference(last).inDays == 1) {

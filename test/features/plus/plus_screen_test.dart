@@ -15,7 +15,7 @@ void main() {
     l = await L10n.delegate.load(const Locale('tr'));
   });
 
-  Future<void> pumpPlus(WidgetTester tester) async {
+  Future<void> pumpPlus(WidgetTester tester, {bool iapEnabled = true}) async {
     await tester.pumpWidget(MaterialApp(
       locale: const Locale('tr'),
       localizationsDelegates: L10n.localizationsDelegates,
@@ -24,7 +24,8 @@ void main() {
       // RAKAMLAR ARTIK ZORUNLU PARAMETRE: `?? 8/10/300/50/1000` yedeği
       // kaldırıldı. Paywall bir RAKAM VAADİ taşıyor ve `app_config`
       // sınırları gevşetildiğinde eski sayıyı göstermesi kabul edilemezdi.
-      home: const PlusScreen(
+      home: PlusScreen(
+        iapEnabled: iapEnabled,
         freeWindowLimit: 10,
         freeMonthLimit: 300,
         plusWindowLimit: 50,
@@ -176,5 +177,26 @@ void main() {
     expect(PlusPlans.current, isEmpty);
     expect(PlusPlans.isConfigured, isFalse);
     PlusPlans.resetForTest();
+  });
+
+  testWidgets('ff_iap KAPALIYKEN satın alma yüzeyi kapanıyor',
+      (WidgetTester tester) async {
+    // Task 17. Bayrak bir KILL SWITCH ve üretim kodunda TEK BİR OKUYUCUSU
+    // yoktu: `app_config`'e `ff_iap = 'false'` yazmak hiçbir şeyi
+    // değiştirmiyordu. Diğer üç bayrağın hepsinin gerçek okuyucusu var.
+    //
+    // ÜRÜNLER TANIMLI OLMAK ZORUNDA: `resetForTest()` ile boş bırakılsaydı
+    // yüzey zaten `isConfigured` yüzünden kapalı olurdu ve test bayrağı hiç
+    // sınamazdı. (İlk yazımı tam bu yüzden mutasyonu ISIRMADI.)
+    PlusPlans.setProducts(const <PlusPlan>[
+      PlusPlan(id: 'kimo_plus_monthly', priceLabel: '₺99,99',
+          perMonthLabel: '₺99,99'),
+    ]);
+    addTearDown(PlusPlans.resetForTest);
+    await pumpPlus(tester, iapEnabled: false);
+    final KimoButton cta = tester.widget<KimoButton>(
+        find.widgetWithText(KimoButton, l.plusCta(PlusPlans.trialDays)));
+    expect(cta.onPressed, isNull);
+    expect(find.text(l.plusNotAvailableYet), findsOneWidget);
   });
 }

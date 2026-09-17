@@ -200,6 +200,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   label: l.settingsPlus,
                   onTap: () => _push(
                     PlusScreen(
+                      iapEnabled: _daily!.iapEnabled,
                       freeWindowLimit: _daily!.freeWindowLimit,
                       freeMonthLimit: _daily!.freeMonthLimit,
                       plusWindowLimit: _daily!.plusWindowLimit,

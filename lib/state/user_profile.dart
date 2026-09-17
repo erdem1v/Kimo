@@ -107,18 +107,33 @@ class UserProfile extends ChangeNotifier {
     // kadarki başlangıç durumu ve varsayılanı "onay yok".
     _shareConsent = false;
     _notifyEnabled = meta?['notify_enabled'] == true;
-    final Object? a = meta?['avatar_path'];
-    _avatarPath = (a is String && a.isNotEmpty) ? a : null;
+    // AVATAR METADATA'DAN OKUNMUYOR (Task 17). Tek kaynak
+    // `profiles.avatar_path`: yükleme onu yazıyor ve arkadaş listesi, lig,
+    // gelen kutusu ile açık profil zaten oradan okuyor. Metadata ikinci bir
+    // kopyaydı ve iki kaynak ayrışabiliyordu — bu turda üç kez kapatılan
+    // sınıfın aynısı. Yerel alan `syncAvatarFromServer` ile tohumlanıyor.
     notifyListeners();
   }
 
-  /// Profil fotoğrafının yolunu saklar. Asıl dosya ve `profiles.avatar_path`
-  /// SocialRepository tarafından yazılır; burada yalnızca yerel kopyası tutulur
-  /// (diğer cihazlarda da görünsün diye metadata'ya da yazılır).
-  Future<void> setAvatarPath(String? path) async {
+  /// Profil fotoğrafının yolunu YEREL olarak saklar.
+  ///
+  /// Asıl dosya ve `profiles.avatar_path` `SocialRepository` tarafından
+  /// yazılıyor; burası yalnızca gösterim önbelleği. METADATA'YA ARTIK
+  /// YAZILMIYOR (Task 17): ikinci bir kopyaydı, kendi profil ekranı ondan
+  /// okurken diğer bütün yüzeyler `profiles.avatar_path`ten okuyordu ve ikisi
+  /// ayrışabiliyordu. Üstelik `auth.updateUser` JETONU tazelemediği için o
+  /// kopya bir de gecikmeli oluyordu.
+  void setAvatarPath(String? path) {
     _avatarPath = (path != null && path.isNotEmpty) ? path : null;
     notifyListeners();
-    await _save(<String, dynamic>{'avatar_path': _avatarPath});
+  }
+
+  /// Sunucudaki `profiles.avatar_path`i yerel önbelleğe yansıtır.
+  void syncAvatarFromServer(String? path) {
+    final String? next = (path != null && path.isNotEmpty) ? path : null;
+    if (_avatarPath == next) return;
+    _avatarPath = next;
+    notifyListeners();
   }
 
   /// Bildirim tercihini yazar. **Başarısızlıkta GERİ ALIR ve fırlatır.**

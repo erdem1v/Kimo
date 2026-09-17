@@ -569,6 +569,7 @@ class _CreditWallScreenState extends State<CreditWallScreen> {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => PlusScreen(
+          iapEnabled: _s.iapEnabled,
           freeWindowLimit: _s.freeWindowLimit,
           freeMonthLimit: _s.freeMonthLimit,
           plusWindowLimit: _s.plusWindowLimit,

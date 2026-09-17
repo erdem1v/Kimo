@@ -12,6 +12,7 @@ import 'package:kimo/state/game_progress.dart';
 /// YUKARI hareket ediyor (`if (dbCount > dailyReviewsDone)`), yani A'nın 5'i
 /// B'nin 0'ıyla değiştirilemiyor. Aşağıdaki son iddia tam olarak onu tutuyor.
 void main() {
+  _serverDayTests();
   _dailyGoalFromServerTests();
   test('clear() bütün ilerleme durumunu sıfırlıyor', () {
     final GameProgress g = GameProgress.instance;
@@ -90,6 +91,52 @@ void _dailyGoalFromServerTests() {
         dailyGoalDate: DateTime(2026, 9, 16),
       );
       expect(gameProgress.dailyGoalReached, isFalse);
+    });
+  });
+}
+
+/// Seri günü SUNUCUDAN sayılıyor (Task 17).
+void _serverDayTests() {
+  group('registerActivity sunucu gününü kullanıyor', () {
+    setUp(gameProgress.clear);
+
+    test('cihaz günü ilerlese de sunucu günü aynıysa seri BÜYÜMÜYOR', () {
+      // Sınıfın kendi başlığı "günün tek tanımı sunucuya ait" diyor ama
+      // registerActivity `DateTime.now()` yazıyordu: saati ileri alan bir
+      // kullanıcı seriyi şişirebiliyordu.
+      gameProgress.syncFromDailyState(
+        xp: 0,
+        weeklyXp: 0,
+        streak: 0,
+        serverToday: DateTime(2026, 9, 17),
+      );
+      gameProgress.registerActivity();
+      expect(gameProgress.streak, 1);
+
+      // Aynı sunucu günü: ikinci çağrı saymamalı.
+      gameProgress.registerActivity();
+      expect(gameProgress.streak, 1, reason: 'aynı gün ikinci kez saymaz');
+    });
+
+    test('sunucu günü ilerleyince seri büyüyor', () {
+      gameProgress.syncFromDailyState(
+        xp: 0,
+        weeklyXp: 0,
+        streak: 0,
+        serverToday: DateTime(2026, 9, 17),
+      );
+      gameProgress.registerActivity();
+      expect(gameProgress.streak, 1);
+
+      gameProgress.syncFromDailyState(
+        xp: 0,
+        weeklyXp: 0,
+        streak: 1,
+        lastActivityDate: DateTime(2026, 9, 17),
+        serverToday: DateTime(2026, 9, 18),
+      );
+      gameProgress.registerActivity();
+      expect(gameProgress.streak, 2, reason: 'ertesi sunucu günü seriyi büyütür');
     });
   });
 }

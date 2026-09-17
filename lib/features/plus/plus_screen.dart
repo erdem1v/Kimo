@@ -54,6 +54,7 @@ class PlusScreen extends StatefulWidget {
     required this.plusWindowLimit,
     required this.plusMonthLimit,
     required this.windowHours,
+    required this.iapEnabled,
   });
 
   /// Kıyas tablosunun rakamları — HEPSİ SUNUCUDAN, `required`.
@@ -71,6 +72,17 @@ class PlusScreen extends StatefulWidget {
   final int plusWindowLimit;
   final int plusMonthLimit;
   final int windowHours;
+
+  /// `ff_iap` KILL SWITCH'İ (0092). Mağaza tarafında bir sorun çıktığında
+  /// satın alma yüzeyini SÜRÜM BEKLEMEDEN kapatmak için.
+  ///
+  /// Task 17'ye kadar ÜRETİM KODUNDA TEK BİR OKUYUCUSU YOKTU: sunucu bayrağı
+  /// yayınlıyor, `DailyState.iapEnabled` getter'ı da duruyordu ama hiçbir ekran
+  /// onu sormuyordu. `app_config`'e `ff_iap = 'false'` yazmak hiçbir şeyi
+  /// değiştirmiyordu — yani kill switch SAHTEYDİ. Diğer üç bayrağın
+  /// (`ff_pair_streak`, `ff_ad_reward`, `ff_multi_capture`) hepsinin gerçek
+  /// okuyucusu var; eksik olan tek bayrak buydu.
+  final bool iapEnabled;
 
 
   @override
@@ -229,6 +241,9 @@ class _PlusScreenState extends State<PlusScreen> {
       if (mounted) setState(() => _busy = false);
     }
   }
+
+  /// Satın alma yüzeyi açık mı: hem mağaza tanımlı hem kill switch açık.
+  bool get _purchasable => widget.iapEnabled && PlusPlans.isConfigured;
 
   Future<void> _buy() async {
     final PlusPlan? plan = _selected;
@@ -448,12 +463,12 @@ class _PlusScreenState extends State<PlusScreen> {
             // satın alma sürerken ekranda ilerlemeyi gösteren HİÇBİR işaret
             // yoktu, yalnızca solmuş bir düğme vardı.
             busy: _busy,
-            onPressed: (PlusPlans.isConfigured && _selected != null && !_busy)
+            onPressed: (_purchasable && _selected != null && !_busy)
                 ? _buy
                 : null,
           ),
           const SizedBox(height: Gap.xs),
-          if (!PlusPlans.isConfigured)
+          if (!_purchasable)
             Text(
               l.plusNotAvailableYet,
               textAlign: TextAlign.center,
@@ -478,7 +493,7 @@ class _PlusScreenState extends State<PlusScreen> {
               textAlign: TextAlign.center,
             ),
           // Satın alma açılmadan bu iki satır ÇİZİLMİYOR (bkz. sınıf yorumu).
-          if (PlusPlans.isConfigured) ...<Widget>[
+          if (_purchasable) ...<Widget>[
             const SizedBox(height: Gap.xs),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,

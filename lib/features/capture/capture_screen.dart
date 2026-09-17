@@ -508,6 +508,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
                     builder: (_) => PlusScreen(
                       // Rakamlar sunucudan: paywall "8 saatte 50 analiz"
                       // vaadini yazıyor ve yanlış sayı göstermemeli.
+                      iapEnabled: s.iapEnabled,
                       freeWindowLimit: s.freeWindowLimit,
                       freeMonthLimit: s.freeMonthLimit,
                       plusWindowLimit: s.plusWindowLimit,
