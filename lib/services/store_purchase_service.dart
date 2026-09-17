@@ -219,18 +219,49 @@ class StorePurchaseService implements PurchaseService {
           ios ? (p.purchaseID ?? '') : p.verificationData.serverVerificationData;
       if (token.isEmpty) return false;
 
-      final FunctionResponse res =
-          await Supabase.instance.client.functions.invoke(
-        'verify-purchase',
-        body: <String, dynamic>{
-          'platform': ios ? 'ios' : 'android',
-          'token': token,
-        },
-      );
-      return res.status == 200;
+      return await _invokeVerify(ios ? 'ios' : 'android', token);
+    } on FunctionException catch (e, s) {
+      // 401 = JETON HÂLÂ "ANONİM" DİYOR (Task 17 · T17-7).
+      //
+      // `verify-purchase` kimi yazacağını JWT'den okuyor ve anonim kullanıcıyı
+      // reddediyor — doğru karar, çünkü anonim biri abone olsa bile
+      // `user_tier()` onu `anonymous` sayardı (para alınır, hak verilmezdi).
+      // Ama `convertToPermanent` (kayıt adımı) `auth.users`ı GÜNCELLİYOR,
+      // jetonu yeniden üretmiyor: kaydını yeni tamamlamış kullanıcının
+      // jetonunda `is_anonymous` bir SONRAKİ yenilemeye kadar (en kötü
+      // durumda ~1 saat) true kalıyor. Yani "kaydol, hemen Plus al" akışı
+      // sessizce düşüyordu.
+      //
+      // Asıl düzeltme kayıt adımında (`AuthRepository.convertToPermanent`
+      // artık jetonu tazeliyor); buradaki tek seferlik yeniden deneme o
+      // tazeleme başarısız olduysa (çevrimdışı, zaman aşımı) ikinci şans.
+      // PARA ÖDENDİ: sessizce pes etmek en pahalı dal.
+      if (e.status == 401) {
+        try {
+          await Supabase.instance.client.auth.refreshSession();
+          final bool ios = !kIsWeb && Platform.isIOS;
+          final String token = ios
+              ? (p.purchaseID ?? '')
+              : p.verificationData.serverVerificationData;
+          return await _invokeVerify(ios ? 'ios' : 'android', token);
+        } catch (e2, s2) {
+          unawaited(reportError(e2, s2, context: 'verify-purchase.retry'));
+          return false;
+        }
+      }
+      unawaited(reportError(e, s, context: 'verify-purchase'));
+      return false;
     } catch (e, s) {
       unawaited(reportError(e, s, context: 'verify-purchase'));
       return false;
     }
+  }
+
+  Future<bool> _invokeVerify(String platform, String token) async {
+    final FunctionResponse res = await Supabase.instance.client.functions.invoke(
+      'verify-purchase',
+      body: <String, dynamic>{'platform': platform, 'token': token},
+    );
+    return res.status == 200;
   }
 }

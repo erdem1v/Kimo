@@ -127,6 +127,19 @@ jobs:
       - name: PyYAML
         run: pip install --quiet pyyaml
 
+      # EDGE FONKSİYONLARININ SAF PARÇALARI. Depoda iki Deno testi vardı
+      # (`ad-reward/ssv.ts`in DER ayrıştırıcısı) ve HİÇBİR YERDE
+      # KOŞMUYORLARDI — yazılmış ama çalıştırılmamış testin bu depodaki ikinci
+      # örneği. Task 17'de abonelik mutabakatının karar fonksiyonu da buraya
+      # eklendi. Bunlar ağa çıkmıyor, `supabase start` gerektirmiyor; en ucuz
+      # işe, statik kapıların yanına bindiriliyor.
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Edge fonksiyonu birim testleri
+        run: deno test supabase/functions/
+
       - name: İş akışı denetleyicisinin kendi sınaması
         run: python tools/check_workflows.py --selftest
 

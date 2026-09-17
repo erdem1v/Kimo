@@ -26,6 +26,7 @@ import {
   googleSubscription,
 } from "../_shared/stores.ts";
 import { applySubscription } from "../_shared/iap.ts";
+import { needsWrite } from "./diff.ts";
 
 const TAG = "reconcile-subscriptions";
 
@@ -48,6 +49,9 @@ interface Row {
   platform: "ios" | "android";
   original_txn_id: string;
   status: string;
+  expires_at: string | null;
+  auto_renewing: boolean | null;
+  product_id: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -79,7 +83,7 @@ Deno.serve(async (req) => {
   // servis rolü istemcisi bu fonksiyonda yalnızca OKUYOR.
   const res = await fetch(
     `${url}/rest/v1/subscriptions` +
-      `?select=platform,original_txn_id,status` +
+      `?select=platform,original_txn_id,status,expires_at,auto_renewing,product_id` +
       `&status=in.(trial,active,grace)`,
     { headers: { Authorization: `Bearer ${service}`, apikey: service } },
   );
@@ -114,7 +118,10 @@ Deno.serve(async (req) => {
         autoRenewing: false,
       };
 
-      if (next.status === row.status && state) continue;
+      // SAPMA YOKSA YAZMA YOK. Karşılaştırma `status`la SINIRLI DEĞİL:
+      // yenileme durumu değiştirmiyor, yalnızca `expires_at`i ileri atıyor
+      // (bkz. diff.ts). Eski kod bu yüzden her yenilemeyi atlıyordu.
+      if (state && !needsWrite(row, next)) continue;
 
       await applySubscription({
         platform: row.platform,

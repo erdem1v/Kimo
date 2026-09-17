@@ -17,7 +17,7 @@
 begin;
 set search_path to public, extensions, tests;
 
-select plan(27);
+select plan(30);
 
 select tests.create_supabase_user('alice');
 select tests.create_supabase_user('bob');
@@ -128,13 +128,33 @@ select is(
   1, 'ikinci yazım İKİNCİ SATIR üretmiyor — idempotent');
 
 -- ============================================== BİR MAKBUZ İKİ HESABA OLMAZ
-select throws_ok(
-  format($q$select public.apply_subscription(
-              'test-sir', 'ios', 'TXN-1', 'active', now() + interval '30 days',
-              true, 'kimo_plus_monthly', %L)$q$,
-         tests.get_supabase_uid('bob')),
-  '23505', null,
-  'aynı makbuz İKİNCİ bir hesaba bağlanamıyor');
+-- SONUÇ İSTİSNA DEĞİL, KARARA BAĞLANMIŞ `false` (0103 · Task 17 · T17-8).
+--
+-- Kısıt katalogda duruyor ve DEĞİŞMEDİ; değişen, ihlalin çağırana nasıl
+-- göründüğü. Eskiden 23505 PostgREST üzerinden edge fonksiyonuna sızıyor ve
+-- `verify-purchase`in genel `catch`inde 503'e dönüşüyordu — yani "geçici
+-- arıza, yine dene". Durum ise kalıcı: makbuz başkasının. İstemci 503'te
+-- satın almayı tamamlamıyor, mağaza teslimi tekrarlıyor, kullanıcı aynı
+-- anlamsız hatayı görmeye devam ediyordu.
+select ok(
+  not (select public.apply_subscription(
+         'test-sir', 'ios', 'TXN-1', 'active', now() + interval '30 days',
+         true, 'kimo_plus_monthly', tests.get_supabase_uid('bob'))),
+  'aynı makbuz İKİNCİ bir hesaba bağlanamıyor — false, istisna DEĞİL');
+select is(
+  (select count(*)::int from public.subscriptions
+    where user_id = tests.get_supabase_uid('bob')),
+  0, 'çakışan makbuz ikinci hesapta satır AÇMADI');
+select is(
+  (select s.user_id from public.subscriptions s
+    where s.platform = 'ios' and s.original_txn_id = 'TXN-1'),
+  tests.get_supabase_uid('alice'),
+  'makbuz hâlâ İLK hesaba bağlı — çakışma sahipliği devretmiyor');
+select is(
+  (select p.premium_until from public.profiles p
+    where p.id = tests.get_supabase_uid('bob')),
+  null,
+  'ikinci hesaba premium YAZILMADI');
 
 -- ============================================================== İADE
 -- İade ANINDA düşürüyor: para geri verildi, hak da gitmeli. İptal

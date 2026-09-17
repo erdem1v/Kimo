@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/notification_service.dart';
 import '../services/push_service.dart';
 
 
@@ -42,6 +43,19 @@ class AccountRepository {
     if (data is Map && data['ok'] == true) {
       final int removed = (data['objects_removed'] as num?)?.toInt() ?? 0;
       debugPrint('hesap silindi, $removed nesne kaldırıldı');
+      // YEREL HATIRLATMALAR DA İPTAL (Task 17 · T17-10). Çıkış yolu bunu
+      // yapıyordu, silme yolu YAPMIYORDU: `planDay` cihazda üç hatırlatma
+      // kuruyor (bugün, yarın, üç gün sonra "geri dön") ve bunlar sunucudan
+      // bağımsız, telefonun kendi zamanlayıcısında duruyor. Hesabını silen
+      // kullanıcı günlerce "Tekrarların hazır" / "Serin tehlikede"
+      // bildirimleri almaya devam ediyordu — silinmiş bir hesabın serisi
+      // için. Sessiz, kanıtı zor ve mağaza incelemesinde kötü görünen bir
+      // hata.
+      //
+      // Silmeden ÖNCE değil SONRA: sunucu kısmi başarıda hesabı silmiyor ve
+      // hata dönüyor; o durumda kullanıcı uygulamayı kullanmaya devam ediyor
+      // ve hatırlatmalarını kaybetmemeli.
+      await notifications.cancelAll();
       // Oturumu yerelde de kapat. Sunucudaki kullanıcı zaten yok; jeton
       // elde kalırsa uygulama silinmiş bir hesapla açık görünürdü.
       await _client.auth.signOut();

@@ -685,6 +685,32 @@
   },
   "plusCta": "{days} gün ücretsiz dene",
   "plusOpen": "Kimo Plus'ı gör",
+  "plusActiveTitle": "Kimo Plus etkin",
+  "@plusActiveTitle": {
+    "description": "ABONE OLANIN GÖRDÜĞÜ BAŞLIK (Task 17 · T17-5). Sunucu abonelik durumunu `my_daily_state.sub_*` sütunlarıyla veriyordu ve istemci onu modele kadar okuyordu ama HİÇBİR EKRAN kullanmıyordu: ödeme yapan kullanıcı Kimo Plus'ı açınca yine satış sayfasını ve '7 gün ücretsiz dene' düğmesini görüyordu. Apple ve Play mevcut aboneye deneme teklif edilmesini de yasaklıyor."
+  },
+  "plusActiveTrialTitle": "Ücretsiz deneme sürüyor",
+  "plusActiveGraceTitle": "Ödeme alınamadı",
+  "plusActiveGraceBody": "Mağazadaki ödeme yöntemini güncellersen aboneliğin kesintisiz sürer.",
+  "plusActiveRenews": "{date} tarihinde yenilenecek.",
+  "@plusActiveRenews": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "plusActiveEnds": "{date} tarihine kadar Plus'sın; o gün sona erecek.",
+  "@plusActiveEnds": {
+    "description": "İptal edilmiş ama süresi dolmamış abonelik. Hak ödenen dönemin sonuna kadar duruyor — `apply_subscription` iptali premium'dan DÜŞÜRMÜYOR.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "plusActiveNoDate": "Bitiş tarihi mağazadan gelmedi.",
+  "plusActiveThanks": "Analiz hakların yüksek katmanda ve çoklu çekim açık.",
   "@plusOpen": {
     "description": "Hak duvarındaki düğme paywall'ı AÇIYOR, satın alma başlatmıyor (Task 17 · D7). Eskiden iki ekranda da birebir aynı '{days} gün ücretsiz dene' yazıyordu: kullanıcı düğmeye basıyor ve karşısına aynı düğme çıkıyordu — dokunuş işe yaramamış gibi okunuyordu. Deneme sözü düğmenin ALTINDAKİ künyede duruyor."
   },
@@ -839,6 +865,10 @@
   },
   "sendUnsendableOptions": "Şıklar eksik",
   "sendUnsendableScan": "Fotoğraf inceleniyor",
+  "sendUnsendableFlagged": "Bu fotoğraf kontrolden geçmedi",
+  "@sendUnsendableFlagged": {
+    "description": "KALICI sebep (Task 17 · S6): moderasyon ya da tarama damgaladı. Eskiden bu satır da 'Fotoğraf inceleniyor' diyordu — kullanıcı bitmesini bekliyordu ama hiç bitmeyecekti."
+  },
   "sendUnsendableHideToggle": "Kullanılamayanları gizle",
   "leagueTab": "Lig",
   "friendsTab": "Arkadaşlar",

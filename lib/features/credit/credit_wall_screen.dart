@@ -578,6 +578,11 @@ class _CreditWallScreenState extends State<CreditWallScreen> {
           plusWindowLimit: _s.plusWindowLimit,
           plusMonthLimit: _s.plusMonthLimit,
           windowHours: _s.aiWindowHours,
+          // ABONELİK DURUMU DA GEÇİYOR (T17-5): abone olan kullanıcı satış
+          // sayfası değil durum kartı görüyor.
+          subStatus: _s.subStatus,
+          subExpiresAt: _s.subExpiresAt,
+          subRenews: _s.subRenews,
         ),
       ),
     );

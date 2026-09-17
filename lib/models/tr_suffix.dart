@@ -122,6 +122,18 @@ String? trMonthDay(DateTime? date) {
   return '${date.day} ${_months[date.month - 1][0]}';
 }
 
+/// Gün + ay + YIL → `15 Ekim 2027` (eksiz).
+///
+/// [trMonthDay]'den ayrı çünkü abonelik bitişi başka bir YILDA olabiliyor:
+/// yıllık plan alan biri için "15 Ekim'de yenilenecek" hangi yıl olduğunu
+/// söylemiyor. Cümle ARB'de "… tarihinde yenilenecek" biçiminde kuruluyor,
+/// yani ek sorunu da doğmuyor.
+String? trMonthDayYear(DateTime? date) {
+  if (date == null) return null;
+  if (date.month < 1 || date.month > 12) return null;
+  return '${date.day} ${_months[date.month - 1][0]} ${date.year}';
+}
+
 /// Sıra sayısının Türkçe kelimesi — "ikinci", "üçüncü"…
 ///
 /// Tasarım "Bu hafta **üçüncü** kez karşılaştık" yazıyor. ICU çoğul biçimi bunu

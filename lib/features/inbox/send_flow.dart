@@ -286,14 +286,10 @@ class _SendArchiveScreenState extends State<SendArchiveScreen> {
     }
   }
 
-  /// Gönderilebilirlik ölçütü `received_questions` görünümünün ÜÇ ZORUNLU
-  /// ALANIYLA aynı: fotoğraf, şıklar ve doğru şık. Görünüm bunları şart
-  /// koştuğu için eksik bir soru gönderilse de alıcıda HİÇ görünmezdi.
-  static bool _sendable(MistakeEntry e) =>
-      e.id != null &&
-      e.photoPath != null &&
-      (e.options?.isNotEmpty ?? false) &&
-      e.correctIndex != null;
+  /// Ölçüt `MistakeEntry.sendable`da (Task 17 · S6): ekranda private bir
+  /// yardımcıyken sunucunun beş koşulundan ikisini (moderasyon ve tarama)
+  /// taşımıyordu ve hiçbir test o eksiği göremiyordu.
+  static bool _sendable(MistakeEntry e) => e.sendable;
 
   List<String> get _subjects {
     final Set<String> out = <String>{for (final MistakeEntry e in _items) e.subject};
@@ -465,11 +461,15 @@ class _SendArchiveScreenState extends State<SendArchiveScreen> {
     // GEÇİCİ sebep soluk + açıklama; kalıcı sebep de aynı yolla anlatılıyor
     // çünkü ikisinin de çıkışı kullanıcının elinde (şıkları girmek / taramanın
     // bitmesi). Gizlemek "sorum nerede?" sorusunu üretirdi.
+    // ÜÇ SEBEP, ÜÇ CÜMLE. İkisi geçici (tarama sürüyor / şıklar eksik) ve
+    // çıkışı kullanıcının elinde; üçüncüsü KALICI (damgalandı) ve beklemekle
+    // düzelmiyor. Hepsine "Fotoğraf inceleniyor" demek, damgalanmış bir
+    // fotoğrafı bekleyen kullanıcıyı sonsuza kadar bekletirdi.
     final String? why = can
         ? null
         : (e.photoPath == null || (e.options?.isEmpty ?? true))
             ? l.sendUnsendableOptions
-            : l.sendUnsendableScan;
+            : (e.scanPending ? l.sendUnsendableScan : l.sendUnsendableFlagged);
     return Opacity(
       opacity: can ? 1 : 0.45,
       child: KimoCard(

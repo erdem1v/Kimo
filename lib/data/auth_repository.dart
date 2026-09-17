@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Supabase Auth sarmalayıcısı. Yalnızca Supabase yapılandırılmışken kullanılır
@@ -42,6 +43,20 @@ class AuthRepository {
   /// false`) `updateUser` ANINDA tamamlanıyor — adres askıda kalmıyor ve
   /// sunucudaki `profiles.is_anonymous` hemen düşüyor. Katman ayrımı bu tek
   /// bayrağa dayandığı için kullanıcı kayıt anında ücretsiz kotaya geçiyor.
+  /// Anonim oturumu kalıcıya çevirir; `uid` aynı kalır.
+  ///
+  /// JETON HEMEN TAZELENİYOR (Task 17 · T17-7). `updateUser` `auth.users`ı
+  /// güncelliyor ama JETONU YENİDEN ÜRETMİYOR: `is_anonymous` claim'i bir
+  /// sonraki yenilemeye kadar (en kötü durumda ~1 saat) `true` kalıyor.
+  /// Sunucunun çoğu yeri bundan etkilenmiyor — sosyal yüzey ve `user_tier()`
+  /// `profiles.is_anonymous`'ı okuyor ve onu bir tetikleyici anında
+  /// güncelliyor — ama `verify-purchase` kararını JWT'den veriyor ve anonim
+  /// kullanıcıyı 401 ile reddediyor. Sonuç: "kaydol, hemen Plus al" akışı
+  /// sessizce düşüyordu. Task 15'in müfredat hatası da tam olarak bu sınıftı.
+  ///
+  /// Hata YUTULMUYOR gibi görünse de tazeleme ayrı: kayıt BAŞARILI, jeton
+  /// tazelenemezse (çevrimdışı) satın alma yolundaki tek seferlik yeniden
+  /// deneme ikinci şansı veriyor.
   Future<void> convertToPermanent({
     required String email,
     required String password,
@@ -49,6 +64,11 @@ class AuthRepository {
     await _client.auth.updateUser(
       UserAttributes(email: email, password: password),
     );
+    try {
+      await _client.auth.refreshSession();
+    } catch (e) {
+      debugPrint('kayıt sonrası jeton tazelenemedi: $e');
+    }
   }
 
   // signUp() SİLİNDİ (Task 03): sıfır çağrısı vardı — kayıt tek yoldan,

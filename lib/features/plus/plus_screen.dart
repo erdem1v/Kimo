@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/photo_queue.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../../models/tr_suffix.dart';
 import '../../services/legal_links.dart';
 import '../../services/purchase_service.dart';
 import '../../theme/tokens.dart';
@@ -55,6 +56,9 @@ class PlusScreen extends StatefulWidget {
     required this.plusMonthLimit,
     required this.windowHours,
     required this.iapEnabled,
+    this.subStatus,
+    this.subExpiresAt,
+    this.subRenews = false,
   });
 
   /// Kıyas tablosunun rakamları — HEPSİ SUNUCUDAN, `required`.
@@ -83,6 +87,25 @@ class PlusScreen extends StatefulWidget {
   /// (`ff_pair_streak`, `ff_ad_reward`, `ff_multi_capture`) hepsinin gerçek
   /// okuyucusu var; eksik olan tek bayrak buydu.
   final bool iapEnabled;
+
+  /// ETKİN ABONELİK DURUMU (Task 17 · T17-5).
+  ///
+  /// `trial | active | grace | expired | refunded | revoked` ya da `null`
+  /// (abonelik yok / okunamadı — ikisi de aynı şeyi gerektiriyor: satış
+  /// yüzeyini normal göster).
+  ///
+  /// Sunucu bu üç bilgiyi 0092'den beri `my_daily_state.sub_*` sütunlarıyla
+  /// yayınlıyordu ve `DailyState` onları modele kadar okuyordu — ama HİÇBİR
+  /// EKRAN sormuyordu. Sonuç: parasını ödemiş kullanıcı Kimo Plus'ı açınca
+  /// satış sayfasını, plan seçicisini ve "7 gün ücretsiz dene" düğmesini
+  /// görüyordu. Hem yanlış hem de mağaza kuralına aykırı: mevcut aboneye
+  /// ücretsiz deneme teklif edilemiyor.
+  final String? subStatus;
+  final DateTime? subExpiresAt;
+
+  /// Dönem sonunda kendiliğinden yenilenecek mi. İptal edilmiş ama süresi
+  /// dolmamış abonelikte `false` — hak duruyor, cümle değişiyor.
+  final bool subRenews;
 
 
   @override
@@ -118,6 +141,10 @@ class _PlusScreenState extends State<PlusScreen> {
   int get _freeMonth => widget.freeMonthLimit;
   int get _plusWindow => widget.plusWindowLimit;
   int get _plusMonth => widget.plusMonthLimit;
+
+  /// Etkin abonelik var mı. `DailyState.hasSubscription` ile AYNI ölçüt.
+  bool get _subscribed => const <String>{'trial', 'active', 'grace'}
+      .contains(widget.subStatus);
 
   /// "Bir oturumda N kat daha fazla analiz" — TÜRETİLİYOR, yazılmıyor.
   int get _multiplier =>
@@ -158,7 +185,9 @@ class _PlusScreenState extends State<PlusScreen> {
                   // tabloyu hiç çizmemek) kalktı.
                   _compare(context, l),
                   const SizedBox(height: Gap.lg),
-                  _plans(context, l),
+                  // ABONEYE PLAN SEÇİCİ ÇİZİLMİYOR: alacağı bir şey yok ve
+                  // ikinci bir abonelik satın alması engellenmeli.
+                  if (_subscribed) _statusCard(context, l) else _plans(context, l),
                   const SizedBox(height: Gap.screen),
                 ],
               ),
@@ -442,7 +471,78 @@ class _PlusScreenState extends State<PlusScreen> {
     );
   }
 
+  /// Abonenin durum kartı: hangi durumdasın, ne zaman ne olacak.
+  ///
+  /// TARİH SUNUCUDAN. Gelmezse cümle uydurulmuyor, "bitiş tarihi mağazadan
+  /// gelmedi" yazıyor — ekranın rakam/tarih vaatlerinde deponun kuralı bu.
+  Widget _statusCard(BuildContext context, L10n l) {
+    final KimoColors c = context.c;
+    final KimoTypography t = context.t;
+    final bool grace = widget.subStatus == 'grace';
+    final bool trial = widget.subStatus == 'trial';
+    final String? date = trMonthDayYear(widget.subExpiresAt?.toLocal());
+
+    final String title = grace
+        ? l.plusActiveGraceTitle
+        : (trial ? l.plusActiveTrialTitle : l.plusActiveTitle);
+    final String body;
+    if (grace) {
+      body = l.plusActiveGraceBody;
+    } else if (date == null) {
+      body = l.plusActiveNoDate;
+    } else {
+      body = widget.subRenews ? l.plusActiveRenews(date) : l.plusActiveEnds(date);
+    }
+
+    return KimoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              KimoIcon(grace ? KimoIcons.flag : KimoIcons.check,
+                  size: 20, color: grace ? c.ink : c.mintText),
+              const SizedBox(width: Gap.sm),
+              Expanded(child: Text(title, style: t.section)),
+            ],
+          ),
+          const SizedBox(height: Gap.sm),
+          Text(body, style: t.body.copyWith(color: c.inkSecondary)),
+          if (!grace) ...<Widget>[
+            const SizedBox(height: Gap.xs),
+            Text(l.plusActiveThanks,
+                style: t.caption.copyWith(color: c.inkMuted)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Abonenin alt çubuğu: satın alma değil YÖNETİM.
+  ///
+  /// "Geri yükle" de çizilmiyor — etkin abonelikte geri yüklenecek bir şey
+  /// yok; düğme yalnızca hiçbir şey yapmayan bir kontrol olurdu.
+  Widget _subscribedCta(BuildContext context, L10n l) {
+    final KimoColors c = context.c;
+    final Uri? manage = Purchases.instance.manageUri();
+    return Container(
+      padding: const EdgeInsets.fromLTRB(Gap.screen, Gap.md, Gap.screen, Gap.md),
+      decoration: BoxDecoration(
+        color: c.page,
+        border: Border(top: BorderSide(color: c.border)),
+      ),
+      child: Column(
+        children: <Widget>[
+          if (manage != null)
+            KimoButton(label: l.plusManage, onPressed: _openManage),
+          _legalRow(context, l),
+        ],
+      ),
+    );
+  }
+
   Widget _cta(BuildContext context, L10n l) {
+    if (_subscribed) return _subscribedCta(context, l);
     final KimoColors c = context.c;
     final KimoTypography t = context.t;
     return Container(

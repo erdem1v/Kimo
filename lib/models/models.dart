@@ -207,7 +207,47 @@ class MistakeEntry {
     this.nextReviewAt,
     this.exam,
     this.extraConcepts = const <String>[],
+    this.moderation,
+    this.photoScan,
   });
+
+  /// `mistakes.moderation` — `ok | pending | flagged` (sunucu sahipli).
+  ///
+  /// GÖNDERİLEBİLİRLİK ÖLÇÜTÜ SUNUCUDA BEŞ KOŞUL, istemcide ÜÇTÜ (Task 17 ·
+  /// S6): `send_question_to_friends` sahiplik + `moderation = 'ok'` +
+  /// `photo_scan = 'clear'` arıyor; arşiv listesi ise yalnızca fotoğraf, şık
+  /// ve doğru şık bakıyordu. Sonuç: damgalanmış bir fotoğraf listede
+  /// GÖNDERİLEBİLİR görünüyor, kullanıcı dokunuyor ve ancak sunucudan dönen
+  /// hata mesajıyla öğreniyordu.
+  ///
+  /// `null` = sütun okunamadı (eski sunucu) ya da yerel kayıt. İkisinde de
+  /// ölçüt ENGELLEMİYOR: gerçek kapı sunucuda, buradaki yalnızca ekranın
+  /// dürüst durması.
+  final String? moderation;
+
+  /// `mistakes.photo_scan` — `pending | clear | flagged`.
+  final String? photoScan;
+
+  /// Sunucunun gönderim kapısından geçer mi (fotoğraf/şık koşulları hariç).
+  bool get contentCleared =>
+      (moderation ?? 'ok') == 'ok' && (photoScan ?? 'clear') == 'clear';
+
+  /// Fotoğraf taraması HÂLÂ SÜRÜYOR — geçici, kendiliğinden düzelir.
+  bool get scanPending => photoScan == 'pending';
+
+  /// Bu soru bir arkadaşa GÖNDERİLEBİLİR mi — sunucunun ölçütünün aynısı.
+  ///
+  /// İlk üçü `received_questions` görünümünün zorunlu alanları (görünüm
+  /// bunları şart koştuğu için eksik bir soru gönderilse de alıcıda hiç
+  /// görünmezdi), son ikisi `send_question_to_friends`in kendi kapısı.
+  /// Ölçüt MODELDE duruyor ki tek bir yerde sınanabilsin: ekranda private bir
+  /// yardımcıyken sunucudan iki koşul eksik kalmış ve kimse fark etmemişti.
+  bool get sendable =>
+      id != null &&
+      photoPath != null &&
+      (options?.isNotEmpty ?? false) &&
+      correctIndex != null &&
+      contentCleared;
 
   /// Supabase satır kimliği (tekrar güncellemesi için).
   final String? id;

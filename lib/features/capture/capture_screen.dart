@@ -514,6 +514,9 @@ class _CaptureScreenState extends State<CaptureScreen> {
                       plusWindowLimit: s.plusWindowLimit,
                       plusMonthLimit: s.plusMonthLimit,
                       windowHours: s.aiWindowHours,
+                      subStatus: s.subStatus,
+                      subExpiresAt: s.subExpiresAt,
+                      subRenews: s.subRenews,
                     ),
                   ),
                 ));

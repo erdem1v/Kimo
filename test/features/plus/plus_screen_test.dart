@@ -15,7 +15,13 @@ void main() {
     l = await L10n.delegate.load(const Locale('tr'));
   });
 
-  Future<void> pumpPlus(WidgetTester tester, {bool iapEnabled = true}) async {
+  Future<void> pumpPlus(
+    WidgetTester tester, {
+    bool iapEnabled = true,
+    String? subStatus,
+    DateTime? subExpiresAt,
+    bool subRenews = false,
+  }) async {
     await tester.pumpWidget(MaterialApp(
       locale: const Locale('tr'),
       localizationsDelegates: L10n.localizationsDelegates,
@@ -31,6 +37,9 @@ void main() {
         plusWindowLimit: 50,
         plusMonthLimit: 1000,
         windowHours: 8,
+        subStatus: subStatus,
+        subExpiresAt: subExpiresAt,
+        subRenews: subRenews,
       ),
     ));
     await tester.pump(const Duration(milliseconds: 32));
@@ -198,5 +207,90 @@ void main() {
         find.widgetWithText(KimoButton, l.plusCta(PlusPlans.trialDays)));
     expect(cta.onPressed, isNull);
     expect(find.text(l.plusNotAvailableYet), findsOneWidget);
+  });
+
+  // ===================================================== ABONE OLANIN EKRANI
+  //
+  // T17-5: sunucu abonelik durumunu 0092'den beri yayınlıyordu, `DailyState`
+  // onu modele kadar okuyordu ve HİÇBİR EKRAN sormuyordu. Parasını ödemiş
+  // kullanıcı Kimo Plus'ı açınca satış sayfasını ve "7 gün ücretsiz dene"
+  // düğmesini görüyordu — hem yanlış hem de mağaza kuralına aykırı (mevcut
+  // aboneye ücretsiz deneme teklif edilemiyor).
+  /// Durum kartı listenin altında; `ListView` görünür olmayanı KURMUYOR.
+  Future<void> scrollToBottom(WidgetTester tester) async {
+    await tester.drag(find.byType(ListView), const Offset(0, -1200));
+    await tester.pump(const Duration(seconds: 1));
+  }
+
+  group('etkin abonelik', () {
+    testWidgets('deneme CTA\'sı ve plan seçici YOK, durum kartı VAR',
+        (WidgetTester tester) async {
+      PlusPlans.resetForTest();
+      await pumpPlus(
+        tester,
+        subStatus: 'active',
+        subExpiresAt: DateTime(2027, 10, 15),
+        subRenews: true,
+      );
+      await scrollToBottom(tester);
+      expect(find.text(l.plusCta(PlusPlans.trialDays)), findsNothing,
+          reason: 'mevcut aboneye ücretsiz deneme teklif edilemez');
+      expect(find.text(l.plusRestore), findsNothing,
+          reason: 'etkin abonelikte geri yüklenecek bir şey yok');
+      expect(find.text(l.plusActiveTitle), findsOneWidget);
+      expect(find.text(l.plusActiveRenews('15 Ekim 2027')), findsOneWidget);
+    });
+
+    testWidgets('iptal edilmiş ama süresi dolmamış: BİTİŞ cümlesi',
+        (WidgetTester tester) async {
+      PlusPlans.resetForTest();
+      await pumpPlus(
+        tester,
+        subStatus: 'active',
+        subExpiresAt: DateTime(2026, 11, 3),
+        subRenews: false,
+      );
+      await scrollToBottom(tester);
+      // Hak ödenen dönemin sonuna kadar duruyor; `apply_subscription` iptali
+      // premium'dan düşürmüyor. Cümle bunu söylemeli.
+      expect(find.text(l.plusActiveEnds('3 Kasım 2026')), findsOneWidget);
+      expect(find.text(l.plusActiveRenews('3 Kasım 2026')), findsNothing);
+    });
+
+    testWidgets('deneme sürerken başlık DENEME diyor',
+        (WidgetTester tester) async {
+      PlusPlans.resetForTest();
+      await pumpPlus(tester,
+          subStatus: 'trial',
+          subExpiresAt: DateTime(2026, 9, 25),
+          subRenews: true);
+      await scrollToBottom(tester);
+      expect(find.text(l.plusActiveTrialTitle), findsOneWidget);
+      expect(find.text(l.plusActiveTitle), findsNothing);
+    });
+
+    testWidgets('ödemesiz dönemde ne yapılacağı yazıyor',
+        (WidgetTester tester) async {
+      PlusPlans.resetForTest();
+      await pumpPlus(tester, subStatus: 'grace', subRenews: true);
+      await scrollToBottom(tester);
+      expect(find.text(l.plusActiveGraceTitle), findsOneWidget);
+      expect(find.text(l.plusActiveGraceBody), findsOneWidget);
+    });
+
+    testWidgets('tarih gelmediyse UYDURULMUYOR', (WidgetTester tester) async {
+      PlusPlans.resetForTest();
+      await pumpPlus(tester, subStatus: 'active', subRenews: true);
+      await scrollToBottom(tester);
+      expect(find.text(l.plusActiveNoDate), findsOneWidget);
+    });
+
+    testWidgets('süresi dolmuş abonelik satış sayfasını GERİ getiriyor',
+        (WidgetTester tester) async {
+      PlusPlans.resetForTest();
+      await pumpPlus(tester, subStatus: 'expired');
+      expect(find.text(l.plusCta(PlusPlans.trialDays)), findsOneWidget);
+      expect(find.text(l.plusActiveTitle), findsNothing);
+    });
   });
 }

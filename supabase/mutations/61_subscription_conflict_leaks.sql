@@ -1,20 +1,19 @@
 -- test: supabase/tests/340_subscriptions.sql
 --
--- MUTASYON: sir kontrolunu FAIL-OPEN yap — sir GIRILMEMISSE abonelik yine de
--- yazilsin.
--- BEKLENEN: 340'in "SIR GIRILMEMISSE abonelik YAZILMIYOR (fail-closed)"
--- iddiasi kirmizi.
+-- MUTASYON: `apply_subscription`daki `unique_violation` dalini kaldir —
+-- baska hesaba bagli makbuz yine ISTISNA firlatsin.
+-- BEKLENEN: 340'in "ayni makbuz IKINCI bir hesaba baglanamiyor — false,
+-- istisna DEGIL" iddiasi kirmizi (dosya hatayla duser).
 --
--- NEDEN BU BIR KORUMA: sir yonetiminde ASIMETRI bilincli (0076'nin yazdigi
--- kural): kota SAYILARI fail-open okunur (`config_int` varsayilana duser),
--- KIMLIK DOGRULAMA sirri fail-closed'dir. Yanlis yapilandirilmis bir ortam
--- bedava premium BASMAMALI. Bu mutasyon tam o asimetriyi tersine ceviriyor ve
--- en kotu yani sessiz olmasi: hicbir hata gorunmez, yalnizca herkes premium
--- olur.
+-- NEDEN BU BIR KORUMA (Task 17 · T17-8): istisna cagirana siziyor ve
+-- `verify-purchase`in genel catch'inde 503'e donusuyor. 503 "gecici ariza,
+-- yine dene" demek; durum ise KALICI — makbuz baskasinin. Istemci satin
+-- almayi tamamlamiyor, magaza teslimi tekrarliyor, kullanici ayni anlamsiz
+-- hatayi tekrar tekrar goruyor. Fonksiyonun sozlesmesi zaten "karara
+-- baglandiysa false".
 --
 -- NOT: iki govde de goc dosyasindan URETILDI. Kaynak: 0103
--- (20260918000100_subscription_conflict.sql) — CANLI surum. 0092'nin
--- govdesi bayat: cakisma dalini tasimiyor.
+-- (20260918000100_subscription_conflict.sql).
 create or replace function public.apply_subscription(
   p_secret        text,
   p_platform      text,
@@ -42,9 +41,9 @@ begin
   select value into v_secret from public.app_config where key = 'iap_secret';
 
   -- FAIL-CLOSED, ve SESSİZ DEĞİL (`grant_ad_reward`ın aynı kuralı).
-  -- MUTASYON: sır girilmemişse de devam et (fail-open).
   if v_secret is null or v_secret = '' then
-    v_secret := p_secret;
+    raise warning 'apply_subscription: iap_secret yok — abonelik YAZILMIYOR';
+    return false;
   end if;
   if p_secret <> v_secret then
     return false;
@@ -88,27 +87,21 @@ begin
   -- korunuyor (`subscriptions_txn_uniq`) ve o ihlal buraya `unique_violation`
   -- olarak geliyordu — ele alınmadığı için çağıran edge fonksiyonunda 503'e
   -- dönüşüyordu. Durum kalıcı: bu makbuz BAŞKA bir hesaba bağlı.
-  begin
-    insert into public.subscriptions as s
-      (user_id, platform, product_id, original_txn_id, status, expires_at,
-       auto_renewing, last_event_at, raw_event)
-    values
-      (v_uid, p_platform, v_product, p_original_txn, p_status, p_expires_at,
-       p_auto_renewing, now(), p_raw)
-    on conflict (user_id, platform) do update
-       set product_id      = excluded.product_id,
-           original_txn_id = excluded.original_txn_id,
-           status          = excluded.status,
-           expires_at      = excluded.expires_at,
-           auto_renewing   = coalesce(excluded.auto_renewing, s.auto_renewing),
-           last_event_at   = now(),
-           raw_event       = coalesce(excluded.raw_event, s.raw_event);
-  exception when unique_violation then
-    -- SESSİZ DEĞİL: hangi makbuzun hangi platformda çakıştığı günlüğe yazılıyor.
-    raise warning 'apply_subscription: makbuz BAŞKA hesaba bağlı (%, %)',
-                  p_platform, p_original_txn;
-    return false;
-  end;
+  -- MUTASYON: cakisma dali KALDIRILDI — 23505 yine cagirana sizsin.
+  insert into public.subscriptions as s
+    (user_id, platform, product_id, original_txn_id, status, expires_at,
+     auto_renewing, last_event_at, raw_event)
+  values
+    (v_uid, p_platform, v_product, p_original_txn, p_status, p_expires_at,
+     p_auto_renewing, now(), p_raw)
+  on conflict (user_id, platform) do update
+     set product_id      = excluded.product_id,
+         original_txn_id = excluded.original_txn_id,
+         status          = excluded.status,
+         expires_at      = excluded.expires_at,
+         auto_renewing   = coalesce(excluded.auto_renewing, s.auto_renewing),
+         last_event_at   = now(),
+         raw_event       = coalesce(excluded.raw_event, s.raw_event);
 
   -- İZDÜŞÜM, AYNI İŞLEMDE. Kullanıcının BÜTÜN platformlarındaki en geç
   -- bitişi yazıyoruz: iki platformdan abone olan biri (nadir ama mümkün)

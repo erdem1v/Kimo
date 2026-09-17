@@ -143,6 +143,10 @@ class MistakeRepository {
       lapses: (row['lapses'] as int?) ?? 0,
       mastered: row['mastered'] == true,
       isLeech: row['is_leech'] == true,
+      // SUNUCUNUN GÖNDERİM KAPISI (S6): iki sütun zaten satırda geliyordu
+      // (`select()` yıldızlı), yalnızca okunmuyordu.
+      moderation: row['moderation'] as String?,
+      photoScan: row['photo_scan'] as String?,
       nextReviewDate: row['next_review_date'] == null
           ? null
           : DateTime.parse(row['next_review_date'] as String),
