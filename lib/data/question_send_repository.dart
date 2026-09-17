@@ -16,6 +16,8 @@ class SendResult {
     this.dailyLimit = false,
     this.notSendable = false,
     this.scanPending = false,
+    this.suspended = false,
+    this.anonymous = false,
   });
 
   final int sent;
@@ -45,6 +47,48 @@ class SendResult {
   /// [notSendable]ın sebebi taramanın SÜRMESİ: beklemek işe yarar.
   final bool scanPending;
 
+  /// GÖNDEREN askıda (`reason = 'suspended'`).
+  ///
+  /// Task 16'da `not_sendable` ayrıldı ama sunucu DÖRT sebep döndürüyor ve
+  /// kalan ikisi hâlâ `blocked`a karışıyordu: askıdaki kullanıcı "Bu soru
+  /// onlara gitmedi — yakında göndermiş olabilirsin." görüyordu. Yani C0-1'in
+  /// düzeltilen cümlesinin aynısı, bu kez yaptırım yolunda. Askı ekranı
+  /// yalnızca açılışta bir kez çıkıyor ve kapatılabiliyor, dolayısıyla
+  /// kullanıcı hesabının kısıtlı olduğunu başka hiçbir yerden öğrenmiyordu.
+  final bool suspended;
+
+  /// GÖNDEREN anonim (`reason = 'anonymous'`). Kayıt akışın sonunda olduğu
+  /// için gerçek bir durum: kaydı atlayan kullanıcı sosyal yüzeye giremiyor.
+  final bool anonymous;
+
+  /// `send_question_to_friends` satırını sonuca çevirir.
+  ///
+  /// AYRI BİR FABRİKA, çünkü kırık olan tam buydu ve sunucu olmadan
+  /// sınanamıyordu: Task 16 `not_sendable`ı ayırdı ama `suspended` ve
+  /// `anonymous` `blocked`a karışmaya devam etti. Eşleme saf olunca mutasyon
+  /// testi onu gerçekten ayırt edebiliyor.
+  factory SendResult.fromRow(Map<String, dynamic> row) {
+    final String reason = (row['reason'] as String?) ?? '';
+    // GÖNDEREN-TARAFI REDLER `blocked` DEĞİL: üçü de "arkadaşın almadı" demek
+    // değil, "sen gönderemiyorsun" demek. `duplicate`a yazmak kullanıcıya
+    // yanlış hikâyeyi anlatıyordu.
+    const Set<String> senderSide = <String>{
+      'not_sendable',
+      'suspended',
+      'anonymous',
+    };
+    return SendResult(
+      sent: (row['sent'] as num?)?.toInt() ?? 0,
+      duplicate: senderSide.contains(reason)
+          ? 0
+          : ((row['blocked'] as num?)?.toInt() ?? 0),
+      dailyLimit: reason == 'daily_limit',
+      notSendable: reason == 'not_sendable',
+      suspended: reason == 'suspended',
+      anonymous: reason == 'anonymous',
+    );
+  }
+
   bool get ok => sent > 0;
 
   /// Kullanıcıya gösterilecek mesaj.
@@ -55,6 +99,13 @@ class SendResult {
     }
     if (dailyLimit) {
       return 'Bugünün gönderim hakkın doldu. Yarın devam edebilirsin.';
+    }
+    if (suspended) {
+      return 'Hesabın şu an kısıtlı; soru gönderemiyorsun. '
+          'Ayrıntısı ve itiraz yolu Ayarlar\'da.';
+    }
+    if (anonymous) {
+      return 'Soru göndermek için önce hesabını açman gerekiyor.';
     }
     if (scanPending) {
       return 'Fotoğrafın kontrolü hâlâ sürüyor. Birkaç saniye sonra tekrar dene.';
@@ -168,17 +219,7 @@ class QuestionSendRepository {
         },
       );
       if (rows.isEmpty) return const SendResult(error: 'Boş yanıt');
-      final Map<String, dynamic> row = rows.first as Map<String, dynamic>;
-      final String reason = (row['reason'] as String?) ?? '';
-      final bool notSendable = reason == 'not_sendable';
-      return SendResult(
-        sent: (row['sent'] as num?)?.toInt() ?? 0,
-        // `not_sendable` bir ALICI reddi değil, sorunun kendisiyle ilgili:
-        // `blocked` sayısına karıştırmak "arkadaşın almadı" anlamına gelirdi.
-        duplicate: notSendable ? 0 : ((row['blocked'] as num?)?.toInt() ?? 0),
-        dailyLimit: reason == 'daily_limit',
-        notSendable: notSendable,
-      );
+      return SendResult.fromRow(rows.first as Map<String, dynamic>);
     } on PostgrestException catch (e) {
       // 22023 = not çok uzun ya da 20'den fazla alıcı; ikisi de istemcinin
       // zaten engellemesi gereken durumlar, yani buraya düşmesi bir hata.
