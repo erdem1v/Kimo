@@ -1,4 +1,4 @@
-// Uygulama ikonlarını ÇİZEREK üretir — `flutter test tools/gen_app_icons.dart`.
+// Uygulama ikonlarını ÇİZEREK üretir — `flutter test tool/gen_app_icons.dart`.
 //
 // NEDEN BURADA: depoda Flutter'ın VARSAYILAN ikonu duruyordu (mavi Flutter
 // logosu). İki mağaza da yer tutucu varlıkla gönderilen yapıyı reddediyor ve
@@ -8,6 +8,12 @@
 //
 // `test/` ALTINDA DEĞİL: `flutter test` varsayılan taramasına girmesin,
 // üretim CI'da her koşuda dosya yazmasın. Elle çalıştırılan bir araç.
+//
+// `tools/` DEĞİL `tool/`: `tools/` kendi `pubspec.yaml`ını taşıyan AYRI bir
+// paket (`meb_import`) ve oradan `package:kimo`/`package:flutter` import
+// etmek `flutter analyze`ı beş `depend_on_referenced_packages` bildirimiyle
+// kırmızıya döndürüyor. `tool/` kök paketin içinde — Dart'ın betikler için
+// zaten önerdiği ad.
 //
 // Çıktı:
 //   ios/Runner/Assets.xcassets/AppIcon.appiconset/*.png  (Contents.json'daki
