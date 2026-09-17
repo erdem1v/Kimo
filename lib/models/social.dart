@@ -55,6 +55,17 @@ enum League {
   /// Sondan kaç kişi bir alt lige düşer.
   static const int demotionCount = 5;
 
+  /// Düşmenin UYGULANDIĞI en küçük kohort. Sunucunun ölçütü bu (0103 ·
+  /// `settle_past_leagues`: `n >= 11`), istemci de aynı sayıyı kullanmak
+  /// zorunda.
+  ///
+  /// NEDEN 11: kohort 10 kişiyken "ilk 5 yükselir, son 5 düşer" iki kümeyi
+  /// ÜST ÜSTE bindiriyor — dokuz kişilik grupta beşinci sıradaki hem terfi
+  /// hem düşme kümesinde. İstemci eskiden `total > demotionCount` (yani 6+)
+  /// diyordu ve 6-10 kişilik gruplara hiç gerçekleşmeyecek bir düşme sözü
+  /// veriyordu.
+  static const int demotionMinCohort = 11;
+
   /// Bir kohortun en fazla kaç kişi olabileceği.
   ///
   /// Sunucudaki `league_cohort_size()` ile AYNI olmak zorunda; ikisi ayrışırsa

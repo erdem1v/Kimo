@@ -24,6 +24,7 @@ import '../../widgets/kit/kimo_icons.dart';
 import '../../widgets/kit/kimo_progress.dart';
 import '../../widgets/kit/kimo_surfaces.dart';
 import '../../widgets/mistake_photo.dart';
+import '../../widgets/photo_viewer.dart';
 import 'answer_reveal.dart';
 import 'session_end_screen.dart';
 import 'session_result.dart';
@@ -640,35 +641,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
   }
 
   void _showPhoto(BuildContext context, MistakeEntry e) {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (BuildContext ctx) => Scaffold(
-          backgroundColor: Colors.black,
-          body: SafeArea(
-            child: Stack(
-              children: <Widget>[
-                Center(
-                  child: InteractiveViewer(
-                    minScale: 0.5,
-                    maxScale: 5,
-                    child: e.imageBytes != null
-                        ? Image.memory(e.imageBytes!, fit: BoxFit.contain)
-                        : MistakePhoto(path: e.photoPath!, fit: BoxFit.contain),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.topLeft,
-                  child: IconButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    icon: const KimoIcon(KimoIcons.close, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    // Görünüm `widgets/photo_viewer.dart`'a taşındı (Task 17): gelen kutusu da
+    // aynı tam ekranı açıyor, iki kopya iki farklı jest demekti.
+    unawaited(showPhotoViewer(context, path: e.photoPath, bytes: e.imageBytes));
   }
 
   Widget _answerSection(BuildContext context, L10n l, MistakeEntry e) {

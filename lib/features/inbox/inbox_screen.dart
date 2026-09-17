@@ -19,6 +19,7 @@ import '../../widgets/kit/kimo_chips.dart';
 import '../../widgets/kit/kimo_icons.dart';
 import '../../widgets/kit/kimo_surfaces.dart';
 import '../../widgets/mistake_photo.dart';
+import '../../widgets/photo_viewer.dart';
 import '../../widgets/user_avatar.dart';
 import 'pair_streak_flow.dart';
 
@@ -302,14 +303,34 @@ class _InboxCardState extends State<_InboxCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(Radii.card),
-            ),
-            child: SizedBox(
-              height: 160,
-              width: double.infinity,
-              child: MistakePhoto(path: q.photoPath, fit: BoxFit.cover),
+          // FOTOĞRAF DOKUNULABİLİR (Task 17). 160 piksele `cover` ile kırpılan
+          // el yazısı bir soruyu okuyup şık seçmen bekleniyordu; tekrar
+          // ekranında yıllardır duran tam ekran burada YOKTU. Rozet, kırpılmış
+          // önizlemenin büyüyebildiğini söylüyor.
+          GestureDetector(
+            onTap: () {
+              sound.tap();
+              unawaited(showPhotoViewer(context, path: q.photoPath));
+            },
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(Radii.card),
+              ),
+              child: SizedBox(
+                height: 160,
+                width: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: <Widget>[
+                    MistakePhoto(path: q.photoPath, fit: BoxFit.cover),
+                    Positioned(
+                      right: Gap.sm,
+                      bottom: Gap.sm,
+                      child: PhotoZoomBadge(label: l.practiceFullscreen),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
           Padding(

@@ -453,7 +453,10 @@ class _CreditWallScreenState extends State<CreditWallScreen> {
           ),
           const SizedBox(height: Gap.sm),
           KimoButton(
-            label: l.plusCta(PlusPlans.trialDays),
+            // GEZİNME DÜĞMESİ, SATIN ALMA DEĞİL. Etiketi paywall'daki satın
+            // alma düğmesiyle birebir aynıydı; aynı cümleye iki kez basmak
+            // dokunuşun işe yaramadığı hissini veriyordu.
+            label: l.plusOpen,
             onPressed: () => _openPlus(context),
           ),
           // FİYAT YALNIZCA MAĞAZA YANITIYLA ÇİZİLİYOR. Eskiden burada

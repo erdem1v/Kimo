@@ -20,6 +20,7 @@ import '../../widgets/kit/kimo_chips.dart';
 import '../../widgets/kit/kimo_icons.dart';
 import '../../widgets/kit/kimo_progress.dart';
 import '../../widgets/kit/kimo_surfaces.dart';
+import '../../widgets/theme_mode_card.dart';
 import '../../widgets/user_avatar.dart';
 import 'settings_screen.dart';
 
@@ -244,7 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: Gap.md),
               _leagueCard(context),
               const SizedBox(height: Gap.md),
-              _themeCard(context, l),
+              const ThemeModeCard(),
             ],
           ),
         ),
@@ -390,34 +391,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               )
             else
               KimoIcon(KimoIcons.gem, size: 18, color: c.inkMuted),
-        ],
-      ),
-    );
-  }
-
-  /// Tema anahtarı burada da var (tasarım kararı): en sık değiştirilen
-  /// tercih, ayarlara girmeden ulaşılabilsin.
-  Widget _themeCard(BuildContext context, L10n l) {
-    final KimoTypography t = context.t;
-    const List<ThemeMode> modes = <ThemeMode>[
-      ThemeMode.system,
-      ThemeMode.light,
-      ThemeMode.dark,
-    ];
-    return KimoCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(l.settingsTheme, style: t.bodyStrong),
-          const SizedBox(height: Gap.md),
-          SegmentedTabs(
-            labels: <String>[l.themeSystem, l.themeLight, l.themeDark],
-            selectedIndex: modes.indexOf(appSettings.themeMode),
-            onChanged: (int i) {
-              sound.tap();
-              appSettings.setThemeMode(modes[i]);
-            },
-          ),
         ],
       ),
     );

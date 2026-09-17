@@ -684,6 +684,10 @@
     }
   },
   "plusCta": "{days} gün ücretsiz dene",
+  "plusOpen": "Kimo Plus'ı gör",
+  "@plusOpen": {
+    "description": "Hak duvarındaki düğme paywall'ı AÇIYOR, satın alma başlatmıyor (Task 17 · D7). Eskiden iki ekranda da birebir aynı '{days} gün ücretsiz dene' yazıyordu: kullanıcı düğmeye basıyor ve karşısına aynı düğme çıkıyordu — dokunuş işe yaramamış gibi okunuyordu. Deneme sözü düğmenin ALTINDAKİ künyede duruyor."
+  },
   "@plusCta": {
     "placeholders": {
       "days": {
@@ -988,7 +992,15 @@
       }
     }
   },
-  "friendsConfirmBlockTitle": "Engelle",
+  "friendsConfirmBlockTitle": "{name} engellensin mi?",
+  "@friendsConfirmBlockTitle": {
+    "description": "Onay sayfasının başlığı KİMİ engellediğini söylüyor (Task 17 · D7). Eskiden düz 'Engelle' yazıyordu ve kullanıcı aynı kelimeyi üst üste üç kez görüyordu: menü satırı, sayfa başlığı, onay düğmesi — üçü de aynı, hiçbiri kimi engellediğini söylemiyordu.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "friendsConfirmBlockBody": "{name} sana soru gönderemez, arkadaş isteği atamaz ve listelerde seni göremez.",
   "@friendsConfirmBlockBody": {
     "placeholders": {
@@ -1093,7 +1105,7 @@
   "mascotToneArabeskci": "Duygulu ve dramatik; dert ortağın.",
   "mascotToneSanayiUstasi": "Kısa konuşur, işe odaklanır.",
   "mascotToneCeo": "Net ve planlı; işi sıraya koyar.",
-  "mascotSampleEvHanimi": "{ad} tam {n} gündür aksatmıyor canım. Sen de bir bak istersen, yorulmadan.",
+  "mascotSampleEvHanimi": "{ad} tam {n} gündür aksatmıyor. Ne çalışkan çocuk.",
   "@mascotSampleEvHanimi": {
     "description": "Persona kartındaki örnek bildirim. Havuzdaki friend_streak metninin aynısı; seçim yapılmadan önce göründüğü için arayüz metni sayılıyor.",
     "placeholders": {
@@ -1105,7 +1117,7 @@
       }
     }
   },
-  "mascotSampleArabeskci": "{ad} {n} gündür hiç bırakmamış be gülüm. Sen de bırakma.",
+  "mascotSampleArabeskci": "{ad} {n} gündür hiç bırakmadı. Helal olsun dostuma.",
   "@mascotSampleArabeskci": {
     "description": "Persona kartındaki örnek bildirim. Havuzdaki friend_streak metninin aynısı; seçim yapılmadan önce göründüğü için arayüz metni sayılıyor.",
     "placeholders": {
@@ -1117,7 +1129,7 @@
       }
     }
   },
-  "mascotSampleSanayiUstasi": "{ad} {n} gündür tezgâhın başında. Hadi bakalım, sıra sende.",
+  "mascotSampleSanayiUstasi": "{ad} {n} gündür tezgâhın başında. Adam gibi iş.",
   "@mascotSampleSanayiUstasi": {
     "description": "Persona kartındaki örnek bildirim. Havuzdaki friend_streak metninin aynısı; seçim yapılmadan önce göründüğü için arayüz metni sayılıyor.",
     "placeholders": {
@@ -1129,7 +1141,7 @@
       }
     }
   },
-  "mascotSampleCeo": "{ad} {n} gün üst üste hedefini tutturdu. Bugünkü tekrarın 6 dakika.",
+  "mascotSampleCeo": "{ad} {n} gün üst üste hedefini tutturdu.",
   "@mascotSampleCeo": {
     "description": "Persona kartındaki örnek bildirim. Havuzdaki friend_streak metninin aynısı; seçim yapılmadan önce göründüğü için arayüz metni sayılıyor.",
     "placeholders": {
@@ -1142,7 +1154,10 @@
     }
   },
   "notifyStepTitle": "Hatırlatayım mı?",
-  "notifyStepBody": "Günde en fazla iki kez: tekrarların hazır olduğunda ve serini sürdürme vaktinde. Saatlerini Ayarlar'dan değiştirebilirsin.",
+  "notifyStepBody": "Günde iki hatırlatma: tekrarların hazır olduğunda ve serini sürdürme vaktinde. Lig haftasının son günü sıralaman için bir tane daha gelebilir. Saatlerini Ayarlar'dan değiştirebilirsin.",
+  "@notifyStepBody": {
+    "description": "SAYI ÜRÜNLE TUTMAK ZORUNDA (Task 17 · B7). Eski metin 'günde en fazla iki kez' diyordu ama lig haftasının son günü planLeagueReminder ÜÇÜNCÜ bir yerel bildirim kuruyor. Lig hatırlatmasını akşam hatırlatmasına katlamak, o gün zaten soru çözmüş kullanıcıyı (lig nudge'ının asıl hedefi) kapsam dışı bırakırdı; onun yerine söz gerçeğe çekildi."
+  },
   "notifyYes": "Evet, hatırlat",
   "notifyNo": "Şimdilik hayır",
   "notifyDenied": "Bildirim izni verilmedi. Ayarlar'dan sonra açabilirsin.",
@@ -1190,7 +1205,7 @@
   "settingsTitle": "Ayarlar",
   "settingsAppearance": "Görünüm",
   "settingsTheme": "Tema",
-  "settingsPrivacy": "Veri ve gizlilik",
+  "settingsPrivacy": "Veri ve Gizlilik",
   "privacyTitle": "Veri ve Gizlilik",
   "privacyAiHeading": "Soru fotoğrafların",
   "privacyAiBody": "Çektiğin soru fotoğrafları, soruyu okumak ve sınıflandırmak için yurt dışındaki yapay zekâ servisine (OpenAI) gönderilir. Gönderime kimliğin eklenmez. Fotoğraf senin arşivinde saklanır; yalnızca sen, gönderdiğin arkadaşın ve bir şikâyet ya da güvenlik incelemesi hâlinde yetkili moderatörümüz görebilir. Hesabını sildiğinde silinir.",

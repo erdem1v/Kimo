@@ -122,8 +122,10 @@ void main() {
     testWidgets('ilk çarpmada Plus sıradan bir satır (kart DEĞİL)',
         (WidgetTester tester) async {
       await pumpWall(tester, wallState());
-      // Renkli kartın işareti: kıyas tablosu ve deneme CTA'sı.
-      expect(find.text(l.plusCta(7)), findsNothing);
+      // Renkli kartın işareti: kıyas tablosu ve paywall'ı açan düğme.
+      // DÜĞME ETİKETİ `plusOpen` (Task 17 · D7): eskiden paywall'daki satın
+      // alma düğmesiyle birebir aynı cümleyi taşıyordu.
+      expect(find.text(l.plusOpen), findsNothing);
     });
   });
 
@@ -131,7 +133,11 @@ void main() {
     testWidgets('Plus kartı ÖNE ÇIKIYOR (kıyas + CTA)',
         (WidgetTester tester) async {
       await pumpWall(tester, wallState(), arrivals: 3);
-      expect(find.text(l.plusCta(7)), findsOneWidget);
+      expect(find.text(l.plusOpen), findsOneWidget);
+      // SATIN ALMA CÜMLESİ BURADA YOK: bu düğme paywall'ı açıyor, deneme
+      // başlatmıyor. Aynı etiketi iki ekranda birden göstermek dokunuşun işe
+      // yaramadığı hissini veriyordu.
+      expect(find.text(l.plusCta(7)), findsNothing);
     });
 
     testWidgets('aylık cap dolunca başlık AY, ve pencere saati geçmiyor',

@@ -40,6 +40,15 @@ class _MistakesScreenState extends State<MistakesScreen> {
   bool _loading = false;
   bool _failed = false;
 
+  /// İlk yükleme henüz bitmedi. Tam ekran çember YALNIZCA bunda çıkıyor.
+  ///
+  /// U6: `refreshBus` her ping'inde (sekme değişimi, soru silme, tekrar
+  /// bitirme) `_load` koşuyor ve eskiden `_loading` tüm gövdeyi çemberle
+  /// değiştiriyordu — `ListView` sıfırdan kuruluyor, kaydırma konumu
+  /// kayboluyor, okuduğun yerden en başa fırlıyordun. Tazeleme artık sessiz:
+  /// eldeki liste ekranda kalıyor, yerini yenisi geldiğinde alıyor.
+  bool _firstLoad = true;
+
   /// Seçili ders filtresi; `null` = tümü.
   String? _subject;
 
@@ -123,7 +132,7 @@ class _MistakesScreenState extends State<MistakesScreen> {
   Future<void> _load() async {
     setState(() {
       _loading = true;
-      _failed = false;
+      if (_items.isEmpty) _failed = false;
     });
     try {
       final List<MistakeEntry> items = await mistakeRepository.fetch();
@@ -131,13 +140,19 @@ class _MistakesScreenState extends State<MistakesScreen> {
       setState(() {
         _items = items;
         _loading = false;
+        _firstLoad = false;
+        _failed = false;
       });
     } catch (e) {
       debugPrint('hatalar yüklenemedi: $e');
       if (!mounted) return;
       setState(() {
-        _failed = true;
         _loading = false;
+        _firstLoad = false;
+        // Elde liste varsa KORUNUYOR: arka planda düşen bir tazeleme yüzünden
+        // dolu bir ekranı hata metniyle değiştirmek, bayat veriyi göstermekten
+        // daha kötü. Hata yüzeyi yalnızca gösterecek hiçbir şey yokken çıkıyor.
+        _failed = _items.isEmpty;
       });
     }
   }
@@ -166,7 +181,7 @@ class _MistakesScreenState extends State<MistakesScreen> {
 
   Widget _body(BuildContext context) {
     final L10n l = L10n.of(context);
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_firstLoad) return const Center(child: CircularProgressIndicator());
     if (_failed) {
       return Center(
         child: Padding(

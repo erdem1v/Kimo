@@ -239,12 +239,13 @@ class _LeagueBoardViewState extends State<LeagueBoardView> {
           // çoğu hafta daha küçük. Üretimde aynı kartta "30 kişilik grubunda"
           // yazarken hemen altında "4. / 10" duruyordu.
           //
-          // DÜŞME KAPISI SUNUCUDAN: `settle_league` düşmeyi yalnızca kohort
-          // beş kişiden büyükken uyguluyor (0002 · league_six_tiers).
-          // Beş kişilik bir grupta "son 5 düşer" demek herkesin düşeceğini
-          // söylemek olurdu — ve yanlış olurdu.
+          // DÜŞME KAPISI SUNUCUDAN: `settle_past_leagues` düşmeyi yalnızca
+          // kohort 11+ kişiyken uyguluyor. Eşik burada `> demotionCount`
+          // (6+) yazıyordu ve 6-10 kişilik gruplara HİÇ GERÇEKLEŞMEYECEK bir
+          // düşme sözü veriyordu; üstelik dokuz kişilik bir grupta "ilk 5
+          // yükselir, son 5 düşer" beşinci sırayı iki kümeye birden koyuyordu.
           Text(
-            total > League.demotionCount
+            total >= League.demotionMinCohort
                 ? l.leagueCohortNote(
                     total,
                     League.promotionCount,

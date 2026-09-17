@@ -31,7 +31,15 @@ class MistakeRepository {
   /// kesiyordu ve istemci kesildiğini fark edemiyordu. Açık bir limit en
   /// azından davranışı okunur kılıyor; ekranın sayaçları zaten `totalCount()`
   /// ile ayrı geliyor, yani "kaç sorum var" doğru kalıyor.
+  /// Liste getirmenin test dikişi. `PhotoQueue.analyzeOverride` ile aynı
+  /// gerekçe: Hatalarım ekranının yükleme/tazeleme davranışı ağ olmadan
+  /// sınanabilmeli, yoksa U6 gibi bir hata ancak elle gezerek görülüyor.
+  @visibleForTesting
+  static Future<List<MistakeEntry>> Function()? fetchOverride;
+
   Future<List<MistakeEntry>> fetch() async {
+    final Future<List<MistakeEntry>> Function()? seam = fetchOverride;
+    if (seam != null) return seam();
     final List<Map<String, dynamic>> rows = await _client
         .from('mistakes')
         .select()

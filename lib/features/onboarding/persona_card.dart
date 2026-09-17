@@ -37,13 +37,23 @@ String personaTone(L10n l, Mascot m) => switch (m) {
 
 /// Kartta gösterilen örnek bildirim.
 ///
-/// Havuzdaki `friend_streak` metninin ilk varyantıyla aynı cümle, ama ARB'den
-/// geliyor: bu cümle kullanıcı HENÜZ persona seçmeden görünmek zorunda ve
-/// önbellek soğukken (yeni kurulum) ekran boş kalamaz. Kilit ekranı önizlemesi
-/// ise canlı havuzdan okuyor — orada gerçek bildirimi göstermek anlamlı.
+/// ÖNCE CANLI HAVUZ (Task 17). Kart eskiden yalnızca ARB'den okuyordu ve
+/// ARB'deki dört cümle havuzdaki hiçbir satırla birebir tutmuyordu: kullanıcı
+/// kurulumda bir ses duyup üründe başka bir ses duyuyordu. Seçim ekranı bir
+/// SÖZ veriyor; sözün ürünle aynı cümle olması gerekiyor.
+///
+/// ARB yedeği duruyor ama artık havuzun 0. varyantının birebir kopyası
+/// (`persona_sample_pool_test.dart` bunu sabitliyor): bu cümle kullanıcı
+/// HENÜZ persona seçmeden, önbellek soğukken (yeni kurulum, çevrimdışı ilk
+/// açılış) görünmek zorunda ve ekran boş kalamaz.
+///
+/// Kilit ekranı önizlemesi ([PersonaPreview]) 1. varyantı gösteriyor — aynı
+/// cümle ekranda iki kez görünmesin diye.
 String personaSample(L10n l, Mascot m) {
   final String ad = l.mascotPreviewFriend;
   const int n = kPersonaPreviewDays;
+  final String? live = notificationLines.preview(kPersonaPreviewKind, m, 0);
+  if (live != null) return NotificationLines.fill(live, ad: ad, n: n);
   return switch (m) {
     Mascot.evHanimi => l.mascotSampleEvHanimi(ad, n),
     Mascot.arabeskci => l.mascotSampleArabeskci(ad, n),

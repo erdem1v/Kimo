@@ -796,7 +796,7 @@ class _FriendsViewState extends State<FriendsView> {
 
   Future<void> _blockFlow(L10n l, PublicProfile p) async {
     final bool ok = await _confirm(
-      l.friendsConfirmBlockTitle,
+      l.friendsConfirmBlockTitle(p.nickname),
       l.friendsConfirmBlockBody(p.nickname),
       l.friendsBlock,
     );

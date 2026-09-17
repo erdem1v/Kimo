@@ -328,15 +328,28 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   Widget build(BuildContext context) {
     final KimoColors c = context.c;
     final L10n l = L10n.of(context);
-    return Scaffold(
-      backgroundColor: c.page,
-      body: SafeArea(
-        child: Column(
-          children: <Widget>[
-            _progress(context, l),
-            Expanded(child: _page(context, l)),
-            _footer(context, l),
-          ],
+    return PopScope(
+      // ANDROID GERİ TUŞU (Task 17). `OnboardingFlow` `AuthGate`'in KÖKÜ, yani
+      // itilmiş bir rota değil: geri tuşu eskiden hangi adımda olursan ol
+      // doğrudan UYGULAMADAN ÇIKIYORDU. Ekrandaki ok bir adım geri götürürken
+      // donanım tuşunun kurulumu terk etmesi iki farklı sözdü; artık ikisi de
+      // aynı şeyi yapıyor. İlk adımda çıkışa izin veriliyor — kökteyken geri
+      // tuşuyla uygulamadan çıkmak Android'in BEKLENEN davranışı ve kurulum
+      // sunucuda duruyor, geri dönünce kaldığın yerden sürüyor.
+      canPop: _index == 0,
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        if (!didPop) _back();
+      },
+      child: Scaffold(
+        backgroundColor: c.page,
+        body: SafeArea(
+          child: Column(
+            children: <Widget>[
+              _progress(context, l),
+              Expanded(child: _page(context, l)),
+              _footer(context, l),
+            ],
+          ),
         ),
       ),
     );

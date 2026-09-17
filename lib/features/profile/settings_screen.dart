@@ -20,6 +20,7 @@ import '../../widgets/kit/kimo_button.dart';
 import '../../widgets/kit/kimo_chips.dart';
 import '../../widgets/kit/kimo_icons.dart';
 import '../../widgets/kit/kimo_surfaces.dart';
+import '../../widgets/theme_mode_card.dart';
 import '../admin/all_questions_screen.dart';
 import '../admin/moderation_screen.dart';
 import '../onboarding/exam_year_sheet.dart';
@@ -110,7 +111,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: <Widget>[
             SectionHeader(title: l.settingsAppearance),
             const SizedBox(height: Gap.md),
-            _themeCard(context, l),
+            const ThemeModeCard(),
             const SizedBox(height: Gap.sm),
             _soundCard(context, l),
             ...<Widget>[
@@ -284,32 +285,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // ------------------------------------------------------------------ görünüm
-
-  Widget _themeCard(BuildContext context, L10n l) {
-    final KimoTypography t = context.t;
-    const List<ThemeMode> modes = <ThemeMode>[
-      ThemeMode.system,
-      ThemeMode.light,
-      ThemeMode.dark,
-    ];
-    return KimoCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(l.settingsTheme, style: t.bodyStrong),
-          const SizedBox(height: Gap.md),
-          SegmentedTabs(
-            labels: <String>[l.themeSystem, l.themeLight, l.themeDark],
-            selectedIndex: modes.indexOf(appSettings.themeMode),
-            onChanged: (int i) {
-              sound.tap();
-              appSettings.setThemeMode(modes[i]);
-            },
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _soundCard(BuildContext context, L10n l) {
     final KimoTypography t = context.t;
@@ -632,55 +607,86 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// kapatmıyor, dolayısıyla burada gösterilecek bir "bekleniyor" durumu yok.
   Widget _birthYearRow(BuildContext context, L10n l) {
     final AgeStatus? a = _age;
-    final String? value;
+    String? value;
+    String? note;
     if (a == null) {
       value = null;
     } else if (!a.birthYearSet) {
       value = l.settingsBirthYearUnset;
     } else {
-      value = a.birthYear?.toString() ?? l.ageWriteOnceNote;
+      value = a.birthYear?.toString();
+      // Yıl biliniyorsa satır kilitli ve DOKUNULAMIYOR; gerekçe artık altında
+      // yazıyor. Yıl gelmiyorsa (eski sunucu) not tek başına değeri oluyor.
+      if (value == null) {
+        value = l.ageWriteOnceNote;
+      } else {
+        note = l.ageWriteOnceNote;
+      }
     }
     return _row(
       context,
       icon: KimoIcons.lock,
       label: l.settingsBirthYear,
       value: value,
+      note: note,
     );
   }
 
+  /// Ayar satırı. [note] verilirse satırın ALTINA ikinci bir satır olarak
+  /// çiziliyor — dokunulamayan bir satırın NEDEN dokunulamadığını söylemenin
+  /// yeri (Task 17 · D7). Chevron'un yokluğu tek başına bunu anlatmıyordu.
   Widget _row(
     BuildContext context, {
     required KimoIconData icon,
     required String label,
     String? value,
+    String? note,
     VoidCallback? onTap,
   }) {
     final KimoColors c = context.c;
     final KimoTypography t = context.t;
+    final Widget row = Row(
+      children: <Widget>[
+        KimoIcon(icon, size: 20, color: c.inkMuted),
+        const SizedBox(width: Gap.md),
+        Expanded(child: Text(label, style: t.label)),
+        if (value != null)
+          Flexible(
+            child: Text(
+              value,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: t.caption.copyWith(color: c.inkMuted),
+            ),
+          ),
+        if (onTap != null) ...<Widget>[
+          const SizedBox(width: Gap.sm),
+          KimoIcon(KimoIcons.forward, size: 16, color: c.border),
+        ],
+      ],
+    );
     return KimoCard(
       padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.md),
       radius: Radii.tile,
       onTap: onTap,
-      child: Row(
-        children: <Widget>[
-          KimoIcon(icon, size: 20, color: c.inkMuted),
-          const SizedBox(width: Gap.md),
-          Expanded(child: Text(label, style: t.label)),
-          if (value != null)
-            Flexible(
-              child: Text(
-                value,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.right,
-                style: t.caption.copyWith(color: c.inkMuted),
-              ),
+      child: note == null
+          ? row
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                row,
+                const SizedBox(height: Gap.xs),
+                Padding(
+                  // İkonun genişliği (20) + aradaki boşluk: not, etiketle
+                  // aynı hizada başlasın.
+                  padding: const EdgeInsets.only(left: 20 + Gap.md),
+                  child: Text(
+                    note,
+                    style: t.caption.copyWith(color: c.inkMuted),
+                  ),
+                ),
+              ],
             ),
-          if (onTap != null) ...<Widget>[
-            const SizedBox(width: Gap.sm),
-            KimoIcon(KimoIcons.forward, size: 16, color: c.border),
-          ],
-        ],
-      ),
     );
   }
 }
