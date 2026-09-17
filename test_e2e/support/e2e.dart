@@ -66,18 +66,41 @@ Map<String, dynamic> jwtClaims(String accessToken) {
       as Map<String, dynamic>;
 }
 
-/// Yeni anonim oturum açar ve yaş kapısını geçer.
+/// Yeni oturum açar ve yaş kapısını geçer.
 ///
 /// Yaş kapısı ŞART: `mistakes` insert politikası `has_birth_year(auth.uid())`
 /// istiyor (0062). Yani bu, kısayol değil, uygulamanın gerçek sırası.
-Future<SupabaseClient> newUser({int birthYear = 2008}) async {
+///
+/// **VARSAYILAN KALICI HESAP.** Anonim kullanıcı sosyal yüzeyin tamamından
+/// dışlanıyor (`profiles.is_anonymous`, 0043): `send_question_to_friends`
+/// daha ilk kapıda `'anonymous'` dönüyor, arkadaşlık ve lig de kapalı. Bunu
+/// bu süitin ilk koşusu öğretti — anonim kurulumla yazılan gönderim testi
+/// `not_sendable` yerine `anonymous` aldı.
+///
+/// [anonymous] yalnızca karşılama akışını taklit eden testler için: uygulama
+/// kaydı SONA bıraktığı için yaş ve müfredat anonimken yazılıyor.
+Future<SupabaseClient> newUser({
+  int birthYear = 2008,
+  bool anonymous = false,
+}) async {
   final SupabaseClient c = anonClient();
-  await c.auth.signInAnonymously();
+  if (anonymous) {
+    await c.auth.signInAnonymously();
+  } else {
+    // Yerelde e-posta doğrulaması kapalı (`config.toml` enable_confirmations),
+    // yani `signUp` doğrudan oturum döndürüyor.
+    final String tag =
+        '${DateTime.now().microsecondsSinceEpoch}-${_counter++}';
+    await c.auth.signUp(email: 'e2e-$tag@kimo.test', password: 'Kimo12345!');
+  }
   await c.rpc<dynamic>('set_birth_year', params: <String, dynamic>{
     'p_year': birthYear,
   });
   return c;
 }
+
+/// Aynı mikrosaniyede açılan iki hesabın e-postası çakışmasın.
+int _counter = 0;
 
 /// Testin açtığı hesabı ve ona bağlı her şeyi siler.
 ///

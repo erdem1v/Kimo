@@ -42,7 +42,7 @@ void main() {
 
   test('metadata yazılıp jeton tazelenince zincirin tamamı maarife dönüyor',
       () async {
-    final SupabaseClient c = await newUser();
+    final SupabaseClient c = await newUser(anonymous: true);
     addTearDown(() => dropUser(c));
 
     // 1) Müfredat belirtilmemiş: sunucu "eski" varsayıyor.
@@ -84,7 +84,7 @@ void main() {
     // yenilemediği için var. Bir gün yenilemeye başlarsa burası kırmızıya
     // döner ve o tazeleme çağrısını kaldırabiliriz — sessizce gereksiz bir
     // ağ turu taşımaya devam etmek yerine.
-    final SupabaseClient c = await newUser();
+    final SupabaseClient c = await newUser(anonymous: true);
     addTearDown(() => dropUser(c));
 
     await c.auth.updateUser(

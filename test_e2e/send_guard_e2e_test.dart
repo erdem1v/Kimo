@@ -97,6 +97,35 @@ void main() {
     expect(after, hasLength(1));
   });
 
+  test('ANONİM kullanıcı hiç gönderemiyor — sebebi ayrı', () async {
+    // Bu testi süitin İLK KOŞUSU yazdırdı: gönderim testleri anonim kurulumla
+    // yazılmıştı ve sunucu `not_sendable` yerine `anonymous` döndü. Kural
+    // gerçek ve kasıtlı (0043): anonim kullanıcı sosyal yüzeyin tamamından
+    // dışlanıyor. Artık sözleşme olarak sabitleniyor.
+    final SupabaseClient a = await newUser(anonymous: true);
+    final SupabaseClient b = await newUser();
+    addTearDown(() => dropUser(a));
+    addTearDown(() => dropUser(b));
+
+    await befriend(a.auth.currentUser!.id, b.auth.currentUser!.id);
+
+    final Map<String, dynamic> row = await a
+        .from('mistakes')
+        .insert(<String, dynamic>{
+          'subject': 'Matematik',
+          'concept': 'Birinci Dereceden Denklemler ve Eşitsizlikler',
+          'exam': 'TYT',
+        })
+        .select('id')
+        .single();
+
+    final Map<String, dynamic> res =
+        await send(a, row['id'] as String, b.auth.currentUser!.id);
+    expect(res['sent'], 0);
+    expect(res['reason'], 'anonymous',
+        reason: 'anonimlik reddi, içerik reddinden AYRI anlatılmalı');
+  });
+
   test('fotoğrafsız kayıt beklemeden gönderilebiliyor', () async {
     // `photo_scan` varsayılanı 'clear' ve tetikleyici yalnızca `photo_path`
     // doluyken 'pending' yazıyor. Elle giriş yolu bu yüzden beklemiyor —
