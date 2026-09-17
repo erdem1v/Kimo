@@ -20,12 +20,14 @@ döndürülmesi onay bekliyor** (§7).
 
 | | |
 |---|---|
-| Kapatılan bulgu | **23** (6'sı yayını engelleyecek sınıfta) |
+| Kapatılan bulgu | **25** (7'si yayını engelleyecek sınıfta) |
 | Yeni göç | 6 (0098–0103) |
-| Yeni test | 40 Dart + 12 pgTAP iddiası + 7 Deno |
-| Yeni mutasyon | 3 (59, 60, 61) |
+| Dart testi | 414 → **449** |
+| pgTAP iddiası | 836 → **852** (38 dosya) |
+| Mutasyon | 58 → **61** |
+| Yeni Deno testi | 7 (ve depodaki 2 eski test ilk kez koşuyor) |
 | Yeni CI işi | 2 (entegrasyon süiti, Android derlemesi) + Deno adımı |
-| Hâlâ açık | Sır döndürme (onay bekliyor), mağaza hesabı gerektiren adımlar |
+| Hâlâ açık | Sır döndürme ve 0103'ün üretime basılması (ikisi de onay bekliyor) |
 
 ---
 
@@ -191,7 +193,35 @@ satın alma doğrulaması ve push çalışmaz. Onayınızla başlatılacak.
 
 Yeni değerler hiçbir dosyaya, commit'e ve bu rapora yazılmayacak.
 
-## 8. Doğrulama
+## 8. Kapanış turu
+
+Değişen her yüzey, üretime bağlı bir simülatörle gezildi (`ada@kimo.test`).
+
+| Yüzey | Sonuç |
+|---|---|
+| Hatalarım · sekme değişimi | Kaydırma konumu **korunuyor**, çember yok |
+| Gelen kutusu | "Tam ekran" rozeti çıkıyor, dokunuş tam ekranı açıyor |
+| Lig · 9 kişilik kohort | "ilk 5 yükselir; **bu hafta kimse düşmüyor**" — eski metin aynı grupta "son 5 düşer" diyordu |
+| Arkadaş · engelleme | Onay başlığı **"Efe engellensin mi?"** |
+| Ayarlar · doğum yılı | Yıl **ve** gerekçesi: "bir kez yazılır, sonradan değiştirilemez" |
+| Ayarlar · "Veri ve Gizlilik" | Yazım ekran başlığıyla aynı |
+| Persona kartları | Dört cümle de **havuzun 0. varyantı** — üründe duyulacak cümlenin ta kendisi |
+| Kimo Plus | Düğme kapalı ve **nedeni yazıyor**; koşullar ve gizlilik bağlantıları yerinde |
+| Uygulama ikonu | Ana ekranda maskot, marka yeşili zeminde |
+
+### Turda çıkan YENİ hata — düzeltildi
+
+Hatalarım'ın "Son 7 gün" grafiğinde ekranda **"BOTTOM OVERFLOWED BY 10
+PIXELS"** şeridi vardı: sütunlar sabit 72 piksellik bir kutuya sığdırılmıştı
+ama içerik (sayı + sütun + gün adı) ~82 piksel. Yayın derlemesinde şerit
+çizilmez, içerik yine de kırpılır.
+
+Neden hiçbir test görmemişti: mevcut testler tarihi geçmiş bir kayıt
+kullanıyordu, yani grafik hiç çizilmiyor, "bu hafta kayıt yok" metnine
+düşüyordu. Yeni test bugünün tarihiyle kayıt veriyor; sabit yükseklik geri
+konduğunda **kırmızıya dönüyor**.
+
+## 9. Doğrulama
 
 * CI yeşil: pgTAP · mutasyon · statik kapılar · analyze + test · **entegrasyon
   süiti** · **Android derlemesi**
@@ -203,7 +233,12 @@ Yeni değerler hiçbir dosyaya, commit'e ve bu rapora yazılmayacak.
 
 ### Kalanlar
 
-1. **0103 üretime basılmalı** (çakışan makbuz dalı).
+1. **0103 üretime basılmalı** (çakışan makbuz dalı). Üretimde kontrol edildi:
+   fonksiyon hâlâ eski gövdede.
 2. **Sır döndürme** — onayınızla.
 3. Android geri tuşu düzeltmesi **iOS simülatöründe doğrulanamaz**; donanım
    tuşu yok. Gerçek bir Android cihazda ya da emülatörde bakılmalı.
+4. **Üretimde altı test hesabı duruyor**: `ada@kimo.test`, `efe@kimo.test`
+   (bu turun hesapları) ve Task 11/14'ten kalan `kimo-t14-a@`, `kimo-t14-c@`,
+   `task14a@`, `kimo-model-test@`. Silinmeleri sizin onayınıza bağlı —
+   hesap silme geri alınamıyor ve listede sizin kendi adresleriniz de var.

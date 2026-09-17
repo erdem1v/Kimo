@@ -386,9 +386,14 @@ class _MistakesScreenState extends State<MistakesScreen> {
           if (peak == 0)
             Text(l.mistakesWeekEmpty, style: t.caption.copyWith(color: c.inkMuted))
           else
-            SizedBox(
-              height: 72,
-              child: Row(
+            // YÜKSEKLİK SABİT DEĞİL (Task 17 · kapanış turu). Burada
+            // `SizedBox(height: 72)` vardı ve içerik ona sığmıyordu: sayı +
+            // boşluk + en uzun sütun (48) + boşluk + gün adı ≈ 82 piksel.
+            // Ekranda "BOTTOM OVERFLOWED BY 10 PIXELS" şeridi çıkıyordu;
+            // yayın derlemesinde şerit çizilmez ama içerik yine kırpılır.
+            // Satır artık doğal yüksekliğini alıyor — metin ölçeği büyüyen
+            // kullanıcıda da taşmıyor.
+            Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: <Widget>[
                   for (int i = 0; i < s.week.length; i++) ...<Widget>[
@@ -416,7 +421,6 @@ class _MistakesScreenState extends State<MistakesScreen> {
                     if (i != s.week.length - 1) const SizedBox(width: Gap.xs),
                   ],
                 ],
-              ),
             ),
         ],
       ),

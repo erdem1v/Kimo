@@ -97,6 +97,35 @@ void main() {
         reason: 'bayat liste, boş hata ekranından iyidir');
   });
 
+  testWidgets('son 7 gün grafiği TAŞMIYOR', (WidgetTester tester) async {
+    // Kapanış turunda ekranda "BOTTOM OVERFLOWED BY 10 PIXELS" şeridi çıktı:
+    // haftalık sütun grafiği sabit 72 piksellik bir kutuya sığdırılmıştı ama
+    // içerik (sayı + sütun + gün adı) ~82 piksel. Bu test o dalı KURUYOR —
+    // eski testler tarihi geçmiş bir kayıt kullandığı için grafik hiç
+    // çizilmiyor, "bu hafta kayıt yok" metnine düşüyordu.
+    //
+    // `flutter_test` taşmayı istisna olarak raporluyor; iddia gerekmiyor,
+    // testin kendisi taşmada kırmızıya dönüyor.
+    final DateTime today = DateTime.now();
+    MistakeRepository.fetchOverride = () async => <MistakeEntry>[
+          MistakeEntry(
+            subject: 'Matematik',
+            concept: 'Türev',
+            note: '',
+            date: today,
+          ),
+          MistakeEntry(
+            subject: 'Matematik',
+            concept: 'İntegral',
+            note: '',
+            date: today,
+          ),
+        ];
+    await pump(tester);
+    await tester.pumpAndSettle();
+    expect(find.text(l.mistakesWeekTitle), findsOneWidget);
+  });
+
   testWidgets('ilk yükleme düşerse hata yüzeyi çıkıyor', (WidgetTester tester) async {
     MistakeRepository.fetchOverride = () async => throw Exception('ağ yok');
     await pump(tester);
