@@ -35,6 +35,15 @@ class PublicProfileScreen extends StatefulWidget {
 class _PublicProfileScreenState extends State<PublicProfileScreen> {
   PublicProfile? _profile;
   int _mutual = 0;
+
+  /// Bu kişiyle KABUL EDİLMİŞ arkadaşlık var mı (Task 16 · C0-3).
+  ///
+  /// Lig tahtasındaki her satır bu ekranı açıyor ve kohort arkadaşlıktan
+  /// BAĞIMSIZ kuruluyor, yani buradaki kişi çoğunlukla bir yabancı. Ekran
+  /// koşulsuz bir "Arkadaşına gönder" düğmesi çiziyordu; sunucu
+  /// `are_friends` koşulunda gönderimi düşürüyor ve kullanıcı üç ekran
+  /// sonra "Bu soru ona gitmedi — yakında göndermiş olabilirsin." görüyordu.
+  bool _isFriend = false;
   bool _loading = true;
   bool _failed = false;
 
@@ -51,10 +60,15 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       final PublicProfile? p =
           await socialRepository.profileById(widget.userId);
       final int mutual = await friendRepository.mutualFriends(widget.userId);
+      final List<Friendship> rels = await socialRepository.relations();
+      final bool friend = rels.any((Friendship f) =>
+          f.accepted &&
+          (f.requesterId == widget.userId || f.addresseeId == widget.userId));
       if (!mounted) return;
       setState(() {
         if (p != null) _profile = p;
         _mutual = mutual;
+        _isFriend = friend;
         _loading = false;
         _failed = p == null && widget.initial == null;
       });
@@ -139,14 +153,25 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 // Tur 7 · n5: gönderme akışının ikinci ARKADAŞ-ÖNCE girişi.
                 // Profil ekranı bugüne kadar yalnızca okunuyordu; gönderme
                 // eylemi hiç yoktu.
-                KimoButton(
-                  label: l.mistakesSend,
-                  onPressed: () => unawaited(showSendEntrySheet(
-                    context,
-                    friendId: p.id,
-                    friendName: p.nickname,
-                  )),
-                ),
+                //
+                // YALNIZCA ARKADAŞA (Task 16 · C0-3): sunucu zaten
+                // `are_friends` istiyor. Yabancıda düğmeyi çizmek, kullanıcıyı
+                // üç ekran sonra sebebi söylenmeyen bir redde götürüyordu.
+                if (_isFriend)
+                  KimoButton(
+                    label: l.mistakesSend,
+                    onPressed: () => unawaited(showSendEntrySheet(
+                      context,
+                      friendId: p.id,
+                      friendName: p.nickname,
+                    )),
+                  )
+                else
+                  Text(
+                    l.publicProfileNotFriend,
+                    textAlign: TextAlign.center,
+                    style: t.caption.copyWith(color: c.inkMuted),
+                  ),
               ],
             ),
     );

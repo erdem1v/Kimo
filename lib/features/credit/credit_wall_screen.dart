@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../data/auth_repository.dart';
 import '../../data/daily_state_repository.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../models/ai_credit.dart';
@@ -569,6 +570,8 @@ class _CreditWallScreenState extends State<CreditWallScreen> {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => PlusScreen(
+          freeLimitsKnown:
+              !widget.state.hasSubscription && !authRepository.isAnonymous,
           freeWindowLimit: _s.aiWindowLimit,
           freeMonthLimit: _s.aiMonthLimit,
           plusWindowLimit: _s.plusWindowLimit,

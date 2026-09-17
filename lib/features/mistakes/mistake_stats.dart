@@ -61,7 +61,8 @@ class MistakeStats {
 
   /// [now] dışarıdan veriliyor: saat bağımlılığı olmadan test edilebilsin.
   factory MistakeStats.from(List<MistakeEntry> items, {DateTime? now}) {
-    final DateTime today = _dateOnly(now ?? DateTime.now());
+    final DateTime nowTs = now ?? DateTime.now();
+    final DateTime today = _dateOnly(nowTs);
 
     int mastered = 0;
     int learning = 0;
@@ -75,11 +76,23 @@ class MistakeStats {
         mastered++;
       } else {
         learning++;
-        // `dueReviews()` sorgusuyla BİREBİR aynı kural: hâkim olunmamış ve
-        // planlanan gün bugün ya da geçmiş. Planı bilinmeyen (yerel) kayıt
-        // sayılmıyor — bilinmeyeni "bugün" saymak sayıyı şişirirdi.
-        final DateTime? due = e.nextReviewDate;
-        if (due != null && !_dateOnly(due).isAfter(today)) dueToday++;
+        // `dueReviews()` sorgusu ve sunucunun `due_count`'u ile BİREBİR aynı
+        // kural (0096): vadesi geçmiş DAMGA, damga yoksa gün gölgesi.
+        //
+        // ESKİDEN YALNIZCA GÜN BAZLIYDI ve yorum "birebir aynı" diyordu —
+        // ama 0096 sunucu tarafını zamana çevirince kural ayrıştı: vadesi
+        // bugün 02:53 olan bir soru için Bugün ekranı "tekrar yok" derken
+        // bu kart "Bugün 1" yazıyordu (Task 16, üretimde doğrulandı).
+        //
+        // Planı bilinmeyen (yerel) kayıt sayılmıyor — bilinmeyeni "bugün"
+        // saymak sayıyı şişirirdi.
+        final DateTime? at = e.nextReviewAt;
+        if (at != null) {
+          if (!at.isAfter(nowTs)) dueToday++;
+        } else {
+          final DateTime? due = e.nextReviewDate;
+          if (due != null && !_dateOnly(due).isAfter(today)) dueToday++;
+        }
       }
 
       if (e.isLeech || e.lapses >= leechThreshold) leeches.add(e);

@@ -137,17 +137,27 @@ class _PracticeScreenState extends State<PracticeScreen> {
 
   // ------------------------------------------------------------------ cevap
 
+  /// Süren cevap gönderimi. `_advance` günlük hedefi istemeden ÖNCE bunu
+  /// bekliyor (Task 16 · C0-2): `claim_daily_goal` o günkü `study_attempts`
+  /// sayısını okuyor ve satır `submit_review` içinde yazılıyor. Kullanıcı
+  /// "Devam"a iki ağ turu bitmeden basarsa sunucu `42501 'bugün hiç
+  /// çalışılmamış'` fırlatıyor, istemci onu yutuyor ve 50 XP + 5 elmas
+  /// sessizce kayboluyordu — üstelik o gün bir daha istenmiyordu.
+  Future<void>? _answerInFlight;
+
   void _pickOption(int i) {
     if (_revealed != null) return;
     setState(() => _selectedOption = i);
     // Bilinçli ateşle-unut: panel HEMEN açılmalı, ağ beklenmez. `_answer`
     // kendi hatalarını içeride yakalayıp panele/rapora işliyor.
-    unawaited(_answer(correct: i == _current.correctIndex, choice: i));
+    _answerInFlight = _answer(correct: i == _current.correctIndex, choice: i);
+    unawaited(_answerInFlight);
   }
 
   void _selfGrade(bool correct) {
     if (_revealed != null) return;
-    unawaited(_answer(correct: correct, choice: null, selfReported: true));
+    _answerInFlight = _answer(correct: correct, choice: null, selfReported: true);
+    unawaited(_answerInFlight);
   }
 
   /// Cevabı işler.
@@ -278,6 +288,15 @@ class _PracticeScreenState extends State<PracticeScreen> {
         !_goalClaimed && _target > 0 && (_base + next) >= _target;
 
     if (reachedGoal) {
+      // ÖLÇÜM SATIRI ÖNCE. `claim_daily_goal` o günkü `study_attempts`
+      // sayısını okuyor; satır süren `submit_review` çağrısında yazılıyor.
+      // Beklemeden istemek, günün İLK tekrarında sunucuya "bugün hiç
+      // çalışılmamış" dedirtiyordu.
+      try {
+        await _answerInFlight;
+      } catch (_) {
+        // `_answer` hatalarını zaten kendi içinde raporluyor.
+      }
       _goalClaimed = true;
       // Ödülü asıl veren sunucu; günde bir kez olduğunu daily_goal_date
       // garanti ediyor. Ağ yoksa kuyruğa alınır.
@@ -286,10 +305,18 @@ class _PracticeScreenState extends State<PracticeScreen> {
       if (awarded) {
         final Map<String, dynamic>? totals =
             await progressRepository.claimDailyGoal();
-        gameProgress.applyServerTotals(totals);
-        _goalXp = (totals?['xp_awarded'] as num?)?.toInt() ?? 0;
-        _xpGained += _goalXp;
-        _gemsAwarded = (totals?['gems_awarded'] as num?)?.toInt() ?? 0;
+        if (totals == null) {
+          // SUNUCU VERMEDİ: iyimser +50 geri alınıyor ve `_lastGoalDate`
+          // temizleniyor, yani ödül bugün yeniden istenebilir. Eskiden yerel
+          // artış öylece kalıyor, bir sonraki açılışta sessizce yok oluyordu.
+          gameProgress.revertDailyGoal(GameProgress.dailyGoalBonus);
+          _goalClaimed = false;
+        } else {
+          gameProgress.applyServerTotals(totals);
+          _goalXp = (totals['xp_awarded'] as num?)?.toInt() ?? 0;
+          _xpGained += _goalXp;
+          _gemsAwarded = (totals['gems_awarded'] as num?)?.toInt() ?? 0;
+        }
         await _refreshPending();
       }
       if (!mounted) return;

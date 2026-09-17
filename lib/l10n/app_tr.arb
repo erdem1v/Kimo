@@ -775,7 +775,10 @@
     }
   },
   "mistakesSend": "Arkadaşına gönder",
-  "sendEntryTitle": "{name}''e soru gönder",
+  "friendsDecline": "Reddet",
+  "inboxAnswerQueued": "Cevabın sırada — bağlantı gelince gönderilecek.",
+  "publicProfileNotFriend": "Soru göndermek için önce arkadaş olmanız gerekiyor.",
+  "sendEntryTitle": "{name} soru gönder",
   "@sendEntryTitle": {
     "description": "Tur 7 · n5: arkadaş satırından açılan sayfanın başlığı. Akış ARKADAŞ-ÖNCE: alıcı zaten belli, seçilecek olan soru.",
     "placeholders": {
@@ -796,7 +799,7 @@
   },
   "sendEntryNewPhoto": "Yeni soru çek",
   "sendEntryNewPhotoHint": "Fotoğrafla, doğrudan gönder",
-  "sendArchiveTitle": "{name}''e gönderiliyor",
+  "sendArchiveTitle": "{name} gönderiliyor",
   "@sendArchiveTitle": {
     "description": "Arşivden seçme ekranının başlığı; alıcı sabit olduğu için adı başlıkta.",
     "placeholders": {
@@ -843,6 +846,14 @@
     }
   },
   "leagueCohortNote": "{size} kişilik grubunda ilk {up} yükselir, son {down} düşer.",
+  "leagueCohortNoteSmall": "{size} kişilik grubunda ilk {up} yükselir; bu hafta kimse düşmüyor.",
+  "@leagueCohortNoteSmall": {
+    "description": "Kohort beş kişiden büyük DEĞİLSE. Sunucu (settle_league, 0002) düşmeyi yalnızca kohort > 5 iken uyguluyor; küçük grupta düşme cümlesi yanlış olurdu.",
+    "placeholders": {
+      "size": { "type": "int" },
+      "up": { "type": "int" }
+    }
+  },
   "@leagueCohortNote": {
     "description": "Sayılar League.cohortSize / promotionCount / demotionCount'tan; sunucudaki league_cohort_size() ile aynı olmak zorunda.",
     "placeholders": {
@@ -1207,7 +1218,7 @@
       }
     }
   },
-  "settingsQuietNote": "Bu aralıkta bildirim gönderilmez. Aralığa denk gelen hatırlatma bir sonraki uygun saate kayar.",
+  "settingsQuietNote": "Bu aralıkta Kimo'nun hatırlatmaları gönderilmez; aralığa denk gelen hatırlatma bir sonraki uygun saate kayar. Arkadaşlarından gelen bildirimler bundan etkilenmez.",
   "settingsHourValue": "{hour}:00",
   "@settingsHourValue": {
     "placeholders": {

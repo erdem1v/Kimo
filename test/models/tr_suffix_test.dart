@@ -7,6 +7,7 @@ import 'package:kimo/models/tr_suffix.dart';
 /// doğru ama değerler keyfî. Sabit bir `'da` yazmak üretilen zamanların
 /// kabaca yarısını bozardı ve bu, hiçbir derleyici hatası vermeden olurdu.
 void main() {
+  _dativeTests();
   group('saat — dakika 0 DEĞİLSE ek dakikadan gelir', () {
     const Map<String, String> cases = <String, String>{
       '14:30': "14:30'da",   // otuz
@@ -102,6 +103,45 @@ void main() {
 
     test('null → null', () {
       expect(trLocativeMonthDay(null), isNull);
+    });
+  });
+}
+
+/// Yönelme hâli eki — takma adlar (Task 16).
+void _dativeTests() {
+  group('trDative', () {
+    test('ünsüzle biten ad: kaynaştırma YOK', () {
+      expect(trDative('Berk'), "Berk'e");
+      expect(trDative('Burak'), "Burak'a");
+      expect(trDative('Deniz'), "Deniz'e");
+    });
+
+    test('ünlüyle biten ad: kaynaştırma y GİRİYOR', () {
+      // Bu satır hatanın ta kendisiydi: ekranda "Ayla''e" yazıyordu.
+      expect(trDative('Ayla'), "Ayla'ya");
+      expect(trDative('Ece'), "Ece'ye");
+      expect(trDative('Tugba'), "Tugba'ya");
+    });
+
+    test('ek SON ünlüye göre kalınlaşıyor', () {
+      expect(trDative('Elif'), "Elif'e");
+      expect(trDative('Mustafa'), "Mustafa'ya");
+      expect(trDative('Zeynep'), "Zeynep'e");
+      expect(trDative('Oğuz'), "Oğuz'a");
+    });
+
+    test('bozuk girdide delik açmıyor', () {
+      expect(trDative(''), '');
+      expect(trDative('  Ayla  '), "Ayla'ya");
+      // Ünlüsüz girdi Türkçede yok; yine de bir cümle üretilmeli.
+      expect(trDative('42'), "42'e");
+    });
+
+    test('ÇIKTIDA ÇİFT KESME YOK', () {
+      // ARB'deki `''` kaçışı ekrana literal olarak düşüyordu.
+      for (final String n in <String>['Ayla', 'Berk', 'Ece']) {
+        expect(trDative(n), isNot(contains("''")));
+      }
     });
   });
 }

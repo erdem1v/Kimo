@@ -234,12 +234,23 @@ class _LeagueBoardViewState extends State<LeagueBoardView> {
             ],
           ),
           const SizedBox(height: Gap.sm),
+          // GERÇEK GRUP BOYUTU (Task 16 · B5). Cümle `League.cohortSize`
+          // sabitini (30) yazıyordu; kohort ise 30'a kadar DOLDURULUYOR, yani
+          // çoğu hafta daha küçük. Üretimde aynı kartta "30 kişilik grubunda"
+          // yazarken hemen altında "4. / 10" duruyordu.
+          //
+          // DÜŞME KAPISI SUNUCUDAN: `settle_league` düşmeyi yalnızca kohort
+          // beş kişiden büyükken uyguluyor (0002 · league_six_tiers).
+          // Beş kişilik bir grupta "son 5 düşer" demek herkesin düşeceğini
+          // söylemek olurdu — ve yanlış olurdu.
           Text(
-            l.leagueCohortNote(
-              League.cohortSize,
-              League.promotionCount,
-              League.demotionCount,
-            ),
+            total > League.demotionCount
+                ? l.leagueCohortNote(
+                    total,
+                    League.promotionCount,
+                    League.demotionCount,
+                  )
+                : l.leagueCohortNoteSmall(total, League.promotionCount),
             style: t.caption.copyWith(color: c.inkSecondary),
           ),
           if (rank > 0) ...<Widget>[

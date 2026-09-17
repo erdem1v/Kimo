@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'mistake_repository.dart';
 import '../models/received_question.dart';
 import '../models/report_reason.dart';
 import 'submission_queue.dart';
@@ -12,6 +14,8 @@ class SendResult {
     this.duplicate = 0,
     this.error,
     this.dailyLimit = false,
+    this.notSendable = false,
+    this.scanPending = false,
   });
 
   final int sent;
@@ -28,6 +32,19 @@ class SendResult {
   /// söylenecek şey farklı: "yarın tekrar" demek gerekiyor.
   final bool dailyLimit;
 
+  /// Sunucu soruyu gönderilebilir bulmadı (`reason = 'not_sendable'`):
+  /// fotoğraf taraması bitmemiş, moderasyon 'ok' değil ya da soru bu
+  /// kullanıcıya ait değil.
+  ///
+  /// [duplicate]DAN AYRI (Task 16 · C0-1). Eskiden ikisi tek sayıda
+  /// toplanıyordu ve kullanıcı "yakında göndermiş olabilirsin" mesajını
+  /// görüyordu — hiç göndermediği bir soru için, üstelik gerçek sebep
+  /// birkaç saniye içinde kendiliğinden geçecekken.
+  final bool notSendable;
+
+  /// [notSendable]ın sebebi taramanın SÜRMESİ: beklemek işe yarar.
+  final bool scanPending;
+
   bool get ok => sent > 0;
 
   /// Kullanıcıya gösterilecek mesaj.
@@ -38,6 +55,12 @@ class SendResult {
     }
     if (dailyLimit) {
       return 'Bugünün gönderim hakkın doldu. Yarın devam edebilirsin.';
+    }
+    if (scanPending) {
+      return 'Fotoğrafın kontrolü hâlâ sürüyor. Birkaç saniye sonra tekrar dene.';
+    }
+    if (notSendable) {
+      return 'Bu soru gönderilemiyor: fotoğrafı kontrolden geçmedi.';
     }
     if (duplicate > 0 && error == null) {
       return duplicate == 1
@@ -71,12 +94,70 @@ class QuestionSendRepository {
   /// 30 gün tekrar gönderme" yasağı `send_question_to_friends` içinde.
   /// Arkadaşlık/engel/askı kontrolü RLS politikasında KALIYOR — istemci
   /// hiçbirini tekrarlamıyor.
+  /// `not_sendable` sonrası taramanın bitmesi için beklenecek süreler.
+  ///
+  /// Ölçüm: üretimde bir fotoğrafın `pending` → `clear` geçişi **2,4 saniye**
+  /// sürdü. Merdiven 1+2+3+5 = 11 saniyeye kadar bekliyor ve her adımda önce
+  /// taramanın HÂLÂ sürdüğünü doğruluyor — bitmişse ya da damgalanmışsa
+  /// beklemek anlamsız, hemen çıkıyor.
+  @visibleForTesting
+  static List<Duration> scanWaits = const <Duration>[
+    Duration(seconds: 1),
+    Duration(seconds: 2),
+    Duration(seconds: 3),
+    Duration(seconds: 5),
+  ];
+
+  /// Bir soruyu arkadaşlara gönderir; tarama sürüyorsa BEKLER.
+  ///
+  /// **TARAMA YARIŞI (Task 16 · C0-1).** Fotoğraflı bir kayıt eklenince
+  /// `mistakes_photo_scan_reset` `photo_scan`i `pending` yapıyor ve tarama
+  /// edge fonksiyonu ateşle-unut çağrılıyor. `send_question_to_friends` ise
+  /// `photo_scan = 'clear'` istiyor. "Yeni soru çek → doğrudan gönder" yolu
+  /// kaydın hemen ardından, AYNI KAREDE gönderiyordu: sunucu `not_sendable`
+  /// dönüyor, istemci bunu `blocked` sayıp "yakında göndermiş olabilirsin"
+  /// diyor ve gönderim niyeti sessizce kayboluyordu. Üretimde doğrulandı:
+  /// soru 00:06:41.022'de yazıldı, tarama 00:06:43.444'te bitti, arada
+  /// gönderim düştü ve `question_sends`te satır OLUŞMADI.
+  ///
+  /// Bekleme BURADA, üç gönderim yolunun da geçtiği tek noktada: çekimden
+  /// gönderme, arşivden gönderme ve ortak seri daveti.
   Future<SendResult> sendToFriends({
     required String mistakeId,
     required List<String> receiverIds,
     String? note,
   }) async {
     if (receiverIds.isEmpty) return const SendResult();
+    SendResult res = await _sendOnce(
+      mistakeId: mistakeId,
+      receiverIds: receiverIds,
+      note: note,
+    );
+    if (!res.notSendable) return res;
+
+    for (final Duration wait in scanWaits) {
+      if (await mistakeRepository.photoScanOf(mistakeId) != 'pending') break;
+      await Future<void>.delayed(wait);
+      res = await _sendOnce(
+        mistakeId: mistakeId,
+        receiverIds: receiverIds,
+        note: note,
+      );
+      if (!res.notSendable) return res;
+    }
+    // Hâlâ gönderilemiyor: sebebi ayrı söyleniyor. `pending` ise kullanıcı
+    // birazdan tekrar deneyebilir; `flagged`/eksik ise deneme boşuna.
+    return SendResult(
+      notSendable: true,
+      scanPending: await mistakeRepository.photoScanOf(mistakeId) == 'pending',
+    );
+  }
+
+  Future<SendResult> _sendOnce({
+    required String mistakeId,
+    required List<String> receiverIds,
+    String? note,
+  }) async {
     try {
       final List<dynamic> rows = await _client.rpc<List<dynamic>>(
         'send_question_to_friends',
@@ -89,15 +170,24 @@ class QuestionSendRepository {
       if (rows.isEmpty) return const SendResult(error: 'Boş yanıt');
       final Map<String, dynamic> row = rows.first as Map<String, dynamic>;
       final String reason = (row['reason'] as String?) ?? '';
+      final bool notSendable = reason == 'not_sendable';
       return SendResult(
         sent: (row['sent'] as num?)?.toInt() ?? 0,
-        duplicate: (row['blocked'] as num?)?.toInt() ?? 0,
+        // `not_sendable` bir ALICI reddi değil, sorunun kendisiyle ilgili:
+        // `blocked` sayısına karıştırmak "arkadaşın almadı" anlamına gelirdi.
+        duplicate: notSendable ? 0 : ((row['blocked'] as num?)?.toInt() ?? 0),
         dailyLimit: reason == 'daily_limit',
+        notSendable: notSendable,
       );
     } on PostgrestException catch (e) {
       // 22023 = not çok uzun ya da 20'den fazla alıcı; ikisi de istemcinin
       // zaten engellemesi gereken durumlar, yani buraya düşmesi bir hata.
-      return SendResult(error: e.message);
+      //
+      // HAM SUNUCU METNİ GÖSTERİLMİYOR: `e.message` SQL hata gövdesi olabilir
+      // ve kullanıcıya şema sızdırır. Günlüğe yazılıyor, ekrana sabit bir
+      // cümle gidiyor.
+      debugPrint('gönderim reddedildi: ${e.code} ${e.message}');
+      return const SendResult(error: 'Bağlantı hatası');
     } catch (_) {
       return const SendResult(error: 'Bağlantı hatası');
     }

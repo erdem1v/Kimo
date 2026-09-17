@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import '../../data/mistake_repository.dart';
 import '../../data/question_send_repository.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../../models/tr_suffix.dart';
 import '../../models/models.dart';
 import '../../services/sound_service.dart';
 import '../../state/refresh_bus.dart';
@@ -102,14 +103,22 @@ class SendEntrySheetBody extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(l.sendEntryTitle(friendName), style: t.section),
+          // EK KODDA ÜRETİLİYOR (Task 16). ARB'de sabit bir `'e` yazıyordu ve
+          // `''` kaçışı ekranda literal çıkıyordu: "Ayla''e soru gönder".
+          // Takma ad serbest metin, yani ek kuralı işletilmek zorunda.
+          Text(l.sendEntryTitle(trDative(friendName)), style: t.section),
           const SizedBox(height: Gap.xs),
           Text(l.sendEntryBody, style: t.caption),
           const SizedBox(height: Gap.lg),
+          // ARŞİV BOŞSA KAPALI (Task 16). Satır "Arşivin boş" yazdığı hâlde
+          // dokunulabiliyordu ve hiçbir eylemi olmayan boş bir ekrana
+          // götürüyordu — kullanıcı oradan soru da ekleyemiyordu, iki kez
+          // geri dönmesi gerekiyordu.
           _Option(
             icon: KimoIcons.notebook,
             label: l.sendEntryFromArchive,
             hint: l.sendEntryFromArchiveHint(archiveCount),
+            enabled: archiveCount > 0,
             onTap: () {
               sound.tap();
               Navigator.of(context).pop();
@@ -158,12 +167,16 @@ class _Option extends StatelessWidget {
     required this.label,
     required this.hint,
     required this.onTap,
+    this.enabled = true,
   });
 
   final KimoIconData icon;
   final String label;
   final String hint;
   final VoidCallback onTap;
+
+  /// `false` ise kart soluk ve dokunuşa yanıtsız.
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -173,31 +186,36 @@ class _Option extends StatelessWidget {
       radius: Radii.tile,
       padding: const EdgeInsets.symmetric(
           horizontal: Gap.lg, vertical: Gap.md),
-      onTap: onTap,
-      child: Row(
-        children: <Widget>[
-          Container(
-            width: 40,
-            height: 40,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: c.actionTint,
-              borderRadius: Radii.all(Radii.chip),
+      onTap: enabled ? onTap : null,
+      child: Opacity(
+        opacity: enabled ? 1 : 0.45,
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: enabled ? c.actionTint : c.sunken,
+                borderRadius: Radii.all(Radii.chip),
+              ),
+              child: KimoIcon(icon,
+                  size: 20, color: enabled ? c.actionText : c.inkMuted),
             ),
-            child: KimoIcon(icon, size: 20, color: c.actionText),
-          ),
-          const SizedBox(width: Gap.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(label, style: t.bodyStrong),
-                Text(hint, style: t.caption.copyWith(color: c.inkMuted)),
-              ],
+            const SizedBox(width: Gap.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(label, style: t.bodyStrong),
+                  Text(hint, style: t.caption.copyWith(color: c.inkMuted)),
+                ],
+              ),
             ),
-          ),
-          KimoIcon(KimoIcons.forward, size: 18, color: c.inkMuted),
-        ],
+            if (enabled)
+              KimoIcon(KimoIcons.forward, size: 18, color: c.inkMuted),
+          ],
+        ),
       ),
     );
   }
@@ -326,7 +344,8 @@ class _SendArchiveScreenState extends State<SendArchiveScreen> {
     final List<MistakeEntry> rows = _filtered;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l.sendArchiveTitle(widget.friendName))),
+      appBar:
+          AppBar(title: Text(l.sendArchiveTitle(trDative(widget.friendName)))),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _failed

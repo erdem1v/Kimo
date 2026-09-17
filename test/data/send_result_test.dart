@@ -43,5 +43,28 @@ void main() {
       const SendResult r = SendResult(error: 'Bağlantı hatası');
       expect(r.message, 'Gönderilemedi: Bağlantı hatası');
     });
+
+    test('tarama sürüyorsa AYRI anlatılıyor — "gitmedi" DEĞİL', () {
+      // Task 16 · C0-1. Sunucu `not_sendable` dönüyordu ve istemci onu
+      // `blocked` sayıyordu: kullanıcı hiç göndermediği bir soru için
+      // "yakında göndermiş olabilirsin" görüyordu. Gerçek sebep birkaç
+      // saniye içinde kendiliğinden geçen fotoğraf taramasıydı.
+      const SendResult r = SendResult(notSendable: true, scanPending: true);
+      expect(r.ok, isFalse);
+      expect(r.message, contains('kontrolü'));
+      expect(r.message, isNot(contains('göndermiş olabilirsin')));
+    });
+
+    test('tarama bitmiş ama yine gönderilemiyorsa beklemeye çağırmıyor', () {
+      const SendResult r = SendResult(notSendable: true);
+      expect(r.message, isNot(contains('Birkaç saniye')));
+      expect(r.message, contains('gönderilemiyor'));
+    });
+
+    test('not_sendable bir ALICI reddi değil: duplicate sayılmıyor', () {
+      // `blocked`a karıştırmak "arkadaşın almadı" anlamına gelirdi.
+      const SendResult r = SendResult(notSendable: true, scanPending: true);
+      expect(r.duplicate, 0);
+    });
   });
 }

@@ -215,6 +215,13 @@ class _InboxCardState extends State<_InboxCard> {
 
   bool _open = false;
   bool _answering = false;
+
+  /// Cevap ÇEVRİMDIŞI kuyruğa alındı (Task 16 · U4).
+  ///
+  /// Kuyruğa alınan yolda `_result` null kalıyor ve `_answering` sıfırlanıyor,
+  /// yani `_answer`ın başındaki koruma bir daha tutmuyordu: kullanıcı şıklara
+  /// her dokunduğunda AYNI soru için kuyruğa bir kayıt daha yazılıyordu.
+  bool _queued = false;
   AnswerResult? _result;
 
   @override
@@ -224,7 +231,7 @@ class _InboxCardState extends State<_InboxCard> {
   }
 
   Future<void> _answer(int index) async {
-    if (_answering || _result != null) return;
+    if (_answering || _result != null || _queued) return;
     setState(() => _answering = true);
     try {
       final AnswerResult res = await questionSendRepository.answerSentQuestion(
@@ -235,7 +242,10 @@ class _InboxCardState extends State<_InboxCard> {
       if (res.queued) {
         // Çevrimdışı: doğruluğu SUNUCU belirlediği için sonucu gösteremiyoruz.
         // Uydurmak yerine kuyruğa alındığını söylüyoruz.
-        setState(() => _answering = false);
+        setState(() {
+          _answering = false;
+          _queued = true;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(L10n.of(context).practiceQueuedCount(1))),
         );
@@ -405,13 +415,21 @@ class _InboxCardState extends State<_InboxCard> {
   Widget _options(BuildContext context, ReceivedQuestion q) {
     final KimoColors c = context.c;
     final KimoTypography t = context.t;
+    if (_queued) {
+      // Cevap sırada: şıklar artık dokunulamaz ve sebebi yazıyor. Sessizce
+      // soluk bırakmak, kullanıcıyı tekrar tekrar dokunmaya iterdi.
+      return Text(
+        L10n.of(context).inboxAnswerQueued,
+        style: t.caption.copyWith(color: c.inkMuted),
+      );
+    }
     return Row(
       children: <Widget>[
         for (int i = 0; i < q.options.length; i++) ...<Widget>[
           Expanded(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: _answering ? null : () => _answer(i),
+              onTap: (_answering || _queued) ? null : () => _answer(i),
               child: Container(
                 height: Sizes.rowMin,
                 alignment: Alignment.center,

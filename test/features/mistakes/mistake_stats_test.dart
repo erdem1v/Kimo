@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// (`mastered`, `is_leech`, `lapses`, `created_at`) türüyor. Türetme yanlışsa
 /// ekran gerçekte olmayan bir şey söyler ve bunu ancak cihazda fark ederiz.
 void main() {
+  _dueTodayTests();
   MistakeEntry entry({
     String subject = 'Matematik',
     String concept = 'Türev',
@@ -192,6 +193,54 @@ void main() {
       ], now: now);
       expect(s.week, <int>[0, 0, 0, 0, 0, 0, 0]);
       expect(s.total, 1);
+    });
+  });
+}
+
+/// "Bugün" sayısı sunucunun kuralıyla aynı mı (Task 16).
+void _dueTodayTests() {
+  MistakeEntry at(DateTime? stamp, {DateTime? day}) => MistakeEntry(
+        subject: 'Matematik',
+        concept: 'Denklem-Eşitsizlik',
+        note: '',
+        date: DateTime(2026, 9, 17, 3),
+        hasPhoto: true,
+        nextReviewAt: stamp,
+        nextReviewDate: day,
+      );
+
+  group('dueToday sunucu kuralıyla aynı', () {
+    final DateTime now = DateTime(2026, 9, 17, 3, 11);
+
+    test('vadesi BUGÜN ama HENÜZ GELMEMİŞ soru sayılmıyor', () {
+      // ÜRETİMDE GÖRÜLEN HÂL: damga 05:53, saat 03:11. Bugün ekranı "tekrar
+      // yok" derken bu kart "Bugün 1" yazıyordu.
+      final MistakeStats s = MistakeStats.from(
+        <MistakeEntry>[at(DateTime(2026, 9, 17, 5, 53))],
+        now: now,
+      );
+      expect(s.dueToday, 0);
+    });
+
+    test('vadesi geçmiş soru sayılıyor', () {
+      final MistakeStats s = MistakeStats.from(
+        <MistakeEntry>[at(DateTime(2026, 9, 17, 2, 59))],
+        now: now,
+      );
+      expect(s.dueToday, 1);
+    });
+
+    test('damga yoksa gün gölgesine düşülüyor', () {
+      final MistakeStats s = MistakeStats.from(
+        <MistakeEntry>[at(null, day: DateTime(2026, 9, 17))],
+        now: now,
+      );
+      expect(s.dueToday, 1);
+    });
+
+    test('planı bilinmeyen kayıt sayılmıyor', () {
+      final MistakeStats s = MistakeStats.from(<MistakeEntry>[at(null)], now: now);
+      expect(s.dueToday, 0);
     });
   });
 }

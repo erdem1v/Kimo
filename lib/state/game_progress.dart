@@ -300,6 +300,19 @@ class GameProgress extends ChangeNotifier {
     notifyListeners();
     return true;
   }
+
+  /// İyimser günlük hedef talebini GERİ ALIR (Task 16 · C0-2).
+  ///
+  /// Sunucu ödülü vermezse yerel `+bonus` düzeltilmeden kalıyordu: kullanıcı
+  /// HUD'da 50 XP fazla görüyor, uygulamayı kapatıp açınca o XP yok oluyor ve
+  /// `_lastGoalDate` yazıldığı için ödül o gün bir daha İSTENMİYORDU.
+  void revertDailyGoal(int bonus) {
+    if (!dailyGoalReached) return;
+    _lastGoalDate = null;
+    xp -= bonus;
+    if (xp < 0) xp = 0;
+    notifyListeners();
+  }
 }
 
 final GameProgress gameProgress = GameProgress.instance;

@@ -144,3 +144,39 @@ String trOrdinal(int n) => const <int, String>{
       10: 'onuncu',
     }[n] ??
     '$n.';
+
+
+/// Takma ada yönelme hâli eki: `Berk` → `Berk'e`, `Ayla` → `Ayla'ya`.
+///
+/// NEDEN GEREKLİ (Task 16). Gönderme yüzeyleri "{name}'e soru gönder" diye
+/// SABİT bir `e` yazıyordu; üstelik ARB'de `''` olarak kaçırıldığı için
+/// ekranda **"Ayla''e soru gönder"** çıkıyordu — hem fazladan kesme hem yanlış
+/// ek. Takma ad kullanıcının seçtiği serbest bir metin, yani kapalı küme değil;
+/// kural işletilmek zorunda.
+///
+/// KURAL: ek SON ÜNLÜYE göre kalın/ince (a ı o u → `a`, e i ö ü → `e`), ve
+/// kelime ünlüyle bitiyorsa araya kaynaştırma `y` giriyor. Özel ad olduğu için
+/// ekten önce kesme işareti var.
+///
+/// Ünlü bulunamazsa (rakam, emoji, boş ad) ek `'e`ye düşüyor: Türkçede
+/// ünlüsüz bir sözcük yok, yani bu yalnızca bozuk girdide oluyor ve delikli
+/// bir cümleden iyi.
+String trDative(String name) {
+  final String trimmed = name.trim();
+  if (trimmed.isEmpty) return trimmed;
+  const String back = 'aıouâû';
+  const String front = 'eiöüî';
+  const String vowels = '$back$front';
+  final String lower = trimmed.toLowerCase();
+
+  String? lastVowel;
+  for (int i = lower.length - 1; i >= 0; i--) {
+    if (vowels.contains(lower[i])) {
+      lastVowel = lower[i];
+      break;
+    }
+  }
+  final String suffix = (lastVowel != null && back.contains(lastVowel)) ? 'a' : 'e';
+  final bool endsWithVowel = vowels.contains(lower[lower.length - 1]);
+  return "$trimmed'${endsWithVowel ? 'y' : ''}$suffix";
+}

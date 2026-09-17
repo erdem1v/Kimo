@@ -138,6 +138,9 @@ class MistakeRepository {
       nextReviewDate: row['next_review_date'] == null
           ? null
           : DateTime.parse(row['next_review_date'] as String),
+      nextReviewAt: row['next_review_at'] == null
+          ? null
+          : DateTime.parse(row['next_review_at'] as String),
       exam: row['exam'] as String?,
       extraConcepts: (row['extra_concepts'] as List<dynamic>?)
               ?.map((dynamic e) => e as String)
@@ -198,6 +201,30 @@ class MistakeRepository {
   /// imzayı fark edip bir kez yeniden imzalıyor. Bu olmadan TTL'i düşürmek
   /// havuzda kaydırırken görsellerin ölmesine yol açardı.
   static const int signedUrlTtlSeconds = 600;
+
+  /// Bir sorunun fotoğraf tarama durumu: `pending` | `clear` | `flagged`.
+  ///
+  /// GÖNDERİM YARIŞI İÇİN (Task 16 · C0-1). Fotoğraflı bir kayıt eklenince
+  /// `mistakes_photo_scan_reset` tetikleyicisi `photo_scan`i `pending` yapıyor
+  /// ve tarama edge fonksiyonu ATEŞLE-UNUT çağrılıyor; ölçülen süre ~2,4
+  /// saniye. `send_question_to_friends` ise `photo_scan = 'clear'` istiyor.
+  /// Gönderim bu süreyi beklemeden çağrılırsa sunucu `not_sendable` dönüyor.
+  ///
+  /// `null` = satır okunamadı (ağ ya da yetki); çağıran bunu "bilmiyorum"
+  /// sayıp beklemeyi bırakıyor.
+  Future<String?> photoScanOf(String id) async {
+    try {
+      final Map<String, dynamic>? row = await _client
+          .from('mistakes')
+          .select('photo_scan')
+          .eq('id', id)
+          .maybeSingle();
+      return row?['photo_scan'] as String?;
+    } catch (e) {
+      debugPrint('tarama durumu okunamadı: $e');
+      return null;
+    }
+  }
 
   /// Yeni hata ekler; fotoğraf varsa önce Storage'a yükler.
   /// Yeni hata kaydı ekler ve **satırın kimliğini** döndürür.

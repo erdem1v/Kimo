@@ -204,6 +204,7 @@ class MistakeEntry {
     this.mastered = false,
     this.isLeech = false,
     this.nextReviewDate,
+    this.nextReviewAt,
     this.exam,
     this.extraConcepts = const <String>[],
   });
@@ -217,13 +218,22 @@ class MistakeEntry {
   final bool mastered;
   final bool isLeech;
 
-  /// Bir sonraki tekrarın planlandığı gün. `null` = plan bilinmiyor (yerel
-  /// kayıt).
+  /// Bir sonraki tekrarın planlandığı GÜN — damgadan türetilen gölge.
+  /// `null` = plan bilinmiyor (yerel kayıt).
   ///
-  /// "Hatalarım" ekranındaki **Bugün** sayısı bunu kullanıyor. `step == 0`'dan
-  /// tahmin etmek daha ucuzdu ama sayıyı etiketinden farklı bir şey yapardı:
-  /// bugün eklenmiş bir soru da `step == 0` taşıyor ve tekrarı yarın.
+  /// Yalnızca [nextReviewAt] yokken kullanılıyor; tek doğruluk kaynağı damga
+  /// (0049). `step == 0`'dan tahmin etmek daha ucuzdu ama sayıyı etiketinden
+  /// farklı bir şey yapardı: bugün eklenmiş bir soru da `step == 0` taşıyor.
   final DateTime? nextReviewDate;
+
+  /// Bir sonraki tekrarın DAMGASI (`next_review_at`, 0049).
+  ///
+  /// "Hatalarım"daki **Bugün** sayısı artık bunu kullanıyor (Task 16).
+  /// Eskiden yalnızca [nextReviewDate] okunuyordu, yani sayım GÜN bazlıydı;
+  /// oysa sunucunun `due_count`'u ve `dueReviews()` sorgusu 0096'dan beri
+  /// ZAMAN bazlı. Sonuç: aynı anda Bugün ekranı "bugün tekrar yok" derken
+  /// Hatalarım "Bugün 1" diyordu — vadesi birkaç saat sonra olan soru için.
+  final DateTime? nextReviewAt;
 
   final String subject;
   final String concept;

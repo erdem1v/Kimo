@@ -184,15 +184,23 @@ class _FriendsViewState extends State<FriendsView> {
 
   // ------------------------------------------------------------------ eylem
 
-  Future<void> _act(String userId, Future<void> Function() action) async {
-    if (_busy.contains(userId)) return;
+  /// Eylemi çalıştırır ve GERÇEKTEN olup olmadığını döndürür.
+  ///
+  /// Dönüş değeri Task 16'da eklendi: `_blockFlow` eylemin sonucuna bakmadan
+  /// "Engellendi" diyordu. Hata durumunda kullanıcı önce
+  /// `friendsActionFailed`i, hemen ardından "Engellendi"yi görüyordu — yani
+  /// son söz, olmamış bir şeyin olduğunu söylüyordu.
+  Future<bool> _act(String userId, Future<void> Function() action) async {
+    if (_busy.contains(userId)) return false;
     setState(() => _busy.add(userId));
     try {
       await action();
       await _load();
+      return true;
     } catch (e) {
       debugPrint('arkadaş işlemi başarısız: $e');
       if (mounted) _snack(L10n.of(context).friendsActionFailed);
+      return false;
     } finally {
       if (mounted) setState(() => _busy.remove(userId));
     }
@@ -527,6 +535,23 @@ class _FriendsViewState extends State<FriendsView> {
                 ),
               ),
               const SizedBox(width: Gap.sm),
+              // REDDET (Task 16). Gelen istekte yalnızca "Kabul et" ve
+              // "Engelle" vardı: hayır demenin tek yolu karşı tarafı
+              // ENGELLEMEKTİ. Engelleme çok daha ağır bir eylem — lig
+              // tahtasında maskeliyor, bütün sosyal yüzeyleri kapatıyor ve
+              // kullanıcının kendi "Engellenen kişiler" listesini şişiriyor.
+              Expanded(
+                child: KimoButton(
+                  label: l.friendsDecline,
+                  kind: KimoButtonKind.tertiary,
+                  minHeight: Sizes.rowMin,
+                  onPressed: busy
+                      ? null
+                      : () => _act(
+                          p.id, () => socialRepository.removeRelation(p.id)),
+                ),
+              ),
+              const SizedBox(width: Gap.sm),
               Expanded(
                 child: KimoButton(
                   label: l.friendsBlock,
@@ -751,7 +776,7 @@ class _FriendsViewState extends State<FriendsView> {
       l.friendsBlock,
     );
     if (!ok || !mounted) return;
-    await _act(p.id, () => friendRepository.block(p.id));
-    if (mounted) _snack(l.friendsBlocked);
+    final bool done = await _act(p.id, () => friendRepository.block(p.id));
+    if (done && mounted) _snack(l.friendsBlocked);
   }
 }
