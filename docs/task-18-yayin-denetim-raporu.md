@@ -206,6 +206,17 @@ turda `S` kanıtı alacak).
 | Y8 yaması | 3 fonksiyon yeniden | anon anahtarla POST → 403 |
 | Eski Release | prerelease | `isPrerelease = true` |
 
+### 5.1 Üretim işlemleri 2 (faz 8)
+
+| Adım | Karar / sonuç | Doğrulama |
+|---|---|---|
+| Test hesapları (8) | **Silinmedi** (karar) | `auth.users` 10; liste §8 |
+| DB parolası | **Döndürüldü** (Management API `PATCH …/database/password`, 200); yeni parola yalnız `~/.kimo-release/db.env` (0600) | Yeni parolayla pooler üzerinden (5432 ve 6543) `supabase migration list` bağlandı |
+| `sbp_` kişisel jeton | **Bekliyor — yalnız hesap sahibi üretebilir.** Yeni jeton `~/.kimo-release/sbp.env`e (`export SUPABASE_ACCESS_TOKEN=…`), eskisi Dashboard → Account → Access Tokens'tan iptal; ben yenisiyle API'yi, eskisiyle 401'i doğrularım | — |
+| `service_role` (eski tip HS256 JWT) | **Ayrı adım** (karar): önce yayın adayı, sonra göç — runbook §8 | — |
+| `schema_migrations` | API ile basılan 6 göç (0917 ×5, 0918 ×1) kayda geçirildi | `supabase migration list`: yerel 110 / uzak 110, eksik 0 |
+| `ADMOB_TEST_DEVICE_IDS` | Simülatör SDK'da otomatik test cihazı; kimlik yalnız gerçek cihazda loga düşer → o gün yerel `supabase.json`a | — |
+
 ---
 
 ## 6. Tur
@@ -281,7 +292,17 @@ parolası tur için sıfırlandı (hesap §6.4'te siliniyor).
 
 ### 6.4 Çıkış, giriş, hesap silme
 
-*(faz 8 ile doldurulacak)*
+B'de Ayarlar → "Çıkış yap" → Welcome (B_42) → "Hesabım var" → Login boş
+(B_44) → e-posta + parola (B_45; parola tur için sıfırlanmıştı) → "Giriş
+yap" → Bugün "9 hakkın kaldı" (B_46): giriş uçtan uca gerçek sunucuyla.
+Login formunun hata dalı `login_screen_test`te.
+
+**Hesap silme: karar — üretimdeki test hesapları SİLİNMEDİ** (faz 8.1
+sorusuna yanıt: "Hiçbirini silme"). `auth.users`: 10 hesap — 8 test
+(`kimo-test-1@`, `kimo-model-test@`, `task14a@`, `kimo-t14-a@`,
+`kimo-t14-c@`, `ada@`, `efe@`, `bora@`), 2 gerçek. DeleteAccount ekranı
+görüldü (A_28) ve `delete_account_screen_test` (4) davranışı sabitliyor;
+uçtan uca silme §7'de. Liste §8'e "yayın öncesi temizlik" olarak girdi.
 
 ---
 
@@ -299,6 +320,7 @@ parolası tur için sıfırlandı (hesap §6.4'te siliniyor).
 | Yayın imzalı iOS | Ücretli hesap yok | `--no-codesign` derleme CI'da |
 | pgTAP / mutasyon / Deno yerelde | Docker, deno yok | CI (sayılar §0) |
 | Login formu A'da | Türkçe klavye | B'de gerçek giriş (§6.4) + `login_screen_test` |
+| Hesap silme uçtan uca | Karar: test hesapları silinmedi (§6.4) | `delete_account_screen_test`; `delete-account` fonksiyonu Task 13 e2e'sinde |
 
 ---
 
@@ -323,6 +345,28 @@ uygulama içi yol zaten var) → **AdMob'da Android uygulaması** →
 `web/app-ads.txt`, yayıncı kimliği konsoldan teyit) → SSV geri çağrı adresi
 `ad-reward` fonksiyonu → uygulama mağazaya bağlanınca "Publisher data not
 found" kalkar → test cihazı kimlikleri `ADMOB_TEST_DEVICE_IDS`.
+
+**Sır göçü (service_role) — mağazaya göndermeden ÖNCE, ayrı task:**
+Sızan `service_role` **eski tip** (legacy HS256) anahtar. Projede imzalama
+anahtarları zaten yeni düzende (ES256 `in_use`, HS256 `previously_used`),
+uygulama **zaten publishable anahtarla** çalışıyor (`supabase.json` →
+`SUPABASE_PUBLISHABLE_KEY`), yeni tip `secret` anahtar da tanımlı. Eski
+anahtarı geçersiz kılmak = HS256 anahtarını **revoke** etmek; bundan önce
+eski anahtara bağımlı iki yer taşınmalı: (1) `vault.decrypted_secrets`
+`service_role_key` (üç cron işi `net.http_post` başlığında kullanıyor) →
+`sb_secret_…`; (2) altı edge fonksiyonunun `isServiceRole` kapısı (JWT
+`role` alanına bakıyor) → yeni anahtar şemasına (Deno testi + yeniden
+dağıtım) ve platformun enjekte ettiği `SUPABASE_SERVICE_ROLE_KEY` yerine
+`sb_secret` ile `createClient`. Sıra: kod + test → 10 fonksiyon dağıt →
+vault güncelle → cron'ları elle bir kez çalıştırıp 200 gör → HS256 revoke
+→ eski anahtarla çağrı 401. Yan etki: iki gerçek hesabın oturumu düşer
+(yeniden giriş).
+
+**Yayın öncesi temizlik:** üretimdeki 8 test hesabı (`kimo-test-1@`,
+`kimo-model-test@`, `task14a@`, `kimo-t14-a@`, `kimo-t14-c@`, `ada@`,
+`efe@`, `bora@`; Bora'nın parolası tur için sıfırlandı) silinmeli —
+`delete-account` yolu ya da yönetim API'si (depolama → auth). `sbp_`
+jetonu döndürülmeli (§5.1).
 
 **Sunucu, mağaza kimlikleri girildiğinde:** `ff_iap='true'` · `legal_version
 = '1.4'` **en son** (metin 1.4 mağaza metinleriyle) · `admins` tablosuna

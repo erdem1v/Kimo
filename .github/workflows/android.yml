@@ -180,6 +180,30 @@ jobs:
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "::notice::$NAME — $((SIZE / 1024 / 1024)) MB"
 
+      # İMZA DOĞRULAMASI (Task 18 · Y1). Play, yükleme anahtarıyla imzalanmamış
+      # `.aab`'ı reddeder; "derlendi" tek başına "imzalandı" demek değil. Eski
+      # düzende `key.properties` yoksa Gradle SESSİZCE debug anahtarına
+      # düşüyordu. Bu adım `jarsigner` ile imzanın geçerli olduğunu ve
+      # sertifikanın SHA-256 parmak izinin beklenen yükleme anahtarıyla
+      # eşleştiğini kanıtlıyor (parmak izi gizli değil: Play Console'un
+      # "yükleme anahtarı" olarak kaydettiği açık değer). Yalnızca release
+      # yapısında: debug yapı bilerek debug anahtarıyla imzalı.
+      - name: İmzayı doğrula (release)
+        if: ${{ (inputs.flavor || 'release') == 'release' }}
+        run: |
+          F="${{ steps.artifact.outputs.name }}"
+          EXPECTED="09:8A:B5:6F:DB:65:83:ED:5F:6B:64:9A:2D:B2:88:6C:7B:D1:47:52:AB:BB:49:89:AD:BE:03:03:C5:83:02:B0"
+          jarsigner -verify -strict "$F" | tee /tmp/jarsigner.txt
+          grep -q "jar verified" /tmp/jarsigner.txt || { echo "::error::$F imzası doğrulanamadı"; exit 1; }
+          # Sertifika parmak izi: keytool artifact içindeki imza bloğunu okuyor.
+          GOT=$(keytool -printcert -jarfile "$F" | awk '/SHA256:/ {print $2; exit}')
+          echo "imza sertifikası SHA-256: $GOT"
+          if [ "$GOT" != "$EXPECTED" ]; then
+            echo "::error::İmza yükleme anahtarıyla eşleşmiyor (debug anahtarı mı?). Beklenen $EXPECTED, gelen $GOT"
+            exit 1
+          fi
+          echo "::notice::$F yükleme anahtarıyla imzalı (SHA-256 eşleşti)"
+
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.artifact.outputs.name }}
