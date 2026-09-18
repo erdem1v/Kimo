@@ -136,6 +136,15 @@
       }
     }
   },
+  "batchAwaiting": "{count} şık bekliyor",
+  "@batchAwaiting": {
+    "description": "Parti özeti: okunmuş, yalnız doğru şıkkı bekleyen satır sayısı (Task 18).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "batchExtracted": "Çıkarılan konular",
   "batchRowReading": "Okunuyor…",
   "batchRowIndex": "{index}. fotoğraf",

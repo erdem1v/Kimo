@@ -107,8 +107,22 @@ class _BatchResultScreenState extends State<BatchResultScreen> {
       .length;
 
   /// Okunamayanlar: analiz çalıştı ama konu/şık eksik kaldı.
-  int get _failed =>
-      _rows.where((PendingPhoto p) => p.state == PhotoQueueState.needsUser).length;
+  ///
+  /// YALNIZ DOĞRU ŞIKKI EKSİK OLAN SATIR "OKUNAMADI" DEĞİL (Task 18 turu).
+  /// Sunucu konuyu da şıkları da çıkarmışken özet "2 okunamadı" yazıyordu;
+  /// oysa satırın kendisi şık seçiciyi gösteriyor ve tek eksik kullanıcının
+  /// bir dokunuşu. O satırlar `_awaiting` ile ayrı sayılıyor.
+  int get _failed => _rows
+      .where((PendingPhoto p) =>
+          p.state == PhotoQueueState.needsUser && !p.needsOnlyCorrectOption)
+      .length;
+
+  /// Okundu, yalnız doğru şık bekleniyor.
+  int get _awaiting =>
+      _rows.where((PendingPhoto p) => p.needsOnlyCorrectOption).length;
+
+  /// Analizi bitmiş satırlar (halka ve "n/toplam" bunu sayıyor).
+  int get _analysed => _done + _awaiting + _failed;
 
   /// Kota parti ortasında bitti mi.
   bool get _creditPaused =>
@@ -246,10 +260,10 @@ class _BatchResultScreenState extends State<BatchResultScreen> {
               alignment: Alignment.center,
               children: <Widget>[
                 CircularProgressIndicator(
-                  value: total == 0 ? 0 : (_done + _failed) / total,
+                  value: total == 0 ? 0 : _analysed / total,
                   strokeWidth: 5,
                 ),
-                Text('${_done + _failed}/$total', style: t.caption),
+                Text('$_analysed/$total', style: t.caption),
               ],
             ),
           ),
@@ -261,7 +275,12 @@ class _BatchResultScreenState extends State<BatchResultScreen> {
                 Text(l.batchReading, style: t.bodyStrong),
                 const SizedBox(height: Gap.xxs),
                 Text(
-                  l.batchProgress(_done, _queued, _failed),
+                  // Şık bekleyen satır varsa özet onu ayrıca söylüyor; yoksa
+                  // parça hiç eklenmiyor ("0 şık bekliyor" gürültü olurdu).
+                  _awaiting > 0
+                      ? '${l.batchProgress(_done, _queued, _failed)} · '
+                          '${l.batchAwaiting(_awaiting)}'
+                      : l.batchProgress(_done, _queued, _failed),
                   style: t.caption.copyWith(color: c.inkMuted),
                 ),
               ],

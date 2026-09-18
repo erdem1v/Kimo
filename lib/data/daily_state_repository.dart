@@ -373,7 +373,14 @@ class DailyStateRepository {
 
   /// HUD verisi. Hata durumunda `null` döner — çağıran eldeki değeri korur,
   /// sıfırlanmış bir HUD göstermez.
+  /// Çekim ekranı testinin dikişi (Task 18): ekran açılışta HUD verisini
+  /// okuyor ve çoklu çekim anahtarını ona göre çiziyor; testte Supabase yok.
+  @visibleForTesting
+  static Future<DailyState?> Function()? readOverride;
+
   Future<DailyState?> read() async {
+    final Future<DailyState?> Function()? seam = readOverride;
+    if (seam != null) return seam();
     try {
       final List<Map<String, dynamic>> rows =
           await _client.from('my_daily_state').select().limit(1);

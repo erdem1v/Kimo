@@ -491,12 +491,24 @@ class _CaptureScreenState extends State<CaptureScreen> {
     final DailyState? s = _state;
     if (s == null || !s.multiCaptureEnabled) return const SizedBox.shrink();
     final bool premium = s.aiTier == AiTier.premium;
+    // GENİŞLİK SINIRLI (Task 18 · kapanış turu). Anahtar eskiden
+    // `Row(mainAxisAlignment: center, children: [SegmentedTabs])` içindeydi;
+    // `SegmentedTabs` içinde `Expanded` var ve `Row` ona SINIRSIZ genişlik
+    // veriyor — "non-zero flex but incoming width constraints are unbounded".
+    // Sonucu: bayrak + premium açıkken ekranın ORTASI HİÇ ÇİZİLMİYORDU (ne
+    // maskot ne metin ne anahtar), yalnızca üç düğme kalıyordu. Bayrak
+    // üretimde kapalı olduğu için hiçbir tur görmemişti; bayrak açılınca
+    // her premium kullanıcı boş bir çekim ekranıyla karşılaşacaktı.
+    // Bugün ekranındaki TYT|AYT anahtarıyla aynı yerleşim: sayfa kenar
+    // boşluğu içinde tam genişlik.
     return Padding(
-      padding: const EdgeInsets.only(bottom: Gap.md),
+      padding: const EdgeInsets.fromLTRB(Gap.screen, 0, Gap.screen, Gap.md),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          SegmentedTabs(
+          // `Expanded` ŞART: SegmentedTabs kendi içinde Expanded taşıyor ve
+          // sınırsız genişlikte kurulamıyor.
+          Expanded(
+            child: SegmentedTabs(
             labels: <String>[l.captureModeSingle, l.captureModeBatch],
             selectedIndex: 0,
             onChanged: (int i) {
@@ -527,6 +539,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
                     builder: (_) => const BatchCaptureScreen()),
               ));
             },
+          ),
           ),
           if (!premium) ...<Widget>[
             const SizedBox(width: Gap.sm),

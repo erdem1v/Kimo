@@ -19,6 +19,7 @@ import '../../widgets/kit/kimo_icons.dart';
 import '../../widgets/kit/kimo_surfaces.dart';
 import '../../widgets/user_avatar.dart';
 import '../inbox/send_flow.dart';
+import 'friend_request_tile.dart';
 import '../social/public_profile_screen.dart';
 
 /// 3m — Arkadaşlar.
@@ -490,81 +491,14 @@ class _FriendsViewState extends State<FriendsView> {
   }
 
   Widget _requestTile(BuildContext context, L10n l, PublicProfile p) {
-    final KimoColors c = context.c;
-    final KimoTypography t = context.t;
-    final int mutual = _mutual[p.id] ?? 0;
-    final bool busy = _busy.contains(p.id);
-    return KimoCard(
-      padding: const EdgeInsets.all(Gap.md),
-      radius: Radii.tile,
-      child: Column(
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              UserAvatar(name: p.nickname, avatarPath: p.avatarPath, size: 40),
-              const SizedBox(width: Gap.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(p.nickname, style: t.label),
-                    if (mutual > 0)
-                      Text(
-                        l.friendsMutual(mutual),
-                        style: t.caption.copyWith(color: c.inkMuted),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: Gap.md),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: KimoButton(
-                  label: l.friendsAccept,
-                  // İKİNCİL: bekleyen istek başına bir tane çiziliyor. Üç
-                  // istekte, "Ekle" ile birlikte dört birincil düğme aynı
-                  // ekranda duruyordu.
-                  kind: KimoButtonKind.secondary,
-                  minHeight: Sizes.rowMin,
-                  onPressed: busy
-                      ? null
-                      : () => _act(p.id,
-                          () => socialRepository.acceptRequest(p.id)),
-                ),
-              ),
-              const SizedBox(width: Gap.sm),
-              // REDDET (Task 16). Gelen istekte yalnızca "Kabul et" ve
-              // "Engelle" vardı: hayır demenin tek yolu karşı tarafı
-              // ENGELLEMEKTİ. Engelleme çok daha ağır bir eylem — lig
-              // tahtasında maskeliyor, bütün sosyal yüzeyleri kapatıyor ve
-              // kullanıcının kendi "Engellenen kişiler" listesini şişiriyor.
-              Expanded(
-                child: KimoButton(
-                  label: l.friendsDecline,
-                  kind: KimoButtonKind.tertiary,
-                  minHeight: Sizes.rowMin,
-                  onPressed: busy
-                      ? null
-                      : () => _act(
-                          p.id, () => socialRepository.removeRelation(p.id)),
-                ),
-              ),
-              const SizedBox(width: Gap.sm),
-              Expanded(
-                child: KimoButton(
-                  label: l.friendsBlock,
-                  kind: KimoButtonKind.tertiary,
-                  minHeight: Sizes.rowMin,
-                  onPressed: busy ? null : () => _blockFlow(l, p),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+    return FriendRequestTile(
+      profile: p,
+      mutual: _mutual[p.id] ?? 0,
+      busy: _busy.contains(p.id),
+      onAccept: () => _act(p.id, () => socialRepository.acceptRequest(p.id)),
+      onDecline: () =>
+          _act(p.id, () => socialRepository.removeRelation(p.id)),
+      onBlock: () => _blockFlow(l, p),
     );
   }
 
