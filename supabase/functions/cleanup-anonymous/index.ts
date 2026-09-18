@@ -26,6 +26,7 @@
 //
 // Deploy: supabase functions deploy cleanup-anonymous
 
+import { isServiceRole } from "../_shared/auth.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const BUCKETS = ["mistake-photos", "avatars"] as const;
@@ -72,6 +73,12 @@ async function purgeFolder(
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "gecersiz_istek" }, 405);
+  // YALNIZCA SERVİS ROLÜ (Task 18). `verify_jwt = true` anon anahtarını da
+  // geçiriyor; bu satır olmadan anonim hesap temizliği herkese açıktı.
+  if (!isServiceRole(req.headers.get("Authorization"))) {
+    console.error("[cleanup-anonymous] 403: servis rolu degil");
+    return json({ error: "gecersiz_istek" }, 403);
+  }
 
   const url = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");

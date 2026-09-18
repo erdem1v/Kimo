@@ -125,12 +125,25 @@ class FriendRepository {
   ///
   /// Tek çağrı: iki ayrı istek olsaydı ikincisi düştüğünde kullanıcı
   /// "engelledim" sanıp engellememiş olurdu.
+  /// Bildir sayfası testinin dikişi (Task 18).
+  @visibleForTesting
+  static Future<void> Function({
+    required String sendId,
+    required ReportReason reason,
+    String? note,
+    bool block,
+  })? reportOverride;
+
   Future<void> reportReceived({
     required String sendId,
     required ReportReason reason,
     String? note,
     bool block = false,
   }) async {
+    final seam = reportOverride;
+    if (seam != null) {
+      return seam(sendId: sendId, reason: reason, note: note, block: block);
+    }
     await _client.rpc<void>(
       'report_received_question',
       params: <String, dynamic>{

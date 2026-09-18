@@ -314,6 +314,79 @@ jobs:
           print('ARB: çözülmemiş ICU kaçışı yok')
           PY
 
+      # ---------------------------------------------------- YAYIN VARLIKLARI
+      # Üç kapı da Task 18'de eklendi; üçü de bir kez YAYINA GİDEBİLİRDİ:
+      # app-ads.txt yer tutucu yayıncı kimliğiyle, Info.plist tek SKAdNetwork
+      # girdisiyle, ikon Flutter'ın varsayılan logosuyla depoda duruyordu ve
+      # hiçbir kapı bunlara bakmıyordu. Her kapı önce kendini sınıyor.
+      - name: app-ads.txt yayıncı kimliği (yer tutucu yok, xcconfig ile aynı)
+        run: |
+          python3 - <<'PY'
+          import re, sys, tempfile, os
+          def check(ads, xcconfig):
+              m = re.search(r'^google\.com,\s*pub-(\d{16}),\s*DIRECT', ads, re.M)
+              if not m: return 'app-ads.txt satiri yok/bozuk'
+              if m.group(1) == '0' * 16: return 'yer tutucu yayinci kimligi (pub-0000000000000000)'
+              x = re.search(r'ADMOB_APP_ID\s*=\s*ca-app-pub-(\d{16})~', xcconfig)
+              if not x: return 'Release.xcconfig ADMOB_APP_ID okunamadi'
+              if x.group(1) != m.group(1): return 'app-ads.txt (%s) ile Release.xcconfig (%s) FARKLI hesap' % (m.group(1), x.group(1))
+              return None
+          # KAPININ KENDİ SINAMASI: dört bozuk girdi yakalanmalı, düzgün ikiz geçmeli
+          good_x = 'ADMOB_APP_ID=ca-app-pub-1234567890123456~1\n'
+          assert check('google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0\n', good_x)
+          assert check('google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0\n', 'ADMOB_APP_ID=ca-app-pub-6543210987654321~1\n')
+          assert check('', good_x)
+          assert check('google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0\n', '') 
+          assert check('# yorum\ngoogle.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0\n', good_x) is None
+          err = check(open('web/app-ads.txt', encoding='utf-8').read(),
+                      open('ios/Flutter/Release.xcconfig', encoding='utf-8').read())
+          if err:
+              print('::error::app-ads.txt: ' + err); sys.exit(1)
+          print('app-ads.txt: yayinci kimligi gercek ve xcconfig ile ayni')
+          PY
+
+      - name: SKAdNetwork listesi tam mı
+        run: |
+          python3 - <<'PY'
+          import plistlib, sys
+          def check(d):
+              items = d.get('SKAdNetworkItems') or []
+              ids = {i.get('SKAdNetworkIdentifier', '') for i in items}
+              if 'cstr6suwn9.skadnetwork' not in ids: return "Google'in kendi kimligi (cstr6suwn9) yok"
+              if len(ids) < 30: return 'yalnizca %d kimlik — tam liste kopyalanmamis' % len(ids)
+              return None
+          # KAPININ KENDİ SINAMASI
+          assert check({'SKAdNetworkItems': [{'SKAdNetworkIdentifier': 'cstr6suwn9.skadnetwork'}]})
+          assert check({'SKAdNetworkItems': [{'SKAdNetworkIdentifier': 'x%02d.skadnetwork' % i} for i in range(40)]})
+          assert check({'SKAdNetworkItems': [{'SKAdNetworkIdentifier': 'cstr6suwn9.skadnetwork'}] +
+                        [{'SKAdNetworkIdentifier': 'x%02d.skadnetwork' % i} for i in range(40)]}) is None
+          with open('ios/Runner/Info.plist', 'rb') as f:
+              err = check(plistlib.load(f))
+          if err:
+              print('::error::Info.plist: ' + err); sys.exit(1)
+          print('SKAdNetwork: liste tam')
+          PY
+
+      # İKON FLUTTER'IN VARSAYILANI DEĞİL. Sapma değil KİMLİK kontrolü: üretici
+      # (tool/gen_app_icons.dart) Skia ile çiziyor ve çıktı platformlar arası
+      # bayt-eş değil; "depodaki = üretilen" karşılaştırması CI'da yanlış
+      # kırmızı üretirdi. Buradaki soru daha dar ve deterministik: 1024'lük
+      # iOS ikonu ile xxxhdpi Android ikonu, `flutter create`ın bastığı iki
+      # dosyanın sha256'sı MI? (Değerler e1f1356'daki, Task 17 öncesi hâlden.)
+      - name: Uygulama ikonu Flutter varsayılanı değil
+        run: |
+          DEFAULT_IOS=7770183009e914112de7d8ef1d235a6a30c5834424858e0d2f8253f6b8d31926
+          DEFAULT_ANDROID=3c34e1f298d0c9ea3455d46db6b7759c8211a49e9ec6e44b635fc5c87dfb4180
+          # KAPININ KENDİ SINAMASI: karşılaştırma mekanizması gerçekten çalışıyor mu
+          TMP="$(mktemp)"; printf 'x' > "$TMP"
+          [ "$(shasum -a 256 "$TMP" | cut -c1-64)" = "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881" ] || { echo "::error::KAPI BOZUK — shasum beklenmeyen çıktı"; exit 1; }
+          rm -f "$TMP"
+          IOS="$(shasum -a 256 ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png | cut -c1-64)"
+          AND="$(shasum -a 256 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png | cut -c1-64)"
+          if [ "$IOS" = "$DEFAULT_IOS" ]; then echo "::error::iOS ikonu Flutter'ın VARSAYILAN logosu — tool/gen_app_icons.dart koşturulmalı"; exit 1; fi
+          if [ "$AND" = "$DEFAULT_ANDROID" ]; then echo "::error::Android ikonu Flutter'ın VARSAYILAN logosu — tool/gen_app_icons.dart koşturulmalı"; exit 1; fi
+          echo "ikonlar varsayılan değil"
+
       - name: Sabit fiyat hiçbir yerde yok mu
         run: |
           TL="$(printf '\u20ba')"

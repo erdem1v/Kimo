@@ -1,35 +1,29 @@
-# app-ads.txt — Kimo (com.stratejico.kimo)
+# app-ads.txt — AdMob yetkili satıcı beyanı (IAB "Authorized Sellers for Apps")
 #
-# NE İŞE YARIYOR: reklam alıcılarının, bu uygulamanın reklam envanterini
-# satmaya GERÇEKTEN yetkili olanın kim olduğunu doğrulamasını sağlıyor.
-# Dosya olmadan AdMob talebi "doğrulanmamış" sayabilir ve doluluk düşer.
+# NE İŞE YARIYOR: reklam alıcıları, bu uygulamanın envanterini kimin
+# satabildiğini uygulamanın MAĞAZA KAYDINDAKİ geliştirici web sitesinden
+# (`https://kimo.work/app-ads.txt`) okuyor. Dosya yoksa ya da yayıncı
+# kimliği tutmuyorsa AdMob doğrulaması BAŞARISIZ olur ve doluluk düşer.
 #
-# ================================ YAYIN ======================================
-# BU DOSYA DEPODA DURUYOR AMA YAYINLANMASI GEREKEN YER BURASI DEĞİL.
+# NEREYE KONACAK: alan adının KÖK dizinine, tam olarak `/app-ads.txt` yolunda,
+# `text/plain` olarak. Mağaza kayıtlarındaki geliştirici sitesi de aynı alan
+# adı olmalı (App Store Connect → "Marketing URL"/"Support URL",
+# Play Console → "Store listing → Website"). AdMob taraması yayından sonra
+# birkaç gün sürebilir.
 #
-# 1. Geliştirici web sitesinin KÖKÜNE konmalı:
-#       https://<alan-adi>/app-ads.txt
-# 2. Aynı alan adı HER İKİ mağaza listelemesinde de tanımlı olmalı:
-#       Play Console  → Store listing → Website
-#       App Store Connect → App Information → Marketing URL
-#    AdMob siteyi mağaza listelemesindeki adresten buluyor; adres girilmezse
-#    dosya yayında olsa bile OKUNMUYOR.
-# 3. Yayından sonra AdMob konsolu → Apps → app-ads.txt durumunu kontrol edin
-#    (tarama birkaç gün sürebilir).
+# YAYINCI KİMLİĞİ (Task 18): `pub-3524308481275678`, yayın AdMob uygulama
+# kimliğinden türetildi (`ios/Flutter/Release.xcconfig`:
+# `ca-app-pub-3524308481275678~…` — `ca-app-pub-` ile `~` arasındaki 16 hane
+# hesabın yayıncı kimliğidir). CI kapısı (`ci.yml` → "app-ads.txt") bu iki
+# yerin AYNI sayıyı taşımasını zorluyor; yer tutucu `pub-0000000000000000`
+# görürse kırmızı düşüyor.
 #
-# ⚠️  ALAN ADI HENÜZ YOK. Hukuki metin adresleri de aynı durumda
-#     (`supabase.example.json` içindeki `ornek.com` yer tutucuları). Alan adı
-#     belirlendiğinde bu dosya oraya taşınmalı.
-#
-# ⚠️  AŞAĞIDAKİ YAYINCI KİMLİĞİ YER TUTUCU. Gerçek değer AdMob konsolunda
-#     Settings → Account information → Publisher ID altında duruyor ve
-#     `pub-` ile başlayan 16 haneli bir sayı. YER TUTUCUYLA YAYINLAMAK,
-#     dosyayı hiç yayınlamamaktan daha kötü: AdMob doğrulamayı BAŞARISIZ
-#     sayar.
+# SAHİP TEYİDİ: AdMob konsolu → Settings → Account information → Publisher ID
+# ile karşılaştırın. Yanlış bir kimlikle yayınlamak boş dosyadan kötüdür.
 #
 # Biçim:  google.com, pub-<YAYINCI-KIMLIGI>, DIRECT, f08c47fec0942fa0
 #         └ reklam sistemi  └ hesap kimliği   └ doğrudan  └ TAG-ID (Google'ın
 #                                               satış       sertifikasyon
 #                                               yetkisi     kimliği, sabit)
 
-google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0
+google.com, pub-3524308481275678, DIRECT, f08c47fec0942fa0

@@ -13,7 +13,17 @@ class AuthRepository {
   User? get currentUser => _client.auth.currentUser;
   Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
 
+  /// Giriş ekranı testinin dikişi (Task 18): `Supabase.instance` test
+  /// ortamında kurulu değil ve ona dokunmak fırlatıyor. Deponun
+  /// `PhotoQueue.analyzeOverride` deseni.
+  @visibleForTesting
+  static Future<void> Function({required String email, required String password})?
+      signInOverride;
+
   Future<void> signIn({required String email, required String password}) {
+    final Future<void> Function({required String email, required String password})?
+        seam = signInOverride;
+    if (seam != null) return seam(email: email, password: password);
     return _client.auth.signInWithPassword(email: email, password: password);
   }
 
@@ -23,7 +33,13 @@ class AuthRepository {
   /// `profiles.is_anonymous` var ve tetikleyiciyle senkronlanıyor (0046);
   /// buradaki değer yalnızca ARAYÜZ kararları için — sosyal yüzeyi kapatan
   /// asıl kural politikaların içinde.
-  bool get isAnonymous => currentUser?.isAnonymous ?? false;
+  /// Onboarding testinin dikişi (Task 18): `currentUser` `Supabase.instance`
+  /// üzerinden geliyor ve test ortamında yok.
+  @visibleForTesting
+  static bool? isAnonymousOverride;
+
+  bool get isAnonymous =>
+      isAnonymousOverride ?? (currentUser?.isAnonymous ?? false);
 
   /// Kayıt öncesi geçici kimlik.
   ///

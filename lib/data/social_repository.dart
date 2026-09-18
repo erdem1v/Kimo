@@ -134,7 +134,14 @@ class SocialRepository {
   // Aramayı kaldırmak dizini kapatmamıştı — görünüm hâlâ toplu okunabiliyordu.
 
   /// Beni ilgilendiren tüm arkadaşlık kayıtları (istek + kabul).
+  /// Gönderme sayfası testinin dikişi (Task 18): arkadaş listesi hata
+  /// verdiğinde sayfanın yine de kapatılabildiğini sınamak için.
+  @visibleForTesting
+  static Future<List<Friendship>> Function()? relationsOverride;
+
   Future<List<Friendship>> relations() async {
+    final Future<List<Friendship>> Function()? seam = relationsOverride;
+    if (seam != null) return seam();
     final String? uid = _uid;
     if (uid == null) return <Friendship>[];
     final List<Map<String, dynamic>> rows = await _client

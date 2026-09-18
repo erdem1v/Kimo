@@ -32,6 +32,10 @@ on:
         required: false
         default: false
         type: boolean
+      admob_test_ok:
+        description: "Release'i Google'ın TEST AdMob kimliğiyle derlemeye İZİN VER (yalnızca imza/derleme doğrulaması; Play'e YÜKLENMEZ)"
+        type: boolean
+        default: false
   push:
     tags: ['v*']
 
@@ -133,8 +137,15 @@ jobs:
           if [ -n "$ADMOB_APP_ID" ]; then
             ARGS="$ARGS -Padmob.appId=$ADMOB_APP_ID"
             echo "::notice::ADMOB_APP_ID tanımlı — gerçek AdMob uygulama kimliği."
+          elif [ "$BUILD_TYPE" = "release" ] && [ "${{ inputs.admob_test_ok }}" != "true" ]; then
+            # YAYIN YAPISI TEST KİMLİĞİYLE ÇIKAMAZ (Task 18 · S2). Eskiden
+            # yalnızca uyarı basılıyordu; uyarıyı kimse okumazsa mağazaya
+            # giden yapı Google'ın test kimliğini taşır ve reklam geliri
+            # sıfırlanır. Debug/profile yapıları test kimliğiyle sürüyor.
+            echo "::error::ADMOB_APP_ID sırrı yok — RELEASE yapısı Google'ın TEST uygulama kimliğiyle DERLENMEZ. Sırrı girin ya da debug derleyin."
+            exit 1
           else
-            echo "::warning::ADMOB_APP_ID sırrı yok — APK Google'ın TEST uygulama kimliğiyle derlenecek, gerçek reklam gelmez."
+            echo "::warning::ADMOB_APP_ID sırrı yok — $BUILD_TYPE yapısı Google'ın TEST uygulama kimliğiyle derlenecek, gerçek reklam gelmez. Bu yapı Play'e YÜKLENMEZ."
           fi
           # PLAY YENİ UYGULAMALAR İÇİN `.aab` ŞART KOŞUYOR. Task 13'e kadar
           # bu iş yalnızca APK üretiyordu, yani IAP'li bir sürümü Play'e

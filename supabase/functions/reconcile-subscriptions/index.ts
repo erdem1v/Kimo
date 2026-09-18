@@ -19,6 +19,7 @@
 // Deploy: supabase functions deploy reconcile-subscriptions
 // config.toml: [functions.reconcile-subscriptions] verify_jwt = true
 
+import { isServiceRole } from "../_shared/auth.ts";
 import {
   appleConfig,
   appleSubscription,
@@ -30,20 +31,6 @@ import { needsWrite } from "./diff.ts";
 
 const TAG = "reconcile-subscriptions";
 
-/** Ağ geçidi imzayı doğruladı; burada yalnızca rol iddiası okunuyor
- *  (`send-push`in savunma derinliği deseni). */
-function isServiceRole(authHeader: string | null): boolean {
-  if (!authHeader?.startsWith("Bearer ")) return false;
-  const parts = authHeader.slice(7).trim().split(".");
-  if (parts.length !== 3) return false;
-  try {
-    const pad = "=".repeat((4 - (parts[1].length % 4)) % 4);
-    const json = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/") + pad);
-    return JSON.parse(json)?.role === "service_role";
-  } catch {
-    return false;
-  }
-}
 
 interface Row {
   platform: "ios" | "android";

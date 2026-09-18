@@ -78,3 +78,9 @@ Bu dizin **çalışır kod garantisi vermiyor**. Analizden hariç tutulduğu iç
 Task 02 boyunca değişen tasarım token'ları, yerelleştirme altyapısı ve bileşen
 kütüphanesiyle uyumu bozulacak. Arşivin amacı ekran tasarımını ve iş
 mantığını korumak — geri getirildiğinde yeniden temalanması gerekecek.
+
+## Geri taşırken
+
+- `pool/solve_pool_screen.dart` `package:confetti` kullanıyor; paket Task 18'de
+  `pubspec.yaml`'dan çıkarıldı (tek kullanıcısı bu arşivdi). Geri taşımadan
+  önce `confetti` bağımlılığı yeniden eklenmeli.

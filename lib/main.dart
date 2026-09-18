@@ -42,6 +42,12 @@ Future<void> main() async {
       // çağırmadan kapalı bıraktığımızı burada beyan ediyoruz.
       o.sendDefaultPii = false;
       o.tracesSampleRate = 0.0;
+      // ORTAM ETİKETİ (Task 18). `release` ve `dist` zaten otomatik:
+      // sentry_flutter'ın LoadReleaseIntegration'ı package_info_plus ile
+      // `com.stratejico.kimo@1.0.0+1` yazıyor. Ama `environment` verilmezse
+      // simülatör turundan gelen bir hata ile mağazadan gelen aynı kovaya
+      // düşüyor; yayın çökmelerini ayırmanın tek yolu bu.
+      o.environment = kReleaseMode ? 'production' : 'development';
     }, appRunner: _run);
   } else {
     // DSN yok (dev/CI): raporlar debugPrint'e düşer ama kancalar yine kurulur

@@ -26,7 +26,15 @@ class AccountRepository {
   ///
   /// Dönen sayı silinen depolama nesnesi adedi (kayıt/teşhis için).
   /// Başarısızlıkta [Exception] fırlatıyor.
+  /// Hesap silme ekranı testinin dikişi (Task 18). Silme uçtan uca yalnızca
+  /// üretim turunda tetiklenebiliyor (yıkıcı); ekranın kendi davranışı —
+  /// takma ad kapısı, hata dalında ekranın AÇIK kalması — bu dikişle sınanıyor.
+  @visibleForTesting
+  static Future<int> Function()? deleteOverride;
+
   Future<int> deleteAccount() async {
+    final Future<int> Function()? seam = deleteOverride;
+    if (seam != null) return seam();
     // Jeton kaydı hesap silinmeden ÖNCE temizlenir (satır kullanıcıya bağlı;
     // sonrasında oturum da kalmayacak). Başarısızlığı silmeyi engellemez —
     // unregisterDevice kendi içinde raporlayıp yutar.

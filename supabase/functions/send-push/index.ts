@@ -21,6 +21,7 @@
 // Deploy (artık bayrak YOK):
 //   supabase functions deploy send-push
 
+import { isServiceRole } from "../_shared/auth.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 interface ServiceAccount {
@@ -61,25 +62,6 @@ function deny(status: number, logDetail: string): Response {
   });
 }
 
-/**
- * Ağ geçidi JWT imzasını zaten doğruladı (verify_jwt = true); burada yalnızca
- * rol iddiasını okuyoruz. Yani bu, imza doğrulaması DEĞİL — savunma derinliği:
- * geçerli bir SON KULLANICI jetonuyla yapılan çağrıyı da reddetmek için.
- * İmza doğrulamasının tek kaynağı ağ geçididir; verify_jwt kapatılırsa bu
- * kontrol tek başına yeterli olmaz.
- */
-function isServiceRole(authHeader: string | null): boolean {
-  if (!authHeader?.startsWith("Bearer ")) return false;
-  const parts = authHeader.slice(7).trim().split(".");
-  if (parts.length !== 3) return false;
-  try {
-    const pad = "=".repeat((4 - (parts[1].length % 4)) % 4);
-    const json = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/") + pad);
-    return JSON.parse(json)?.role === "service_role";
-  } catch {
-    return false;
-  }
-}
 
 function pemToBinary(pem: string): Uint8Array {
   const body = pem

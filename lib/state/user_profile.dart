@@ -38,6 +38,14 @@ class UserProfile extends ChangeNotifier {
 
   int? get examYear => _examYear;
   String? get nickname => _nickname;
+
+  /// Test dikişi (Task 18): hesap silme ekranı takma adı buradan okuyor ve
+  /// test ortamında `loadFromAuth` çağrılamıyor.
+  @visibleForTesting
+  void setNicknameForTest(String? value) {
+    _nickname = value;
+    notifyListeners();
+  }
   Mascot? get mascot => _mascot;
 
   /// Profil fotoğrafının Storage yolu (yoksa maskot simgesi gösterilir).

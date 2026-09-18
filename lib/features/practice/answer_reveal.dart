@@ -124,8 +124,16 @@ class _AnswerRevealState extends State<AnswerReveal> {
                       o.correct ? l.practiceCorrectTitle : l.practiceWrongTitle,
                       style: t.heading.copyWith(color: text),
                     ),
-                    const SizedBox(height: Gap.xxs),
-                    Text(_body(l, o), style: t.body),
+                    // PLAN YAZILAMADIYSA GÜN SÖZÜ YOK (Task 18). Eskiden
+                    // "3 gün sonra yeniden soracağım" ile hemen altındaki
+                    // "tekrar planı kaydedilemedi, yarın yine karşına
+                    // çıkabilir" aynı panelde yan yana duruyordu — biri
+                    // yanlış. Sunucu plan yazmadıysa istemci tarih vaat
+                    // edemez; uyarı metni tek başına kalıyor.
+                    if (!o.scheduleFailed) ...<Widget>[
+                      const SizedBox(height: Gap.xxs),
+                      Text(_body(l, o), style: t.body),
+                    ],
                   ],
                 ),
               ),

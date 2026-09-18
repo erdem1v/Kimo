@@ -66,7 +66,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.stratejico.kimo"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -112,6 +111,10 @@ android {
     signingConfigs {
         if (keystorePropertiesFile.exists()) {
             create("release") {
+                // PKCS12: keystore Task 18'de openssl ile üretildi (geliştirme
+                // makinesinde JDK/keytool yok). AGP her iki türü de okuyor;
+                // türü açıkça yazmak "JKS bekliyordum" sürprizini kapatıyor.
+                storeType = "PKCS12"
                 storeFile = file(keystoreProperties["storeFile"] as String)
                 storePassword = keystoreProperties["storePassword"] as String
                 keyAlias = keystoreProperties["keyAlias"] as String

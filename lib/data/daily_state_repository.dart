@@ -437,7 +437,14 @@ class DailyStateRepository {
     );
   }
 
+  /// Onboarding testinin dikişi (Task 18): akış yaş durumunu ilk karede
+  /// okuyor ve test ortamında `Supabase.instance` yok.
+  @visibleForTesting
+  static Future<AgeStatus?> Function()? ageStatusOverride;
+
   Future<AgeStatus?> ageStatus() async {
+    final Future<AgeStatus?> Function()? seam = ageStatusOverride;
+    if (seam != null) return seam();
     try {
       final dynamic res = await _client.rpc<dynamic>('my_age_status');
       if (res is List && res.isNotEmpty) {
