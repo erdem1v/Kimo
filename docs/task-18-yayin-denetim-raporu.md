@@ -192,6 +192,7 @@ turda `S` kanıtı alacak).
 | SKAdNetwork ≥30 + Google kimliği | üç uydurma plist |
 | İkon Flutter varsayılanı değil | `shasum` mekanizması bilinen girdiyle |
 | `android.yml` `ADMOB_APP_ID` | release + sır yok → `exit 1` |
+| `android.yml` imza doğrulama (release) | gerçek koşuda: parmak izi eşleşti, geçerlilik 2054; sıkılaştırılmış sürüm ikinci koşuda (§9) |
 
 ---
 
@@ -374,3 +375,21 @@ gerçek yönetici · Sentry `production` ortamında ilk olayın görülmesi.
 
 **Depo:** keystore + `key.properties` yedeği (kayıp = güncelleme
 yapamamak) · `supabase.json` sırları yalnız CI/yerelde.
+
+---
+
+## 9. Yayın adayı
+
+| | |
+|---|---|
+| Dal / commit | `main` @ `15bdb95` → son düzeltmeyle bir commit daha (aşağıda); etiket yok (karar) |
+| İçerik | Task 18: faz 2–5 (`59a2e6b`), faz 6–7 (`6eff2ad`), faz 8–9 (`15bdb95`) |
+| `flutter analyze` | temiz |
+| `flutter test` | **501** yeşil (yerel tam koşu; CI "analyze + test" işi yeşil) |
+| `ci.yml` (run 35363358172) | dört iş yeşil: statik kontroller (5 Python kapısı + 3 yeni kapı + **Deno 20/20**), analyze + test, **pgTAP 852 iddia / 38 dosya**, **mutasyon 61/61 kırmızıya döndü**, Android derlemesi |
+| `android.yml` (run 35363399284; `release`, `bundle=true`, `admob_test_ok=true`) | yeşil; artifact `kimo-1.0.0-1-release-15bdb95.aab` 65 MB; **imza adımı:** `jarsigner -verify -strict` → "jar verified, with signer errors" (iki beklenen hata: kendinden imzalı, zincir yok), sertifika SHA-256 `09:8A:B5:6F…02:B0` = yükleme anahtarı ✓; sertifika RSA 2048 / sha256, geçerlilik **2054-02-03** (Play sınırı 2033-10-22 ✓). Uyarılar beklendiği gibi: `SUPABASE_JSON`, `SENTRY_DSN`, `GOOGLE_SERVICES_JSON`, `ADMOB_APP_ID` sırları yok → bu artifact yapılandırmasız, Play'e yüklenmez; **mağaza yapısı o dört sır girildikten sonra aynı dispatch ile üretilir** |
+| `ios.yml` (run 35363402913; `--no-codesign`) | yeşil; `Runner.app` 32 MB; `SUPABASE_JSON` yok → yapılandırmasız. `PrivacyInfo.xcprivacy` pakette (yerel simülatör yapısında doğrulandı: izleme yok, 8 veri türü, 1 erişim API'si); `Info.plist`: 50 SKAdNetwork, `ITSAppUsesNonExemptEncryption=false` |
+| Turdan sonra bulunan (Y9) | İmza adımının ilk sürümü "jar verified" dizesini arıyordu; `-strict` çıktısı "jar verified, **with signer errors**" olduğu için süresi dolmuş ya da zinciri bozuk bir sertifikayı da geçirirdi. Sıkılaştırıldı: yalnız iki beklenen hata kabul, parmak izi + geçerlilik yılı ≥ 2034 zorunlu. Doğrulama koşusu: *(aşağıda)* |
+
+Yerelde `check_sql` ve `build_taxonomy` bellek baskısı altında kesildi
+(makine iki simülatör + Xcode derlemesi taşıyordu); ikisi de CI'da yeşil.

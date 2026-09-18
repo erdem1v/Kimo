@@ -34,8 +34,22 @@ altında; yayın öncesi bütünsel denetim `docs/task-18-yayin-denetim-raporu.m
 - Gerçek uygulama ikonu ve açılış ekranı (maskottan üretiliyor),
   `PrivacyInfo.xcprivacy`, tam SKAdNetwork listesi, `app-ads.txt`.
 - Android: PKCS12 yükleme anahtarı, R8 kuralları, `.aab` üretimi;
-  `ADMOB_APP_ID` olmadan yayın yapısı derlenmiyor.
+  `ADMOB_APP_ID` olmadan yayın yapısı derlenmiyor; CI release artifact'ının
+  imzasını `jarsigner` ile doğrulayıp sertifika parmak izini yükleme
+  anahtarıyla karşılaştırıyor.
 - Sentry: `environment` etiketi; `release`/`dist` otomatik.
+
+### Yayın öncesi bütünsel denetimde düzeltilenler (Task 18)
+- Satın alma yolunun üç edge fonksiyonu üretime hiç dağıtılmamıştı; dağıtıldı,
+  IAP sırları tanımlandı (`ff_iap` mağaza kimlikleri gelene kadar kapalı).
+- Çekim ekranı, çoklu çekim bayrağı + Kimo Plus birlikteyken boş çiziliyordu.
+- Çoklu çekim özeti, yalnız doğru şıkkı eksik kalan soruyu "okunamadı"
+  sayıyordu; artık "şık bekliyor".
+- Gelen arkadaşlık isteğinde "Kabul et" iki satıra kırılıyordu; düğmeler iki
+  sıraya alındı.
+- Cevap paneli, tekrar planı yazılamadığında hem gün sözü hem hata veriyordu.
+- Bildirimden gelen dokunuş, kabuk boştayken bir sonraki dokunuşa kadar
+  bekliyordu.
 
 ### Bilinen sınırlar
 - Apple ücretli geliştirici hesabı yok: iOS imzasız derleniyor; push için

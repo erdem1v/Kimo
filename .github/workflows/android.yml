@@ -193,16 +193,35 @@ jobs:
         run: |
           F="${{ steps.artifact.outputs.name }}"
           EXPECTED="09:8A:B5:6F:DB:65:83:ED:5F:6B:64:9A:2D:B2:88:6C:7B:D1:47:52:AB:BB:49:89:AD:BE:03:03:C5:83:02:B0"
-          jarsigner -verify -strict "$F" | tee /tmp/jarsigner.txt
-          grep -q "jar verified" /tmp/jarsigner.txt || { echo "::error::$F imzası doğrulanamadı"; exit 1; }
-          # Sertifika parmak izi: keytool artifact içindeki imza bloğunu okuyor.
-          GOT=$(keytool -printcert -jarfile "$F" | awk '/SHA256:/ {print $2; exit}')
-          echo "imza sertifikası SHA-256: $GOT"
+          # `-strict` çıktısı "jar verified, with signer errors." diyor: yükleme
+          # anahtarı KENDİNDEN İMZALI (Play'in beklediği de bu), jarsigner bunu
+          # ve zincir kurulamamasını "hata" sayıyor. İlk sürüm yalnız "jar
+          # verified" arıyordu — süresi dolmuş ya da yanlış bir sertifikayı da
+          # geçirirdi. Şimdi: beklenen iki hata dışında HİÇBİR "This jar" satırı
+          # olmamalı; "jar is unsigned" / "NOT verified" zaten "jar verified"
+          # içermediği için düşer.
+          jarsigner -verify -strict "$F" > /tmp/jarsigner.txt || true
+          cat /tmp/jarsigner.txt
+          grep -q "^jar verified" /tmp/jarsigner.txt || { echo "::error::$F imzası doğrulanamadı"; exit 1; }
+          if grep "^This jar" /tmp/jarsigner.txt \
+               | grep -vE "signer certificate is self-signed|certificate chain is invalid|do not include a timestamp"; then
+            echo "::error::jarsigner beklenmeyen bir imza sorunu bildirdi (yukarıda)"; exit 1
+          fi
+          # Sertifika: parmak izi yükleme anahtarıyla eşleşmeli; geçerlilik
+          # Play'in yükleme anahtarı için istediği 2033-10-22'yi aşmalı.
+          keytool -printcert -jarfile "$F" > /tmp/cert.txt
+          GOT=$(awk '/SHA256:/ {print $2; exit}' /tmp/cert.txt)
+          UNTIL_YEAR=$(grep -m1 'until:' /tmp/cert.txt | awk '{print $NF}')
+          echo "imza sertifikası SHA-256: $GOT — geçerlilik sonu yılı: $UNTIL_YEAR"
           if [ "$GOT" != "$EXPECTED" ]; then
             echo "::error::İmza yükleme anahtarıyla eşleşmiyor (debug anahtarı mı?). Beklenen $EXPECTED, gelen $GOT"
             exit 1
           fi
-          echo "::notice::$F yükleme anahtarıyla imzalı (SHA-256 eşleşti)"
+          if ! [ "$UNTIL_YEAR" -ge 2034 ] 2>/dev/null; then
+            echo "::error::Sertifika geçerliliği ($UNTIL_YEAR) Play'in 2033-10-22 sınırını karşılamıyor"
+            exit 1
+          fi
+          echo "::notice::$F yükleme anahtarıyla imzalı (SHA-256 eşleşti, geçerlilik $UNTIL_YEAR)"
 
       - uses: actions/upload-artifact@v4
         with:
